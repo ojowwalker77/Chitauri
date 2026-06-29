@@ -42,7 +42,6 @@ import {
   IconHash,
   IconFolder,
   IconFolderOpen,
-  IconEdit,
   IconHistory,
   IconInfoCircle,
   IconLayoutDistributeHorizontal,
@@ -65,7 +64,6 @@ import {
   IconPlus,
   IconRefresh,
   IconRocket,
-  IconRobot,
   IconRotate2,
   IconSelector,
   IconSettings,
@@ -75,7 +73,6 @@ import {
   IconStarFilled,
   IconSun,
   IconTextWrap,
-  IconTool,
   IconTrash,
   IconTrophy,
   IconWorld,
@@ -128,7 +125,13 @@ export const ArrowDownIcon = adaptIcon(IconArrowDown);
 export const ArrowUpIcon = adaptIcon(IconArrowUp);
 export const ArrowUpRightIcon = adaptIcon(IconArrowUpRight);
 export const ArrowUpDownIcon = adaptIcon(IconArrowsUpDown);
-export const BotIcon = adaptIcon(IconRobot);
+// Single source for the robot/agent glyph. Sourced from the Central icon set so
+// every robot affordance (reasoning rows, agent-task rows, agent mention chips,
+// subagent menus, agent-activity headers) renders one identical icon. Use
+// BotIcon in React; AGENT_ROBOT_ICON_NAME for imperative DOM via
+// createCentralIconElement.
+export const AGENT_ROBOT_ICON_NAME = "robot";
+export const BotIcon: LucideIcon = centralIconWrapper(AGENT_ROBOT_ICON_NAME);
 export const BugIcon = adaptIcon(IconBug);
 export const CameraIcon = adaptIcon(IconCamera);
 export const CheckIcon = adaptIcon(IconCheck);
@@ -191,7 +194,10 @@ export const McpIcon: LucideIcon = (props) => (
   <VscMcp className={props.className} style={props.style} />
 );
 export const PluginIcon: LucideIcon = centralIconWrapper("puzzle");
-export const HammerIcon = adaptIcon(IconTool);
+// Single hammer/build glyph (tool-call rows, codex provider, "build" scripts).
+// Sourced from the Central set so it matches the other work-row icons (pencil,
+// terminal, skill cube) it sits beside, instead of the Tabler wrench it used to be.
+export const HammerIcon: LucideIcon = centralIconWrapper("hammer");
 export const HistoryIcon = adaptIcon(IconHistory);
 export const InfoIcon = adaptIcon(IconInfoCircle);
 export const KanbanIcon = centralIconWrapper("columns-3-wide");
@@ -236,7 +242,6 @@ export const MoonIcon = adaptIcon(IconMoon);
 export const DeviceLaptopIcon = adaptIcon(IconDeviceLaptop);
 export const StopIcon = adaptIcon(IconPlayerStop);
 export const StopFilledIcon = adaptIcon(IconPlayerStopFilled);
-export const SquarePenIcon = adaptIcon(IconEdit);
 export const SquareSplitHorizontal: LucideIcon = (props) => (
   <PiSquareSplitHorizontal className={props.className} style={props.style} />
 );
@@ -255,7 +260,10 @@ export const TextWrapIcon = adaptIcon(IconTextWrap);
 export const Trash2 = adaptIcon(IconTrash);
 export const TriangleAlertIcon = adaptIcon(IconAlertTriangle);
 export const Undo2Icon = adaptIcon(IconArrowBackUp);
-export const WrenchIcon = adaptIcon(IconTool);
 export const WorktreeIcon = centralIconWrapper("arrow-split-right");
 export const XIcon = adaptIcon(IconX);
 export const ZapIcon = adaptIcon(IconBolt);
+// Single source for the fast-mode glyph. Every fast-mode affordance (composer
+// trait badges, the Speed submenu, the /fast command) renders this one solid
+// lightning bolt from the Central fill set instead of mixing Tabler/Ionicons bolts.
+export const FastModeIcon: LucideIcon = centralIconWrapper("zap", "fill");
