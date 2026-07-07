@@ -14,8 +14,6 @@ import { ServerSettings, ServerSettingsPatch } from "./settings";
 import { ExecutionEnvironmentDescriptor } from "./environment";
 import { AutomationCompletionPolicy, AutomationMode, AutomationSchedule } from "./automation";
 
-const SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BASE64_CHARS = 14_000_000;
-
 const KeybindingsMalformedConfigIssue = Schema.Struct({
   kind: Schema.Literal("keybindings.malformed-config"),
   message: TrimmedNonEmptyString,
@@ -52,7 +50,6 @@ export const ServerProviderStatus = Schema.Struct({
   authStatus: ServerProviderAuthStatus,
   authType: Schema.optional(TrimmedNonEmptyString),
   authLabel: Schema.optional(TrimmedNonEmptyString),
-  voiceTranscriptionAvailable: Schema.optional(Schema.Boolean),
   version: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   checkedAt: IsoDateTime,
   message: Schema.optional(TrimmedNonEmptyString),
@@ -248,24 +245,6 @@ export const ServerDiagnosticsResult = Schema.Struct({
   }),
 });
 export type ServerDiagnosticsResult = typeof ServerDiagnosticsResult.Type;
-
-export const ServerVoiceTranscriptionInput = Schema.Struct({
-  provider: ProviderKind,
-  cwd: TrimmedNonEmptyString,
-  threadId: Schema.optional(ThreadId),
-  mimeType: TrimmedNonEmptyString.check(Schema.isMaxLength(100)),
-  sampleRateHz: NonNegativeInt,
-  durationMs: NonNegativeInt,
-  audioBase64: TrimmedNonEmptyString.check(
-    Schema.isMaxLength(SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BASE64_CHARS),
-  ),
-});
-export type ServerVoiceTranscriptionInput = typeof ServerVoiceTranscriptionInput.Type;
-
-export const ServerVoiceTranscriptionResult = Schema.Struct({
-  text: TrimmedNonEmptyString,
-});
-export type ServerVoiceTranscriptionResult = typeof ServerVoiceTranscriptionResult.Type;
 
 // Compact, stateless recap generation. The caller owns debounce/cache policy so
 // this endpoint never participates in the hot transcript projection path.

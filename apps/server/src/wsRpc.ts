@@ -1026,23 +1026,6 @@ export const makeWsRpcLayer = () =>
             }),
             "Failed to load server diagnostics",
           ),
-        [WS_METHODS.serverTranscribeVoice]: (input) =>
-          rpcEffect(
-            providerAdapterRegistry
-              .getByProvider(input.provider)
-              .pipe(
-                Effect.flatMap((adapter) =>
-                  adapter.transcribeVoice
-                    ? adapter.transcribeVoice(input)
-                    : Effect.fail(
-                        new Error(
-                          `Voice transcription is unavailable for provider '${input.provider}'.`,
-                        ),
-                      ),
-                ),
-              ),
-            "Voice transcription failed",
-          ),
         [WS_METHODS.serverGenerateThreadRecap]: (input) =>
           rpcEffect(
             Effect.gen(function* () {

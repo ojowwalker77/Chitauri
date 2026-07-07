@@ -140,8 +140,6 @@ import {
   ServerUpdateSettingsInput,
   ServerUpdateSettingsResult,
   ServerUpsertKeybindingResult,
-  ServerVoiceTranscriptionInput,
-  ServerVoiceTranscriptionResult,
 } from "./server";
 import {
   TerminalAckOutputInput,
@@ -635,12 +633,6 @@ export const WsServerGetDiagnosticsRpc = Rpc.make(WS_METHODS.serverGetDiagnostic
   error: WsRpcError,
 });
 
-export const WsServerTranscribeVoiceRpc = Rpc.make(WS_METHODS.serverTranscribeVoice, {
-  payload: ServerVoiceTranscriptionInput,
-  success: ServerVoiceTranscriptionResult,
-  error: WsRpcError,
-});
-
 export const WsServerGenerateThreadRecapRpc = Rpc.make(WS_METHODS.serverGenerateThreadRecap, {
   payload: ServerGenerateThreadRecapInput,
   success: ServerGenerateThreadRecapResult,
@@ -878,7 +870,6 @@ export const WsRpcGroup = RpcGroup.make(
   WsStatsGetProfileStatsRpc,
   WsStatsGetProfileTokenStatsRpc,
   WsServerGetDiagnosticsRpc,
-  WsServerTranscribeVoiceRpc,
   WsServerGenerateThreadRecapRpc,
   WsServerGenerateAutomationIntentRpc,
   WsServerUpsertKeybindingRpc,

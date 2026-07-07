@@ -8,6 +8,7 @@ import {
   type ProviderKind,
   type ServerProviderStatus,
   type ThreadId,
+  type ThreadMarkerColor,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
 } from "@t3tools/contracts";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
@@ -215,11 +216,47 @@ const THEME_OPTIONS = [
   },
 ] as const;
 
+function HighlightColorSwatch({ color }: { color: string }) {
+  return (
+    <span
+      aria-hidden
+      className="size-3 shrink-0 rounded-[3px] border border-black/10 dark:border-white/15"
+      style={{ backgroundColor: color }}
+    />
+  );
+}
+
+// Only the colors that render a visible highlight fill are offered (blue is a
+// transparent/underline tone). Values map to ThreadMarkerColor + the
+// `.thread-marker-<color>` styles in index.css.
+const HIGHLIGHT_COLOR_OPTIONS: ReadonlyArray<{
+  value: ThreadMarkerColor;
+  label: string;
+  icon: ReactNode;
+}> = [
+  {
+    value: "yellow",
+    label: "Yellow",
+    icon: (
+      <HighlightColorSwatch color="color-mix(in srgb, var(--color-text-accent) 60%, transparent)" />
+    ),
+  },
+  {
+    value: "green",
+    label: "Green",
+    icon: <HighlightColorSwatch color="#34d399" />,
+  },
+  {
+    value: "pink",
+    label: "Pink",
+    icon: <HighlightColorSwatch color="#f472b6" />,
+  },
+];
+
 const PROVIDER_SELECT_OPTIONS = [
   "codex",
   "claudeAgent",
   "cursor",
-  "gemini",
   "grok",
   "opencode",
   "kilo",
@@ -247,7 +284,6 @@ type InstallBinarySettingsKey =
   | "claudeBinaryPath"
   | "codexBinaryPath"
   | "cursorBinaryPath"
-  | "geminiBinaryPath"
   | "grokBinaryPath"
   | "kiloBinaryPath"
   | "openCodeBinaryPath"
@@ -285,7 +321,6 @@ const PROVIDER_VISIBILITY_OPTIONS: ReadonlyArray<{ provider: ProviderKind; title
   { provider: "codex", title: PROVIDER_DISPLAY_NAMES.codex },
   { provider: "claudeAgent", title: PROVIDER_DISPLAY_NAMES.claudeAgent },
   { provider: "cursor", title: PROVIDER_DISPLAY_NAMES.cursor },
-  { provider: "gemini", title: PROVIDER_DISPLAY_NAMES.gemini },
   { provider: "grok", title: PROVIDER_DISPLAY_NAMES.grok },
   { provider: "kilo", title: PROVIDER_DISPLAY_NAMES.kilo },
   { provider: "opencode", title: PROVIDER_DISPLAY_NAMES.opencode },
@@ -410,25 +445,6 @@ const INSTALL_PROVIDER_SETTINGS: readonly InstallProviderSettings[] = [
     apiEndpointKey: "cursorApiEndpoint",
     apiEndpointPlaceholder: "https://api2.cursor.sh",
     apiEndpointDescription: "Optional Cursor API endpoint override passed to `cursor-agent -e`.",
-  },
-  {
-    provider: "gemini",
-    title: "Gemini",
-    docs: [
-      { label: "Install", href: "https://google-gemini.github.io/gemini-cli/docs/get-started/" },
-      { label: "Update", href: "https://github.com/google-gemini/gemini-cli" },
-      {
-        label: "Config",
-        href: "https://google-gemini.github.io/gemini-cli/docs/get-started/configuration.html",
-      },
-    ],
-    binaryPathKey: "geminiBinaryPath",
-    binaryPlaceholder: "Gemini binary path",
-    binaryDescription: (
-      <>
-        Leave blank to use <code>gemini</code> from your PATH.
-      </>
-    ),
   },
   {
     provider: "grok",
@@ -674,7 +690,6 @@ function SettingsRouteView() {
     codex: Boolean(settings.codexBinaryPath || settings.codexHomePath),
     claudeAgent: Boolean(settings.claudeBinaryPath),
     cursor: Boolean(settings.cursorBinaryPath || settings.cursorApiEndpoint),
-    gemini: Boolean(settings.geminiBinaryPath),
     grok: Boolean(settings.grokBinaryPath),
     kilo: Boolean(settings.kiloBinaryPath || settings.kiloServerUrl || settings.kiloServerPassword),
     opencode: Boolean(
@@ -696,7 +711,6 @@ function SettingsRouteView() {
     codex: "",
     claudeAgent: "",
     cursor: "",
-    gemini: "",
     grok: "",
     kilo: "",
     opencode: "",
@@ -750,7 +764,6 @@ function SettingsRouteView() {
   const claudeBinaryPath = settings.claudeBinaryPath;
   const cursorBinaryPath = settings.cursorBinaryPath;
   const cursorApiEndpoint = settings.cursorApiEndpoint;
-  const geminiBinaryPath = settings.geminiBinaryPath;
   const grokBinaryPath = settings.grokBinaryPath;
   const kiloBinaryPath = settings.kiloBinaryPath;
   const kiloServerUrl = settings.kiloServerUrl;
@@ -927,7 +940,6 @@ function SettingsRouteView() {
     settings.customCodexModels.length +
     settings.customClaudeModels.length +
     settings.customCursorModels.length +
-    settings.customGeminiModels.length +
     settings.customGrokModels.length +
     settings.customKiloModels.length +
     settings.customOpenCodeModels.length +
@@ -951,7 +963,6 @@ function SettingsRouteView() {
     settings.claudeBinaryPath !== defaults.claudeBinaryPath ||
     settings.cursorBinaryPath !== defaults.cursorBinaryPath ||
     settings.cursorApiEndpoint !== defaults.cursorApiEndpoint ||
-    settings.geminiBinaryPath !== defaults.geminiBinaryPath ||
     settings.grokBinaryPath !== defaults.grokBinaryPath ||
     settings.kiloBinaryPath !== defaults.kiloBinaryPath ||
     settings.kiloServerUrl !== defaults.kiloServerUrl ||
@@ -981,6 +992,7 @@ function SettingsRouteView() {
       ? ["Workspace section"]
       : []),
     ...(settings.uiDensity !== defaults.uiDensity ? ["UI density"] : []),
+    ...(settings.highlightColor !== defaults.highlightColor ? ["Highlight color"] : []),
     ...(settings.chatFontSizePx !== defaults.chatFontSizePx ? ["Base font size"] : []),
     ...(settings.terminalFontSizePx !== defaults.terminalFontSizePx ? ["Terminal font size"] : []),
     ...(settings.terminalFontFamily !== defaults.terminalFontFamily ? ["Terminal font"] : []),
@@ -1016,7 +1028,6 @@ function SettingsRouteView() {
     ...(settings.customCodexModels.length > 0 ||
     settings.customClaudeModels.length > 0 ||
     settings.customCursorModels.length > 0 ||
-    settings.customGeminiModels.length > 0 ||
     settings.customGrokModels.length > 0 ||
     settings.customKiloModels.length > 0 ||
     settings.customOpenCodeModels.length > 0 ||
@@ -1202,7 +1213,6 @@ function SettingsRouteView() {
       codex: false,
       claudeAgent: false,
       cursor: false,
-      gemini: false,
       grok: false,
       kilo: false,
       opencode: false,
@@ -1213,7 +1223,6 @@ function SettingsRouteView() {
       codex: "",
       claudeAgent: "",
       cursor: "",
-      gemini: "",
       grok: "",
       kilo: "",
       opencode: "",
@@ -1715,6 +1724,15 @@ function SettingsRouteView() {
       <div ref={environmentPanelRef} id={SETTINGS_TARGETS.environmentPanel}>
         <SettingsSection title="Environment panel">
           {renderBooleanSettingRow({
+            settingKey: "showEnvironmentPanel",
+            title: "Environment panel",
+            description:
+              "Show the Environment panel — the side dock with git status, usage, notes, and more. When off, the panel is hidden and the section toggles below have no effect.",
+            resetLabel: "environment panel",
+            ariaLabel: "Show the Environment panel",
+          })}
+
+          {renderBooleanSettingRow({
             settingKey: "showEnvironmentUsage",
             title: "Usage",
             description: "Show the provider usage row in the chat Environment panel.",
@@ -1862,6 +1880,27 @@ function SettingsRouteView() {
                 }}
                 ariaLabel="UI density"
                 options={UI_DENSITY_OPTIONS}
+              />
+            }
+          />
+
+          <SettingsRow
+            title="Highlight color"
+            description="Color used when you highlight selected text in a chat transcript."
+            resetAction={
+              settings.highlightColor !== defaults.highlightColor ? (
+                <SettingResetButton
+                  label="highlight color"
+                  onClick={() => updateSettings({ highlightColor: defaults.highlightColor })}
+                />
+              ) : null
+            }
+            control={
+              <SettingsSegmentedControl
+                value={settings.highlightColor}
+                onValueChange={(value) => updateSettings({ highlightColor: value })}
+                ariaLabel="Highlight color"
+                options={HIGHLIGHT_COLOR_OPTIONS}
               />
             }
           />
@@ -2451,7 +2490,6 @@ function SettingsRouteView() {
                     customCodexModels: defaults.customCodexModels,
                     customClaudeModels: defaults.customClaudeModels,
                     customCursorModels: defaults.customCursorModels,
-                    customGeminiModels: defaults.customGeminiModels,
                     customGrokModels: defaults.customGrokModels,
                     customKiloModels: defaults.customKiloModels,
                     customOpenCodeModels: defaults.customOpenCodeModels,
@@ -2473,7 +2511,6 @@ function SettingsRouteView() {
                     value !== "codex" &&
                     value !== "claudeAgent" &&
                     value !== "cursor" &&
-                    value !== "gemini" &&
                     value !== "grok" &&
                     value !== "kilo" &&
                     value !== "opencode" &&
@@ -2754,7 +2791,6 @@ function SettingsRouteView() {
                     codexHomePath: defaults.codexHomePath,
                     cursorBinaryPath: defaults.cursorBinaryPath,
                     cursorApiEndpoint: defaults.cursorApiEndpoint,
-                    geminiBinaryPath: defaults.geminiBinaryPath,
                     grokBinaryPath: defaults.grokBinaryPath,
                     kiloBinaryPath: defaults.kiloBinaryPath,
                     kiloServerUrl: defaults.kiloServerUrl,
@@ -2770,7 +2806,6 @@ function SettingsRouteView() {
                     codex: false,
                     claudeAgent: false,
                     cursor: false,
-                    gemini: false,
                     grok: false,
                     kilo: false,
                     opencode: false,
@@ -2794,39 +2829,34 @@ function SettingsRouteView() {
                       : providerSettings.provider === "cursor"
                         ? settings.cursorBinaryPath !== defaults.cursorBinaryPath ||
                           settings.cursorApiEndpoint !== defaults.cursorApiEndpoint
-                        : providerSettings.provider === "gemini"
-                          ? settings.geminiBinaryPath !== defaults.geminiBinaryPath
-                          : providerSettings.provider === "grok"
-                            ? settings.grokBinaryPath !== defaults.grokBinaryPath
-                            : providerSettings.provider === "kilo"
-                              ? settings.kiloBinaryPath !== defaults.kiloBinaryPath ||
-                                settings.kiloServerUrl !== defaults.kiloServerUrl ||
-                                settings.kiloServerPassword !== defaults.kiloServerPassword
-                              : providerSettings.provider === "pi"
-                                ? settings.piBinaryPath !== defaults.piBinaryPath ||
-                                  settings.piAgentDir !== defaults.piAgentDir
-                                : settings.openCodeBinaryPath !== defaults.openCodeBinaryPath ||
-                                  settings.openCodeExperimentalWebSockets !==
-                                    defaults.openCodeExperimentalWebSockets ||
-                                  settings.openCodeServerUrl !== defaults.openCodeServerUrl ||
-                                  settings.openCodeServerPassword !==
-                                    defaults.openCodeServerPassword;
+                        : providerSettings.provider === "grok"
+                          ? settings.grokBinaryPath !== defaults.grokBinaryPath
+                          : providerSettings.provider === "kilo"
+                            ? settings.kiloBinaryPath !== defaults.kiloBinaryPath ||
+                              settings.kiloServerUrl !== defaults.kiloServerUrl ||
+                              settings.kiloServerPassword !== defaults.kiloServerPassword
+                            : providerSettings.provider === "pi"
+                              ? settings.piBinaryPath !== defaults.piBinaryPath ||
+                                settings.piAgentDir !== defaults.piAgentDir
+                              : settings.openCodeBinaryPath !== defaults.openCodeBinaryPath ||
+                                settings.openCodeExperimentalWebSockets !==
+                                  defaults.openCodeExperimentalWebSockets ||
+                                settings.openCodeServerUrl !== defaults.openCodeServerUrl ||
+                                settings.openCodeServerPassword !== defaults.openCodeServerPassword;
                 const binaryPathValue =
                   providerSettings.binaryPathKey === "claudeBinaryPath"
                     ? claudeBinaryPath
                     : providerSettings.binaryPathKey === "cursorBinaryPath"
                       ? cursorBinaryPath
-                      : providerSettings.binaryPathKey === "geminiBinaryPath"
-                        ? geminiBinaryPath
-                        : providerSettings.binaryPathKey === "grokBinaryPath"
-                          ? grokBinaryPath
-                          : providerSettings.binaryPathKey === "kiloBinaryPath"
-                            ? kiloBinaryPath
-                            : providerSettings.binaryPathKey === "openCodeBinaryPath"
-                              ? openCodeBinaryPath
-                              : providerSettings.binaryPathKey === "piBinaryPath"
-                                ? piBinaryPath
-                                : codexBinaryPath;
+                      : providerSettings.binaryPathKey === "grokBinaryPath"
+                        ? grokBinaryPath
+                        : providerSettings.binaryPathKey === "kiloBinaryPath"
+                          ? kiloBinaryPath
+                          : providerSettings.binaryPathKey === "openCodeBinaryPath"
+                            ? openCodeBinaryPath
+                            : providerSettings.binaryPathKey === "piBinaryPath"
+                              ? piBinaryPath
+                              : codexBinaryPath;
                 const providerStatus = providerStatusByProvider.get(providerSettings.provider);
                 const showProviderUpdateStatus = providerStatus
                   ? shouldShowProviderUpdateStatus({
@@ -2979,18 +3009,16 @@ function SettingsRouteView() {
                                       ? { claudeBinaryPath: nextValue }
                                       : providerSettings.binaryPathKey === "cursorBinaryPath"
                                         ? { cursorBinaryPath: nextValue }
-                                        : providerSettings.binaryPathKey === "geminiBinaryPath"
-                                          ? { geminiBinaryPath: nextValue }
-                                          : providerSettings.binaryPathKey === "grokBinaryPath"
-                                            ? { grokBinaryPath: nextValue }
-                                            : providerSettings.binaryPathKey === "kiloBinaryPath"
-                                              ? { kiloBinaryPath: nextValue }
-                                              : providerSettings.binaryPathKey ===
-                                                  "openCodeBinaryPath"
-                                                ? { openCodeBinaryPath: nextValue }
-                                                : providerSettings.binaryPathKey === "piBinaryPath"
-                                                  ? { piBinaryPath: nextValue }
-                                                  : { codexBinaryPath: nextValue },
+                                        : providerSettings.binaryPathKey === "grokBinaryPath"
+                                          ? { grokBinaryPath: nextValue }
+                                          : providerSettings.binaryPathKey === "kiloBinaryPath"
+                                            ? { kiloBinaryPath: nextValue }
+                                            : providerSettings.binaryPathKey ===
+                                                "openCodeBinaryPath"
+                                              ? { openCodeBinaryPath: nextValue }
+                                              : providerSettings.binaryPathKey === "piBinaryPath"
+                                                ? { piBinaryPath: nextValue }
+                                                : { codexBinaryPath: nextValue },
                                   )
                                 }
                                 placeholder={providerSettings.binaryPlaceholder}

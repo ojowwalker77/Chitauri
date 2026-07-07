@@ -9,14 +9,12 @@ import {
   resolveAppNavigationState,
 } from "../appNavigation";
 import ShortcutsDialog from "../components/ShortcutsDialog";
-import { RecentViewSwitcher } from "../components/RecentViewSwitcher";
 import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
 import ThreadSidebar from "../components/Sidebar";
 import { isElectron } from "../env";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useTemporaryThreadLifecycle } from "../hooks/useTemporaryThreadLifecycle";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
-import { useRecentViewSwitcher } from "../hooks/useRecentViewSwitcher";
 import { useLatestProjectStore } from "../latestProjectStore";
 import {
   resolveCurrentProjectTargetId,
@@ -190,10 +188,6 @@ function resolveBrowserNavigationShortcut(
   return null;
 }
 
-function isRecentViewSwitcherCommitKey(event: KeyboardEvent): boolean {
-  return event.key === "Enter" || event.key === " " || event.key === "Spacebar";
-}
-
 function ChatRouteGlobalShortcuts() {
   const navigate = useNavigate();
   const { toggleSidebar } = useSidebar();
@@ -209,17 +203,6 @@ function ChatRouteGlobalShortcuts() {
     handleNewThread,
     projects,
   } = useHandleNewThread();
-  const {
-    recentSwitcherState,
-    recentViewEntries,
-    openOrAdvanceRecentSwitcher,
-    commitRecentSwitcherSelection,
-    cancelRecentSwitcher,
-  } = useRecentViewSwitcher({
-    activeContextThreadId,
-    activeDraftThread,
-    projects,
-  });
   const { handleNewChat } = useHandleNewChat();
   const latestProjectId = useLatestProjectStore((state) => state.latestProjectId);
   const setLatestProjectId = useLatestProjectStore((state) => state.setLatestProjectId);
@@ -269,20 +252,6 @@ function ChatRouteGlobalShortcuts() {
         terminalWorkspaceOpen,
       };
 
-      if (recentSwitcherState && event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
-        cancelRecentSwitcher();
-        return;
-      }
-
-      if (recentSwitcherState && isRecentViewSwitcherCommitKey(event)) {
-        event.preventDefault();
-        event.stopPropagation();
-        commitRecentSwitcherSelection();
-        return;
-      }
-
       const isShortcutsHelpShortcut =
         (event.metaKey || event.ctrlKey) &&
         !event.shiftKey &&
@@ -328,15 +297,6 @@ function ChatRouteGlobalShortcuts() {
 
       if (!command) return;
 
-      if (command === "view.recent.next" || command === "view.recent.previous") {
-        event.preventDefault();
-        event.stopPropagation();
-        // Ignore auto-repeat: holding Ctrl+Tab should not race-advance the selection.
-        if (event.repeat) return;
-        openOrAdvanceRecentSwitcher(command === "view.recent.next" ? "next" : "previous");
-        return;
-      }
-
       if (command === "chat.newChat" || command === "chat.newLocal") {
         event.preventDefault();
         event.stopPropagation();
@@ -369,17 +329,14 @@ function ChatRouteGlobalShortcuts() {
       if (
         command === "chat.newClaude" ||
         command === "chat.newCodex" ||
-        command === "chat.newCursor" ||
-        command === "chat.newGemini"
+        command === "chat.newCursor"
       ) {
         const provider =
           command === "chat.newClaude"
             ? "claudeAgent"
             : command === "chat.newCodex"
               ? "codex"
-              : command === "chat.newCursor"
-                ? "cursor"
-                : "gemini";
+              : "cursor";
         const target = resolveNewThreadTarget({ currentProjectId, latestUsableProjectId });
         if (!target) return;
         event.preventDefault();
@@ -431,19 +388,15 @@ function ChatRouteGlobalShortcuts() {
   }, [
     activeDraftThread,
     activeThread,
-    cancelRecentSwitcher,
     clearSelection,
-    commitRecentSwitcherSelection,
     currentProjectId,
     handleNewChat,
     handleNewThread,
     keybindings,
     latestUsableProjectId,
-    openOrAdvanceRecentSwitcher,
     platform,
     providerStatuses,
     refreshProviderStatuses,
-    recentSwitcherState,
     selectedThreadIdsSize,
     terminalOpen,
     terminalWorkspaceOpen,
@@ -484,12 +437,6 @@ function ChatRouteGlobalShortcuts() {
           terminalWorkspaceOpen,
         }}
       />
-      {recentSwitcherState ? (
-        <RecentViewSwitcher
-          entries={recentViewEntries}
-          selectedIndex={recentSwitcherState.selectedIndex}
-        />
-      ) : null}
     </>
   );
 }

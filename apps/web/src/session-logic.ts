@@ -50,7 +50,6 @@ export const PROVIDER_OPTIONS: Array<{
   { value: "codex", label: "Codex", available: true },
   { value: "claudeAgent", label: "Claude", available: true },
   { value: "cursor", label: "Cursor", available: true },
-  { value: "gemini", label: "Gemini", available: true },
   { value: "grok", label: "Grok", available: true },
   { value: "kilo", label: "Kilo", available: true },
   { value: "opencode", label: "OpenCode", available: true },
@@ -307,7 +306,7 @@ export function hasLiveLatestTurn(
 /**
  * Pending approval / user-input requests are only actionable while the session
  * that raised them can still receive the answer. Once the session is closed or
- * errored the request is dead — status surfaces (sidebar pill, kanban column)
+ * errored the request is dead — status surfaces (sidebar pill)
  * must not present the thread as awaiting action forever after a provider
  * crash. A thread with no session yet keeps the request actionable: the flag
  * can arrive ahead of the session snapshot.

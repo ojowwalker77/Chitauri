@@ -226,19 +226,6 @@ const DEFAULT_BINDINGS = compile([
     whenAst: whenCreationAllowed,
   },
   {
-    shortcut: modShortcut("g", { altKey: true }),
-    command: "chat.newGemini",
-    whenAst: whenCreationAllowed,
-  },
-  {
-    shortcut: ctrlShortcut("tab"),
-    command: "view.recent.next",
-  },
-  {
-    shortcut: ctrlShortcut("tab", { shiftKey: true }),
-    command: "view.recent.previous",
-  },
-  {
     shortcut: modShortcut("1"),
     command: "thread.jump.1",
     whenAst: whenAnd(
@@ -521,50 +508,6 @@ describe("composer focus shortcuts", () => {
         platform: "Linux",
         context: { terminalFocus: false },
       }),
-    );
-  });
-});
-
-describe("recent view shortcuts", () => {
-  it("resolves Ctrl+Tab outside terminal focus", () => {
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "Tab", ctrlKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "view.recent.next",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ key: "Tab", ctrlKey: true, shiftKey: true }),
-        DEFAULT_BINDINGS,
-        {
-          platform: "MacIntel",
-          context: { terminalFocus: false },
-        },
-      ),
-      "view.recent.previous",
-    );
-  });
-
-  it("resolves Ctrl+Tab while a terminal has focus", () => {
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "Tab", ctrlKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: true },
-      }),
-      "view.recent.next",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ key: "Tab", ctrlKey: true, shiftKey: true }),
-        DEFAULT_BINDINGS,
-        {
-          platform: "MacIntel",
-          context: { terminalFocus: true },
-        },
-      ),
-      "view.recent.previous",
     );
   });
 });
@@ -928,13 +871,6 @@ describe("chat/editor shortcuts", () => {
       "chat.newCursor",
     );
     assert.strictEqual(
-      resolveShortcutCommand(event({ key: "g", metaKey: true, altKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "chat.newGemini",
-    );
-    assert.strictEqual(
       resolveShortcutCommand(
         event({ code: "KeyC", key: "ç", metaKey: true, altKey: true }),
         DEFAULT_BINDINGS,
@@ -966,17 +902,6 @@ describe("chat/editor shortcuts", () => {
         },
       ),
       "chat.newCursor",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ code: "KeyG", key: "©", metaKey: true, altKey: true }),
-        DEFAULT_BINDINGS,
-        {
-          platform: "MacIntel",
-          context: { terminalFocus: false },
-        },
-      ),
-      "chat.newGemini",
     );
   });
 
@@ -1339,8 +1264,7 @@ describe("resolveShortcutCommand", () => {
       (binding) =>
         binding.command !== "chat.newClaude" &&
         binding.command !== "chat.newCodex" &&
-        binding.command !== "chat.newCursor" &&
-        binding.command !== "chat.newGemini",
+        binding.command !== "chat.newCursor",
     );
 
     assert.strictEqual(
@@ -1363,13 +1287,6 @@ describe("resolveShortcutCommand", () => {
         context: { terminalFocus: false },
       }),
       "chat.newCursor",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "g", metaKey: true, altKey: true }), legacyBindings, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "chat.newGemini",
     );
     assert.strictEqual(
       resolveShortcutCommand(
@@ -1403,17 +1320,6 @@ describe("resolveShortcutCommand", () => {
         },
       ),
       "chat.newCursor",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ code: "KeyG", key: "©", metaKey: true, altKey: true }),
-        legacyBindings,
-        {
-          platform: "MacIntel",
-          context: { terminalFocus: false },
-        },
-      ),
-      "chat.newGemini",
     );
   });
 });

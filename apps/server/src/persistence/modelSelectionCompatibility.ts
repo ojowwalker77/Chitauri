@@ -3,15 +3,7 @@
 // Layer: Persistence compatibility helper
 // Exports: normalizeLegacyModelSelection, normalizePersistedModelSelection
 
-type ModelProviderKind =
-  | "codex"
-  | "claudeAgent"
-  | "cursor"
-  | "gemini"
-  | "grok"
-  | "kilo"
-  | "opencode"
-  | "pi";
+type ModelProviderKind = "codex" | "claudeAgent" | "cursor" | "grok" | "kilo" | "opencode" | "pi";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -44,9 +36,6 @@ function inferProviderFromLabel(label: string): ModelProviderKind | undefined {
   if (lowerLabel.includes("claude") || lowerLabel.includes("anthropic")) {
     return "claudeAgent";
   }
-  if (lowerLabel.includes("gemini") || lowerLabel.includes("google")) {
-    return "gemini";
-  }
   if (lowerLabel.includes("grok") || lowerLabel.includes("xai") || lowerLabel.includes("x.ai")) {
     return "grok";
   }
@@ -61,7 +50,6 @@ function inferLegacyModelProvider(provider: unknown, model: string): ModelProvid
     provider === "codex" ||
     provider === "claudeAgent" ||
     provider === "cursor" ||
-    provider === "gemini" ||
     provider === "grok" ||
     provider === "kilo" ||
     provider === "opencode" ||
@@ -78,9 +66,6 @@ function inferLegacyModelProvider(provider: unknown, model: string): ModelProvid
   const lowerModel = model.toLowerCase();
   if (lowerModel.includes("claude")) {
     return "claudeAgent";
-  }
-  if (lowerModel.includes("gemini")) {
-    return "gemini";
   }
   if (lowerModel.includes("grok")) {
     return "grok";

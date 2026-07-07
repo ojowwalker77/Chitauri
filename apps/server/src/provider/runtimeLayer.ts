@@ -10,7 +10,6 @@ import { makeClaudeAdapterLive } from "./Layers/ClaudeAdapter";
 import { makeCodexAdapterLive } from "./Layers/CodexAdapter";
 import { makeCursorAdapterLive } from "./Layers/CursorAdapter";
 import { makeEventNdjsonLogger } from "./Layers/EventNdjsonLogger";
-import { makeGeminiAdapterLive } from "./Layers/GeminiAdapter";
 import { makeGrokAdapterLive } from "./Layers/GrokAdapter";
 import { makeKiloAdapterLive, makeOpenCodeAdapterLive } from "./Layers/OpenCodeAdapter";
 import { makePiAdapterLive } from "./Layers/PiAdapter";
@@ -61,9 +60,6 @@ export function makeServerProviderLayer(): Layer.Layer<
     const kiloAdapterLayer = makeKiloAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
     );
-    const geminiAdapterLayer = makeGeminiAdapterLive(
-      nativeEventLogger ? { nativeEventLogger } : undefined,
-    );
     const grokAdapterLayer = makeGrokAdapterLive(
       {},
       nativeEventLogger ? { nativeEventLogger } : undefined,
@@ -77,7 +73,6 @@ export function makeServerProviderLayer(): Layer.Layer<
       Layer.provide(codexAdapterLayer),
       Layer.provide(claudeAdapterLayer),
       Layer.provide(cursorAdapterLayer),
-      Layer.provide(geminiAdapterLayer),
       Layer.provide(grokAdapterLayer),
       Layer.provide(kiloAdapterLayer),
       Layer.provide(openCodeAdapterLayer),

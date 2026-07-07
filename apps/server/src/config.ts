@@ -59,12 +59,41 @@ export interface ServerConfigShape extends ServerDerivedPaths {
   readonly logWebSocketEvents: boolean;
 }
 
+/** State-dir namespace used by packaged/production builds. */
+export const PRODUCTION_STATE_DIR_NAME = "userdata";
+/** Default state-dir namespace when serving the UI from a Vite dev server. */
+export const DEV_STATE_DIR_NAME = "dev";
+
+/**
+ * Resolve the state-directory namespace (the single path segment under the base
+ * dir that holds the database, settings, logs, etc.).
+ *
+ * By default the namespace tracks whether the UI is served from a Vite dev
+ * server (`dev`) or a packaged build (`userdata`), so routine `bun dev`
+ * experiments never pollute real desktop data. An explicit override
+ * (`SYNARA_STATE_NAMESPACE`) lets a dev build deliberately share the production
+ * namespace so threads continue across both. The override must be a single safe
+ * path segment; anything else (empty, separators, parent refs) is ignored and
+ * the devUrl-derived default applies.
+ */
+export function resolveStateDirName(input: {
+  readonly devUrl: URL | undefined;
+  readonly stateDirNameOverride?: string | undefined;
+}): string {
+  const override = input.stateDirNameOverride?.trim();
+  if (override && override !== "." && override !== ".." && /^[A-Za-z0-9._-]+$/.test(override)) {
+    return override;
+  }
+  return input.devUrl !== undefined ? DEV_STATE_DIR_NAME : PRODUCTION_STATE_DIR_NAME;
+}
+
 export const deriveServerPaths = Effect.fn(function* (
   baseDir: ServerConfigShape["baseDir"],
   devUrl: ServerConfigShape["devUrl"],
+  stateDirNameOverride?: string,
 ): Effect.fn.Return<ServerDerivedPaths, never, Path.Path> {
   const { join } = yield* Path.Path;
-  const stateDir = join(baseDir, devUrl !== undefined ? "dev" : "userdata");
+  const stateDir = join(baseDir, resolveStateDirName({ devUrl, stateDirNameOverride }));
   const secretsDir = join(stateDir, "secrets");
   const dbPath = join(stateDir, "state.sqlite");
   const attachmentsDir = join(stateDir, "attachments");

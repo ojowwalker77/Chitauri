@@ -11,7 +11,6 @@ const ProviderDiscoveryKind = Schema.Literals([
   "codex",
   "claudeAgent",
   "cursor",
-  "gemini",
   "grok",
   "kilo",
   "opencode",

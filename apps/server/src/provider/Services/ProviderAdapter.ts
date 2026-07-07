@@ -33,8 +33,6 @@ import type {
   ProviderSteerTurnInput,
   ProviderSession,
   ProviderSessionStartInput,
-  ServerVoiceTranscriptionInput,
-  ServerVoiceTranscriptionResult,
   ThreadId,
   ProviderTurnStartResult,
   TurnId,
@@ -240,11 +238,4 @@ export interface ProviderAdapterShape<TError> {
   readonly listAgents?: (
     input: ProviderListAgentsInput,
   ) => Effect.Effect<ProviderListAgentsResult, TError>;
-
-  /**
-   * Transcribe one captured voice clip into plain text when supported.
-   */
-  readonly transcribeVoice?: (
-    input: ServerVoiceTranscriptionInput,
-  ) => Effect.Effect<ServerVoiceTranscriptionResult, TError>;
 }

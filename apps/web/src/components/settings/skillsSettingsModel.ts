@@ -40,7 +40,6 @@ export const ORIGIN_SECTION_ORDER = [
   "codex",
   "claude",
   "cursor",
-  "gemini",
   "grok",
   "kilo",
   "opencode",
@@ -52,7 +51,6 @@ export const PROVIDER_STACK_ORDER: readonly ProviderKind[] = [
   "codex",
   "claudeAgent",
   "cursor",
-  "gemini",
   "grok",
   "kilo",
   "opencode",
@@ -69,8 +67,6 @@ export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
       return { label: PROVIDER_DISPLAY_NAMES.claudeAgent, provider: "claudeAgent" };
     case "cursor":
       return { label: PROVIDER_DISPLAY_NAMES.cursor, provider: "cursor" };
-    case "gemini":
-      return { label: PROVIDER_DISPLAY_NAMES.gemini, provider: "gemini" };
     case "grok":
       return { label: PROVIDER_DISPLAY_NAMES.grok, provider: "grok" };
     case "kilo":

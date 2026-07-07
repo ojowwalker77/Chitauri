@@ -1,7 +1,6 @@
 // FILE: ProjectMenuPicker.tsx
 // Purpose: Shared menu-based project picker keyed by ProjectId. Single source for
-//          the project radio menu used by the kanban new-task dialog and the
-//          editor top-bar project switcher.
+//          the project radio menu used by the editor top-bar project switcher.
 // Layer: Web UI component
 
 import type { ProjectId } from "@t3tools/contracts";

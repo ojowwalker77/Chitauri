@@ -11,7 +11,6 @@ describe("threadHandoff", () => {
     expect(resolveAvailableHandoffTargetProviders("codex")).toEqual([
       "claudeAgent",
       "cursor",
-      "gemini",
       "grok",
       "kilo",
       "opencode",
@@ -20,7 +19,6 @@ describe("threadHandoff", () => {
     expect(resolveAvailableHandoffTargetProviders("claudeAgent")).toEqual([
       "codex",
       "cursor",
-      "gemini",
       "grok",
       "kilo",
       "opencode",
@@ -29,16 +27,6 @@ describe("threadHandoff", () => {
     expect(resolveAvailableHandoffTargetProviders("cursor")).toEqual([
       "codex",
       "claudeAgent",
-      "gemini",
-      "grok",
-      "kilo",
-      "opencode",
-      "pi",
-    ]);
-    expect(resolveAvailableHandoffTargetProviders("gemini")).toEqual([
-      "codex",
-      "claudeAgent",
-      "cursor",
       "grok",
       "kilo",
       "opencode",
@@ -48,7 +36,6 @@ describe("threadHandoff", () => {
       "codex",
       "claudeAgent",
       "cursor",
-      "gemini",
       "kilo",
       "opencode",
       "pi",
@@ -57,7 +44,6 @@ describe("threadHandoff", () => {
       "codex",
       "claudeAgent",
       "cursor",
-      "gemini",
       "grok",
       "opencode",
       "pi",
@@ -66,7 +52,6 @@ describe("threadHandoff", () => {
       "codex",
       "claudeAgent",
       "cursor",
-      "gemini",
       "grok",
       "kilo",
       "pi",
@@ -75,7 +60,6 @@ describe("threadHandoff", () => {
       "codex",
       "claudeAgent",
       "cursor",
-      "gemini",
       "grok",
       "kilo",
       "opencode",
@@ -91,8 +75,8 @@ describe("threadHandoff", () => {
 
   it("prefers sticky model selection for the chosen handoff target", () => {
     const stickySelection = {
-      provider: "gemini",
-      model: "gemini-2.5-pro",
+      provider: "grok",
+      model: "grok-build",
     } satisfies ModelSelection;
 
     expect(
@@ -103,13 +87,13 @@ describe("threadHandoff", () => {
             model: "claude-sonnet-4-6",
           },
         },
-        targetProvider: "gemini",
+        targetProvider: "grok",
         projectDefaultModelSelection: {
-          provider: "gemini",
-          model: "gemini-3.1-pro-preview",
+          provider: "grok",
+          model: "grok-build-0.1",
         },
         stickyModelSelectionByProvider: {
-          gemini: stickySelection,
+          grok: stickySelection,
         },
       }),
     ).toEqual(stickySelection);
@@ -120,8 +104,8 @@ describe("threadHandoff", () => {
       resolveThreadHandoffModelSelection({
         sourceThread: {
           modelSelection: {
-            provider: "gemini",
-            model: "gemini-2.5-pro",
+            provider: "grok",
+            model: "grok-build",
           },
         },
         targetProvider: "codex",

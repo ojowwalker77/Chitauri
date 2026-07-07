@@ -396,7 +396,6 @@ export function resolveThreadStatusPill(input: {
   const { thread } = input;
   // A dead session can't receive approval/input answers anymore — drop the
   // actionable pills instead of advertising a request nobody can fulfill.
-  // Mirrored by the kanban board's deriveKanbanColumn.
   const canAnswerPendingRequests = canSessionAnswerPendingRequests(thread.session);
   const hasPendingApprovals = input.hasPendingApprovals && canAnswerPendingRequests;
   const hasPendingUserInput = input.hasPendingUserInput && canAnswerPendingRequests;
@@ -1416,7 +1415,7 @@ export function deriveSidebarProjectData(input: {
   return byProjectId;
 }
 
-/** Shared PR-state presentation so sidebar badges and kanban cards color PRs identically. */
+/** Shared PR-state presentation so sidebar badges color PRs consistently. */
 export interface PrStatePresentation {
   label: "PR open" | "PR closed" | "PR merged" | "PR draft" | "PR has conflicts";
   colorClass: string;

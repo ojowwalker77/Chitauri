@@ -78,11 +78,11 @@ describe("ServerSettingsService", () => {
         Effect.provide(
           ServerSettingsService.layerTest({
             textGenerationModelSelection: {
-              provider: "gemini",
-              model: DEFAULT_MODEL_BY_PROVIDER.gemini,
+              provider: "kilo",
+              model: DEFAULT_MODEL_BY_PROVIDER.kilo,
             },
             providers: {
-              gemini: { enabled: false },
+              kilo: { enabled: false },
             },
           }),
         ),

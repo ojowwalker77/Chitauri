@@ -181,7 +181,7 @@ describe("resolveAppModelSelection", () => {
           codex: ["galapagos-alpha"],
           claudeAgent: [],
           cursor: [],
-          gemini: [],
+
           grok: [],
           kilo: [],
           opencode: [],
@@ -200,7 +200,7 @@ describe("resolveAppModelSelection", () => {
           codex: [],
           claudeAgent: [],
           cursor: [],
-          gemini: [],
+
           grok: [],
           kilo: [],
           opencode: [],
@@ -219,7 +219,7 @@ describe("resolveAppModelSelection", () => {
           codex: [],
           claudeAgent: [],
           cursor: [],
-          gemini: [],
+
           grok: [],
           kilo: [],
           opencode: [],
@@ -238,7 +238,7 @@ describe("resolveAppModelSelection", () => {
           codex: [],
           claudeAgent: [],
           cursor: [],
-          gemini: [],
+
           grok: [],
           kilo: [],
           opencode: [],
@@ -257,7 +257,7 @@ describe("resolveAppModelSelection", () => {
           codex: [],
           claudeAgent: [],
           cursor: [],
-          gemini: [],
+
           grok: [],
           kilo: [],
           opencode: [],
@@ -372,7 +372,6 @@ describe("normalizeStoredAppSettings", () => {
         claudeBinaryPath: "claude",
         codexBinaryPath: "codex",
         cursorBinaryPath: "cursor-agent",
-        geminiBinaryPath: "gemini",
         grokBinaryPath: "grok",
         kiloBinaryPath: "kilo",
         openCodeBinaryPath: "opencode",
@@ -385,7 +384,6 @@ describe("normalizeStoredAppSettings", () => {
       claudeBinaryPath: "",
       codexBinaryPath: "",
       cursorBinaryPath: "",
-      geminiBinaryPath: "",
       grokBinaryPath: "",
       kiloBinaryPath: "",
       openCodeBinaryPath: "",
@@ -412,7 +410,6 @@ describe("getProviderStartOptions", () => {
         codexHomePath: "/Users/you/.codex",
         cursorApiEndpoint: "http://localhost:3000",
         cursorBinaryPath: "/usr/local/bin/agent",
-        geminiBinaryPath: "/usr/local/bin/gemini",
         grokBinaryPath: "/usr/local/bin/grok",
         kiloBinaryPath: "",
         kiloServerPassword: "",
@@ -435,9 +432,6 @@ describe("getProviderStartOptions", () => {
         apiEndpoint: "http://localhost:3000",
         binaryPath: "/usr/local/bin/agent",
       },
-      gemini: {
-        binaryPath: "/usr/local/bin/gemini",
-      },
       grok: {
         binaryPath: "/usr/local/bin/grok",
       },
@@ -452,7 +446,6 @@ describe("getProviderStartOptions", () => {
         codexHomePath: "",
         cursorApiEndpoint: "",
         cursorBinaryPath: "",
-        geminiBinaryPath: "",
         grokBinaryPath: "",
         kiloBinaryPath: "",
         kiloServerPassword: "",
@@ -475,7 +468,6 @@ describe("getProviderStartOptions", () => {
         codexHomePath: "",
         cursorApiEndpoint: "",
         cursorBinaryPath: "cursor-agent",
-        geminiBinaryPath: "gemini",
         grokBinaryPath: "grok",
         kiloBinaryPath: "kilo",
         kiloServerPassword: "",
@@ -496,7 +488,6 @@ describe("provider-indexed custom model settings", () => {
     customCodexModels: ["custom/codex-model"],
     customClaudeModels: ["claude/custom-opus"],
     customCursorModels: ["cursor/custom-model"],
-    customGeminiModels: ["gemini/custom-flash"],
     customGrokModels: ["grok/custom-fast"],
     customKiloModels: ["kilo/kilo-auto/free"],
     customOpenCodeModels: ["openrouter/gpt-oss-120b"],
@@ -508,7 +499,6 @@ describe("provider-indexed custom model settings", () => {
       "codex",
       "claudeAgent",
       "cursor",
-      "gemini",
       "grok",
       "kilo",
       "opencode",
@@ -520,7 +510,6 @@ describe("provider-indexed custom model settings", () => {
     expect(getCustomModelsForProvider(settings, "codex")).toEqual(["custom/codex-model"]);
     expect(getCustomModelsForProvider(settings, "claudeAgent")).toEqual(["claude/custom-opus"]);
     expect(getCustomModelsForProvider(settings, "cursor")).toEqual(["cursor/custom-model"]);
-    expect(getCustomModelsForProvider(settings, "gemini")).toEqual(["gemini/custom-flash"]);
     expect(getCustomModelsForProvider(settings, "grok")).toEqual(["grok/custom-fast"]);
     expect(getCustomModelsForProvider(settings, "kilo")).toEqual(["kilo/kilo-auto/free"]);
     expect(getCustomModelsForProvider(settings, "opencode")).toEqual(["openrouter/gpt-oss-120b"]);
@@ -532,7 +521,6 @@ describe("provider-indexed custom model settings", () => {
       customCodexModels: ["default/codex-model"],
       customClaudeModels: ["claude/default-opus"],
       customCursorModels: ["cursor/default-model"],
-      customGeminiModels: ["gemini/default-flash"],
       customGrokModels: ["grok/default-fast"],
       customKiloModels: ["kilo/default-auto"],
       customOpenCodeModels: ["openai/gpt-5"],
@@ -544,7 +532,6 @@ describe("provider-indexed custom model settings", () => {
       "claude/default-opus",
     ]);
     expect(getDefaultCustomModelsForProvider(defaults, "cursor")).toEqual(["cursor/default-model"]);
-    expect(getDefaultCustomModelsForProvider(defaults, "gemini")).toEqual(["gemini/default-flash"]);
     expect(getDefaultCustomModelsForProvider(defaults, "grok")).toEqual(["grok/default-fast"]);
     expect(getDefaultCustomModelsForProvider(defaults, "kilo")).toEqual(["kilo/default-auto"]);
     expect(getDefaultCustomModelsForProvider(defaults, "opencode")).toEqual(["openai/gpt-5"]);
@@ -560,12 +547,6 @@ describe("provider-indexed custom model settings", () => {
   it("patches custom models for claude", () => {
     expect(patchCustomModels("claudeAgent", ["claude/custom-opus"])).toEqual({
       customClaudeModels: ["claude/custom-opus"],
-    });
-  });
-
-  it("patches custom models for gemini", () => {
-    expect(patchCustomModels("gemini", ["gemini/custom-flash"])).toEqual({
-      customGeminiModels: ["gemini/custom-flash"],
     });
   });
 
@@ -604,7 +585,6 @@ describe("provider-indexed custom model settings", () => {
       codex: ["custom/codex-model"],
       claudeAgent: ["claude/custom-opus"],
       cursor: ["cursor/custom-model"],
-      gemini: ["gemini/custom-flash"],
       grok: ["grok/custom-fast"],
       kilo: ["kilo/kilo-auto/free"],
       opencode: ["openrouter/gpt-oss-120b"],
@@ -623,9 +603,6 @@ describe("provider-indexed custom model settings", () => {
     ).toBe(true);
     expect(
       modelOptionsByProvider.cursor.some((option) => option.slug === "cursor/custom-model"),
-    ).toBe(true);
-    expect(
-      modelOptionsByProvider.gemini.some((option) => option.slug === "gemini/custom-flash"),
     ).toBe(true);
     expect(modelOptionsByProvider.grok.some((option) => option.slug === "grok/custom-fast")).toBe(
       true,
@@ -646,7 +623,6 @@ describe("provider-indexed custom model settings", () => {
       customCodexModels: ["  custom/codex-model ", "gpt-5.4", "custom/codex-model"],
       customClaudeModels: [" sonnet ", "claude/custom-opus", "claude/custom-opus"],
       customCursorModels: [" composer-2 ", "cursor/custom-model", "cursor/custom-model"],
-      customGeminiModels: [" auto-gemini-3 ", "gemini/custom-flash", "gemini/custom-flash"],
       customGrokModels: [" grok-build ", "grok/custom-fast", "grok/custom-fast"],
       customKiloModels: [" kilo/kilo-auto/free ", "kilo/kilo-auto/free"],
       customOpenCodeModels: [
@@ -672,14 +648,8 @@ describe("provider-indexed custom model settings", () => {
       modelOptionsByProvider.claudeAgent.some((option) => option.slug === "claude-sonnet-5"),
     ).toBe(true);
     expect(
-      modelOptionsByProvider.gemini.filter((option) => option.slug === "gemini/custom-flash"),
-    ).toHaveLength(1);
-    expect(
       modelOptionsByProvider.cursor.filter((option) => option.slug === "cursor/custom-model"),
     ).toHaveLength(1);
-    expect(modelOptionsByProvider.gemini.some((option) => option.slug === "auto-gemini-3")).toBe(
-      true,
-    );
     expect(
       modelOptionsByProvider.grok.filter((option) => option.slug === "grok/custom-fast"),
     ).toHaveLength(1);
@@ -716,7 +686,6 @@ describe("AppSettingsSchema", () => {
       chatFontSizePx: DEFAULT_CHAT_FONT_SIZE_PX,
       codexBinaryPath: "/usr/local/bin/codex",
       codexHomePath: "",
-      geminiBinaryPath: "",
       grokBinaryPath: "",
       defaultThreadEnvMode: "local",
       confirmThreadDelete: false,
@@ -729,7 +698,6 @@ describe("AppSettingsSchema", () => {
       customCodexModels: [],
       customClaudeModels: [],
       customCursorModels: [],
-      customGeminiModels: [],
       customGrokModels: [],
       customKiloModels: [],
       customOpenCodeModels: [],

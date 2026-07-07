@@ -61,6 +61,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           host: undefined,
           port: undefined,
           devUrl: undefined,
+          stateNamespace: undefined,
         });
 
         assert.equal(env.SYNARA_HOME, resolve(homedir(), ".synara"));
@@ -83,6 +84,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           host: "0.0.0.0",
           port: 4222,
           devUrl: new URL("http://localhost:7331"),
+          stateNamespace: undefined,
         });
 
         assert.equal(env.T3CODE_HOME, resolve("/tmp/custom-t3"));
@@ -114,6 +116,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           host: undefined,
           port: undefined,
           devUrl: undefined,
+          stateNamespace: undefined,
         });
 
         assert.equal(env.T3CODE_MODE, "web");
@@ -136,6 +139,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           host: undefined,
           port: undefined,
           devUrl: undefined,
+          stateNamespace: undefined,
         });
 
         assert.equal(env.T3CODE_LOG_WS_EVENTS, "0");
@@ -157,11 +161,56 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           host: undefined,
           port: undefined,
           devUrl: undefined,
+          stateNamespace: undefined,
         });
 
         assert.equal(env.T3CODE_HOME, resolve("/tmp/my-t3"));
         assert.equal(env.DPCODE_HOME, resolve("/tmp/my-t3"));
         assert.equal(env.SYNARA_HOME, resolve("/tmp/my-t3"));
+      }),
+    );
+
+    it.effect("forwards an explicit state namespace to SYNARA_STATE_NAMESPACE", () =>
+      Effect.gen(function* () {
+        const env = yield* createDevRunnerEnv({
+          mode: "dev:desktop",
+          baseEnv: {},
+          serverOffset: 0,
+          webOffset: 0,
+          t3Home: undefined,
+          authToken: undefined,
+          noBrowser: undefined,
+          autoBootstrapProjectFromCwd: undefined,
+          logWebSocketEvents: undefined,
+          host: undefined,
+          port: undefined,
+          devUrl: undefined,
+          stateNamespace: "userdata",
+        });
+
+        assert.equal(env.SYNARA_STATE_NAMESPACE, "userdata");
+      }),
+    );
+
+    it.effect("clears an inherited state namespace when none is requested", () =>
+      Effect.gen(function* () {
+        const env = yield* createDevRunnerEnv({
+          mode: "dev:desktop",
+          baseEnv: { SYNARA_STATE_NAMESPACE: "leak" },
+          serverOffset: 0,
+          webOffset: 0,
+          t3Home: undefined,
+          authToken: undefined,
+          noBrowser: undefined,
+          autoBootstrapProjectFromCwd: undefined,
+          logWebSocketEvents: undefined,
+          host: undefined,
+          port: undefined,
+          devUrl: undefined,
+          stateNamespace: undefined,
+        });
+
+        assert.equal(env.SYNARA_STATE_NAMESPACE, undefined);
       }),
     );
   });

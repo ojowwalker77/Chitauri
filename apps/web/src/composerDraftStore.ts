@@ -7,8 +7,6 @@ import {
   type ClaudeCodeEffort,
   type CodexReasoningEffort,
   type CursorModelOptions,
-  type GeminiThinkingBudget,
-  type GeminiThinkingLevel,
   GROK_REASONING_EFFORT_OPTIONS,
   type GrokReasoningEffort,
   type ModelSlug,
@@ -79,7 +77,6 @@ const COMPOSER_PROVIDER_KINDS = [
   "codex",
   "claudeAgent",
   "cursor",
-  "gemini",
   "grok",
   "kilo",
   "opencode",
@@ -489,7 +486,7 @@ export interface ComposerDraftStoreState {
    * Registers a standalone chat draft thread without claiming the project's
    * composer-draft mapping. Unlike setProjectDraftThreadId this never replaces
    * (and therefore never deletes) the mapped draft, so any number of standalone
-   * drafts — e.g. kanban tasks — can coexist per project. Create-only: an
+   * drafts can coexist per project. Create-only: an
    * existing draft thread is left untouched.
    */
   registerDraftThread: (
@@ -1225,14 +1222,6 @@ function makeModelSelection(
           ? { options: options as Extract<ModelSelection, { provider: "cursor" }>["options"] }
           : {}),
       };
-    case "gemini":
-      return {
-        provider,
-        model,
-        ...(options
-          ? { options: options as Extract<ModelSelection, { provider: "gemini" }>["options"] }
-          : {}),
-      };
     case "grok":
       return {
         provider,
@@ -1285,10 +1274,6 @@ function normalizeProviderModelOptions(
   const cursorCandidate =
     candidate?.cursor && typeof candidate.cursor === "object"
       ? (candidate.cursor as Record<string, unknown>)
-      : null;
-  const geminiCandidate =
-    candidate?.gemini && typeof candidate.gemini === "object"
-      ? (candidate.gemini as Record<string, unknown>)
       : null;
   const grokCandidate =
     candidate?.grok && typeof candidate.grok === "object"
@@ -1405,29 +1390,6 @@ function normalizeProviderModelOptions(
         }
       : undefined;
 
-  const geminiThinkingLevel: GeminiThinkingLevel | undefined =
-    geminiCandidate?.thinkingLevel === "LOW" || geminiCandidate?.thinkingLevel === "HIGH"
-      ? geminiCandidate.thinkingLevel
-      : undefined;
-  const rawGeminiThinkingBudget =
-    typeof geminiCandidate?.thinkingBudget === "number"
-      ? geminiCandidate.thinkingBudget
-      : typeof geminiCandidate?.thinkingBudget === "string"
-        ? Number(geminiCandidate.thinkingBudget)
-        : undefined;
-  const geminiThinkingBudget: GeminiThinkingBudget | undefined =
-    rawGeminiThinkingBudget === -1 ||
-    rawGeminiThinkingBudget === 0 ||
-    rawGeminiThinkingBudget === 512
-      ? rawGeminiThinkingBudget
-      : undefined;
-  const gemini =
-    geminiThinkingLevel !== undefined || geminiThinkingBudget !== undefined
-      ? {
-          ...(geminiThinkingLevel !== undefined ? { thinkingLevel: geminiThinkingLevel } : {}),
-          ...(geminiThinkingBudget !== undefined ? { thinkingBudget: geminiThinkingBudget } : {}),
-        }
-      : undefined;
   const grokReasoningEffort: GrokReasoningEffort | undefined = isGrokReasoningEffort(
     grokCandidate?.reasoningEffort,
   )
@@ -1463,14 +1425,13 @@ function normalizeProviderModelOptions(
       ? piCandidate.thinkingLevel
       : undefined;
   const pi = piThinkingLevel !== undefined ? { thinkingLevel: piThinkingLevel } : undefined;
-  if (!codex && !claude && !cursor && !gemini && !grok && !kilo && !opencode && !pi) {
+  if (!codex && !claude && !cursor && !grok && !kilo && !opencode && !pi) {
     return null;
   }
   return {
     ...(codex ? { codex } : {}),
     ...(claude ? { claudeAgent: claude } : {}),
     ...(cursor ? { cursor } : {}),
-    ...(gemini ? { gemini } : {}),
     ...(grok ? { grok } : {}),
     ...(kilo ? { kilo } : {}),
     ...(opencode ? { opencode } : {}),
@@ -1518,19 +1479,17 @@ function normalizeModelSelection(
                 modelOptions?.claudeAgent?.contextWindow ?? inferredClaudeContextWindow,
             }
           : modelOptions?.claudeAgent
-        : provider === "gemini"
-          ? modelOptions?.gemini
-          : provider === "grok"
-            ? modelOptions?.grok
-            : provider === "kilo"
-              ? modelOptions?.kilo
-              : provider === "cursor"
-                ? modelOptions?.cursor
-                : provider === "opencode"
-                  ? modelOptions?.opencode
-                  : provider === "pi"
-                    ? modelOptions?.pi
-                    : undefined;
+        : provider === "grok"
+          ? modelOptions?.grok
+          : provider === "kilo"
+            ? modelOptions?.kilo
+            : provider === "cursor"
+              ? modelOptions?.cursor
+              : provider === "opencode"
+                ? modelOptions?.opencode
+                : provider === "pi"
+                  ? modelOptions?.pi
+                  : undefined;
   return makeModelSelection(provider, model, options);
 }
 

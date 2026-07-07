@@ -54,7 +54,7 @@ const dialogPopupClassName =
  * and a soft lift shadow — mirrors the command-palette / composer aesthetic.
  * The default `--composer-surface` is intentionally translucent (frosted chrome),
  * but it has no backdrop blur on the dialog, so over the dark backdrop it reads
- * muddy/dark. Content-heavy dialogs (e.g. the kanban task composer) opt into this
+ * muddy/dark. Content-heavy dialogs opt into this
  * to match the clean, deeply rounded sheet look. */
 const dialogPopupSolidSurfaceClassName =
   "rounded-3xl border-[color:var(--color-border-light)] bg-popover shadow-[0_16px_50px_-12px_rgba(0,0,0,0.34)] dark:shadow-[0_16px_50px_-12px_rgba(0,0,0,0.7)]";

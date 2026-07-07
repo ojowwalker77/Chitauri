@@ -12,7 +12,6 @@ import { cn } from "~/lib/utils";
 import {
   ClaudeAI,
   CursorIcon,
-  Gemini,
   GrokIcon,
   type Icon,
   KiloIcon,
@@ -66,7 +65,6 @@ export const PROVIDER_ICON_COMPONENT_BY_PROVIDER: Record<ProviderKind, Icon> = {
   codex: OpenAI,
   claudeAgent: ClaudeAI,
   cursor: CursorIcon,
-  gemini: Gemini,
   grok: GrokIcon,
   kilo: KiloIcon,
   opencode: OpenCodeProviderIcon,

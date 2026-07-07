@@ -39,6 +39,10 @@ interface LegacyHomeMigrationInput {
   readonly baseDir: string;
   readonly homeDir: string;
   readonly devUrl: URL | undefined;
+  // Explicit state-dir namespace override (SYNARA_STATE_NAMESPACE). When set, the
+  // migration targets the same namespace the running server uses so a shared-state
+  // dev build imports into the dir it actually reads from.
+  readonly stateDirNameOverride?: string | undefined;
 }
 
 interface MigrationMarker {
@@ -220,7 +224,11 @@ export const migrateLegacyHomeIfNeeded = Effect.fn(function* (input: LegacyHomeM
     };
   }
 
-  const targetPaths = yield* deriveServerPaths(canonicalTargetBaseDir, input.devUrl);
+  const targetPaths = yield* deriveServerPaths(
+    canonicalTargetBaseDir,
+    input.devUrl,
+    input.stateDirNameOverride,
+  );
   const markerPath = yield* getLegacyImportMarkerPath(targetPaths.stateDir);
   const marker: MigrationMarker | undefined = yield* readMigrationMarker(markerPath);
   if (marker?.status === "completed") {
@@ -240,7 +248,11 @@ export const migrateLegacyHomeIfNeeded = Effect.fn(function* (input: LegacyHomeM
       continue;
     }
     sawLegacyHome = true;
-    const sourcePaths = yield* deriveServerPaths(legacyBaseDir, input.devUrl);
+    const sourcePaths = yield* deriveServerPaths(
+      legacyBaseDir,
+      input.devUrl,
+      input.stateDirNameOverride,
+    );
     const sourceArtifacts = {
       database: yield* fs.exists(sourcePaths.dbPath),
       keybindings: yield* fs.exists(sourcePaths.keybindingsConfigPath),
@@ -308,7 +320,11 @@ export const migrateLegacyHomeIfNeeded = Effect.fn(function* (input: LegacyHomeM
     input.homeDir,
     `.${SYNARA_HOME_DIRNAME.slice(1)}-migration-${process.pid}-${Date.now()}`,
   );
-  const stagingPaths = yield* deriveServerPaths(stagingBaseDir, input.devUrl);
+  const stagingPaths = yield* deriveServerPaths(
+    stagingBaseDir,
+    input.devUrl,
+    input.stateDirNameOverride,
+  );
   yield* fs.makeDirectory(stagingPaths.stateDir, { recursive: true });
 
   const migrateEffect = Effect.gen(function* () {

@@ -80,6 +80,13 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
       "Show the Workspace tab in the sidebar switcher. The Threads tab always stays visible. sidebar section",
   },
   {
+    id: "general:environment-panel",
+    section: "general",
+    title: "Environment panel",
+    keywords:
+      "Show or hide the Environment panel side dock with git status, usage, notes, and more. disable hide",
+  },
+  {
     id: "general:environment-usage",
     section: "general",
     title: "Usage",
@@ -143,6 +150,12 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     title: "UI density",
     keywords:
       "Control spacing in the sidebar, composer, chat gutters, and settings rows without changing font size. compact comfortable",
+  },
+  {
+    id: "appearance:highlight-color",
+    section: "appearance",
+    title: "Highlight color",
+    keywords: "Color used when you highlight selected text in a chat transcript. yellow green pink",
   },
   {
     id: "appearance:base-font-size",

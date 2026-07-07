@@ -73,7 +73,6 @@ import {
   shouldBroadcastDownloadProgress,
   shouldCheckForUpdatesOnForeground,
 } from "./updateState";
-import { registerDesktopVoiceTranscriptionHandler } from "./voiceTranscription";
 import {
   resolveDesktopMenuAccelerator,
   resolveKeyboardShortcutsMenuAccelerator,
@@ -2500,7 +2499,6 @@ function registerIpcHandlers(): void {
         ...(typeof input?.threadId === "string" ? { threadId: input.threadId } : {}),
       }),
   );
-  registerDesktopVoiceTranscriptionHandler();
   startBrowserPerformanceLogging();
   void ensureBrowserUsePipeServer().catch((error) => {
     console.warn("[Synara browser] Failed to start browser-use native pipe", error);

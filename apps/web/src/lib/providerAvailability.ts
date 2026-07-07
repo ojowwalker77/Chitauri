@@ -53,9 +53,6 @@ export function normalizeProviderStatusForLocalConfig(input: {
       checkedAt: status.checkedAt,
       ...(status.authType ? { authType: status.authType } : {}),
       ...(status.authLabel ? { authLabel: status.authLabel } : {}),
-      ...(status.voiceTranscriptionAvailable !== undefined
-        ? { voiceTranscriptionAvailable: status.voiceTranscriptionAvailable }
-        : {}),
     };
   }
 
@@ -96,7 +93,7 @@ export function findProviderStatus(
   return statuses.find((status) => status.provider === provider) ?? null;
 }
 
-// Shared send gate used by chat, Kanban, shortcuts, and handoff flows.
+// Shared send gate used by chat, shortcuts, and handoff flows.
 export function resolveProviderSendAvailability(input: {
   readonly provider: ProviderKind;
   readonly statuses: readonly ServerProviderStatus[];

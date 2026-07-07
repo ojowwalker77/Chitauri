@@ -117,8 +117,6 @@ import type {
   ServerUpdateSettingsResult,
   ServerUpsertKeybindingInput,
   ServerUpsertKeybindingResult,
-  ServerVoiceTranscriptionInput,
-  ServerVoiceTranscriptionResult,
 } from "./server";
 import type {
   TerminalAckOutputInput,
@@ -370,11 +368,6 @@ export interface DesktopBridge {
     isSupported: () => Promise<boolean>;
     show: (input: DesktopNotificationInput) => Promise<boolean>;
   };
-  server?: {
-    transcribeVoice: (
-      input: ServerVoiceTranscriptionInput,
-    ) => Promise<ServerVoiceTranscriptionResult>;
-  };
   browser: {
     open: (input: BrowserOpenInput) => Promise<ThreadBrowserState>;
     close: (input: BrowserThreadInput) => Promise<ThreadBrowserState>;
@@ -528,9 +521,6 @@ export interface NativeApi {
     generateAutomationIntent: (
       input: ServerGenerateAutomationIntentInput,
     ) => Promise<ServerGenerateAutomationIntentResult>;
-    transcribeVoice: (
-      input: ServerVoiceTranscriptionInput,
-    ) => Promise<ServerVoiceTranscriptionResult>;
     upsertKeybinding: (input: ServerUpsertKeybindingInput) => Promise<ServerUpsertKeybindingResult>;
   };
   stats: {

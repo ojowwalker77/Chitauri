@@ -115,6 +115,12 @@ const CliEnvConfig = Config.all({
   t3Home: Config.string("T3CODE_HOME").pipe(Config.option, Config.map(Option.getOrUndefined)),
   dpcodeHome: Config.string("DPCODE_HOME").pipe(Config.option, Config.map(Option.getOrUndefined)),
   devUrl: Config.url("VITE_DEV_SERVER_URL").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  // Explicit state-dir namespace override. Lets a dev build share the production
+  // `userdata` namespace (continue real threads) instead of the isolated `dev` one.
+  stateNamespace: Config.string("SYNARA_STATE_NAMESPACE").pipe(
+    Config.option,
+    Config.map(Option.getOrUndefined),
+  ),
   noBrowser: Config.boolean("T3CODE_NO_BROWSER").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
@@ -169,6 +175,7 @@ const ServerConfigLive = (input: CliInput) =>
       });
 
       const devUrl = Option.getOrElse(input.devUrl, () => env.devUrl);
+      const stateDirNameOverride = env.stateNamespace;
       const configuredHome =
         Option.getOrUndefined(input.t3Home) ?? env.synaraHome ?? env.t3Home ?? env.dpcodeHome;
       const userHomeDir = OS.homedir();
@@ -178,6 +185,7 @@ const ServerConfigLive = (input: CliInput) =>
         baseDir,
         homeDir: userHomeDir,
         devUrl,
+        stateDirNameOverride,
       }).pipe(
         Effect.mapError(
           (cause) =>
@@ -187,7 +195,7 @@ const ServerConfigLive = (input: CliInput) =>
             }),
         ),
       );
-      const derivedPaths = yield* deriveServerPaths(baseDir, devUrl);
+      const derivedPaths = yield* deriveServerPaths(baseDir, devUrl, stateDirNameOverride);
       const noBrowser = resolveBooleanFlag(input.noBrowser, env.noBrowser ?? mode === "desktop");
       const authToken = Option.getOrUndefined(input.authToken) ?? env.authToken;
       const autoBootstrapProjectFromCwd = resolveBooleanFlag(

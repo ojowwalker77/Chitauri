@@ -16,6 +16,7 @@ import {
   resolveCanonicalWorkspaceRoots,
   resolveDefaultChatWorkspaceRoot,
   resolveDefaultStudioWorkspaceRoot,
+  resolveStateDirName,
 } from "./config";
 
 const tempDirs = new Set<string>();
@@ -159,5 +160,34 @@ describe("resolveCanonicalWorkspaceRoots", () => {
     // with the previously-reported (pre-creation) canonicalized root.
     fs.mkdirSync(result.studioWorkspaceRoot, { recursive: true });
     expect(fs.realpathSync(result.studioWorkspaceRoot)).toBe(result.studioWorkspaceRoot);
+  });
+});
+
+describe("resolveStateDirName", () => {
+  const devUrl = new URL("http://localhost:5733");
+
+  it("uses the isolated dev namespace when serving from a dev URL", () => {
+    expect(resolveStateDirName({ devUrl })).toBe("dev");
+  });
+
+  it("uses the production namespace for packaged builds", () => {
+    expect(resolveStateDirName({ devUrl: undefined })).toBe("userdata");
+  });
+
+  it("lets an explicit override share the production namespace even in dev", () => {
+    expect(resolveStateDirName({ devUrl, stateDirNameOverride: "userdata" })).toBe("userdata");
+  });
+
+  it("trims a valid override", () => {
+    expect(resolveStateDirName({ devUrl, stateDirNameOverride: "  staging  " })).toBe("staging");
+  });
+
+  it("ignores unsafe overrides and falls back to the devUrl default", () => {
+    for (const unsafe of ["", "   ", ".", "..", "a/b", "../escape", "has space", "weird*name"]) {
+      expect(resolveStateDirName({ devUrl, stateDirNameOverride: unsafe })).toBe("dev");
+      expect(resolveStateDirName({ devUrl: undefined, stateDirNameOverride: unsafe })).toBe(
+        "userdata",
+      );
+    }
   });
 });

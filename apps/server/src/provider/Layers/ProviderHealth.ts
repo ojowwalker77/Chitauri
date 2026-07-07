@@ -52,11 +52,6 @@ import { ServerConfig } from "../../config";
 import { ServerSettingsService } from "../../serverSettings";
 import { isWindowsShellCommandMissingResult } from "../../shell-command-detection";
 import {
-  buildGeminiProbeEnv,
-  normalizeGeminiCapabilityProbeResult,
-  probeGeminiCapabilities,
-} from "../geminiAcpProbe";
-import {
   buildCursorAgentCommand,
   buildCursorAgentHeadlessEnv,
   DEFAULT_CURSOR_AGENT_BINARY,
@@ -109,7 +104,6 @@ const OPENCODE_HEALTH_TIMEOUT_MS = 20_000;
 const CODEX_PROVIDER = "codex" as const;
 const CLAUDE_AGENT_PROVIDER = "claudeAgent" as const;
 const CURSOR_PROVIDER = "cursor" as const;
-const GEMINI_PROVIDER = "gemini" as const;
 const GROK_PROVIDER = "grok" as const;
 const KILO_PROVIDER = "kilo" as const;
 const OPENCODE_PROVIDER = "opencode" as const;
@@ -121,7 +115,6 @@ const PROVIDERS = [
   CODEX_PROVIDER,
   CLAUDE_AGENT_PROVIDER,
   CURSOR_PROVIDER,
-  GEMINI_PROVIDER,
   GROK_PROVIDER,
   KILO_PROVIDER,
   OPENCODE_PROVIDER,
@@ -171,13 +164,6 @@ const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
       isCommandPath: isClaudeNativeCommandPath,
     },
   },
-  gemini: {
-    provider: GEMINI_PROVIDER,
-    binaryName: "gemini",
-    npmPackageName: "@google/gemini-cli",
-    homebrew: { name: "gemini-cli", kind: "formula" },
-    nativeUpdate: null,
-  },
   kilo: {
     provider: KILO_PROVIDER,
     binaryName: "kilo",
@@ -226,15 +212,6 @@ const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
 //
 // Generic CLI-output parsing lives in ../providerCliOutput; Claude auth-status
 // interpretation lives in ../claudeAuthStatus.
-
-function resolveVoiceTranscriptionAvailability(
-  authMethod: string | undefined,
-): boolean | undefined {
-  if (!authMethod) {
-    return undefined;
-  }
-  return authMethod === "chatgpt" || authMethod === "chatgptAuthTokens";
-}
 
 // ── Subscription type detection ─────────────────────────────────────
 //
@@ -442,7 +419,6 @@ const probeClaudeSubscription = () => {
 export function parseAuthStatusFromOutput(result: CommandResult): {
   readonly status: ServerProviderStatusState;
   readonly authStatus: ServerProviderAuthStatus;
-  readonly voiceTranscriptionAvailable?: boolean;
   readonly message?: string;
 } {
   const lowerOutput = `${result.stdout}\n${result.stderr}`.toLowerCase();
@@ -499,13 +475,9 @@ export function parseAuthStatusFromOutput(result: CommandResult): {
   })();
 
   if (parsedAuth.auth === true) {
-    const voiceTranscriptionAvailable = resolveVoiceTranscriptionAvailability(
-      parsedAuth.authMethod,
-    );
     return {
       status: "ready",
       authStatus: "authenticated",
-      ...(voiceTranscriptionAvailable !== undefined ? { voiceTranscriptionAvailable } : {}),
     };
   }
   if (parsedAuth.auth === false) {
@@ -640,15 +612,6 @@ const runClaudeCommand = (
   env: NodeJS.ProcessEnv = buildClaudeProcessEnv(),
 ) =>
   runProviderCommand(executable, args, env).pipe(
-    Effect.flatMap((result) =>
-      isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
-        ? Effect.fail(new Error(`spawn ${executable} ENOENT`))
-        : Effect.succeed(result),
-    ),
-  );
-
-const runGeminiCommand = (args: ReadonlyArray<string>, executable = "gemini") =>
-  runProviderCommand(executable, args, buildGeminiProbeEnv()).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
         ? Effect.fail(new Error(`spawn ${executable} ENOENT`))
@@ -955,9 +918,6 @@ export const makeCheckCodexProviderStatus = (
       version: parsedVersion,
       ...(codexAuthType ? { authType: codexAuthType } : {}),
       ...(codexLabel ? { authLabel: codexLabel } : {}),
-      ...(parsed.voiceTranscriptionAvailable !== undefined
-        ? { voiceTranscriptionAvailable: parsed.voiceTranscriptionAvailable }
-        : {}),
       checkedAt,
       ...(parsed.message ? { message: parsed.message } : {}),
     } satisfies ServerProviderStatus;
@@ -1148,94 +1108,6 @@ export const makeCheckClaudeProviderStatus = (
   });
 
 export const checkClaudeProviderStatus = makeCheckClaudeProviderStatus();
-
-export const makeCheckGeminiProviderStatus = (
-  binaryPath?: string,
-): Effect.Effect<ServerProviderStatus, never, ChildProcessSpawner.ChildProcessSpawner> =>
-  Effect.gen(function* () {
-    const checkedAt = new Date().toISOString();
-    const executable = nonEmptyTrimmed(binaryPath) ?? "gemini";
-
-    const versionProbe = yield* runGeminiCommand(["--version"], executable).pipe(
-      Effect.timeoutOption(DEFAULT_TIMEOUT_MS),
-      Effect.result,
-    );
-
-    if (Result.isFailure(versionProbe)) {
-      const error = versionProbe.failure;
-      return {
-        provider: GEMINI_PROVIDER,
-        status: "error" as const,
-        available: false,
-        authStatus: "unknown" as const,
-        checkedAt,
-        message: isCommandMissingCause(error)
-          ? "Gemini CLI (`gemini`) is not installed or not on PATH."
-          : `Failed to execute Gemini CLI health check: ${error instanceof Error ? error.message : String(error)}.`,
-      };
-    }
-
-    if (Option.isNone(versionProbe.success)) {
-      return {
-        provider: GEMINI_PROVIDER,
-        status: "error" as const,
-        available: false,
-        authStatus: "unknown" as const,
-        checkedAt,
-        message: "Gemini CLI is installed but failed to run. Timed out while running command.",
-      };
-    }
-
-    const version = versionProbe.success.value;
-    if (version.code !== 0) {
-      const detail = detailFromResult(version);
-      return {
-        provider: GEMINI_PROVIDER,
-        status: "error" as const,
-        available: false,
-        authStatus: "unknown" as const,
-        checkedAt,
-        message: detail
-          ? `Gemini CLI is installed but failed to run. ${detail}`
-          : "Gemini CLI is installed but failed to run.",
-      };
-    }
-    const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
-
-    const capabilityProbe = yield* probeGeminiCapabilities({
-      binaryPath: executable,
-      cwd: OS.homedir(),
-    }).pipe(Effect.result);
-
-    if (Result.isFailure(capabilityProbe)) {
-      const error = capabilityProbe.failure;
-      return {
-        provider: GEMINI_PROVIDER,
-        status: "warning" as const,
-        available: true,
-        authStatus: "unknown" as const,
-        version: parsedVersion,
-        checkedAt,
-        message:
-          error instanceof Error
-            ? `Could not verify Gemini authentication status: ${error.message}.`
-            : "Could not verify Gemini authentication status.",
-      };
-    }
-
-    const parsed = normalizeGeminiCapabilityProbeResult(capabilityProbe.success);
-    return {
-      provider: GEMINI_PROVIDER,
-      status: parsed.status,
-      available: true,
-      authStatus: parsed.auth.status,
-      version: parsedVersion,
-      checkedAt,
-      ...(parsed.message ? { message: parsed.message } : {}),
-    } satisfies ServerProviderStatus;
-  });
-
-export const checkGeminiProviderStatus = makeCheckGeminiProviderStatus();
 
 // ── Grok health check ───────────────────────────────────────────────
 
@@ -1752,7 +1624,6 @@ export function providerStatusesEqual(
       status.authStatus === next.authStatus &&
       (status.authType ?? null) === (next.authType ?? null) &&
       (status.authLabel ?? null) === (next.authLabel ?? null) &&
-      status.voiceTranscriptionAvailable === next.voiceTranscriptionAvailable &&
       (status.version ?? null) === (next.version ?? null) &&
       (status.message ?? null) === (next.message ?? null) &&
       JSON.stringify(comparableProviderVersionAdvisory(status.versionAdvisory)) ===
@@ -1984,8 +1855,6 @@ export const ProviderHealthLive = Layer.effect(
           return settings.providers.claudeAgent.binaryPath;
         case "cursor":
           return settings.providers.cursor.binaryPath;
-        case "gemini":
-          return settings.providers.gemini.binaryPath;
         case "grok":
           return settings.providers.grok.binaryPath;
         case "kilo":
@@ -2173,11 +2042,6 @@ export const ProviderHealthLive = Layer.effect(
                 settings,
                 CURSOR_PROVIDER,
                 makeCheckCursorProviderStatus(settings.providers.cursor.binaryPath),
-              ),
-              checkProviderWhenEnabled(
-                settings,
-                GEMINI_PROVIDER,
-                makeCheckGeminiProviderStatus(settings.providers.gemini.binaryPath),
               ),
               checkProviderWhenEnabled(
                 settings,

@@ -14,7 +14,6 @@ import {
   FolderOpenIcon,
   GitMergedSimpleIcon,
   GitPullRequestIcon,
-  KanbanIcon,
   type LucideIcon,
   NewThreadIcon,
   PencilIcon,
@@ -407,7 +406,6 @@ const DebugFeatureFlagsMenu = import.meta.env.DEV
 
 type ProjectContextMenuId =
   | "open-in-finder"
-  | "open-in-kanban"
   | "copy-path"
   | "start-dev"
   | "stop-dev"
@@ -1344,7 +1342,6 @@ export default function Sidebar() {
   });
   const isOnWorkspace = pathname.startsWith("/workspace");
   const isOnStudioRoute = pathname.startsWith("/studio");
-  const isOnKanban = pathname.startsWith("/kanban");
   const isOnAutomations = pathname.startsWith("/automations");
   // Lightweight read of automations to drive the sidebar attention badge. Shares the
   // ["automations"] query cache with the Automations route (and its live stream updates).
@@ -3978,10 +3975,6 @@ export default function Sidebar() {
                 : "An unknown error occurred opening the folder.",
           });
         }
-        return;
-      }
-      if (clicked === "open-in-kanban") {
-        void navigate({ to: "/kanban/$projectId", params: { projectId } });
         return;
       }
       if (clicked === "copy-path") {
@@ -6671,14 +6664,6 @@ export default function Sidebar() {
                       shortcutLabel={searchShortcutLabel}
                     />
                     <SidebarPrimaryAction
-                      icon={KanbanIcon}
-                      label="Kanban"
-                      active={isOnKanban}
-                      onClick={() => {
-                        void navigate({ to: "/kanban" });
-                      }}
-                    />
-                    <SidebarPrimaryAction
                       icon={ClockIcon}
                       label="Automations"
                       active={isOnAutomations}
@@ -7218,18 +7203,6 @@ export default function Sidebar() {
               >
                 <ProjectContextMenuIcon icon={FolderOpenIcon} />
                 <span>Open in Finder</span>
-              </MenuItem>
-              <MenuItem
-                className={PROJECT_CONTEXT_MENU_ITEM_CLASS_NAME}
-                onClick={() =>
-                  void handleProjectContextMenuAction(
-                    projectContextMenuState.projectId,
-                    "open-in-kanban",
-                  )
-                }
-              >
-                <ProjectContextMenuIcon icon={KanbanIcon} />
-                <span>Open in Kanban</span>
               </MenuItem>
               <MenuItem
                 className={PROJECT_CONTEXT_MENU_ITEM_CLASS_NAME}

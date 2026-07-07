@@ -201,7 +201,7 @@ describe("syncShellEnvironment", () => {
     const readWindowsEnvironment = vi.fn(() => ({
       PATH: "C:\\Users\\ramar\\.local\\bin",
       CLAUDE_CONFIG_DIR: "C:\\Users\\ramar\\.config\\claude",
-      GEMINI_API_KEY: "from-registry",
+      GROK_API_KEY: "from-registry",
     }));
 
     syncShellEnvironment(env, {
@@ -211,7 +211,7 @@ describe("syncShellEnvironment", () => {
 
     expect(env.PATH).toBe("C:\\Users\\ramar\\.local\\bin;C:\\Windows\\system32");
     expect(env.CLAUDE_CONFIG_DIR).toBe("C:\\already\\set");
-    expect(env.GEMINI_API_KEY).toBe("from-registry");
+    expect(env.GROK_API_KEY).toBe("from-registry");
   });
 
   it("logs a warning and leaves the environment intact when the Windows reader throws", () => {

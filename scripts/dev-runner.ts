@@ -132,6 +132,7 @@ interface CreateDevRunnerEnvInput {
   readonly host: string | undefined;
   readonly port: number | undefined;
   readonly devUrl: URL | undefined;
+  readonly stateNamespace: string | undefined;
 }
 
 export function createDevRunnerEnv({
@@ -147,6 +148,7 @@ export function createDevRunnerEnv({
   host,
   port,
   devUrl,
+  stateNamespace,
 }: CreateDevRunnerEnvInput): Effect.Effect<NodeJS.ProcessEnv, never, Path.Path> {
   return Effect.gen(function* () {
     const serverPort = port ?? BASE_SERVER_PORT + serverOffset;
@@ -167,6 +169,13 @@ export function createDevRunnerEnv({
 
     if (host !== undefined) {
       output.T3CODE_HOST = host;
+    }
+
+    const trimmedStateNamespace = stateNamespace?.trim();
+    if (trimmedStateNamespace) {
+      output.SYNARA_STATE_NAMESPACE = trimmedStateNamespace;
+    } else {
+      delete output.SYNARA_STATE_NAMESPACE;
     }
 
     if (authToken !== undefined) {
@@ -349,6 +358,7 @@ interface DevRunnerCliInput {
   readonly host: string | undefined;
   readonly port: number | undefined;
   readonly devUrl: URL | undefined;
+  readonly stateNamespace: string | undefined;
   readonly dryRun: boolean;
   readonly turboArgs: ReadonlyArray<string>;
 }
@@ -435,6 +445,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       host: input.host,
       port: input.port,
       devUrl: input.devUrl,
+      stateNamespace: input.stateNamespace,
     });
 
     const selectionSuffix =
@@ -528,6 +539,13 @@ const devRunnerCli = Command.make("dev-runner", {
     Flag.withSchema(Schema.URLFromString),
     Flag.withDescription("Web dev URL override (forwards to VITE_DEV_SERVER_URL)."),
     Flag.withFallbackConfig(optionalUrlConfig("VITE_DEV_SERVER_URL")),
+  ),
+  stateNamespace: Flag.string("state-namespace").pipe(
+    Flag.withDescription(
+      "State-dir namespace under the home dir (forwards to SYNARA_STATE_NAMESPACE). " +
+        "Use `userdata` to share the production desktop state instead of the isolated `dev` namespace.",
+    ),
+    Flag.withFallbackConfig(optionalStringConfig("SYNARA_STATE_NAMESPACE")),
   ),
   dryRun: Flag.boolean("dry-run").pipe(
     Flag.withDescription("Resolve mode/ports/env and print, but do not spawn turbo."),

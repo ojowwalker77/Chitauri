@@ -125,28 +125,9 @@ export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
     whenAst: whenCreationAllowed,
   },
   {
-    command: "chat.newGemini",
-    shortcut: commandShortcut("g", { altKey: true }),
-    whenAst: whenCreationAllowed,
-  },
-  {
     command: "chat.split",
     shortcut: commandShortcut("\\"),
     whenAst: whenCreationAllowed,
-  },
-  // Installed-app only (Electron / standalone PWA). Browsers reserve Ctrl+Tab and
-  // Ctrl+Shift+Tab for tab switching and won't deliver them to the page, so the
-  // recent-view switcher does not open in a normal browser tab. Uses literal Ctrl
-  // (not mod) on purpose so it stays Ctrl+Tab on macOS too, matching Arc/Helium.
-  // This intentionally ignores terminal focus; the chat route captures the chord
-  // before xterm can pass it through to the shell.
-  {
-    command: "view.recent.next",
-    shortcut: commandShortcut("tab", { ctrlKey: true, modKey: false }),
-  },
-  {
-    command: "view.recent.previous",
-    shortcut: commandShortcut("tab", { ctrlKey: true, shiftKey: true, modKey: false }),
   },
   {
     command: "modelPicker.toggle",
@@ -691,14 +672,6 @@ export function isChatNewCursorShortcut(
   options?: ShortcutMatchOptions,
 ): boolean {
   return matchesCommandShortcut(event, keybindings, "chat.newCursor", options);
-}
-
-export function isChatNewGeminiShortcut(
-  event: ShortcutEventLike,
-  keybindings: ResolvedKeybindingsConfig,
-  options?: ShortcutMatchOptions,
-): boolean {
-  return matchesCommandShortcut(event, keybindings, "chat.newGemini", options);
 }
 
 export function isOpenFavoriteEditorShortcut(

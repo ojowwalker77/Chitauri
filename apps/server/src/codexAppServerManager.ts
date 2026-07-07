@@ -35,8 +35,6 @@ import {
   type ProviderTurnStartResult,
   RuntimeMode,
   ProviderInteractionMode,
-  type ServerVoiceTranscriptionInput,
-  type ServerVoiceTranscriptionResult,
 } from "@t3tools/contracts";
 import { getModelSelectionBooleanOptionValue, normalizeModelSlug } from "@t3tools/shared/model";
 import { prepareWindowsSafeProcess } from "@t3tools/shared/windowsProcess";
@@ -51,7 +49,6 @@ import { isNonFatalCodexErrorMessage } from "./codexErrorClassification.ts";
 import { buildCodexProcessEnv } from "./codexProcessEnv.ts";
 import { ensureIsolatedScratchWorkspace } from "./scratchWorkspaces.ts";
 import { createLogger } from "./logger";
-import { transcribeVoiceWithChatGptSession } from "./voiceTranscription.ts";
 
 const log = createLogger("codex");
 
@@ -178,11 +175,6 @@ interface CodexAccountSnapshot {
   readonly type: "apiKey" | "chatgpt" | "unknown";
   readonly planType: CodexPlanType | null;
   readonly sparkEnabled: boolean;
-}
-
-interface CodexVoiceTranscriptionAuthContext {
-  readonly authMethod: "chatgpt" | "chatgptAuthTokens";
-  readonly token: string;
 }
 
 export interface CodexAppServerSendTurnInput {
@@ -1862,20 +1854,6 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     return result;
   }
 
-  async transcribeVoice(
-    input: ServerVoiceTranscriptionInput,
-  ): Promise<ServerVoiceTranscriptionResult> {
-    return transcribeVoiceWithChatGptSession({
-      request: input,
-      resolveAuth: (refreshToken) =>
-        this.resolveVoiceTranscriptionAuth({
-          cwd: input.cwd,
-          ...(input.threadId ? { threadId: input.threadId } : {}),
-          refreshToken,
-        }),
-    });
-  }
-
   getComposerCapabilities(): ProviderComposerCapabilities {
     return {
       provider: "codex",
@@ -1938,44 +1916,6 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       return firstActive;
     }
     return this.getOrCreateDiscoverySession(process.cwd());
-  }
-
-  private async resolveVoiceTranscriptionAuth(input: {
-    readonly cwd?: string;
-    readonly threadId?: string;
-    readonly refreshToken: boolean;
-  }): Promise<CodexVoiceTranscriptionAuthContext> {
-    // Voice transcription should always resolve auth from a fresh discovery context
-    // instead of reusing a possibly stale thread-bound session token.
-    const context = await this.getOrCreateDiscoverySession(input.cwd?.trim() || process.cwd());
-    const readAuthStatus = async (refreshToken: boolean) => {
-      const response = await this.sendRequest<Record<string, unknown>>(context, "getAuthStatus", {
-        includeToken: true,
-        refreshToken,
-      });
-      const authMethod = this.readString(response, "authMethod");
-      return {
-        authMethod,
-        token: this.readString(response, "authToken"),
-      };
-    };
-
-    let { authMethod, token } = await readAuthStatus(input.refreshToken);
-    if (!token && !input.refreshToken) {
-      ({ authMethod, token } = await readAuthStatus(true));
-    }
-
-    if (!token) {
-      throw new Error("No ChatGPT session token is available. Sign in to ChatGPT in Codex.");
-    }
-    if (authMethod !== "chatgpt" && authMethod !== "chatgptAuthTokens") {
-      throw new Error("Voice transcription requires a ChatGPT-authenticated Codex session.");
-    }
-
-    return {
-      authMethod,
-      token,
-    };
   }
 
   private async getOrCreateDiscoverySession(cwd: string): Promise<CodexSessionContext> {

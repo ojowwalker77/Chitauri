@@ -96,24 +96,9 @@ const AVAILABLE_NOW_DEFINITIONS: readonly ShortcutDefinition[] = [
     description: "Start a fresh thread with Cursor selected.",
   },
   {
-    command: "chat.newGemini",
-    label: "New Gemini thread",
-    description: "Start a fresh thread with Gemini selected.",
-  },
-  {
     command: "chat.split",
     label: "Split chat",
     description: "Open the current conversation in a second pane.",
-  },
-  {
-    command: "view.recent.previous",
-    label: "Previous recent view",
-    description: "Cycle backward through recently opened primary views.",
-  },
-  {
-    command: "view.recent.next",
-    label: "Next recent view",
-    description: "Cycle forward through recently opened primary views.",
   },
   {
     command: "modelPicker.toggle",

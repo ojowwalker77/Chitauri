@@ -324,7 +324,6 @@ const HOME_ORIGIN_ORDER = [
   "codex",
   "claude",
   "cursor",
-  "gemini",
   "grok",
   "kilo",
   "opencode",
@@ -401,10 +400,6 @@ const SKILL_ORIGIN_ROOTS = {
     ],
     projectRootNames: [".cursor"],
   },
-  gemini: {
-    homeRoots: (input) => [nodePath.join(input.homeDir, ".gemini", "skills")],
-    projectRootNames: [".gemini"],
-  },
   grok: {
     homeRoots: (input) => [nodePath.join(input.homeDir, ".grok", "skills")],
     projectRootNames: [".grok"],
@@ -431,7 +426,6 @@ const PROVIDER_SKILL_ORIGIN_PREFERENCES = {
   codex: ["codex", "agents"],
   claudeAgent: ["claude"],
   cursor: ["cursor", "agents", "claude", "codex"],
-  gemini: ["agents", "gemini"],
   grok: ["grok", "claude", "agents"],
   kilo: ["kilo", "agents", "claude"],
   opencode: ["opencode", "claude", "agents"],

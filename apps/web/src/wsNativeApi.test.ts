@@ -295,7 +295,6 @@ describe("wsNativeApi", () => {
           codex: { enabled: true, binaryPath: "codex", homePath: "", customModels: [] },
           claudeAgent: { enabled: true, binaryPath: "claude", launchArgs: "", customModels: [] },
           cursor: { enabled: false, binaryPath: "agent", apiEndpoint: "", customModels: [] },
-          gemini: { enabled: true, binaryPath: "gemini", customModels: [] },
           grok: { enabled: true, binaryPath: "grok", customModels: [] },
           kilo: {
             enabled: true,
@@ -773,43 +772,6 @@ describe("wsNativeApi", () => {
     expect(showContextMenuFallbackMock).toHaveBeenCalledWith(
       [{ id: "delete", label: "Delete", destructive: true }],
       { x: 20, y: 30 },
-    );
-  });
-
-  it("uses the desktop voice bridge when available", async () => {
-    const transcribeVoice = vi.fn().mockResolvedValue({ text: "hello" });
-    Object.defineProperty(getWindowForTest(), "desktopBridge", {
-      configurable: true,
-      writable: true,
-      value: {
-        server: {
-          transcribeVoice,
-        },
-      },
-    });
-
-    const { createWsNativeApi } = await import("./wsNativeApi");
-    const api = createWsNativeApi();
-    await api.server.transcribeVoice({
-      provider: "codex",
-      cwd: "/repo",
-      audioBase64: "UklGRgAAAAAAAAAAAAAAAAAAAAA=",
-      mimeType: "audio/wav",
-      sampleRateHz: 24_000,
-      durationMs: 1000,
-    });
-
-    expect(transcribeVoice).toHaveBeenCalledWith({
-      provider: "codex",
-      cwd: "/repo",
-      audioBase64: "UklGRgAAAAAAAAAAAAAAAAAAAAA=",
-      mimeType: "audio/wav",
-      sampleRateHz: 24_000,
-      durationMs: 1000,
-    });
-    expect(requestMock).not.toHaveBeenCalledWith(
-      WS_METHODS.serverTranscribeVoice,
-      expect.anything(),
     );
   });
 });

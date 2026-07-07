@@ -1,6 +1,6 @@
 // FILE: useProviderStatusRefresh.ts
 // Purpose: Shared provider-status refresh hooks — focus/periodic version checks plus an
-//          imperative refresh callback for UI affordances (voice auth retry, banners).
+//          imperative refresh callback for UI affordances (banners, auth retry).
 // Layer: Web hooks
 // Exports: useProviderStatusRefresh, useRefreshProviderStatusesNow
 

@@ -104,13 +104,7 @@ export const DEFAULT_KEYBINDINGS: ReadonlyArray<KeybindingRule> = [
   { key: "mod+alt+c", command: "chat.newClaude", when: "!terminalFocus || isMac" },
   { key: "mod+alt+x", command: "chat.newCodex", when: "!terminalFocus || isMac" },
   { key: "mod+alt+r", command: "chat.newCursor", when: "!terminalFocus || isMac" },
-  { key: "mod+alt+g", command: "chat.newGemini", when: "!terminalFocus || isMac" },
   { key: "mod+\\", command: "chat.split", when: "!terminalFocus || isMac" },
-  // Recent-view switcher (Ctrl+Tab) is an installed-app feature only: Electron and
-  // standalone PWA windows have no tab strip, so the chord reaches the page. It remains
-  // app-level even with terminal focus; the web route captures it before xterm input.
-  { key: "ctrl+tab", command: "view.recent.next" },
-  { key: "ctrl+shift+tab", command: "view.recent.previous" },
   { key: "mod+1", command: "thread.jump.1", when: "!terminalFocus && !terminalWorkspaceOpen" },
   { key: "mod+2", command: "thread.jump.2", when: "!terminalFocus && !terminalWorkspaceOpen" },
   { key: "mod+3", command: "thread.jump.3", when: "!terminalFocus && !terminalWorkspaceOpen" },
@@ -569,12 +563,6 @@ const LEGACY_KEYBINDING_COMMAND_ALIASES = {
 // Retired picker jump commands have no current equivalent; dropping them avoids
 // rebinding old number-key shortcuts to a different action.
 const RETIRED_LEGACY_KEYBINDING_COMMAND_PATTERN = /^(?:composer\.)?modelPicker\.jump\.[1-9]$/;
-const OUTDATED_RECENT_VIEW_TERMINAL_GUARD = "!terminalFocus";
-const RECENT_VIEW_SHORTCUT_BY_COMMAND: Partial<Record<KeybindingRule["command"], string>> = {
-  "view.recent.next": "ctrl+tab",
-  "view.recent.previous": "ctrl+shift+tab",
-};
-
 // New-surface creation commands shipped guarded by a bare `!terminalFocus`. On macOS
 // `mod` is Cmd and xterm never forwards a Cmd-chord to the PTY, so that guard silently
 // dropped "new chat/terminal" chords whenever the terminal had focus. The relaxed guard
@@ -591,7 +579,6 @@ const CREATION_COMMANDS_WITH_TERMINAL_ESCAPE = new Set<KeybindingRule["command"]
   "chat.newClaude",
   "chat.newCodex",
   "chat.newCursor",
-  "chat.newGemini",
   "chat.split",
 ]);
 
@@ -628,31 +615,6 @@ function normalizeLegacyKeybindingEntry(entry: unknown): {
         LEGACY_KEYBINDING_COMMAND_ALIASES[
           command as keyof typeof LEGACY_KEYBINDING_COMMAND_ALIASES
         ],
-    },
-    migrated: true,
-  };
-}
-
-// Update exact old recent-view defaults so existing configs gain terminal-focus support
-// (drop the `!terminalFocus` guard). Per-rule because it never changes the key, so it
-// cannot collide with a sibling entry.
-function migrateOutdatedDefaultKeybindingRule(rule: KeybindingRule): {
-  readonly rule: KeybindingRule;
-  readonly migrated: boolean;
-} {
-  const recentViewShortcut = RECENT_VIEW_SHORTCUT_BY_COMMAND[rule.command];
-  if (
-    recentViewShortcut === undefined ||
-    rule.key !== recentViewShortcut ||
-    rule.when !== OUTDATED_RECENT_VIEW_TERMINAL_GUARD
-  ) {
-    return { rule, migrated: false };
-  }
-
-  return {
-    rule: {
-      key: rule.key,
-      command: rule.command,
     },
     migrated: true,
   };
@@ -921,11 +883,7 @@ const makeKeybindings = Effect.gen(function* () {
         });
         continue;
       }
-      const migratedDefaultRule = migrateOutdatedDefaultKeybindingRule(decodedRule.value);
-      if (migratedDefaultRule.migrated) {
-        migratedDefaultRuleCount += 1;
-      }
-      keybindings.push(migratedDefaultRule.rule);
+      keybindings.push(decodedRule.value);
     }
 
     const relaxed = relaxCreationCommandTerminalGuards(keybindings);

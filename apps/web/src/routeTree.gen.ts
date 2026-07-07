@@ -11,17 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ChatRouteImport } from './routes/_chat'
 import { Route as ChatIndexRouteImport } from './routes/_chat.index'
-import { Route as ChatWorldcupRouteImport } from './routes/_chat.worldcup'
 import { Route as ChatSettingsRouteImport } from './routes/_chat.settings'
 import { Route as ChatPluginsRouteImport } from './routes/_chat.plugins'
 import { Route as ChatAutomationsRouteImport } from './routes/_chat.automations'
 import { Route as ChatThreadIdRouteImport } from './routes/_chat.$threadId'
 import { Route as ChatWorkspaceIndexRouteImport } from './routes/_chat.workspace.index'
 import { Route as ChatStudioIndexRouteImport } from './routes/_chat.studio.index'
-import { Route as ChatKanbanIndexRouteImport } from './routes/_chat.kanban.index'
 import { Route as ChatAutomationsIndexRouteImport } from './routes/_chat.automations.index'
 import { Route as ChatWorkspaceWorkspaceIdRouteImport } from './routes/_chat.workspace.$workspaceId'
-import { Route as ChatKanbanProjectIdRouteImport } from './routes/_chat.kanban.$projectId'
 import { Route as ChatAutomationsAutomationIdRouteImport } from './routes/_chat.automations.$automationId'
 
 const ChatRoute = ChatRouteImport.update({
@@ -31,11 +28,6 @@ const ChatRoute = ChatRouteImport.update({
 const ChatIndexRoute = ChatIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => ChatRoute,
-} as any)
-const ChatWorldcupRoute = ChatWorldcupRouteImport.update({
-  id: '/worldcup',
-  path: '/worldcup',
   getParentRoute: () => ChatRoute,
 } as any)
 const ChatSettingsRoute = ChatSettingsRouteImport.update({
@@ -68,11 +60,6 @@ const ChatStudioIndexRoute = ChatStudioIndexRouteImport.update({
   path: '/studio/',
   getParentRoute: () => ChatRoute,
 } as any)
-const ChatKanbanIndexRoute = ChatKanbanIndexRouteImport.update({
-  id: '/kanban/',
-  path: '/kanban/',
-  getParentRoute: () => ChatRoute,
-} as any)
 const ChatAutomationsIndexRoute = ChatAutomationsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -84,11 +71,6 @@ const ChatWorkspaceWorkspaceIdRoute =
     path: '/workspace/$workspaceId',
     getParentRoute: () => ChatRoute,
   } as any)
-const ChatKanbanProjectIdRoute = ChatKanbanProjectIdRouteImport.update({
-  id: '/kanban/$projectId',
-  path: '/kanban/$projectId',
-  getParentRoute: () => ChatRoute,
-} as any)
 const ChatAutomationsAutomationIdRoute =
   ChatAutomationsAutomationIdRouteImport.update({
     id: '/$automationId',
@@ -102,12 +84,9 @@ export interface FileRoutesByFullPath {
   '/automations': typeof ChatAutomationsRouteWithChildren
   '/plugins': typeof ChatPluginsRoute
   '/settings': typeof ChatSettingsRoute
-  '/worldcup': typeof ChatWorldcupRoute
   '/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
-  '/kanban/$projectId': typeof ChatKanbanProjectIdRoute
   '/workspace/$workspaceId': typeof ChatWorkspaceWorkspaceIdRoute
   '/automations/': typeof ChatAutomationsIndexRoute
-  '/kanban/': typeof ChatKanbanIndexRoute
   '/studio/': typeof ChatStudioIndexRoute
   '/workspace/': typeof ChatWorkspaceIndexRoute
 }
@@ -115,13 +94,10 @@ export interface FileRoutesByTo {
   '/$threadId': typeof ChatThreadIdRoute
   '/plugins': typeof ChatPluginsRoute
   '/settings': typeof ChatSettingsRoute
-  '/worldcup': typeof ChatWorldcupRoute
   '/': typeof ChatIndexRoute
   '/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
-  '/kanban/$projectId': typeof ChatKanbanProjectIdRoute
   '/workspace/$workspaceId': typeof ChatWorkspaceWorkspaceIdRoute
   '/automations': typeof ChatAutomationsIndexRoute
-  '/kanban': typeof ChatKanbanIndexRoute
   '/studio': typeof ChatStudioIndexRoute
   '/workspace': typeof ChatWorkspaceIndexRoute
 }
@@ -132,13 +108,10 @@ export interface FileRoutesById {
   '/_chat/automations': typeof ChatAutomationsRouteWithChildren
   '/_chat/plugins': typeof ChatPluginsRoute
   '/_chat/settings': typeof ChatSettingsRoute
-  '/_chat/worldcup': typeof ChatWorldcupRoute
   '/_chat/': typeof ChatIndexRoute
   '/_chat/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
-  '/_chat/kanban/$projectId': typeof ChatKanbanProjectIdRoute
   '/_chat/workspace/$workspaceId': typeof ChatWorkspaceWorkspaceIdRoute
   '/_chat/automations/': typeof ChatAutomationsIndexRoute
-  '/_chat/kanban/': typeof ChatKanbanIndexRoute
   '/_chat/studio/': typeof ChatStudioIndexRoute
   '/_chat/workspace/': typeof ChatWorkspaceIndexRoute
 }
@@ -150,12 +123,9 @@ export interface FileRouteTypes {
     | '/automations'
     | '/plugins'
     | '/settings'
-    | '/worldcup'
     | '/automations/$automationId'
-    | '/kanban/$projectId'
     | '/workspace/$workspaceId'
     | '/automations/'
-    | '/kanban/'
     | '/studio/'
     | '/workspace/'
   fileRoutesByTo: FileRoutesByTo
@@ -163,13 +133,10 @@ export interface FileRouteTypes {
     | '/$threadId'
     | '/plugins'
     | '/settings'
-    | '/worldcup'
     | '/'
     | '/automations/$automationId'
-    | '/kanban/$projectId'
     | '/workspace/$workspaceId'
     | '/automations'
-    | '/kanban'
     | '/studio'
     | '/workspace'
   id:
@@ -179,13 +146,10 @@ export interface FileRouteTypes {
     | '/_chat/automations'
     | '/_chat/plugins'
     | '/_chat/settings'
-    | '/_chat/worldcup'
     | '/_chat/'
     | '/_chat/automations/$automationId'
-    | '/_chat/kanban/$projectId'
     | '/_chat/workspace/$workspaceId'
     | '/_chat/automations/'
-    | '/_chat/kanban/'
     | '/_chat/studio/'
     | '/_chat/workspace/'
   fileRoutesById: FileRoutesById
@@ -208,13 +172,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof ChatIndexRouteImport
-      parentRoute: typeof ChatRoute
-    }
-    '/_chat/worldcup': {
-      id: '/_chat/worldcup'
-      path: '/worldcup'
-      fullPath: '/worldcup'
-      preLoaderRoute: typeof ChatWorldcupRouteImport
       parentRoute: typeof ChatRoute
     }
     '/_chat/settings': {
@@ -259,13 +216,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatStudioIndexRouteImport
       parentRoute: typeof ChatRoute
     }
-    '/_chat/kanban/': {
-      id: '/_chat/kanban/'
-      path: '/kanban'
-      fullPath: '/kanban/'
-      preLoaderRoute: typeof ChatKanbanIndexRouteImport
-      parentRoute: typeof ChatRoute
-    }
     '/_chat/automations/': {
       id: '/_chat/automations/'
       path: '/'
@@ -278,13 +228,6 @@ declare module '@tanstack/react-router' {
       path: '/workspace/$workspaceId'
       fullPath: '/workspace/$workspaceId'
       preLoaderRoute: typeof ChatWorkspaceWorkspaceIdRouteImport
-      parentRoute: typeof ChatRoute
-    }
-    '/_chat/kanban/$projectId': {
-      id: '/_chat/kanban/$projectId'
-      path: '/kanban/$projectId'
-      fullPath: '/kanban/$projectId'
-      preLoaderRoute: typeof ChatKanbanProjectIdRouteImport
       parentRoute: typeof ChatRoute
     }
     '/_chat/automations/$automationId': {
@@ -316,11 +259,8 @@ interface ChatRouteChildren {
   ChatAutomationsRoute: typeof ChatAutomationsRouteWithChildren
   ChatPluginsRoute: typeof ChatPluginsRoute
   ChatSettingsRoute: typeof ChatSettingsRoute
-  ChatWorldcupRoute: typeof ChatWorldcupRoute
   ChatIndexRoute: typeof ChatIndexRoute
-  ChatKanbanProjectIdRoute: typeof ChatKanbanProjectIdRoute
   ChatWorkspaceWorkspaceIdRoute: typeof ChatWorkspaceWorkspaceIdRoute
-  ChatKanbanIndexRoute: typeof ChatKanbanIndexRoute
   ChatStudioIndexRoute: typeof ChatStudioIndexRoute
   ChatWorkspaceIndexRoute: typeof ChatWorkspaceIndexRoute
 }
@@ -330,11 +270,8 @@ const ChatRouteChildren: ChatRouteChildren = {
   ChatAutomationsRoute: ChatAutomationsRouteWithChildren,
   ChatPluginsRoute: ChatPluginsRoute,
   ChatSettingsRoute: ChatSettingsRoute,
-  ChatWorldcupRoute: ChatWorldcupRoute,
   ChatIndexRoute: ChatIndexRoute,
-  ChatKanbanProjectIdRoute: ChatKanbanProjectIdRoute,
   ChatWorkspaceWorkspaceIdRoute: ChatWorkspaceWorkspaceIdRoute,
-  ChatKanbanIndexRoute: ChatKanbanIndexRoute,
   ChatStudioIndexRoute: ChatStudioIndexRoute,
   ChatWorkspaceIndexRoute: ChatWorkspaceIndexRoute,
 }

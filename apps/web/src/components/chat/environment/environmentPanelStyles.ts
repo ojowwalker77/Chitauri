@@ -1,10 +1,10 @@
 // FILE: environmentPanelStyles.ts
-// Purpose: Shared Environment panel typography tokens. Section labels, the panel title,
-//          and muted body copy (e.g. recap) all reuse the composer placeholder color so
-//          secondary chrome reads consistently across the chat shell.
+// Purpose: Shared Environment panel typography tokens. Section labels and the panel
+//          title reuse the composer placeholder color so secondary chrome reads
+//          consistently; the recap body uses a readable secondary tone since it is
+//          content the user actually reads.
 // Layer: Environment panel design tokens
 
-import { COMPACT_CHAT_MARKDOWN_COZY_CLASS_NAME } from "~/components/chatMarkdownSpacing";
 import {
   COMPOSER_EDITOR_TYPOGRAPHY_CLASS_NAME,
   COMPOSER_PLACEHOLDER_TEXT_CLASS_NAME,
@@ -42,17 +42,18 @@ export const ENVIRONMENT_PANEL_SECTION_LABEL_CLASS_NAME = cn(
   "px-2 py-1",
 );
 
-/** Muted secondary copy such as the recap body. */
-export const ENVIRONMENT_PANEL_MUTED_BODY_CLASS_NAME = cn(
-  COMPOSER_EDITOR_TYPOGRAPHY_CLASS_NAME,
-  COMPOSER_PLACEHOLDER_TEXT_CLASS_NAME,
-);
-
-/** Recap markdown — same placeholder tone with markdown-specific spacing overrides. */
+/**
+ * Recap markdown — the recap is real content the user reads, not placeholder
+ * chrome, so it uses the standard readable secondary tone (`text-muted-foreground`)
+ * instead of the faint placeholder color, with strong text lifted to full foreground.
+ */
 export const ENVIRONMENT_PANEL_RECAP_MARKDOWN_CLASS_NAME = cn(
-  ENVIRONMENT_PANEL_MUTED_BODY_CLASS_NAME,
-  `!${COMPOSER_PLACEHOLDER_TEXT_CLASS_NAME}`,
-  "[&_strong]:font-medium [&_strong]:text-muted-foreground/40",
-  "[&_:not(pre)>code]:!text-muted-foreground/45",
-  COMPACT_CHAT_MARKDOWN_COZY_CLASS_NAME,
+  COMPOSER_EDITOR_TYPOGRAPHY_CLASS_NAME,
+  "!text-muted-foreground",
+  "[&_strong]:font-medium [&_strong]:text-foreground",
+  "[&_:not(pre)>code]:!text-muted-foreground",
+  "[&_p]:my-1.5 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0",
+  "[&_ul]:my-1.5 [&_ol]:my-1.5",
+  "[&_li]:my-0.5",
+  "[&_pre]:my-2",
 );
