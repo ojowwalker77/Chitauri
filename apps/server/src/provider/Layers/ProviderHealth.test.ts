@@ -2,7 +2,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import type { ServerProviderStatus } from "@t3tools/contracts";
 import { DEFAULT_SERVER_SETTINGS, ServerProviderUpdateError } from "@t3tools/contracts";
 import { describe, it, assert } from "@effect/vitest";
-import { Effect, Fiber, FileSystem, Layer, Path, Sink, Stream } from "effect";
+import { Effect, FileSystem, Layer, Path, Sink, Stream } from "effect";
 import * as PlatformError from "effect/PlatformError";
 import { ChildProcessSpawner } from "effect/unstable/process";
 
@@ -286,7 +286,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       }),
     );
 
-    it.effect("publishes ready status when a disabled provider is re-enabled", () =>
+    it.effect("projects cached ready status when a disabled provider is re-enabled", () =>
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
@@ -302,11 +302,13 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           provider: cachedReadyCodexStatus,
         });
 
+        let spawnCount = 0;
         const layer = ProviderHealthLive.pipe(
           Layer.provideMerge(ServerSettingsService.layerTest(allProvidersDisabledSettings)),
           Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
           Layer.provideMerge(
             mockSpawnerLayer((args) => {
+              spawnCount += 1;
               const joined = args.join(" ");
               if (joined === "--version") {
                 return { stdout: "codex 1.0.0\n", stderr: "", code: 0 };
@@ -328,17 +330,6 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           assert.strictEqual(disabledCodex?.available, false);
           assert.strictEqual(disabledCodex?.message, "Provider is disabled in Synara settings.");
 
-          const enabledCodexFiber = yield* providerHealth.streamChanges.pipe(
-            Stream.map((statuses) => statuses.find((status) => status.provider === "codex")),
-            Stream.filter(
-              (status): status is ServerProviderStatus =>
-                status !== undefined &&
-                status.available === true &&
-                status.authStatus === "authenticated",
-            ),
-            Stream.runHead,
-            Effect.forkChild,
-          );
           yield* serverSettings.updateSettings({
             providers: {
               codex: {
@@ -347,27 +338,12 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
             },
           });
 
-          const streamedCodex = yield* Fiber.join(enabledCodexFiber).pipe(
-            Effect.timeoutOption(2_000),
-          );
-          assert.strictEqual(streamedCodex._tag, "Some");
-          if (streamedCodex._tag !== "Some") {
-            return;
-          }
-          assert.strictEqual(streamedCodex.value._tag, "Some");
-          if (streamedCodex.value._tag !== "Some") {
-            return;
-          }
-          assert.notStrictEqual(
-            streamedCodex.value.value.message,
-            "Provider is disabled in Synara settings.",
-          );
-
           const currentStatuses = yield* providerHealth.getStatuses;
           const currentCodex = currentStatuses.find((status) => status.provider === "codex");
           assert.strictEqual(currentCodex?.available, true);
           assert.strictEqual(currentCodex?.authStatus, "authenticated");
           assert.notStrictEqual(currentCodex?.message, "Provider is disabled in Synara settings.");
+          assert.strictEqual(spawnCount, 0);
         }).pipe(Effect.provide(layer));
       }),
     );
@@ -397,6 +373,36 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(error.provider, "kilo");
         assert.strictEqual(error.reason, "Provider is disabled in Synara settings.");
       }).pipe(Effect.provide(disabledProviderHealthLayer)),
+    );
+  });
+
+  describe("startup refresh behavior", () => {
+    it.effect("serves cached statuses without spawning provider CLIs on layer startup", () =>
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const baseDir = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "provider-health-no-boot-refresh-",
+        });
+        let spawnCount = 0;
+        const layer = ProviderHealthLive.pipe(
+          Layer.provideMerge(ServerSettingsService.layerTest(DEFAULT_SERVER_SETTINGS)),
+          Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
+          Layer.provideMerge(
+            mockSpawnerLayer(() => {
+              spawnCount += 1;
+              return { stdout: "", stderr: "", code: 0 };
+            }),
+          ),
+        );
+
+        const statuses = yield* Effect.gen(function* () {
+          const providerHealth = yield* ProviderHealth;
+          return yield* providerHealth.getStatuses;
+        }).pipe(Effect.provide(layer));
+
+        assert.deepStrictEqual(statuses, []);
+        assert.strictEqual(spawnCount, 0);
+      }),
     );
   });
 
@@ -1140,6 +1146,249 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         }),
     );
 
+    it.effect("trusts usable Claude OAuth credentials after the SDK probe validates them", () =>
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const homeDir = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "provider-health-claude-auth-fallback-",
+        });
+        const claudeDir = path.join(homeDir, ".claude");
+        yield* fileSystem.makeDirectory(claudeDir, { recursive: true });
+        yield* fileSystem.writeFileString(
+          path.join(claudeDir, ".credentials.json"),
+          JSON.stringify({
+            claudeAiOauth: {
+              accessToken: "expired-access-token",
+              refreshToken: "refresh-token",
+              expiresAt: Date.now() - 60_000,
+              subscriptionType: "max",
+            },
+          }),
+        );
+
+        let sdkProbeCalls = 0;
+        const status = yield* makeCheckClaudeProviderStatus(
+          Effect.sync(() => {
+            sdkProbeCalls += 1;
+            return "max";
+          }),
+          "claude",
+          homeDir,
+        ).pipe(
+          Effect.provide(
+            mockSpawnerLayer((args) => {
+              const joined = args.join(" ");
+              if (joined === "--version") {
+                return { stdout: "2.1.197\n", stderr: "", code: 0 };
+              }
+              if (joined === "auth status")
+                return {
+                  stdout: '{"loggedIn":false,"authMethod":"none","apiProvider":"firstParty"}\n',
+                  stderr: "",
+                  code: 0,
+                };
+              throw new Error(`Unexpected args: ${joined}`);
+            }),
+          ),
+        );
+
+        assert.strictEqual(sdkProbeCalls, 1);
+        assert.strictEqual(status.provider, "claudeAgent");
+        assert.strictEqual(status.status, "ready");
+        assert.strictEqual(status.authStatus, "authenticated");
+        assert.strictEqual(status.authType, "max");
+        assert.strictEqual(status.authLabel, "Claude Max Subscription");
+        assert.strictEqual(status.message, undefined);
+      }),
+    );
+
+    it.effect("does not trust local Claude OAuth token strings without a live SDK validation", () =>
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const homeDir = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "provider-health-claude-auth-fallback-no-probe-",
+        });
+        const claudeDir = path.join(homeDir, ".claude");
+        yield* fileSystem.makeDirectory(claudeDir, { recursive: true });
+        yield* fileSystem.writeFileString(
+          path.join(claudeDir, ".credentials.json"),
+          JSON.stringify({
+            claudeAiOauth: {
+              accessToken: "expired-access-token",
+              refreshToken: "stale-refresh-token",
+              expiresAt: Date.now() - 60_000,
+              subscriptionType: "max",
+            },
+          }),
+        );
+
+        const status = yield* makeCheckClaudeProviderStatus(undefined, "claude", homeDir).pipe(
+          Effect.provide(
+            mockSpawnerLayer((args) => {
+              const joined = args.join(" ");
+              if (joined === "--version") {
+                return { stdout: "2.1.197\n", stderr: "", code: 0 };
+              }
+              if (joined === "auth status")
+                return {
+                  stdout: '{"loggedIn":false,"authMethod":"none","apiProvider":"firstParty"}\n',
+                  stderr: "",
+                  code: 0,
+                };
+              throw new Error(`Unexpected args: ${joined}`);
+            }),
+          ),
+        );
+
+        assert.strictEqual(status.provider, "claudeAgent");
+        assert.strictEqual(status.status, "error");
+        assert.strictEqual(status.authStatus, "unauthenticated");
+        assert.strictEqual(status.authType, undefined);
+        assert.strictEqual(status.authLabel, undefined);
+      }),
+    );
+
+    it.effect(
+      "keeps Claude unauthenticated when auth status includes a textual login failure",
+      () =>
+        Effect.gen(function* () {
+          const fileSystem = yield* FileSystem.FileSystem;
+          const path = yield* Path.Path;
+          const homeDir = yield* fileSystem.makeTempDirectoryScoped({
+            prefix: "provider-health-claude-auth-text-failure-",
+          });
+          const claudeDir = path.join(homeDir, ".claude");
+          yield* fileSystem.makeDirectory(claudeDir, { recursive: true });
+          yield* fileSystem.writeFileString(
+            path.join(claudeDir, ".credentials.json"),
+            JSON.stringify({
+              claudeAiOauth: {
+                accessToken: "expired-access-token",
+                refreshToken: "refresh-token",
+                expiresAt: Date.now() - 60_000,
+                subscriptionType: "max",
+              },
+            }),
+          );
+
+          const status = yield* makeCheckClaudeProviderStatus(undefined, "claude", homeDir).pipe(
+            Effect.provide(
+              mockSpawnerLayer((args) => {
+                const joined = args.join(" ");
+                if (joined === "--version") {
+                  return { stdout: "2.1.197\n", stderr: "", code: 0 };
+                }
+                if (joined === "auth status")
+                  return {
+                    stdout: '{"loggedIn":false,"authMethod":"none","apiProvider":"firstParty"}\n',
+                    stderr: "Not logged in. Please run /login.\n",
+                    code: 0,
+                  };
+                throw new Error(`Unexpected args: ${joined}`);
+              }),
+            ),
+          );
+
+          assert.strictEqual(status.provider, "claudeAgent");
+          assert.strictEqual(status.status, "error");
+          assert.strictEqual(status.authStatus, "unauthenticated");
+          assert.strictEqual(status.authType, undefined);
+          assert.strictEqual(status.authLabel, undefined);
+          assert.match(status.message ?? "", /not authenticated/i);
+        }),
+    );
+
+    it.effect(
+      "re-probes auth status once when a structured false negative has no credential file to rescue it",
+      () =>
+        Effect.gen(function* () {
+          const fileSystem = yield* FileSystem.FileSystem;
+          const homeDir = yield* fileSystem.makeTempDirectoryScoped({
+            prefix: "provider-health-claude-auth-retry-",
+          });
+
+          let authStatusCalls = 0;
+          const status = yield* makeCheckClaudeProviderStatus(undefined, "claude", homeDir, {
+            falseNegativeRetryDelayMs: 0,
+          }).pipe(
+            Effect.provide(
+              mockSpawnerLayer((args) => {
+                const joined = args.join(" ");
+                if (joined === "--version") {
+                  return { stdout: "2.1.197\n", stderr: "", code: 0 };
+                }
+                if (joined === "auth status") {
+                  authStatusCalls += 1;
+                  // First probe loses a refresh-token rotation race; the retry
+                  // observes the settled, rotated token.
+                  return authStatusCalls === 1
+                    ? {
+                        stdout: '{"loggedIn":false,"authMethod":"none"}\n',
+                        stderr: "",
+                        code: 0,
+                      }
+                    : {
+                        stdout:
+                          '{"loggedIn":true,"authMethod":"claude.ai","subscriptionType":"max"}\n',
+                        stderr: "",
+                        code: 0,
+                      };
+                }
+                throw new Error(`Unexpected args: ${joined}`);
+              }),
+            ),
+          );
+
+          assert.strictEqual(authStatusCalls, 2);
+          assert.strictEqual(status.provider, "claudeAgent");
+          assert.strictEqual(status.status, "ready");
+          assert.strictEqual(status.authStatus, "authenticated");
+          assert.strictEqual(status.authType, "max");
+        }),
+    );
+
+    it.effect(
+      "stays unauthenticated when the structured false negative persists across the retry",
+      () =>
+        Effect.gen(function* () {
+          const fileSystem = yield* FileSystem.FileSystem;
+          const homeDir = yield* fileSystem.makeTempDirectoryScoped({
+            prefix: "provider-health-claude-auth-retry-persist-",
+          });
+
+          let authStatusCalls = 0;
+          const status = yield* makeCheckClaudeProviderStatus(undefined, "claude", homeDir, {
+            falseNegativeRetryDelayMs: 0,
+          }).pipe(
+            Effect.provide(
+              mockSpawnerLayer((args) => {
+                const joined = args.join(" ");
+                if (joined === "--version") {
+                  return { stdout: "2.1.197\n", stderr: "", code: 0 };
+                }
+                if (joined === "auth status") {
+                  authStatusCalls += 1;
+                  return {
+                    stdout: '{"loggedIn":false,"authMethod":"none"}\n',
+                    stderr: "",
+                    code: 0,
+                  };
+                }
+                throw new Error(`Unexpected args: ${joined}`);
+              }),
+            ),
+          );
+
+          assert.strictEqual(authStatusCalls, 2);
+          assert.strictEqual(status.provider, "claudeAgent");
+          assert.strictEqual(status.status, "error");
+          assert.strictEqual(status.authStatus, "unauthenticated");
+          assert.match(status.message ?? "", /not authenticated/i);
+        }),
+    );
+
     it.effect("returns unavailable when claude is missing", () =>
       Effect.gen(function* () {
         const status = yield* checkClaudeProviderStatus;
@@ -1550,6 +1799,46 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           }),
         ),
       ),
+    );
+
+    it.effect(
+      "falls back through configured Cursor editors when no agent command is resolved",
+      () =>
+        Effect.gen(function* () {
+          const originalPath = process.env.PATH;
+          yield* Effect.acquireRelease(
+            Effect.sync(() => {
+              process.env.PATH = "";
+            }),
+            () =>
+              Effect.sync(() => {
+                if (originalPath !== undefined) {
+                  process.env.PATH = originalPath;
+                } else {
+                  delete process.env.PATH;
+                }
+              }),
+          );
+          const status = yield* makeCheckCursorProviderStatus("/custom/bin/cursor");
+          assert.strictEqual(status.status, "ready");
+        }).pipe(
+          Effect.provide(
+            mockSpawnerLayer((args, command) => {
+              assert.strictEqual(command, "/custom/bin/cursor");
+              const joined = args.join(" ");
+              if (joined === "agent --version") {
+                return { stdout: "cursor 2026.04.27\n", stderr: "", code: 0 };
+              }
+              if (joined === "agent status") {
+                return { stdout: "Logged in as user@example.com\n", stderr: "", code: 0 };
+              }
+              if (joined === "agent models") {
+                return { stdout: "gpt-5 - GPT-5\n", stderr: "", code: 0 };
+              }
+              throw new Error(`Unexpected args: ${joined}`);
+            }),
+          ),
+        ),
     );
 
     it.effect("returns unavailable when Cursor Agent is missing", () =>

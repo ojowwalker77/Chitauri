@@ -7,6 +7,7 @@ import {
   OrchestrationCheckpointFile,
   OrchestrationProjectShell,
   OrchestrationProposedPlanId,
+  MessageDispatchOrigin,
   OrchestrationReadModel,
   OrchestrationShellSnapshot,
   OrchestrationThreadDetailSnapshot,
@@ -15,6 +16,7 @@ import {
   ThreadMarkers,
   ProjectScript,
   ProjectId,
+  ProjectKind,
   ProviderMentionReference,
   ProviderSkillReference,
   ThreadId,
@@ -85,6 +87,7 @@ const ProjectionThreadMessageDbRowSchema = ProjectionThreadMessage.mapFields(
     skills: Schema.NullOr(Schema.fromJsonString(Schema.Array(ProviderSkillReference))),
     mentions: Schema.NullOr(Schema.fromJsonString(Schema.Array(ProviderMentionReference))),
     dispatchMode: Schema.NullOr(TurnDispatchMode),
+    dispatchOrigin: Schema.NullOr(MessageDispatchOrigin),
   }),
 );
 const ProjectionThreadProposedPlanDbRowSchema = ProjectionThreadProposedPlan;
@@ -151,6 +154,10 @@ const ProjectIdLookupInput = Schema.Struct({
 const ThreadIdLookupInput = Schema.Struct({
   threadId: ThreadId,
 });
+const ThreadMessagesByThreadLookupInput = Schema.Struct({
+  threadId: ThreadId,
+  maxMessages: Schema.NullOr(Schema.Number),
+});
 const SyntheticSubagentParentLookupInput = Schema.Struct({
   threadId: ThreadId,
 });
@@ -165,6 +172,7 @@ const ProjectionThreadIdLookupRowSchema = Schema.Struct({
 const ProjectionThreadCheckpointContextThreadRowSchema = Schema.Struct({
   threadId: ThreadId,
   projectId: ProjectId,
+  projectKind: ProjectKind.pipe(Schema.withDecodingDefault(() => "project")),
   workspaceRoot: Schema.String,
   envMode: ThreadEnvironmentMode,
   worktreePath: Schema.NullOr(Schema.String),
@@ -172,6 +180,7 @@ const ProjectionThreadCheckpointContextThreadRowSchema = Schema.Struct({
 const ProjectionFullThreadDiffContextRowSchema = Schema.Struct({
   threadId: ThreadId,
   projectId: ProjectId,
+  projectKind: ProjectKind.pipe(Schema.withDecodingDefault(() => "project")),
   workspaceRoot: Schema.String,
   envMode: ThreadEnvironmentMode,
   worktreePath: Schema.NullOr(Schema.String),
@@ -321,6 +330,7 @@ function toProjectedMessage(row: ProjectionThreadMessageDbRow): OrchestrationMes
     ...(row.skills !== null ? { skills: row.skills } : {}),
     ...(row.mentions !== null ? { mentions: row.mentions } : {}),
     ...(row.dispatchMode ? { dispatchMode: row.dispatchMode } : {}),
+    ...(row.dispatchOrigin ? { dispatchOrigin: row.dispatchOrigin } : {}),
     turnId: row.turnId,
     streaming: row.isStreaming === 1,
     source: row.source,
@@ -837,6 +847,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           skills_json AS "skills",
           mentions_json AS "mentions",
           dispatch_mode AS "dispatchMode",
+          dispatch_origin AS "dispatchOrigin",
           is_streaming AS "isStreaming",
           source,
           created_at AS "createdAt",
@@ -1218,9 +1229,9 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
   });
 
   const listThreadMessageRowsByThread = SqlSchema.findAll({
-    Request: ThreadIdLookupInput,
+    Request: ThreadMessagesByThreadLookupInput,
     Result: ProjectionThreadMessageDbRowSchema,
-    execute: ({ threadId }) =>
+    execute: ({ threadId, maxMessages }) =>
       sql`
         SELECT
           message_id AS "messageId",
@@ -1232,6 +1243,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           skills_json AS "skills",
           mentions_json AS "mentions",
           dispatch_mode AS "dispatchMode",
+          dispatch_origin AS "dispatchOrigin",
           is_streaming AS "isStreaming",
           source,
           created_at AS "createdAt",
@@ -1247,7 +1259,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           WHERE thread_id = ${threadId}
         )
         WHERE thread_id = ${threadId}
-          AND message_rank <= ${MAX_THREAD_MESSAGES}
+          AND (${maxMessages} IS NULL OR message_rank <= ${maxMessages})
         ORDER BY created_at ASC, message_id ASC
       `,
   });
@@ -1424,6 +1436,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         SELECT
           threads.thread_id AS "threadId",
           threads.project_id AS "projectId",
+          projects.kind AS "projectKind",
           projects.workspace_root AS "workspaceRoot",
           threads.env_mode AS "envMode",
           threads.worktree_path AS "worktreePath"
@@ -1468,6 +1481,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         SELECT
           threads.thread_id AS "threadId",
           threads.project_id AS "projectId",
+          projects.kind AS "projectKind",
           projects.workspace_root AS "workspaceRoot",
           threads.env_mode AS "envMode",
           threads.worktree_path AS "worktreePath",
@@ -1992,6 +2006,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
       return Option.some({
         threadId: threadRow.value.threadId,
         projectId: threadRow.value.projectId,
+        projectKind: threadRow.value.projectKind,
         workspaceRoot: threadRow.value.workspaceRoot,
         envMode: threadRow.value.envMode,
         worktreePath: threadRow.value.worktreePath,
@@ -2032,6 +2047,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
       return Option.some({
         threadId: row.value.threadId,
         projectId: row.value.projectId,
+        projectKind: row.value.projectKind,
         workspaceRoot: row.value.workspaceRoot,
         envMode: row.value.envMode,
         worktreePath: row.value.worktreePath,
@@ -2142,19 +2158,25 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         );
 
   // Hydrate a full thread detail projection without opening its own transaction.
-  const loadThreadDetail = (threadId: ThreadId) =>
+  const loadThreadDetail = (
+    threadId: ThreadId,
+    options: { readonly messageLimit: number | null; readonly tracePrefix: string } = {
+      messageLimit: MAX_THREAD_MESSAGES,
+      tracePrefix: "ProjectionSnapshotQuery.getThreadDetailById",
+    },
+  ) =>
     Effect.gen(function* () {
       const threadRow = yield* getThreadRowById({ threadId }).pipe(
         Effect.mapError(
           toPersistenceSqlOrDecodeError(
-            "ProjectionSnapshotQuery.getThreadDetailById:getThread:query",
-            "ProjectionSnapshotQuery.getThreadDetailById:getThread:decodeRow",
+            `${options.tracePrefix}:getThread:query`,
+            `${options.tracePrefix}:getThread:decodeRow`,
           ),
         ),
         Effect.flatMap((option) =>
           decodeProjectionThreadOption(
             option,
-            "ProjectionSnapshotQuery.getThreadDetailById:getThread:decodeModelSelection",
+            `${options.tracePrefix}:getThread:decodeModelSelection`,
           ),
         ),
       );
@@ -2170,51 +2192,51 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         latestTurnRow,
         sessionRow,
       ] = yield* Effect.all([
-        listThreadMessageRowsByThread({ threadId }).pipe(
+        listThreadMessageRowsByThread({ threadId, maxMessages: options.messageLimit }).pipe(
           Effect.mapError(
             toPersistenceSqlOrDecodeError(
-              "ProjectionSnapshotQuery.getThreadDetailById:listMessages:query",
-              "ProjectionSnapshotQuery.getThreadDetailById:listMessages:decodeRows",
+              `${options.tracePrefix}:listMessages:query`,
+              `${options.tracePrefix}:listMessages:decodeRows`,
             ),
           ),
         ),
         listThreadProposedPlanRowsByThread({ threadId }).pipe(
           Effect.mapError(
             toPersistenceSqlOrDecodeError(
-              "ProjectionSnapshotQuery.getThreadDetailById:listPlans:query",
-              "ProjectionSnapshotQuery.getThreadDetailById:listPlans:decodeRows",
+              `${options.tracePrefix}:listPlans:query`,
+              `${options.tracePrefix}:listPlans:decodeRows`,
             ),
           ),
         ),
         listThreadActivityRowsByThread({ threadId }).pipe(
           Effect.mapError(
             toPersistenceSqlOrDecodeError(
-              "ProjectionSnapshotQuery.getThreadDetailById:listActivities:query",
-              "ProjectionSnapshotQuery.getThreadDetailById:listActivities:decodeRows",
+              `${options.tracePrefix}:listActivities:query`,
+              `${options.tracePrefix}:listActivities:decodeRows`,
             ),
           ),
         ),
         listCheckpointRowsByThread({ threadId }).pipe(
           Effect.mapError(
             toPersistenceSqlOrDecodeError(
-              "ProjectionSnapshotQuery.getThreadDetailById:listCheckpoints:query",
-              "ProjectionSnapshotQuery.getThreadDetailById:listCheckpoints:decodeRows",
+              `${options.tracePrefix}:listCheckpoints:query`,
+              `${options.tracePrefix}:listCheckpoints:decodeRows`,
             ),
           ),
         ),
         getLatestTurnRowByThread({ threadId }).pipe(
           Effect.mapError(
             toPersistenceSqlOrDecodeError(
-              "ProjectionSnapshotQuery.getThreadDetailById:getLatestTurn:query",
-              "ProjectionSnapshotQuery.getThreadDetailById:getLatestTurn:decodeRow",
+              `${options.tracePrefix}:getLatestTurn:query`,
+              `${options.tracePrefix}:getLatestTurn:decodeRow`,
             ),
           ),
         ),
         getThreadSessionRowByThread({ threadId }).pipe(
           Effect.mapError(
             toPersistenceSqlOrDecodeError(
-              "ProjectionSnapshotQuery.getThreadDetailById:getSession:query",
-              "ProjectionSnapshotQuery.getThreadDetailById:getSession:decodeRow",
+              `${options.tracePrefix}:getSession:query`,
+              `${options.tracePrefix}:getSession:decodeRow`,
             ),
           ),
         ),
@@ -2238,9 +2260,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
 
       return yield* decodeThreadDetail(thread).pipe(
         Effect.map((decodedThread) => Option.some(decodedThread)),
-        Effect.mapError(
-          toPersistenceDecodeError("ProjectionSnapshotQuery.getThreadDetailById:decodeThread"),
-        ),
+        Effect.mapError(toPersistenceDecodeError(`${options.tracePrefix}:decodeThread`)),
       );
     });
 
@@ -2253,6 +2273,26 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         return toPersistenceSqlError("ProjectionSnapshotQuery.getThreadDetailById:query")(error);
       }),
     );
+
+  const getThreadDetailForExportById: ProjectionSnapshotQueryShape["getThreadDetailForExportById"] =
+    (threadId) =>
+      sql
+        .withTransaction(
+          loadThreadDetail(threadId, {
+            messageLimit: null,
+            tracePrefix: "ProjectionSnapshotQuery.getThreadDetailForExportById",
+          }),
+        )
+        .pipe(
+          Effect.mapError((error) => {
+            if (isPersistenceError(error)) {
+              return error;
+            }
+            return toPersistenceSqlError(
+              "ProjectionSnapshotQuery.getThreadDetailForExportById:query",
+            )(error);
+          }),
+        );
 
   // Capture the projection cursor and thread detail in one transaction so the
   // snapshot fence cannot advance past the detail payload the client receives.
@@ -2315,6 +2355,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
     getThreadShellById,
     findSyntheticSubagentParentThread,
     getThreadDetailById,
+    getThreadDetailForExportById,
     getThreadDetailSnapshotById,
   } satisfies ProjectionSnapshotQueryShape;
 });

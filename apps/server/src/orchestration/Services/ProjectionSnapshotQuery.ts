@@ -17,6 +17,7 @@ import type {
   OrchestrationThreadShell,
   CheckpointRef,
   ProjectId,
+  ProjectKind,
   ThreadId,
   ThreadEnvironmentMode,
 } from "@t3tools/contracts";
@@ -37,6 +38,7 @@ export interface ProjectionSnapshotSequence {
 export interface ProjectionThreadCheckpointContext {
   readonly threadId: ThreadId;
   readonly projectId: ProjectId;
+  readonly projectKind: ProjectKind;
   readonly workspaceRoot: string;
   readonly envMode: ThreadEnvironmentMode;
   readonly worktreePath: string | null;
@@ -46,6 +48,7 @@ export interface ProjectionThreadCheckpointContext {
 export interface ProjectionFullThreadDiffContext {
   readonly threadId: ThreadId;
   readonly projectId: ProjectId;
+  readonly projectKind: ProjectKind;
   readonly workspaceRoot: string;
   readonly envMode: ThreadEnvironmentMode;
   readonly worktreePath: string | null;
@@ -152,6 +155,13 @@ export interface ProjectionSnapshotQueryShape {
    * Read a single active thread detail snapshot by id.
    */
   readonly getThreadDetailById: (
+    threadId: ThreadId,
+  ) => Effect.Effect<Option.Option<OrchestrationThread>, ProjectionRepositoryError>;
+
+  /**
+   * Read a single active thread detail snapshot by id with the full message history.
+   */
+  readonly getThreadDetailForExportById: (
     threadId: ThreadId,
   ) => Effect.Effect<Option.Option<OrchestrationThread>, ProjectionRepositoryError>;
 

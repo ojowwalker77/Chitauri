@@ -25,6 +25,7 @@ import {
   type ComponentProps,
   type KeyboardEvent,
   type RefObject,
+  type ReactElement,
   type ReactNode,
 } from "react";
 import {
@@ -33,17 +34,26 @@ import {
   isFileChangeWorkLogEntry,
   type WorkLogEntry,
 } from "../../session-logic";
-import { type TurnDiffSummary } from "../../types";
+import {
+  type TurnDiffSummary,
+  type WorktreeSetupSnapshot,
+  type WorktreeSetupStep,
+} from "../../types";
 import ChatMarkdown from "../ChatMarkdown";
 import { InlineLinkChip } from "../InlineLinkChip";
 import {
+  ArrowUpCircleIcon,
   BotIcon,
   CheckIcon,
   ChangesIcon,
   CircleAlertIcon,
+  CircleCheckIcon,
+  CircleQuestionIcon,
+  ClockIcon,
   EyeIcon,
   GitHubIcon,
   HammerIcon,
+  LoaderIcon,
   type LucideIcon,
   McpIcon,
   NewThreadIcon,
@@ -55,6 +65,7 @@ import {
   TerminalIcon,
   Undo2Icon,
   WebSearchIcon,
+  WorktreeIcon,
   ZapIcon,
 } from "~/lib/icons";
 import { pinActionLabel } from "~/lib/pin";
@@ -77,6 +88,11 @@ import { FileAttachmentChip } from "./FileAttachmentChip";
 import { FileCommentsSummaryChip } from "./FileCommentsSummaryChip";
 import { UserMessagePastedTextCard } from "./PastedTextChip";
 import {
+  hasLeadingUserMedia,
+  resolveUserTurnMarker,
+  type UserTurnMarkerKind,
+} from "./userTurnMarker";
+import {
   computeStableMessagesTimelineRows,
   deriveMessagesTimelineRows,
   MAX_VISIBLE_WORK_LOG_ENTRIES,
@@ -86,7 +102,13 @@ import {
   resolveAssistantMessageCopyState,
   type StableMessagesTimelineRowsState,
 } from "./MessagesTimeline.logic";
-import { deriveReadableCommandDisplay, isInspectCommand } from "../../lib/toolCallLabel";
+import {
+  deriveReadableCommandDisplay,
+  extractWebFetchUrl,
+  resolveCommandVisualKind,
+} from "../../lib/toolCallLabel";
+import { describeLinkChip } from "~/lib/linkChips";
+import { LinkChipIcon } from "../LinkChipIcon";
 import { openWorkspaceFileReference, useWorkspaceFileOpener } from "../../lib/workspaceFileOpener";
 import { isAgentActivityWorkEntry } from "./agentActivity.logic";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
@@ -132,6 +154,11 @@ import {
   resolveSubagentPresentation,
 } from "../../lib/subagentPresentation";
 import { deriveUserMessagePreviewState } from "./userMessagePreview";
+import {
+  resolveActiveTrailSnapshot,
+  type ActiveTrailSnapshot,
+  type MessageTrailAnchor,
+} from "./messageTrail.logic";
 
 const MAX_VISIBLE_INLINE_TOOL_ENTRIES = 4;
 // Changed-files list in the per-turn card is capped so large turns stay compact;
@@ -163,6 +190,10 @@ const TRANSCRIPT_DISCLOSURE_TRANSITION_MS = 220;
 const TRANSCRIPT_DISCLOSURE_CLEANUP_BUFFER_MS = 40;
 const MESSAGE_SEND_ENTER_ANIMATION_MS = 180;
 const MESSAGE_SEND_ENTER_CLEANUP_BUFFER_MS = 60;
+// Treat any partially visible row (>= 1px) as in view, so the navigation trail's
+// "active" tick tracks the topmost rendered row rather than waiting for a turn to
+// be substantially on-screen.
+const TRAIL_VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 0 } as const;
 // The deep-link "active" ring is applied imperatively to the rendered marker spans so jumping
 // never re-parses a message's markdown tree (the className is purely a CSS box-shadow).
 const ACTIVE_MARKER_CLASS_NAME = "thread-marker-active";
@@ -183,18 +214,32 @@ export interface MessagesTimelineController {
 // target agent-task rows specifically; both render the shared central robot glyph.
 const AgentTaskIcon: LucideIcon = (props) => <BotIcon {...props} />;
 
-// Keeps the steer marker visually attached to the whole sent-message stack.
+// Keeps the origin/steer marker visually attached to the whole sent-message stack.
+// Which marker (if any) applies comes from the shared resolveUserTurnMarker predicate,
+// which the timelineHeight estimator also uses — keep presentation-only concerns here.
+const USER_TURN_MARKER_PRESENTATION: Record<
+  UserTurnMarkerKind,
+  { readonly Icon: LucideIcon; readonly label: string }
+> = {
+  automation: { Icon: ClockIcon, label: "Sent via Automation" },
+  steer: { Icon: SteerIcon, label: "Steering conversation" },
+};
+
 function UserDispatchModeChip({
   dispatchMode,
+  dispatchOrigin,
   hasLeadingMedia,
 }: {
   dispatchMode: TimelineMessage["dispatchMode"];
+  dispatchOrigin: TimelineMessage["dispatchOrigin"];
   hasLeadingMedia: boolean;
 }) {
-  if (dispatchMode !== "steer") {
+  const markerKind = resolveUserTurnMarker({ dispatchMode, dispatchOrigin });
+  if (!markerKind) {
     return null;
   }
 
+  const { Icon, label } = USER_TURN_MARKER_PRESENTATION[markerKind];
   return (
     <div
       className={cn(
@@ -202,8 +247,8 @@ function UserDispatchModeChip({
         hasLeadingMedia ? "mb-3" : "mb-1.5",
       )}
     >
-      <SteerIcon className="size-3 shrink-0 text-muted-foreground/75" />
-      <span>Steering conversation</span>
+      <Icon className="size-3 shrink-0 text-muted-foreground/75" />
+      <span>{label}</span>
     </div>
   );
 }
@@ -250,11 +295,85 @@ function findVisibleThreadMarkerElement(elements: readonly HTMLElement[]): HTMLE
   return null;
 }
 
+// Per-step status glyph for the worktree setup stepper. Mirrors the active
+// task-list card: spinner while active, check when done, hollow node pending.
+function WorktreeSetupStepGlyph({ status }: { status: WorktreeSetupStep["status"] }) {
+  if (status === "done") {
+    // Foreground (black) check, same box as the spinner so done/active nodes match.
+    return <CircleCheckIcon className="size-2.5 text-[var(--color-text-foreground)]" />;
+  }
+  if (status === "active") {
+    // Spinner sized to match the pending nodes, in foreground (black) so the
+    // active step reads as the current work rather than an accent flourish.
+    return <LoaderIcon className="size-2.5 animate-spin text-[var(--color-text-foreground)]" />;
+  }
+  if (status === "error") {
+    return <CircleAlertIcon className="size-2.5 text-destructive" />;
+  }
+  // Lucide circles render at ~83% of their box, so an 8px ring matches the
+  // visible diameter of the size-2.5 spinner/check glyphs.
+  return <span className="block size-2 rounded-full border border-[color:var(--color-border)]" />;
+}
+
+// Transient "Preparing worktree..." panel: a compact bordered card with a
+// git-branch header and a connected stepper. Hugs its content so it reads as a
+// status chip rather than a full-width block.
+function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> }) {
+  return (
+    <div className="w-fit max-w-full rounded-xl border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-primary)] px-3.5 py-3 font-system-ui shadow-xs">
+      <div className="flex items-center gap-2">
+        <WorktreeIcon className="size-3.5 shrink-0 text-[var(--color-text-foreground-tertiary)]" />
+        <span className="shimmer text-[13px] font-medium text-[var(--color-text-foreground-secondary)]">
+          Preparing worktree...
+        </span>
+      </div>
+      <ol className="mt-2 flex flex-col">
+        {steps.map((step, index) => {
+          const isLast = index === steps.length - 1;
+          return (
+            <li key={step.id} className="relative flex items-center gap-2.5 py-[3px]">
+              {isLast ? null : (
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "absolute left-[6.5px] top-1/2 h-full w-px",
+                    step.status === "done"
+                      ? "bg-[var(--color-text-foreground)]"
+                      : "bg-[color:var(--color-border)]",
+                  )}
+                />
+              )}
+              <span className="relative z-10 flex size-3.5 shrink-0 items-center justify-center rounded-full bg-[var(--color-background-elevated-primary)]">
+                <WorktreeSetupStepGlyph status={step.status} />
+              </span>
+              <span
+                className={cn(
+                  "text-[13px] leading-5",
+                  step.status === "active" || step.status === "done"
+                    ? "text-[var(--color-text-foreground)]"
+                    : step.status === "error"
+                      ? "text-destructive"
+                      : "text-[var(--color-text-foreground-tertiary)] opacity-70",
+                )}
+              >
+                {step.label}
+                {step.status === "error" ? " — failed" : ""}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
 interface MessagesTimelineProps {
   hasMessages: boolean;
   isWorking: boolean;
   activeTurnInProgress: boolean;
   activeTurnStartedAt: string | null;
+  /** Transient "New worktree" setup progress; rendered as an ephemeral step card at the tail. */
+  worktreeSetup?: WorktreeSetupSnapshot | null;
   followLiveOutput?: boolean;
   emptyStateContent?: ReactNode;
   listRef?: RefObject<LegendListRef | null>;
@@ -287,6 +406,8 @@ interface MessagesTimelineProps {
   isRevertingCheckpoint: boolean;
   onImageExpand: (preview: ExpandedImagePreview) => void;
   onIsAtEndChange?: (isAtEnd: boolean) => void;
+  /** Emits current + visible sent-message anchors as the viewport scrolls (drives the trail). */
+  onTrailHighlightsChange?: (snapshot: ActiveTrailSnapshot) => void;
   onMessagesClickCapture?: ComponentProps<typeof LegendList>["onClickCapture"];
   onMessagesMouseUp?: ComponentProps<typeof LegendList>["onMouseUp"];
   onMessagesPointerCancel?: ComponentProps<typeof LegendList>["onPointerCancel"];
@@ -316,6 +437,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   isWorking,
   activeTurnInProgress,
   activeTurnStartedAt,
+  worktreeSetup = null,
   followLiveOutput = false,
   listRef,
   controllerRef,
@@ -340,6 +462,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   isRevertingCheckpoint,
   onImageExpand,
   onIsAtEndChange,
+  onTrailHighlightsChange,
   onMessagesClickCapture,
   onMessagesMouseUp,
   onMessagesPointerCancel,
@@ -456,11 +579,14 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     [bottomSpacerHeightPx],
   );
 
+  const presentedWorktreeSetup = useWorktreeSetupPresentation(worktreeSetup);
   const rawRows = useMemo(
     () =>
       deriveMessagesTimelineRows({
         timelineEntries,
         isWorking,
+        worktreeSetup: presentedWorktreeSetup?.snapshot ?? null,
+        worktreeSetupOpen: presentedWorktreeSetup?.open ?? false,
         activeTurnInProgress,
         activeTurnId,
         activeTurnStartedAt,
@@ -470,6 +596,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     [
       timelineEntries,
       isWorking,
+      presentedWorktreeSetup,
       activeTurnInProgress,
       activeTurnId,
       activeTurnStartedAt,
@@ -637,7 +764,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   const tailContentRowId = useMemo(() => {
     for (let index = rows.length - 1; index >= 0; index -= 1) {
       const row = rows[index]!;
-      if (row.kind !== "working") return row.id;
+      if (row.kind !== "working" && row.kind !== "worktree-setup") return row.id;
     }
     return null;
   }, [rows]);
@@ -705,16 +832,72 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       window.cancelAnimationFrame(frameId);
     };
   }, [onIsAtEndChange, resolvedListRef, rows.length]);
+  // Sent-message anchors (id + position in the virtualized row list) for the
+  // navigation trail. Held in a ref so the viewability callback stays stable and
+  // doesn't re-subscribe LegendList on every transcript change.
+  const userMessageAnchors = useMemo<MessageTrailAnchor[]>(() => {
+    const anchors: MessageTrailAnchor[] = [];
+    rows.forEach((row, index) => {
+      if (row.kind === "message" && row.message.role === "user") {
+        anchors.push({ id: row.message.id, rowIndex: index });
+      }
+    });
+    return anchors;
+  }, [rows]);
+  const userMessageAnchorsRef = useRef(userMessageAnchors);
+  userMessageAnchorsRef.current = userMessageAnchors;
+  const emitTrailHighlightsForViewport = useCallback(
+    (topRowIndex: number, bottomRowIndex: number) => {
+      if (!onTrailHighlightsChange || !Number.isFinite(topRowIndex)) {
+        return;
+      }
+      onTrailHighlightsChange(
+        resolveActiveTrailSnapshot(userMessageAnchorsRef.current, topRowIndex, bottomRowIndex),
+      );
+    },
+    [onTrailHighlightsChange],
+  );
   const handleListScroll = useCallback<NonNullable<MessagesTimelineProps["onMessagesScroll"]>>(
     (event) => {
       onMessagesScroll?.(event);
       const state = resolvedListRef.current?.getState?.();
       if (state) {
         onIsAtEndChange?.(state.isAtEnd);
+        emitTrailHighlightsForViewport(state.start, state.end);
       }
     },
-    [onIsAtEndChange, onMessagesScroll, resolvedListRef],
+    [emitTrailHighlightsForViewport, onIsAtEndChange, onMessagesScroll, resolvedListRef],
   );
+  const handleViewableItemsChanged = useCallback<
+    NonNullable<ComponentProps<typeof LegendList>["onViewableItemsChanged"]>
+  >(
+    ({ viewableItems }) => {
+      let topIndex = Number.POSITIVE_INFINITY;
+      let bottomIndex = Number.NEGATIVE_INFINITY;
+      for (const token of viewableItems) {
+        if (token.isViewable) {
+          topIndex = Math.min(topIndex, token.index);
+          bottomIndex = Math.max(bottomIndex, token.index);
+        }
+      }
+      emitTrailHighlightsForViewport(topIndex, bottomIndex);
+    },
+    [emitTrailHighlightsForViewport],
+  );
+  useEffect(() => {
+    if (!onTrailHighlightsChange) {
+      return;
+    }
+    const frameId = window.requestAnimationFrame(() => {
+      const state = resolvedListRef.current?.getState?.();
+      if (state) {
+        emitTrailHighlightsForViewport(state.start, state.end);
+      }
+    });
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [emitTrailHighlightsForViewport, onTrailHighlightsChange, resolvedListRef, rows.length]);
   const toggleFileChangesExpanded = useCallback((turnId: TurnId) => {
     setExpandedFileChangesByTurnId((current) => ({
       ...current,
@@ -760,7 +943,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       className={cn(
         CHAT_COLUMN_FRAME_CLASS_NAME,
         "px-1 transition-colors duration-500",
-        row.kind === "work" || (row.kind === "message" && row.message.role === "assistant")
+        row.kind === "work" ||
+          row.kind === "working-header" ||
+          (row.kind === "message" && row.message.role === "assistant")
           ? "pb-2"
           : "pb-4",
         row.kind === "message" && row.message.role === "assistant" ? "group/assistant" : null,
@@ -884,11 +1069,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             Boolean(onEditUserMessage) &&
             row.message.id === latestEditableUserMessageId &&
             displayedUserMessage.copyText.trim().length > 0;
-          const hasLeadingMedia =
-            renderedAssistantSelections.length > 0 ||
-            renderedFileComments.length > 0 ||
-            renderedPastedTexts.length > 0 ||
-            userImages.length > 0;
+          const hasLeadingMedia = hasLeadingUserMedia({
+            imageCount: userImages.length,
+            fileCount: userFiles.length,
+            assistantSelectionCount: renderedAssistantSelections.length,
+            fileCommentCount: renderedFileComments.length,
+            pastedTextCount: renderedPastedTexts.length,
+          });
           const isTailContentRow = row.id === tailContentRowId;
           return (
             <div className="flex w-full justify-end">
@@ -901,6 +1088,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 {/* Keep user-message chrome outside the bubble so the message reads as one simple block. */}
                 <UserDispatchModeChip
                   dispatchMode={row.message.dispatchMode}
+                  dispatchOrigin={row.message.dispatchOrigin}
                   hasLeadingMedia={hasLeadingMedia}
                 />
                 {renderedAssistantSelections.length > 0 && (
@@ -967,7 +1155,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       "w-max max-w-full min-w-0 self-end bg-[var(--app-user-message-background)]",
                       USER_MESSAGE_BUBBLE_RADIUS_CLASS_NAME,
                       bubbleIsChipOnly
-                        ? "py-1 px-3.5"
+                        ? "py-0.5 px-3"
                         : USER_MESSAGE_BUBBLE_SHELL_CHROME_CLASS_NAME,
                     )}
                   >
@@ -1575,29 +1763,49 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         </div>
       )}
 
+      {row.kind === "working-header" && (
+        <div>
+          {/* Non-collapsible twin of the settled "Worked for" header: same label
+              tone, size, and full-width divider, but counting up live. -ml-0.5
+              optically aligns the leading "W" with the reply text below. */}
+          <div
+            className="-ml-0.5 pb-2 text-muted-foreground/70"
+            style={{ fontSize: chatTypographyStyle.fontSize }}
+          >
+            Working for{" "}
+            {nowIso ? (
+              (formatWorkingTimer(row.createdAt, nowIso) ?? "0s")
+            ) : (
+              <WorkingTimer createdAt={row.createdAt} />
+            )}
+          </div>
+          <div className="h-px w-full bg-border" />
+        </div>
+      )}
+
       {row.kind === "working" && (
         <div
           className="shimmer pt-0.5 text-muted-foreground/70 font-system-ui"
           style={{ fontSize: `${appTypographyScale.chatPx}px` }}
         >
-          {row.createdAt ? (
-            <>
-              Working for{" "}
-              {nowIso ? (
-                (formatWorkingTimer(row.createdAt, nowIso) ?? "0s")
-              ) : (
-                <WorkingTimer createdAt={row.createdAt} />
-              )}
-            </>
-          ) : (
-            "Working..."
-          )}
+          Thinking
         </div>
+      )}
+
+      {row.kind === "worktree-setup" && (
+        <DisclosureRegion open={row.open}>
+          <div className="pt-0.5 pb-1">
+            <WorktreeSetupCard steps={row.steps} />
+          </div>
+        </DisclosureRegion>
       )}
     </div>
   );
 
-  if (!hasMessages && !isWorking) {
+  // Transient rows (for example failed first-send worktree setup) must be able
+  // to render even when there are no persisted chat messages yet.
+  const hasRenderableTranscriptContent = hasMessages || rows.length > 0;
+  if (!hasRenderableTranscriptContent && !isWorking) {
     if (emptyStateContent) {
       return <div className="flex h-full items-center justify-center">{emptyStateContent}</div>;
     }
@@ -1631,6 +1839,12 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         onPointerDown={onMessagesPointerDown}
         onPointerUp={onMessagesPointerUp}
         onScroll={handleListScroll}
+        {...(onTrailHighlightsChange
+          ? {
+              onViewableItemsChanged: handleViewableItemsChanged,
+              viewabilityConfig: TRAIL_VIEWABILITY_CONFIG,
+            }
+          : {})}
         onTouchEnd={onMessagesTouchEnd}
         onTouchMove={onMessagesTouchMove}
         onTouchStart={onMessagesTouchStart}
@@ -1779,6 +1993,60 @@ function useMessageSendEnterAnimations(
   );
 
   return enteringRowIds;
+}
+
+interface WorktreeSetupPresentation {
+  snapshot: WorktreeSetupSnapshot;
+  open: boolean;
+}
+
+// Keeps the transient worktree-setup card mounted through one shared-disclosure
+// close animation after ChatView clears the snapshot, mirroring
+// useSettledTurnCollapseTransitions' rAF-flip + delayed-cleanup shape.
+function useWorktreeSetupPresentation(
+  worktreeSetup: WorktreeSetupSnapshot | null,
+): WorktreeSetupPresentation | null {
+  const [presented, setPresented] = useState<WorktreeSetupPresentation | null>(null);
+  const closeFrameRef = useRef<number | null>(null);
+  const cleanupTimeoutRef = useRef<number | null>(null);
+
+  const clearCloseTimers = useCallback(() => {
+    if (closeFrameRef.current !== null) {
+      window.cancelAnimationFrame(closeFrameRef.current);
+      closeFrameRef.current = null;
+    }
+    if (cleanupTimeoutRef.current !== null) {
+      window.clearTimeout(cleanupTimeoutRef.current);
+      cleanupTimeoutRef.current = null;
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (worktreeSetup) {
+      clearCloseTimers();
+      setPresented((current) =>
+        current?.open && current.snapshot === worktreeSetup
+          ? current
+          : { snapshot: worktreeSetup, open: true },
+      );
+      return;
+    }
+    if (!presented?.open || closeFrameRef.current !== null) {
+      return;
+    }
+    closeFrameRef.current = window.requestAnimationFrame(() => {
+      closeFrameRef.current = null;
+      setPresented((current) => (current?.open ? { ...current, open: false } : current));
+      cleanupTimeoutRef.current = window.setTimeout(() => {
+        cleanupTimeoutRef.current = null;
+        setPresented(null);
+      }, TRANSCRIPT_DISCLOSURE_TRANSITION_MS + TRANSCRIPT_DISCLOSURE_CLEANUP_BUFFER_MS);
+    });
+  }, [worktreeSetup, presented, clearCloseTimers]);
+
+  useLayoutEffect(() => clearCloseTimers, [clearCloseTimers]);
+
+  return presented;
 }
 
 // Keeps newly folded turn details mounted for one shared-disclosure close
@@ -2451,14 +2719,27 @@ function isFileReadToolEntry(workEntry: TimelineWorkEntry): boolean {
   return name === "read" || name === "readfile" || name === "viewfile";
 }
 
-// Read-only inspection commands (read/search/find/list) share the search icon so
-// every inspection row looks the same; other shell commands keep the terminal icon.
+// Command rows reuse toolCallLabel's wrapper-aware classifier so wrapped git/gh
+// commands get the GitHub mark while ordinary commands keep the terminal icon.
 function commandWorkEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
   const command = workEntry.command ?? workEntry.rawCommand;
-  return command && isInspectCommand(command) ? SearchIcon : TerminalIcon;
+  switch (command ? resolveCommandVisualKind(command) : "terminal") {
+    case "inspect":
+      return SearchIcon;
+    case "git":
+    case "github":
+      return GitHubIcon;
+    case "terminal":
+      return TerminalIcon;
+  }
 }
 
 function workEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
+  // User-input rows read as a question (awaiting an answer) and an upload
+  // (answer submitted) rather than the generic "info" checkmark.
+  if (workEntry.activityKind === "user-input.requested") return CircleQuestionIcon;
+  if (workEntry.activityKind === "user-input.resolved") return ArrowUpCircleIcon;
+
   if (workEntry.requestKind === "command") return commandWorkEntryIcon(workEntry);
   if (workEntry.requestKind === "file-read") return SearchIcon;
   if (workEntry.requestKind === "file-change") return PencilIcon;
@@ -2491,7 +2772,9 @@ function isGitHubMcpToolCall(workEntry: TimelineWorkEntry): boolean {
   return Boolean(toolName?.startsWith("mcp__codex_apps__github"));
 }
 
-// Render command, agent-task, and file-change rows at the tighter compact density.
+// Render command, agent-task, file-change, and file-read rows at the tighter
+// compact density so every tool-call line shares one height regardless of whether
+// it carries a disclosure chevron.
 function prefersCompactWorkEntryRow(workEntry: TimelineWorkEntry): boolean {
   // Commands stay compact even when surfaced with a non-terminal icon (read-only
   // inspections like `cat` now use the file-read search icon).
@@ -2504,7 +2787,10 @@ function prefersCompactWorkEntryRow(workEntry: TimelineWorkEntry): boolean {
     EntryIcon === HammerIcon ||
     EntryIcon === AgentTaskIcon ||
     EntryIcon === PencilIcon ||
-    EntryIcon === SkillCubeIcon
+    EntryIcon === SkillCubeIcon ||
+    // File-read / inspect rows (e.g. `Read …`) surface the search icon and have no
+    // disclosure chevron; keep them at the same compact height as command rows.
+    EntryIcon === SearchIcon
   );
 }
 
@@ -2607,21 +2893,49 @@ function commandTooltipContent(command: string, displayText: string) {
     <div className="max-w-96 whitespace-pre-wrap leading-tight">
       <div className="space-y-2">
         <div className="space-y-0.5">
-          <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/70">
-            Summary
-          </div>
+          <div className="text-muted-foreground/70">Summary</div>
           <div>{displayText}</div>
         </div>
         <div className="space-y-0.5">
-          <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/70">
-            Raw call
-          </div>
+          <div className="text-muted-foreground/70">Raw call</div>
           <code className="block whitespace-pre-wrap break-words font-chat-code text-[11px] text-foreground/92">
             {command}
           </code>
         </div>
       </div>
     </div>
+  );
+}
+
+// Hover content for a tool-call row: the rich command card when a raw command is
+// present, otherwise the plain label (used to reveal truncated text / file paths).
+// Returns null when there's nothing worth showing so the row renders untouched.
+function toolRowTooltipContent(
+  rawCommand: string | null | undefined,
+  displayText: string,
+  fallback: string | undefined,
+): ReactNode {
+  if (rawCommand) {
+    return commandTooltipContent(rawCommand, displayText);
+  }
+  return fallback ? <span className="whitespace-pre-wrap">{fallback}</span> : null;
+}
+
+// Frosted hover tooltip for tool-call rows — the same surface (via the `default`
+// variant) as the sidebar thread/project hover cards, so the rows read as one
+// system. Replaces the native `title` tooltip; renders the trigger untouched when
+// there's no content to show.
+function ToolRowTooltip(props: { content: ReactNode; children: ReactElement }) {
+  if (!props.content) {
+    return props.children;
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger render={props.children} />
+      <TooltipPopup side="top" align="start" className="max-w-96 whitespace-normal">
+        {props.content}
+      </TooltipPopup>
+    </Tooltip>
   );
 }
 
@@ -2657,21 +2971,35 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
   } = props;
   const compact = density === "compact";
   const EntryIcon = workEntryIcon(workEntry);
-  // Every tool row leads with a single left icon; keep branded glyphs for GitHub/MCP rows.
+  // Web-fetch tool calls surface the target site (favicon + URL) instead of the raw
+  // `WebFetch: {json}` arguments, reusing the same link-chip icon/label path as
+  // composer and markdown links so every site reference looks identical.
+  const webFetchUrl = extractWebFetchUrl(workEntry);
+  // Every tool row leads with a single left icon; keep branded glyphs discoverable
+  // for command rows and app-backed tool rows.
   const isGitHubToolRow = isGitHubMcpToolCall(workEntry);
   const isMcpToolRow = workEntry.itemType === "mcp_tool_call" && !isGitHubToolRow;
   const LeftIcon = isGitHubToolRow ? GitHubIcon : isMcpToolRow ? McpIcon : EntryIcon;
-  const leftIconKind = isGitHubToolRow ? "github" : isMcpToolRow ? "mcp" : undefined;
+  const leftIconKind = webFetchUrl
+    ? "web-fetch"
+    : isGitHubToolRow || EntryIcon === GitHubIcon
+      ? "github"
+      : isMcpToolRow
+        ? "mcp"
+        : undefined;
   const heading = toolWorkEntryHeading(workEntry);
   const preview = workEntryPreview(workEntry);
-  const displayText = combineWorkEntryDisplayText(heading, preview);
+  const displayText = webFetchUrl
+    ? describeLinkChip(webFetchUrl).label
+    : combineWorkEntryDisplayText(heading, preview);
   const showInlineAgentTaskPreview =
     workEntry.itemType === "collab_agent_tool_call" &&
     (workEntry.subagents?.length ?? 0) === 0 &&
     Boolean(preview) &&
     normalizeWorkDisplayText(heading) !== normalizeWorkDisplayText(preview ?? "");
   const rawCommand = workEntry.rawCommand ?? workEntry.command;
-  const hoverText = rawCommand ?? (showInlineAgentTaskPreview ? heading : displayText);
+  const hoverText =
+    rawCommand ?? (showInlineAgentTaskPreview ? heading : (webFetchUrl ?? displayText));
   const changedFiles = workEntry.changedFiles ?? [];
   const showEditedRows = isFileChangeWorkEntry(workEntry) && changedFiles.length > 0;
   const showSubagentRows =
@@ -2775,7 +3103,7 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
                   key={`${workEntry.id}:${changedFilePath}`}
                   details={workEntry.toolDetails}
                   compact={compact}
-                  title="View tool details"
+                  tooltip={<span className="whitespace-pre-wrap">{changedFilePath}</span>}
                   summaryClassName={editedRowClassName}
                   dataFileChangeRow
                 >
@@ -2897,9 +3225,7 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
                           style={{ fontSize: `${Math.max(10, rowFontSizePx - 2)}px` }}
                           title={subagent.latestUpdate}
                         >
-                          <span className="shrink-0 uppercase tracking-[0.14em] text-muted-foreground/30">
-                            Latest
-                          </span>
+                          <span className="shrink-0 text-muted-foreground/30">Latest</span>
                           <span className="truncate">{subagent.latestUpdate}</span>
                         </div>
                       ) : null}
@@ -2922,7 +3248,7 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
                       <button
                         type="button"
                         className={cn(
-                          "shrink-0 rounded-full border border-border/45 px-2.5 py-1 text-[9px] font-medium uppercase tracking-[0.12em] text-muted-foreground/62 transition-colors",
+                          "shrink-0 rounded-full border border-border/45 px-2.5 py-1 text-[9px] font-medium text-muted-foreground/62 transition-colors",
                           canOpenThread
                             ? "hover:border-foreground/15 hover:text-foreground/84"
                             : "cursor-default opacity-50",
@@ -2941,7 +3267,7 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
                 );
               })}
               {hiddenSubagentCount > 0 ? (
-                <div className="pl-4 text-[10px] uppercase tracking-[0.12em] text-muted-foreground/46">
+                <div className="pl-4 text-[10px] text-muted-foreground/46">
                   +{hiddenSubagentCount} more
                 </div>
               ) : null}
@@ -2960,7 +3286,11 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
                 )}
                 data-tool-icon={leftIconKind}
               >
-                <LeftIcon className={compact ? "size-3.5" : "size-4"} />
+                {webFetchUrl ? (
+                  <LinkChipIcon url={webFetchUrl} className={compact ? "size-3.5" : "size-4"} />
+                ) : (
+                  <LeftIcon className={compact ? "size-3.5" : "size-4"} />
+                )}
               </span>
               <div
                 className={cn(
@@ -3013,7 +3343,7 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
               <ToolDetailsDisclosure
                 details={workEntry.toolDetails}
                 compact={compact}
-                title={rawCommand ?? displayText}
+                tooltip={toolRowTooltipContent(rawCommand, displayText, displayText)}
               >
                 {rowContentChildren}
               </ToolDetailsDisclosure>
@@ -3024,26 +3354,19 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
             <AgentActivityOpenSurface
               canOpen={canOpenAgentActivity || canOpenReadFile}
               compact={compact}
-              title={canOpenReadFile ? (readFilePath ?? hoverText) : hoverText}
               onOpen={openAgentActivity ?? openReadFile}
               onHover={prefetchReadFile}
+              tooltip={toolRowTooltipContent(
+                rawCommand,
+                displayText,
+                canOpenReadFile ? (readFilePath ?? hoverText) : hoverText,
+              )}
             >
               {rowContentChildren}
             </AgentActivityOpenSurface>
           );
 
-          if (!rawCommand) {
-            return rowContent;
-          }
-
-          return (
-            <Tooltip>
-              <TooltipTrigger render={rowContent} />
-              <TooltipPopup side="top" align="start" className="max-w-96 whitespace-normal">
-                {commandTooltipContent(rawCommand, displayText)}
-              </TooltipPopup>
-            </Tooltip>
-          );
+          return rowContent;
         })()
       )}
     </div>
@@ -3112,6 +3435,8 @@ function AgentActivityOpenSurface(props: {
   onHover?: (() => void) | undefined;
   onOpen?: (() => void) | undefined;
   title?: string | undefined;
+  /** Styled frosted hover tooltip (preferred over the native `title`). */
+  tooltip?: ReactNode;
   dataToolDetailTrigger?: boolean | undefined;
 }) {
   const className = cn(
@@ -3120,26 +3445,26 @@ function AgentActivityOpenSurface(props: {
     props.canOpen ? "cursor-pointer focus-visible:outline-none" : "cursor-default",
   );
 
-  if (props.canOpen) {
-    return (
-      <button
-        type="button"
-        className={className}
-        title={props.title}
-        onClick={props.onOpen}
-        data-tool-detail-trigger={props.dataToolDetailTrigger ? "true" : undefined}
-        {...(props.onHover ? { onPointerEnter: props.onHover, onFocus: props.onHover } : {})}
-      >
-        {props.children}
-      </button>
-    );
-  }
-
-  return (
+  // Wrap the real DOM element (not this component) so Base UI's tooltip trigger
+  // can attach its hover handlers and compose with our own onClick/onPointerEnter.
+  const surface = props.canOpen ? (
+    <button
+      type="button"
+      className={className}
+      title={props.title}
+      onClick={props.onOpen}
+      data-tool-detail-trigger={props.dataToolDetailTrigger ? "true" : undefined}
+      {...(props.onHover ? { onPointerEnter: props.onHover, onFocus: props.onHover } : {})}
+    >
+      {props.children}
+    </button>
+  ) : (
     <div className={className} title={props.title}>
       {props.children}
     </div>
   );
+
+  return <ToolRowTooltip content={props.tooltip}>{surface}</ToolRowTooltip>;
 }
 
 function ToolDetailsDisclosure(props: {
@@ -3148,7 +3473,7 @@ function ToolDetailsDisclosure(props: {
   dataFileChangeRow?: boolean | undefined;
   details: NonNullable<TimelineWorkEntry["toolDetails"]>;
   summaryClassName?: string | undefined;
-  title?: string | undefined;
+  tooltip?: ReactNode;
 }) {
   const summaryClassName =
     props.summaryClassName ??
@@ -3200,25 +3525,28 @@ function ToolDetailsDisclosure(props: {
 
   useEffect(() => () => clearMotionTimers(), [clearMotionTimers]);
 
+  const summaryButton = (
+    <button
+      type="button"
+      className={summaryClassName}
+      aria-expanded={open}
+      data-file-change-row={props.dataFileChangeRow ? "true" : undefined}
+      data-tool-detail-trigger="true"
+      onClick={() => {
+        setDetailsOpen(!open);
+      }}
+    >
+      {props.children}
+      <DisclosureChevron
+        open={open}
+        className="text-muted-foreground/38 group-hover/tool-row:text-foreground group-hover/file-row:text-foreground group-focus-visible/tool-row:text-foreground group-focus-visible/file-row:text-foreground"
+      />
+    </button>
+  );
+
   return (
     <div className="group/tool-details min-w-0">
-      <button
-        type="button"
-        className={summaryClassName}
-        title={props.title ?? "View tool details"}
-        aria-expanded={open}
-        data-file-change-row={props.dataFileChangeRow ? "true" : undefined}
-        data-tool-detail-trigger="true"
-        onClick={() => {
-          setDetailsOpen(!open);
-        }}
-      >
-        {props.children}
-        <DisclosureChevron
-          open={open}
-          className="text-muted-foreground/38 group-hover/tool-row:text-foreground group-hover/file-row:text-foreground group-focus-visible/tool-row:text-foreground group-focus-visible/file-row:text-foreground"
-        />
-      </button>
+      <ToolRowTooltip content={props.tooltip}>{summaryButton}</ToolRowTooltip>
       {renderDetails ? (
         <DisclosureRegion
           open={motionOpen}
