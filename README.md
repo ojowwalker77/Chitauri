@@ -1,6 +1,6 @@
-# Synara
+# Chitauri
 
-Synara is a local-first desktop app for coding with the AI agents and subscriptions you already use.
+Local-first desktop app for coding with the AI agents and subscriptions you already use.
 
 It brings chats, terminals, browser previews, diffs, branches, provider sessions, and handoffs into one focused workspace so you can run agent work without juggling a dozen windows.
 
