@@ -207,6 +207,7 @@ import {
   deriveActiveWorkStartedAt,
   deriveActiveTaskListState,
   deriveActiveBackgroundTasksState,
+  deriveTurnBackgroundAgents,
   findSidebarProposedPlan,
   findLatestProposedPlan,
   deriveWorkLogEntries,
@@ -447,6 +448,7 @@ import { ComposerPendingUserInputPanel } from "./chat/ComposerPendingUserInputPa
 import { ComposerReferenceAttachments } from "./chat/ComposerReferenceAttachments";
 import { TranscriptSelectionActionLayer } from "./chat/TranscriptSelectionActionLayer";
 import { ComposerActiveTaskListCard } from "./chat/ComposerActiveTaskListCard";
+import { ComposerBackgroundAgentsCard } from "./chat/ComposerBackgroundAgentsCard";
 import { ComposerColumnFrame } from "./chat/ComposerColumnFrame";
 import { useTranscriptAssistantSelectionAction } from "./chat/useTranscriptAssistantSelectionAction";
 import { resolveTranscriptMarkerRange } from "./chat/chatSelectionActions";
@@ -1173,6 +1175,7 @@ export default function ChatView({
     useState<Record<string, number>>({});
   const [planSidebarOpen, setPlanSidebarOpen] = useState(false);
   const [activeTaskListCompact, setActiveTaskListCompact] = useState(false);
+  const [backgroundAgentsCompact, setBackgroundAgentsCompact] = useState(false);
   const [isComposerFooterCompact, setIsComposerFooterCompact] = useState(false);
   // Width-aware visibility for the footer picker cluster (context meter,
   // model name, traits label). Inputs live in a ref so the resize observer
@@ -2509,6 +2512,17 @@ export default function ChatView({
         ? null
         : deriveActiveBackgroundTasksState(threadActivities, activeLatestTurn?.turnId ?? undefined),
     [activeLatestTurn?.turnId, latestTurnSettled, threadActivities],
+  );
+  // The per-agent fleet for the current turn (task.* background/sub agents). Only the RUNNING ones
+  // surface above the composer — completed rows would just be noise — and the card keys purely on
+  // "is anything running", so it never blinks out while a background agent outlives its turn.
+  const backgroundAgents = useMemo(
+    () => deriveTurnBackgroundAgents(threadActivities, activeLatestTurn?.turnId ?? undefined),
+    [activeLatestTurn?.turnId, threadActivities],
+  );
+  const runningBackgroundAgents = useMemo(
+    () => backgroundAgents.filter((agent) => agent.status === "running"),
+    [backgroundAgents],
   );
   // Callback ref on the stacked-panel wrapper: re-attaches a single ResizeObserver when
   // the composer mounts/unmounts, and the observer catches every panel appearing,
@@ -9838,6 +9852,7 @@ export default function ChatView({
 
   const showComposerLiveChangesHeader = latestTurnLive && activeTurnLiveDiffState.hasChanges;
   const showComposerActiveTaskListCard = Boolean(activeTaskList && !planSidebarOpen);
+  const showComposerBackgroundAgentsCard = runningBackgroundAgents.length > 0;
 
   // Composer layout keeps the task list and footer actions in one render path so
   // follow-up prompts and normal chat mode stay visually in sync.
@@ -9845,10 +9860,25 @@ export default function ChatView({
     activeTaskList && showComposerActiveTaskListCard ? (
       <ComposerActiveTaskListCard
         activeTaskList={activeTaskList}
-        backgroundTaskCount={activeBackgroundTasks?.activeCount ?? 0}
+        backgroundTaskCount={
+          showComposerBackgroundAgentsCard ? 0 : (activeBackgroundTasks?.activeCount ?? 0)
+        }
         compact={activeTaskListCompact}
         onCompactChange={setActiveTaskListCompact}
         onOpenSidebar={() => setPlanSidebarOpen(true)}
+        attachedToPrevious={attachedToPrevious}
+      />
+    ) : null;
+
+  // The fleet card supersedes the task-list card's "N background agents" footer with the full
+  // per-agent census, pinned directly above the composer while the turn's fan-out runs.
+  const renderBackgroundAgentsCard = (attachedToPrevious: boolean) =>
+    showComposerBackgroundAgentsCard ? (
+      <ComposerBackgroundAgentsCard
+        agents={runningBackgroundAgents}
+        provider={sessionProvider ?? selectedProvider}
+        compact={backgroundAgentsCompact}
+        onCompactChange={setBackgroundAgentsCompact}
         attachedToPrevious={attachedToPrevious}
       />
     ) : null;
@@ -9883,13 +9913,20 @@ export default function ChatView({
                 />
               ) : null}
               {renderActiveTaskListCard(showComposerLiveChangesHeader)}
+              {renderBackgroundAgentsCard(
+                showComposerLiveChangesHeader || showComposerActiveTaskListCard,
+              )}
               <ComposerQueuedHeader
                 queuedTurns={queuedComposerTurns}
                 onSteer={onSteerQueuedComposerTurn}
                 onRemove={removeQueuedComposerTurn}
                 onEdit={onEditQueuedComposerTurn}
                 cwd={threadWorkspaceCwd ?? undefined}
-                attachedToPrevious={showComposerLiveChangesHeader || showComposerActiveTaskListCard}
+                attachedToPrevious={
+                  showComposerLiveChangesHeader ||
+                  showComposerActiveTaskListCard ||
+                  showComposerBackgroundAgentsCard
+                }
               />
               {/* Pending approvals and AskUserQuestion prompts both render as a detached
                   card floating just above the composer (padding gives the measured gap),
