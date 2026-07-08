@@ -169,6 +169,33 @@ export interface ActiveBackgroundTasksState {
   activeCount: number;
 }
 
+// A single background/sub agent for the current turn, reconstructed from the task.* lifecycle
+// (task.started -> task.progress* -> task.completed) or from collab_agent_tool_call work-log items
+// (Codex-style agent fan-outs). Drives the composer fleet card above the composer.
+export interface BackgroundAgent {
+  taskId: string;
+  taskType?: string | undefined;
+  /** The task description from task.started (e.g. "Review SubagentCardList correctness"). */
+  title: string | null;
+  /** Latest tool the agent invoked (task.progress lastToolName). */
+  currentTool?: string | undefined;
+  /** Latest progress detail (e.g. "Reading …/SubagentCardList.tsx"). */
+  currentDetail?: string | undefined;
+  /**
+   * The shell command that spawned a backgrounded (`local_bash`) agent — linked to the task by
+   * matching its Bash `description` to the task `detail`. Reveals the real provider the agent
+   * shells out to (`agy`→gemini, `opencode`→opencode, `codex`→codex, …). Absent for `local_agent`
+   * subagents, which run under the session provider.
+   */
+  spawnCommand?: string | undefined;
+  totalTokens?: number | undefined;
+  toolUses?: number | undefined;
+  durationMs?: number | undefined;
+  status: "running" | "completed" | "failed" | "stopped";
+  startedAt: string;
+  updatedAt: string;
+}
+
 export interface LatestProposedPlanState {
   id: OrchestrationProposedPlanId;
   createdAt: string;
@@ -630,13 +657,115 @@ export function deriveActiveTaskListState(
     : null;
 }
 
-// Counts still-running background work for the active turn so compact UI can surface agent activity.
-export function deriveActiveBackgroundTasksState(
+function readTaskString(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function readTaskNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+// task.progress / task.completed carry a provider usage object with snake_case keys.
+function readTaskUsage(payload: Record<string, unknown>): {
+  totalTokens?: number | undefined;
+  toolUses?: number | undefined;
+  durationMs?: number | undefined;
+} {
+  const usage =
+    payload.usage && typeof payload.usage === "object"
+      ? (payload.usage as Record<string, unknown>)
+      : null;
+  if (!usage) {
+    return {};
+  }
+  return {
+    totalTokens: readTaskNumber(usage.total_tokens),
+    toolUses: readTaskNumber(usage.tool_uses),
+    durationMs: readTaskNumber(usage.duration_ms),
+  };
+}
+
+function isCollabAgentToolCallActivity(
+  activity: OrchestrationThreadActivity,
+): boolean {
+  if (
+    activity.kind !== "tool.started" &&
+    activity.kind !== "tool.updated" &&
+    activity.kind !== "tool.completed"
+  ) {
+    return false;
+  }
+  const payload =
+    activity.payload && typeof activity.payload === "object"
+      ? (activity.payload as Record<string, unknown>)
+      : null;
+  return payload?.itemType === "collab_agent_tool_call";
+}
+
+function normalizeBackgroundAgentStatus(rawStatus: unknown): BackgroundAgent["status"] {
+  const normalized = typeof rawStatus === "string" ? rawStatus.trim().toLowerCase() : "";
+  if (normalized === "failed" || normalized === "error" || normalized === "errored") {
+    return "failed";
+  }
+  if (
+    normalized === "stopped" ||
+    normalized === "cancelled" ||
+    normalized === "canceled" ||
+    normalized === "interrupted" ||
+    normalized === "aborted"
+  ) {
+    return "stopped";
+  }
+  return "completed";
+}
+
+function collabSubagentToBackgroundStatus(
+  rawStatus: string | undefined | null,
+): BackgroundAgent["status"] {
+  const normalized = typeof rawStatus === "string" ? rawStatus.trim().toLowerCase() : "";
+  if (
+    !normalized ||
+    normalized === "running" ||
+    normalized === "in_progress" ||
+    normalized === "pending"
+  ) {
+    return "running";
+  }
+  if (
+    normalized === "completed" ||
+    normalized === "done" ||
+    normalized === "success"
+  ) {
+    return "completed";
+  }
+  if (normalized === "failed" || normalized === "error" || normalized === "errored") {
+    return "failed";
+  }
+  if (
+    normalized === "stopped" ||
+    normalized === "cancelled" ||
+    normalized === "canceled" ||
+    normalized === "interrupted" ||
+    normalized === "aborted"
+  ) {
+    return "stopped";
+  }
+  return "completed";
+}
+
+// Reconstructs the per-agent state of the active turn's background/sub agents from the task.*
+// lifecycle and collab_agent_tool_call work-log items, preserving spawn order. Plan tasks are
+// excluded (they are the assistant's own plan, not a sub agent). Used by the composer fleet card
+// and the active-count helper below.
+export function deriveTurnBackgroundAgents(
   activities: ReadonlyArray<OrchestrationThreadActivity>,
   latestTurnId: TurnId | undefined,
-): ActiveBackgroundTasksState | null {
+): BackgroundAgent[] {
   const ordered = orderedActivities(activities);
-  const activeTasks = new Map<string, { taskType?: string | undefined }>();
+  const byId = new Map<string, BackgroundAgent>();
+  // Backgrounded shell spawns for this turn, keyed by their Bash `description`, which equals the
+  // task `detail` — the bridge from a `local_bash` agent to the command that reveals its provider.
+  const commandByDescription = new Map<string, string>();
 
   for (const activity of ordered) {
     if (
@@ -645,6 +774,59 @@ export function deriveActiveBackgroundTasksState(
       activity.turnId !== latestTurnId &&
       activity.kind !== "task.completed"
     ) {
+      if (!isCollabAgentToolCallActivity(activity)) {
+        continue;
+      }
+    }
+
+    const payload =
+      activity.payload && typeof activity.payload === "object"
+        ? (activity.payload as Record<string, unknown>)
+        : null;
+
+    if (
+      activity.kind === "tool.started" ||
+      activity.kind === "tool.updated" ||
+      activity.kind === "tool.completed"
+    ) {
+      if (payload && payload.itemType === "command_execution") {
+        const data =
+          payload.data && typeof payload.data === "object"
+            ? (payload.data as Record<string, unknown>)
+            : null;
+        const input =
+          data?.input && typeof data.input === "object"
+            ? (data.input as Record<string, unknown>)
+            : null;
+        const description = readTaskString(input?.description);
+        const command = readTaskString(input?.command);
+        if (description && command) {
+          commandByDescription.set(description, command);
+        }
+      } else if (payload && payload.itemType === "collab_agent_tool_call") {
+        const subagents = extractCollabSubagents(payload);
+        for (const subagent of subagents) {
+          const collabTaskId = subagent.providerThreadId ?? subagent.threadId;
+          if (!collabTaskId) continue;
+
+          const existing: BackgroundAgent = byId.get(collabTaskId) ?? {
+            taskId: collabTaskId,
+            title: null,
+            status: "running",
+            startedAt: activity.createdAt,
+            updatedAt: activity.createdAt,
+          };
+
+          byId.set(collabTaskId, {
+            ...existing,
+            taskType: "collab_subagent",
+            title: subagent.nickname ?? subagent.role ?? subagent.model ?? existing.title,
+            currentDetail: subagent.latestUpdate ?? existing.currentDetail,
+            status: collabSubagentToBackgroundStatus(subagent.rawStatus),
+            updatedAt: activity.createdAt,
+          });
+        }
+      }
       continue;
     }
 
@@ -656,28 +838,74 @@ export function deriveActiveBackgroundTasksState(
       continue;
     }
 
-    const payload =
-      activity.payload && typeof activity.payload === "object"
-        ? (activity.payload as Record<string, unknown>)
-        : null;
     const taskId = payload && typeof payload.taskId === "string" ? payload.taskId : null;
-    if (!taskId) {
+    if (!payload || !taskId) {
       continue;
     }
 
-    if (activity.kind === "task.completed") {
-      activeTasks.delete(taskId);
+    const existing: BackgroundAgent = byId.get(taskId) ?? {
+      taskId,
+      title: null,
+      status: "running",
+      startedAt: activity.createdAt,
+      updatedAt: activity.createdAt,
+    };
+
+    if (activity.kind === "task.started") {
+      byId.set(taskId, {
+        ...existing,
+        taskType: readTaskString(payload.taskType) ?? existing.taskType,
+        title: readTaskString(payload.detail) ?? existing.title,
+        updatedAt: activity.createdAt,
+      });
       continue;
     }
 
-    const previous = activeTasks.get(taskId);
-    const taskType = payload && typeof payload.taskType === "string" ? payload.taskType : undefined;
-    activeTasks.set(taskId, {
-      taskType: taskType ?? previous?.taskType,
+    const usage = readTaskUsage(payload);
+    if (activity.kind === "task.progress") {
+      byId.set(taskId, {
+        ...existing,
+        currentTool: readTaskString(payload.lastToolName) ?? existing.currentTool,
+        currentDetail: readTaskString(payload.detail) ?? existing.currentDetail,
+        totalTokens: usage.totalTokens ?? existing.totalTokens,
+        toolUses: usage.toolUses ?? existing.toolUses,
+        durationMs: usage.durationMs ?? existing.durationMs,
+        updatedAt: activity.createdAt,
+      });
+      continue;
+    }
+
+    // task.completed
+    byId.set(taskId, {
+      ...existing,
+      totalTokens: usage.totalTokens ?? existing.totalTokens,
+      toolUses: usage.toolUses ?? existing.toolUses,
+      durationMs: usage.durationMs ?? existing.durationMs,
+      status: normalizeBackgroundAgentStatus(payload.status),
+      updatedAt: activity.createdAt,
     });
   }
 
-  const activeCount = [...activeTasks.values()].filter((task) => task.taskType !== "plan").length;
+  const agents = [...byId.values()].filter((agent) => agent.taskType !== "plan");
+  for (const agent of agents) {
+    if (agent.title) {
+      const command = commandByDescription.get(agent.title);
+      if (command) {
+        agent.spawnCommand = command;
+      }
+    }
+  }
+  return agents;
+}
+
+// Counts still-running background work for the active turn so compact UI can surface agent activity.
+export function deriveActiveBackgroundTasksState(
+  activities: ReadonlyArray<OrchestrationThreadActivity>,
+  latestTurnId: TurnId | undefined,
+): ActiveBackgroundTasksState | null {
+  const activeCount = deriveTurnBackgroundAgents(activities, latestTurnId).filter(
+    (agent) => agent.status === "running",
+  ).length;
   return activeCount > 0 ? { activeCount } : null;
 }
 
