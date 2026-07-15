@@ -1865,6 +1865,18 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         catch: (cause) => toRequestError(threadId, "thread/compact/start", cause),
       });
 
+    const listExternalThreads: NonNullable<CodexAdapterShape["listExternalThreads"]> = (input) =>
+      Effect.tryPromise({
+        try: () => manager.listExternalThreads(input.limit),
+        catch: (cause) =>
+          new ProviderAdapterRequestError({
+            provider: PROVIDER,
+            method: "thread/list",
+            detail: toMessage(cause, "Failed to list external Codex threads."),
+            cause,
+          }),
+      });
+
     const forkThread: CodexAdapterShape["forkThread"] = (input) =>
       Effect.tryPromise({
         try: () => manager.forkThread(input),
@@ -2035,6 +2047,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       interruptTurn,
       readThread,
       readExternalThread,
+      listExternalThreads,
       rollbackThread,
       compactThread,
       forkThread,

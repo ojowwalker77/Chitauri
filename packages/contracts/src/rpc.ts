@@ -69,6 +69,8 @@ import {
   OrchestrationEvent,
   OrchestrationImportThreadInput,
   OrchestrationImportThreadResult,
+  OrchestrationListImportableDesktopThreadsInput,
+  OrchestrationListImportableDesktopThreadsResult,
   OrchestrationRpcSchemas,
   OrchestrationShellStreamItem,
   OrchestrationThreadStreamItem,
@@ -179,6 +181,15 @@ export const WsOrchestrationImportThreadRpc = Rpc.make(ORCHESTRATION_WS_METHODS.
   success: OrchestrationImportThreadResult,
   error: WsRpcError,
 });
+
+export const WsOrchestrationListImportableDesktopThreadsRpc = Rpc.make(
+  ORCHESTRATION_WS_METHODS.listImportableDesktopThreads,
+  {
+    payload: OrchestrationListImportableDesktopThreadsInput,
+    success: OrchestrationListImportableDesktopThreadsResult,
+    error: WsRpcError,
+  },
+);
 
 export const WsOrchestrationGetSnapshotRpc = Rpc.make(ORCHESTRATION_WS_METHODS.getSnapshot, {
   payload: OrchestrationRpcSchemas.getSnapshot.input,
@@ -799,6 +810,7 @@ export const WsSubscribeAutomationEventsRpc = Rpc.make(WS_METHODS.subscribeAutom
 
 export const WsRpcGroup = RpcGroup.make(
   WsOrchestrationDispatchCommandRpc,
+  WsOrchestrationListImportableDesktopThreadsRpc,
   WsOrchestrationImportThreadRpc,
   WsOrchestrationGetSnapshotRpc,
   WsOrchestrationGetShellSnapshotRpc,

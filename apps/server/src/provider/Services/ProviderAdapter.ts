@@ -69,6 +69,14 @@ export interface ProviderThreadSnapshot {
   readonly cwd?: string | null;
 }
 
+export interface ProviderExternalThreadSummary {
+  readonly externalThreadId: string;
+  readonly title: string;
+  readonly cwd?: string | null;
+  readonly createdAt?: string | null;
+  readonly updatedAt: string;
+}
+
 export interface ProviderAdapterShape<TError> {
   /**
    * Provider kind implemented by this adapter.
@@ -158,6 +166,14 @@ export interface ProviderAdapterShape<TError> {
     readonly externalThreadId: string;
     readonly cwd?: string;
   }) => Effect.Effect<ProviderThreadSnapshot, TError>;
+
+  /**
+   * List persisted provider threads that can be resumed without an existing
+   * Chitauri thread binding.
+   */
+  readonly listExternalThreads?: (input: {
+    readonly limit: number;
+  }) => Effect.Effect<ReadonlyArray<ProviderExternalThreadSummary>, TError>;
 
   /**
    * Roll back a provider thread by N turns.

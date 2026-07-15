@@ -30,6 +30,7 @@ export const ORCHESTRATION_WS_METHODS = {
   getSnapshot: "orchestration.getSnapshot",
   getShellSnapshot: "orchestration.getShellSnapshot",
   dispatchCommand: "orchestration.dispatchCommand",
+  listImportableDesktopThreads: "orchestration.listImportableDesktopThreads",
   importThread: "orchestration.importThread",
   repairState: "orchestration.repairState",
   getTurnDiff: "orchestration.getTurnDiff",
@@ -2028,6 +2029,37 @@ export const OrchestrationImportThreadInput = Schema.Struct({
 });
 export type OrchestrationImportThreadInput = typeof OrchestrationImportThreadInput.Type;
 
+export const ImportableDesktopThreadProvider = Schema.Literals(["codex", "claudeAgent"]);
+export type ImportableDesktopThreadProvider = typeof ImportableDesktopThreadProvider.Type;
+
+export const ImportableDesktopThread = Schema.Struct({
+  provider: ImportableDesktopThreadProvider,
+  externalId: TrimmedNonEmptyString,
+  title: TrimmedNonEmptyString,
+  cwd: Schema.NullOr(TrimmedNonEmptyString),
+  createdAt: Schema.NullOr(IsoDateTime),
+  updatedAt: IsoDateTime,
+  chitauriThreadId: Schema.NullOr(ThreadId),
+});
+export type ImportableDesktopThread = typeof ImportableDesktopThread.Type;
+
+export const ImportableDesktopThreadWarning = Schema.Struct({
+  provider: ImportableDesktopThreadProvider,
+  message: TrimmedNonEmptyString,
+});
+export type ImportableDesktopThreadWarning = typeof ImportableDesktopThreadWarning.Type;
+
+export const OrchestrationListImportableDesktopThreadsInput = Schema.Struct({});
+export type OrchestrationListImportableDesktopThreadsInput =
+  typeof OrchestrationListImportableDesktopThreadsInput.Type;
+
+export const OrchestrationListImportableDesktopThreadsResult = Schema.Struct({
+  threads: Schema.Array(ImportableDesktopThread),
+  warnings: Schema.Array(ImportableDesktopThreadWarning),
+});
+export type OrchestrationListImportableDesktopThreadsResult =
+  typeof OrchestrationListImportableDesktopThreadsResult.Type;
+
 export const OrchestrationImportThreadResult = Schema.Struct({
   threadId: ThreadId,
 });
@@ -2054,6 +2086,10 @@ export const OrchestrationRpcSchemas = {
   dispatchCommand: {
     input: ClientOrchestrationCommand,
     output: DispatchResult,
+  },
+  listImportableDesktopThreads: {
+    input: OrchestrationListImportableDesktopThreadsInput,
+    output: OrchestrationListImportableDesktopThreadsResult,
   },
   importThread: {
     input: OrchestrationImportThreadInput,
