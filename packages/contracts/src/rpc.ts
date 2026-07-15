@@ -28,6 +28,7 @@ import {
   GitCreateDetachedWorktreeResult,
   GitCreateWorktreeInput,
   GitCreateWorktreeResult,
+  GitDeleteBranchInput,
   GitHubRepositoryInput,
   GitHubRepositoryResult,
   GitHandoffThreadInput,
@@ -441,6 +442,12 @@ export const WsGitRemoveWorktreeRpc = Rpc.make(WS_METHODS.gitRemoveWorktree, {
   error: WsRpcError,
 });
 
+export const WsGitDeleteBranchRpc = Rpc.make(WS_METHODS.gitDeleteBranch, {
+  payload: GitDeleteBranchInput,
+  success: Schema.Void,
+  error: WsRpcError,
+});
+
 export const WsGitCreateBranchRpc = Rpc.make(WS_METHODS.gitCreateBranch, {
   payload: GitCreateBranchInput,
   success: Schema.Void,
@@ -842,6 +849,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsGitCreateWorktreeRpc,
   WsGitCreateDetachedWorktreeRpc,
   WsGitRemoveWorktreeRpc,
+  WsGitDeleteBranchRpc,
   WsGitCreateBranchRpc,
   WsGitCheckoutRpc,
   WsGitStashAndCheckoutRpc,

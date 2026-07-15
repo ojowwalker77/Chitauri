@@ -165,6 +165,8 @@ export const AppSettingsSchema = Schema.Struct({
   ),
   openCodeExperimentalWebSockets: Schema.Boolean.pipe(withDefaults(() => false)),
   defaultThreadEnvMode: EnvMode.pipe(withDefaults(() => "local" as const satisfies EnvMode)),
+  autoArchiveMergedPrThreads: Schema.Boolean.pipe(withDefaults(() => false)),
+  autoDeleteMergedLocalBranches: Schema.Boolean.pipe(withDefaults(() => false)),
   confirmThreadDelete: Schema.Boolean.pipe(withDefaults(() => true)),
   confirmThreadArchive: Schema.Boolean.pipe(withDefaults(() => false)),
   confirmTerminalTabClose: Schema.Boolean.pipe(withDefaults(() => true)),

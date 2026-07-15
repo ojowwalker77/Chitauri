@@ -80,6 +80,21 @@ it.effect("accepts git.preparePullRequestThread requests", () =>
   }),
 );
 
+it.effect("accepts git.deleteBranch requests", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decode(WebSocketRequest, {
+      id: "req-delete-branch-1",
+      body: {
+        _tag: WS_METHODS.gitDeleteBranch,
+        cwd: "/repo",
+        branch: "feature/merged",
+        force: true,
+      },
+    });
+    assert.strictEqual(parsed.body._tag, WS_METHODS.gitDeleteBranch);
+  }),
+);
+
 it.effect("accepts project script discovery requests", () =>
   Effect.gen(function* () {
     const parsed = yield* decode(WebSocketRequest, {

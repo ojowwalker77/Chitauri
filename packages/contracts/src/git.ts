@@ -232,6 +232,13 @@ export const GitRemoveWorktreeInput = Schema.Struct({
 });
 export type GitRemoveWorktreeInput = typeof GitRemoveWorktreeInput.Type;
 
+export const GitDeleteBranchInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+  branch: TrimmedNonEmptyStringSchema,
+  force: Schema.optional(Schema.Boolean),
+});
+export type GitDeleteBranchInput = typeof GitDeleteBranchInput.Type;
+
 export const GitCreateBranchInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
   branch: TrimmedNonEmptyStringSchema,

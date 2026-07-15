@@ -1099,6 +1099,12 @@ function SettingsRouteView() {
       ? ["Provider update checks"]
       : []),
     ...(settings.diffWordWrap !== defaults.diffWordWrap ? ["Diff line wrapping"] : []),
+    ...(settings.autoArchiveMergedPrThreads !== defaults.autoArchiveMergedPrThreads
+      ? ["Auto-archive merged PRs"]
+      : []),
+    ...(settings.autoDeleteMergedLocalBranches !== defaults.autoDeleteMergedLocalBranches
+      ? ["Merged branch cleanup"]
+      : []),
     ...(settings.confirmThreadDelete !== defaults.confirmThreadDelete
       ? ["Delete confirmation"]
       : []),
@@ -2333,6 +2339,26 @@ function SettingsRouteView() {
             "Set the default wrap state when the diff panel opens. The in-panel wrap toggle only affects the current diff session.",
           resetLabel: "diff line wrapping",
           ariaLabel: "Wrap diff lines by default",
+        })}
+      </SettingsSection>
+
+      <SettingsSection title="Pull request completion">
+        {renderBooleanSettingRow({
+          settingKey: "autoArchiveMergedPrThreads",
+          title: "Auto-archive merged PRs",
+          description:
+            "Archive an idle thread when its pull request is detected as merged. The archive notification still lets you undo it.",
+          resetLabel: "auto-archive merged PRs",
+          ariaLabel: "Automatically archive merged pull request threads",
+        })}
+
+        {renderBooleanSettingRow({
+          settingKey: "autoDeleteMergedLocalBranches",
+          title: "Delete merged local branches",
+          description:
+            "For local-mode threads, switch a clean repository to its default branch and delete the merged feature branch. Worktree-mode branches are left intact.",
+          resetLabel: "merged branch cleanup",
+          ariaLabel: "Automatically delete merged local branches",
         })}
       </SettingsSection>
 

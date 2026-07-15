@@ -95,6 +95,7 @@ import {
 import { isElectron } from "../env";
 import { showConfirmDialogFallback } from "../confirmDialogFallback";
 import { formatRelativeTime } from "../lib/relativeTime";
+import { deleteMergedLocalBranch } from "../lib/mergedPrBranchCleanup";
 import { isMacPlatform, newCommandId, newThreadId, randomUUID } from "../lib/utils";
 import {
   reconcileDeletedThreadFromClient,
@@ -1478,6 +1479,7 @@ export default function Sidebar() {
   );
   const archivePendingThreadIdsRef = useRef<Set<ThreadId>>(new Set());
   const archiveUndoPendingThreadIdsRef = useRef<Set<ThreadId>>(new Set());
+  const mergedPrAutomationAttemptsRef = useRef<Set<string>>(new Set());
   const [renameDialogThreadId, setRenameDialogThreadId] = useState<ThreadId | null>(null);
   const [renameProjectDialogId, setRenameProjectDialogId] = useState<ProjectId | null>(null);
   const [projectContextMenuState, setProjectContextMenuState] =
@@ -4639,6 +4641,107 @@ export default function Sidebar() {
     threadGitTargets,
     threadStoredPrQueries,
     threadStoredPrTargets,
+  ]);
+  useEffect(() => {
+    if (
+      !appSettings.autoArchiveMergedPrThreads &&
+      !appSettings.autoDeleteMergedLocalBranches
+    ) {
+      mergedPrAutomationAttemptsRef.current.clear();
+      return;
+    }
+
+    const candidates = visibleSidebarThreads.flatMap((thread) => {
+      const pullRequest = prByThreadId.get(thread.id) ?? null;
+      const isLocalMode =
+        thread.envMode === "local" ||
+        (thread.envMode === undefined && thread.worktreePath === null);
+      const shouldDeleteBranch =
+        appSettings.autoDeleteMergedLocalBranches &&
+        isLocalMode &&
+        thread.branch !== null;
+      if (
+        pullRequest?.state !== "merged" ||
+        isThreadRunningTurn(thread) ||
+        (!appSettings.autoArchiveMergedPrThreads && !shouldDeleteBranch)
+      ) {
+        return [];
+      }
+
+      const projectCwd = projectCwdById.get(thread.projectId) ?? null;
+      return [{ thread, pullRequest, projectCwd, shouldDeleteBranch }];
+    });
+
+    for (const candidate of candidates) {
+      const attemptKey = [
+        candidate.thread.id,
+        candidate.pullRequest.url,
+        appSettings.autoArchiveMergedPrThreads ? "archive" : "keep",
+        candidate.shouldDeleteBranch ? "delete" : "keep-branch",
+      ].join(":");
+      if (mergedPrAutomationAttemptsRef.current.has(attemptKey)) {
+        continue;
+      }
+      mergedPrAutomationAttemptsRef.current.add(attemptKey);
+
+      void (async () => {
+        try {
+          const api = readNativeApi();
+          if (!api) {
+            throw new Error("Unable to connect to the app server.");
+          }
+
+          let branchDeleted = false;
+          if (candidate.shouldDeleteBranch) {
+            if (!candidate.projectCwd || !candidate.thread.branch) {
+              throw new Error("The local repository or feature branch is unavailable.");
+            }
+            const result = await deleteMergedLocalBranch(api.git, {
+              cwd: candidate.projectCwd,
+              localBranch: candidate.thread.branch,
+              mergedHeadBranch: candidate.pullRequest.headBranch,
+              mergedPullRequestUrl: candidate.pullRequest.url,
+            });
+            branchDeleted = result === "deleted";
+          }
+
+          let archived = false;
+          if (appSettings.autoArchiveMergedPrThreads) {
+            const returnToThreadOnUndo = routeThreadId === candidate.thread.id;
+            archived = await archiveThread(candidate.thread.id);
+            if (archived) {
+              showArchiveUndoToast(candidate.thread.id, { returnToThreadOnUndo });
+            }
+          }
+
+          if (branchDeleted && !archived) {
+            toastManager.add({
+              type: "success",
+              title: "Merged branch deleted",
+              description: `Deleted local branch ${candidate.thread.branch}.`,
+              data: { threadId: candidate.thread.id },
+            });
+          }
+        } catch (error) {
+          toastManager.add({
+            type: "error",
+            title: "Merged PR cleanup needs attention",
+            description:
+              error instanceof Error ? error.message : "The merged pull request was left intact.",
+            data: { threadId: candidate.thread.id },
+          });
+        }
+      })();
+    }
+  }, [
+    appSettings.autoArchiveMergedPrThreads,
+    appSettings.autoDeleteMergedLocalBranches,
+    archiveThread,
+    prByThreadId,
+    projectCwdById,
+    routeThreadId,
+    showArchiveUndoToast,
+    visibleSidebarThreads,
   ]);
   const isManualProjectSorting = appSettings.sidebarProjectSortOrder === "manual";
   const threadJumpCommandByThreadId = useMemo(() => {

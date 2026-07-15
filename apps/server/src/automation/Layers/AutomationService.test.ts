@@ -12,6 +12,7 @@ import {
   type AutomationCreateInput,
   type AutomationRun,
   type GitCreateWorktreeInput,
+  type GitDeleteBranchInput,
   type GitRemoveWorktreeInput,
   type OrchestrationCommand,
   type OrchestrationProjectShell,
@@ -20,11 +21,7 @@ import {
 import { Duration, Effect, Layer, Option, Stream } from "effect";
 import { TestClock } from "effect/testing";
 
-import {
-  GitCore,
-  type GitCoreShape,
-  type GitDeleteBranchInput,
-} from "../../git/Services/GitCore.ts";
+import { GitCore, type GitCoreShape } from "../../git/Services/GitCore.ts";
 import { TextGeneration, type TextGenerationShape } from "../../git/Services/TextGeneration.ts";
 import { OrchestrationCommandInternalError } from "../../orchestration/Errors.ts";
 import { OrchestrationEngineService } from "../../orchestration/Services/OrchestrationEngine.ts";
