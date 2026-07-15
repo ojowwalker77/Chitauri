@@ -1370,5 +1370,10 @@ function formatHexChannel(value: number): string {
 }
 
 function formatAlpha(value: number): string {
-  return Math.min(1, Math.max(0, value)).toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+  const clampedValue = Math.min(1, Math.max(0, value));
+  // Decimal half-steps such as 0.0875 can be represented just below their
+  // mathematical value in binary, causing toFixed(3) to round down to 0.087.
+  // Nudge only the tie boundary so derived CSS opacity stays deterministic.
+  const roundedValue = Math.round((clampedValue + Number.EPSILON) * 1_000) / 1_000;
+  return String(roundedValue);
 }
