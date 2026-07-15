@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.4.1 - 2026-07-15
+
+### Fixed
+
+- Fixed the packaged desktop app failing to reach its own backend, surfacing in the UI as `SocketOpenError: An error occurred during Open` on every action. The `0.4.0` scheme rename (`t3://` to `chitauri://`) left the server's trusted-origin allowlist pinned to the old `t3://app` literal, so the renderer's `Origin: chitauri://app` no longer matched and every `/ws` upgrade was rejected with `403`. Custom schemes are non-special, so `new URL("chitauri://app").origin` serializes to the opaque `"null"` — which is precisely why that gate compares a literal, and why the stale value failed silently.
+- Fixed in-app image and PDF previews in packaged builds, which were broken by the same stale allowlist: `/api/local-image` is gated on the same origin check, so cross-origin viewer fetches came back without a readable CORS header.
+
+### Changed
+
+- Changed the desktop scheme and app origin to derive from a single shared constant (`@t3tools/shared/desktopAppOrigin`) consumed by both the desktop main process and the server's origin gate, so a future rename cannot drift the two apart.
+- Bumped Chitauri release package versions to `0.4.1` across the server, desktop, web, and contracts packages, and refreshed `bun.lock` workspace metadata.
+- Reformatted 14 drifted files with `oxfmt`. `bun run fmt:check` is a CI gate and was failing on committed code, leaving `main` red. The changes are pure reflow with no semantic diff.
+
+### Notes
+
+- Only packaged builds were affected. Development builds load from the Vite dev-server origin, which is trusted separately via `devUrl`, so this class of regression stays invisible to `bun dev` and only appears in a shipped app.
+
+### Verification
+
+- `bun run fmt:check` passed across 3032 files (failed on 14 files before this release).
+- `bun run lint` passed with 170 warnings, 0 errors.
+- `bun run typecheck` passed across all 8 packages.
+- Full `bun run test` passed: 10 tasks successful in 2m57.634s. `t3` passed 146 files / 1618 tests, with 1 file and 6 tests skipped.
+- `bun run build:desktop` passed: 5 tasks successful. Confirmed the shared scheme constant inlines into `apps/desktop/dist-electron/main.js` and that no `t3://app` literal survives in the bundle.
+- Verified the fix against a server booted from source: the `/ws` upgrade with `Origin: chitauri://app` and a valid token now returns `101 Switching Protocols`, where `0.4.0` returned `403`. Untrusted origins (`https://evil.test`), opaque `Origin: null`, and the retired `t3://app` all still return `403`, so the CSRF gate is unchanged.
+
 ## 0.4.0 - 2026-07-06
 
 ### Added
