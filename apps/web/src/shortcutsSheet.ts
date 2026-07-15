@@ -131,6 +131,11 @@ const AVAILABLE_NOW_DEFINITIONS: readonly ShortcutDefinition[] = [
     description: "Reveal the built-in browser panel for the active thread.",
   },
   {
+    command: "rightPanel.toggle",
+    label: "Toggle right panel",
+    description: "Collapse or reveal the active thread's right panel.",
+  },
+  {
     command: "chat.visible.previous",
     label: "Previous visible thread",
     description: "Cycle to the previous thread that is currently visible in the sidebar.",

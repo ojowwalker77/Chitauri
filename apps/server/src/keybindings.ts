@@ -66,6 +66,7 @@ type WhenToken =
 
 export const DEFAULT_KEYBINDINGS: ReadonlyArray<KeybindingRule> = [
   { key: "mod+b", command: "sidebar.toggle", when: "!terminalFocus" },
+  { key: "mod+alt+b", command: "rightPanel.toggle", when: "!terminalFocus" },
   { key: "mod+k", command: "sidebar.search" },
   { key: "mod+shift+o", command: "sidebar.addProject", when: "!terminalFocus" },
   { key: "mod+i", command: "sidebar.importThread", when: "!terminalFocus" },

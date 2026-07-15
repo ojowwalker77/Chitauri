@@ -54,7 +54,7 @@ import { isNonFatalCodexErrorMessage } from "../../codexErrorClassification.ts";
 import { ServerConfig } from "../../config.ts";
 import { extractProposedPlanMarkdown } from "../planMode.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
-import { chitauriSkillsDir } from "../skillsCatalog.ts";
+import { ensureChitauriSkillsDir } from "../skillsCatalog.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 
 const PROVIDER = "codex" as const;
@@ -1571,10 +1571,13 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           return options.manager;
         }
         const services = yield* Effect.services<never>();
+        const portableSkillsDir = yield* Effect.promise(() =>
+          ensureChitauriSkillsDir(serverConfig.baseDir),
+        );
         return (
           options?.makeManager?.(services) ??
           new CodexAppServerManager(services, {
-            chitauriSkillsDir: chitauriSkillsDir(serverConfig.baseDir),
+            chitauriSkillsDir: portableSkillsDir,
           })
         );
       }),

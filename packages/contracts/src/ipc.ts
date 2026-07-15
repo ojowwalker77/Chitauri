@@ -106,6 +106,12 @@ import type {
 } from "./project";
 import type { FilesystemBrowseInput, FilesystemBrowseResult } from "./filesystem";
 import type {
+  ResearchListInput,
+  ResearchListResult,
+  ResearchReadInput,
+  ResearchReadResult,
+} from "./research";
+import type {
   ServerConfig,
   ServerDiagnosticsResult,
   ServerGenerateAutomationIntentInput,
@@ -447,6 +453,10 @@ export interface NativeApi {
   };
   filesystem: {
     browse: (input: FilesystemBrowseInput) => Promise<FilesystemBrowseResult>;
+  };
+  research: {
+    list: (input?: ResearchListInput) => Promise<ResearchListResult>;
+    read: (input: ResearchReadInput) => Promise<ResearchReadResult>;
   };
   shell: {
     openInEditor: (cwd: string, editor: EditorId) => Promise<void>;

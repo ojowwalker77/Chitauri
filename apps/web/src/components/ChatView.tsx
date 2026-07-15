@@ -63,6 +63,7 @@ import {
   useRef,
   useState,
   type MouseEvent,
+  type ReactNode,
 } from "react";
 import { GoTasklist } from "react-icons/go";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -937,6 +938,12 @@ interface ChatViewProps {
   } | null;
   onChangeThreadInSplitPane?: () => void;
   onCloseThreadPane?: () => void;
+  /** Replaces the transcript while preserving Chitauri's real composer and thread runtime. */
+  transcriptContent?: ReactNode;
+  /** Gives a non-chat surface a meaningful title without changing its backing thread title. */
+  surfaceTitle?: string;
+  /** Adds surface-specific context to provider messages without changing the visible draft. */
+  transformOutgoingPrompt?: (prompt: string) => string;
 }
 
 function normalizeRestoredQueuedPrompt(value: string): string {
@@ -995,6 +1002,9 @@ export default function ChatView({
   viewModeAction = null,
   onChangeThreadInSplitPane,
   onCloseThreadPane,
+  transcriptContent,
+  surfaceTitle,
+  transformOutgoingPrompt,
 }: ChatViewProps) {
   const markThreadVisited = useStore((store) => store.markThreadVisited);
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
@@ -2973,7 +2983,10 @@ export default function ChatView({
   // Home-scoped chats get the global "What should we work on?" copy plus the project picker,
   // while project-scoped drafts reuse the same centered layout with folder-specific copy.
   const isCenteredEmptyLanding =
-    timelineEntries.length === 0 && !activeThread?.parentThreadId && !isEditorRail;
+    transcriptContent === undefined &&
+    timelineEntries.length === 0 &&
+    !activeThread?.parentThreadId &&
+    !isEditorRail;
   const isEmptyChatLanding =
     isCenteredEmptyLanding && Boolean(homeDir) && isContainerLandingProject;
   const { turnDiffSummaries, inferredCheckpointTurnCountByTurnId } =
@@ -5773,6 +5786,14 @@ export default function ChatView({
         return;
       }
 
+      if (command === "rightPanel.toggle") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!hasRightDockPanes) return;
+        toggleRightDock();
+        return;
+      }
+
       if (command === "chat.split") {
         event.preventDefault();
         event.stopPropagation();
@@ -5820,11 +5841,13 @@ export default function ChatView({
     hasLiveTurn,
     handleModelPickerOpenChange,
     handleTraitsPickerOpenChange,
+    hasRightDockPanes,
     isComposerApprovalState,
     setTerminalWorkspaceTab,
     surfaceMode,
     scheduleComposerFocus,
     toggleComposerFocus,
+    toggleRightDock,
     toggleTerminalVisibility,
   ]);
 
@@ -7119,7 +7142,7 @@ export default function ChatView({
     // Trailing blocks are appended innermost-to-outermost: assistant selections,
     // terminal contexts, file comments, then pasted text (outermost). The display
     // extractors unwrap them in the reverse order.
-    const messageTextForSend = appendPastedTextsToPrompt(
+    const visibleMessageTextForSend = appendPastedTextsToPrompt(
       appendFileCommentsToPrompt(
         appendTerminalContextsToPrompt(
           appendAssistantSelectionsToPrompt(promptForSend, composerAssistantSelectionsSnapshot),
@@ -7129,6 +7152,9 @@ export default function ChatView({
       ),
       composerPastedTextsSnapshot,
     );
+    const messageTextForSend = transformOutgoingPrompt
+      ? transformOutgoingPrompt(visibleMessageTextForSend)
+      : visibleMessageTextForSend;
     const messageIdForSend = newMessageId();
     const messageCreatedAt = new Date().toISOString();
     const outgoingTextSeed =
@@ -10325,7 +10351,7 @@ export default function ChatView({
       >
         <ChatHeader
           activeThreadId={activeThread.id}
-          activeThreadTitle={activeThreadDisplayTitle}
+          activeThreadTitle={surfaceTitle ?? activeThreadDisplayTitle}
           activeThreadEntryPoint={terminalState.entryPoint}
           activeProvider={activeThread.session?.provider ?? activeThread.modelSelection.provider}
           activeProjectName={isEditorRail ? undefined : activeProjectDisplayName}
@@ -10530,65 +10556,69 @@ export default function ChatView({
             {shouldRenderChatPaneContent && !isCenteredEmptyLanding ? (
               <div className="flex min-h-0 flex-1 flex-col">
                 <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-                  <ChatTranscriptPane
-                    activeThreadId={activeThread.id}
-                    activeTurnId={activeThread.session?.activeTurnId ?? null}
-                    agentActivityDetail={openAgentActivityDetail}
-                    hasMessages={timelineEntries.length > 0}
-                    isWorking={isWorking}
-                    worktreeSetup={activeWorktreeSetup}
-                    activeTurnInProgress={activeTurnInProgress}
-                    activeTurnStartedAt={activeWorkStartedAt}
-                    listRef={legendListRef}
-                    timelineControllerRef={timelineControllerRef}
-                    pinnedMessageIds={pinnedMessageIds}
-                    canPinMessage={(messageId) => !isPendingSetupBubbleId(messageId)}
-                    onTogglePinMessage={handleTogglePinMessageGuarded}
-                    threadMarkers={threadMarkers}
-                    enteringUserMessageIds={enteringUserMessageIds}
-                    timelineEntries={timelineEntries}
-                    turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}
-                    onOpenTurnDiff={onOpenTurnDiff}
-                    onOpenThread={onNavigateToThread}
-                    onOpenAutomation={onOpenAutomation}
-                    revertTurnCountByUserMessageId={revertTurnCountByUserMessageId}
-                    onRevertUserMessage={onRevertUserMessage}
-                    onEditUserMessage={onEditUserMessage}
-                    isRevertingCheckpoint={isRevertingCheckpoint}
-                    onExpandTimelineImage={onExpandTimelineImage}
-                    followLiveOutput={hasStreamingAssistantText}
-                    onIsAtEndChange={onIsAtEndChange}
-                    markdownCwd={threadWorkspaceCwd ?? undefined}
-                    resolvedTheme={resolvedTheme}
-                    chatFontSizePx={settings.chatFontSizePx}
-                    timestampFormat={timestampFormat}
-                    workspaceRoot={activeProject?.cwd ?? undefined}
-                    emptyStateContent={isEditorRail ? <span aria-hidden="true" /> : undefined}
-                    emptyStateProjectName={activeProjectDisplayName}
-                    terminalWorkspaceTerminalTabActive={terminalWorkspaceTerminalTabActive}
-                    onMessagesScroll={onMessagesScroll}
-                    onMessagesClickCapture={onMessagesClickCapture}
-                    onMessagesMouseUp={onMessagesMouseUp}
-                    onMessagesWheel={onMessagesWheel}
-                    onMessagesPointerDown={onMessagesPointerDown}
-                    onMessagesPointerUp={onMessagesPointerUp}
-                    onMessagesPointerCancel={onMessagesPointerCancel}
-                    onMessagesTouchStart={onMessagesTouchStart}
-                    onMessagesTouchMove={onMessagesTouchMove}
-                    onMessagesTouchEnd={onMessagesTouchEnd}
-                    onOpenAgentActivity={setOpenAgentActivityId}
-                    onCloseAgentActivityDetail={() => setOpenAgentActivityId(null)}
-                    scrollButtonVisible={showScrollToBottom}
-                    onScrollToBottom={onScrollToBottom}
-                    bottomContentInsetPx={
-                      composerStackedChromeHeight > 0 ? composerStackedChromeHeight + 8 : undefined
-                    }
-                    contentInsetRightPx={
-                      environmentAppliesContentInset
-                        ? ENVIRONMENT_DOCKED_CONTENT_INSET_PX
-                        : undefined
-                    }
-                  />
+                  {transcriptContent ?? (
+                    <ChatTranscriptPane
+                      activeThreadId={activeThread.id}
+                      activeTurnId={activeThread.session?.activeTurnId ?? null}
+                      agentActivityDetail={openAgentActivityDetail}
+                      hasMessages={timelineEntries.length > 0}
+                      isWorking={isWorking}
+                      worktreeSetup={activeWorktreeSetup}
+                      activeTurnInProgress={activeTurnInProgress}
+                      activeTurnStartedAt={activeWorkStartedAt}
+                      listRef={legendListRef}
+                      timelineControllerRef={timelineControllerRef}
+                      pinnedMessageIds={pinnedMessageIds}
+                      canPinMessage={(messageId) => !isPendingSetupBubbleId(messageId)}
+                      onTogglePinMessage={handleTogglePinMessageGuarded}
+                      threadMarkers={threadMarkers}
+                      enteringUserMessageIds={enteringUserMessageIds}
+                      timelineEntries={timelineEntries}
+                      turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}
+                      onOpenTurnDiff={onOpenTurnDiff}
+                      onOpenThread={onNavigateToThread}
+                      onOpenAutomation={onOpenAutomation}
+                      revertTurnCountByUserMessageId={revertTurnCountByUserMessageId}
+                      onRevertUserMessage={onRevertUserMessage}
+                      onEditUserMessage={onEditUserMessage}
+                      isRevertingCheckpoint={isRevertingCheckpoint}
+                      onExpandTimelineImage={onExpandTimelineImage}
+                      followLiveOutput={hasStreamingAssistantText}
+                      onIsAtEndChange={onIsAtEndChange}
+                      markdownCwd={threadWorkspaceCwd ?? undefined}
+                      resolvedTheme={resolvedTheme}
+                      chatFontSizePx={settings.chatFontSizePx}
+                      timestampFormat={timestampFormat}
+                      workspaceRoot={activeProject?.cwd ?? undefined}
+                      emptyStateContent={isEditorRail ? <span aria-hidden="true" /> : undefined}
+                      emptyStateProjectName={activeProjectDisplayName}
+                      terminalWorkspaceTerminalTabActive={terminalWorkspaceTerminalTabActive}
+                      onMessagesScroll={onMessagesScroll}
+                      onMessagesClickCapture={onMessagesClickCapture}
+                      onMessagesMouseUp={onMessagesMouseUp}
+                      onMessagesWheel={onMessagesWheel}
+                      onMessagesPointerDown={onMessagesPointerDown}
+                      onMessagesPointerUp={onMessagesPointerUp}
+                      onMessagesPointerCancel={onMessagesPointerCancel}
+                      onMessagesTouchStart={onMessagesTouchStart}
+                      onMessagesTouchMove={onMessagesTouchMove}
+                      onMessagesTouchEnd={onMessagesTouchEnd}
+                      onOpenAgentActivity={setOpenAgentActivityId}
+                      onCloseAgentActivityDetail={() => setOpenAgentActivityId(null)}
+                      scrollButtonVisible={showScrollToBottom}
+                      onScrollToBottom={onScrollToBottom}
+                      bottomContentInsetPx={
+                        composerStackedChromeHeight > 0
+                          ? composerStackedChromeHeight + 8
+                          : undefined
+                      }
+                      contentInsetRightPx={
+                        environmentAppliesContentInset
+                          ? ENVIRONMENT_DOCKED_CONTENT_INSET_PX
+                          : undefined
+                      }
+                    />
+                  )}
                 </div>
 
                 <div
@@ -10680,7 +10710,7 @@ export default function ChatView({
         {/* end chat column */}
 
         {/* Plan sidebar */}
-        {planSidebarOpen ? (
+        {planSidebarOpen && transcriptContent === undefined ? (
           <PlanSidebar
             activeTaskList={activeTaskList}
             activeProposedPlan={sidebarProposedPlan}

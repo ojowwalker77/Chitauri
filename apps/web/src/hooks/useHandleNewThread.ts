@@ -32,6 +32,8 @@ export interface NewThreadNavigationOptions {
    * across the route change; default navigation clears all search params.
    */
   search?: (previous: Record<string, unknown>) => Record<string, unknown>;
+  /** Lets first-class non-chat surfaces keep their own route while reusing thread bootstrapping. */
+  navigate?: (threadId: ThreadId) => Promise<void>;
 }
 
 export function useHandleNewThread() {
@@ -52,6 +54,14 @@ export function useHandleNewThread() {
     ): Promise<ThreadId> => {
       const entryPoint = options?.entryPoint ?? "chat";
       const wantsTemporaryThread = options?.temporary === true;
+      const navigateToThread = (threadId: ThreadId) =>
+        navigation?.navigate
+          ? navigation.navigate(threadId)
+          : navigate({
+              to: "/$threadId",
+              params: { threadId },
+              ...(navigation?.search ? { search: navigation.search } : {}),
+            });
       const applyProviderOverride = (threadId: ThreadId) => {
         if (!options?.provider) {
           return;
@@ -218,11 +228,7 @@ export function useHandleNewThread() {
             }
             return bootstrapPlan.threadId;
           }
-          await navigate({
-            to: "/$threadId",
-            params: { threadId: bootstrapPlan.threadId },
-            ...(navigation?.search ? { search: navigation.search } : {}),
-          });
+          await navigateToThread(bootstrapPlan.threadId);
           restoreComposerDraft(bootstrapPlan.threadId, preservedComposerDraft);
           if (entryPoint === "terminal") {
             await createTerminalThread(
@@ -284,11 +290,7 @@ export function useHandleNewThread() {
         applyStickyState(threadId);
         applyProviderOverride(threadId);
 
-        await navigate({
-          to: "/$threadId",
-          params: { threadId },
-          ...(navigation?.search ? { search: navigation.search } : {}),
-        });
+        await navigateToThread(threadId);
         if (entryPoint === "terminal") {
           await createTerminalThread(
             threadId,

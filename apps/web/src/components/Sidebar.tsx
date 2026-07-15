@@ -4,6 +4,7 @@
 
 import {
   ArchiveIcon,
+  BrainIcon,
   CheckCircle2Icon,
   ChevronDownIcon,
   ChevronRightIcon,
@@ -1337,6 +1338,7 @@ export default function Sidebar() {
   const isOnWorkspace = pathname.startsWith("/workspace");
   const isOnAutomations = pathname.startsWith("/automations");
   const isOnGitHub = pathname.startsWith("/github");
+  const isOnResearch = pathname.startsWith("/research");
   // Lightweight read of automations to drive the sidebar attention badge. Shares the
   // ["automations"] query cache with the Automations route (and its live stream updates).
   const automationListQuery = useQuery({
@@ -6548,6 +6550,14 @@ export default function Sidebar() {
                       badgeCount={automationAttentionBadgeCount}
                       onClick={() => {
                         void navigate({ to: "/automations" });
+                      }}
+                    />
+                    <SidebarPrimaryAction
+                      icon={BrainIcon}
+                      label="Research"
+                      active={isOnResearch}
+                      onClick={() => {
+                        void navigate({ to: "/research" });
                       }}
                     />
                     <SidebarPrimaryAction

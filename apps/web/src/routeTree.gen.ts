@@ -12,14 +12,17 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ChatRouteImport } from './routes/_chat'
 import { Route as ChatIndexRouteImport } from './routes/_chat.index'
 import { Route as ChatSettingsRouteImport } from './routes/_chat.settings'
+import { Route as ChatResearchRouteImport } from './routes/_chat.research'
 import { Route as ChatPluginsRouteImport } from './routes/_chat.plugins'
 import { Route as ChatGithubRouteImport } from './routes/_chat.github'
 import { Route as ChatAutomationsRouteImport } from './routes/_chat.automations'
 import { Route as ChatThreadIdRouteImport } from './routes/_chat.$threadId'
 import { Route as ChatWorkspaceIndexRouteImport } from './routes/_chat.workspace.index'
+import { Route as ChatResearchIndexRouteImport } from './routes/_chat.research.index'
 import { Route as ChatAutomationsIndexRouteImport } from './routes/_chat.automations.index'
 import { Route as ChatWorkspaceWorkspaceIdRouteImport } from './routes/_chat.workspace.$workspaceId'
 import { Route as ChatAutomationsAutomationIdRouteImport } from './routes/_chat.automations.$automationId'
+import { Route as ChatResearchResearchIdThreadIdRouteImport } from './routes/_chat.research.$researchId.$threadId'
 
 const ChatRoute = ChatRouteImport.update({
   id: '/_chat',
@@ -33,6 +36,11 @@ const ChatIndexRoute = ChatIndexRouteImport.update({
 const ChatSettingsRoute = ChatSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => ChatRoute,
+} as any)
+const ChatResearchRoute = ChatResearchRouteImport.update({
+  id: '/research',
+  path: '/research',
   getParentRoute: () => ChatRoute,
 } as any)
 const ChatPluginsRoute = ChatPluginsRouteImport.update({
@@ -60,6 +68,11 @@ const ChatWorkspaceIndexRoute = ChatWorkspaceIndexRouteImport.update({
   path: '/workspace/',
   getParentRoute: () => ChatRoute,
 } as any)
+const ChatResearchIndexRoute = ChatResearchIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ChatResearchRoute,
+} as any)
 const ChatAutomationsIndexRoute = ChatAutomationsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -77,6 +90,12 @@ const ChatAutomationsAutomationIdRoute =
     path: '/$automationId',
     getParentRoute: () => ChatAutomationsRoute,
   } as any)
+const ChatResearchResearchIdThreadIdRoute =
+  ChatResearchResearchIdThreadIdRouteImport.update({
+    id: '/$researchId/$threadId',
+    path: '/$researchId/$threadId',
+    getParentRoute: () => ChatResearchRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ChatIndexRoute
@@ -84,11 +103,14 @@ export interface FileRoutesByFullPath {
   '/automations': typeof ChatAutomationsRouteWithChildren
   '/github': typeof ChatGithubRoute
   '/plugins': typeof ChatPluginsRoute
+  '/research': typeof ChatResearchRouteWithChildren
   '/settings': typeof ChatSettingsRoute
   '/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
   '/workspace/$workspaceId': typeof ChatWorkspaceWorkspaceIdRoute
   '/automations/': typeof ChatAutomationsIndexRoute
+  '/research/': typeof ChatResearchIndexRoute
   '/workspace/': typeof ChatWorkspaceIndexRoute
+  '/research/$researchId/$threadId': typeof ChatResearchResearchIdThreadIdRoute
 }
 export interface FileRoutesByTo {
   '/$threadId': typeof ChatThreadIdRoute
@@ -99,7 +121,9 @@ export interface FileRoutesByTo {
   '/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
   '/workspace/$workspaceId': typeof ChatWorkspaceWorkspaceIdRoute
   '/automations': typeof ChatAutomationsIndexRoute
+  '/research': typeof ChatResearchIndexRoute
   '/workspace': typeof ChatWorkspaceIndexRoute
+  '/research/$researchId/$threadId': typeof ChatResearchResearchIdThreadIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -108,12 +132,15 @@ export interface FileRoutesById {
   '/_chat/automations': typeof ChatAutomationsRouteWithChildren
   '/_chat/github': typeof ChatGithubRoute
   '/_chat/plugins': typeof ChatPluginsRoute
+  '/_chat/research': typeof ChatResearchRouteWithChildren
   '/_chat/settings': typeof ChatSettingsRoute
   '/_chat/': typeof ChatIndexRoute
   '/_chat/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
   '/_chat/workspace/$workspaceId': typeof ChatWorkspaceWorkspaceIdRoute
   '/_chat/automations/': typeof ChatAutomationsIndexRoute
+  '/_chat/research/': typeof ChatResearchIndexRoute
   '/_chat/workspace/': typeof ChatWorkspaceIndexRoute
+  '/_chat/research/$researchId/$threadId': typeof ChatResearchResearchIdThreadIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -123,11 +150,14 @@ export interface FileRouteTypes {
     | '/automations'
     | '/github'
     | '/plugins'
+    | '/research'
     | '/settings'
     | '/automations/$automationId'
     | '/workspace/$workspaceId'
     | '/automations/'
+    | '/research/'
     | '/workspace/'
+    | '/research/$researchId/$threadId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/$threadId'
@@ -138,7 +168,9 @@ export interface FileRouteTypes {
     | '/automations/$automationId'
     | '/workspace/$workspaceId'
     | '/automations'
+    | '/research'
     | '/workspace'
+    | '/research/$researchId/$threadId'
   id:
     | '__root__'
     | '/_chat'
@@ -146,12 +178,15 @@ export interface FileRouteTypes {
     | '/_chat/automations'
     | '/_chat/github'
     | '/_chat/plugins'
+    | '/_chat/research'
     | '/_chat/settings'
     | '/_chat/'
     | '/_chat/automations/$automationId'
     | '/_chat/workspace/$workspaceId'
     | '/_chat/automations/'
+    | '/_chat/research/'
     | '/_chat/workspace/'
+    | '/_chat/research/$researchId/$threadId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -179,6 +214,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof ChatSettingsRouteImport
+      parentRoute: typeof ChatRoute
+    }
+    '/_chat/research': {
+      id: '/_chat/research'
+      path: '/research'
+      fullPath: '/research'
+      preLoaderRoute: typeof ChatResearchRouteImport
       parentRoute: typeof ChatRoute
     }
     '/_chat/plugins': {
@@ -216,6 +258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatWorkspaceIndexRouteImport
       parentRoute: typeof ChatRoute
     }
+    '/_chat/research/': {
+      id: '/_chat/research/'
+      path: '/'
+      fullPath: '/research/'
+      preLoaderRoute: typeof ChatResearchIndexRouteImport
+      parentRoute: typeof ChatResearchRoute
+    }
     '/_chat/automations/': {
       id: '/_chat/automations/'
       path: '/'
@@ -237,6 +286,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatAutomationsAutomationIdRouteImport
       parentRoute: typeof ChatAutomationsRoute
     }
+    '/_chat/research/$researchId/$threadId': {
+      id: '/_chat/research/$researchId/$threadId'
+      path: '/$researchId/$threadId'
+      fullPath: '/research/$researchId/$threadId'
+      preLoaderRoute: typeof ChatResearchResearchIdThreadIdRouteImport
+      parentRoute: typeof ChatResearchRoute
+    }
   }
 }
 
@@ -254,11 +310,26 @@ const ChatAutomationsRouteWithChildren = ChatAutomationsRoute._addFileChildren(
   ChatAutomationsRouteChildren,
 )
 
+interface ChatResearchRouteChildren {
+  ChatResearchIndexRoute: typeof ChatResearchIndexRoute
+  ChatResearchResearchIdThreadIdRoute: typeof ChatResearchResearchIdThreadIdRoute
+}
+
+const ChatResearchRouteChildren: ChatResearchRouteChildren = {
+  ChatResearchIndexRoute: ChatResearchIndexRoute,
+  ChatResearchResearchIdThreadIdRoute: ChatResearchResearchIdThreadIdRoute,
+}
+
+const ChatResearchRouteWithChildren = ChatResearchRoute._addFileChildren(
+  ChatResearchRouteChildren,
+)
+
 interface ChatRouteChildren {
   ChatThreadIdRoute: typeof ChatThreadIdRoute
   ChatAutomationsRoute: typeof ChatAutomationsRouteWithChildren
   ChatGithubRoute: typeof ChatGithubRoute
   ChatPluginsRoute: typeof ChatPluginsRoute
+  ChatResearchRoute: typeof ChatResearchRouteWithChildren
   ChatSettingsRoute: typeof ChatSettingsRoute
   ChatIndexRoute: typeof ChatIndexRoute
   ChatWorkspaceWorkspaceIdRoute: typeof ChatWorkspaceWorkspaceIdRoute
@@ -270,6 +341,7 @@ const ChatRouteChildren: ChatRouteChildren = {
   ChatAutomationsRoute: ChatAutomationsRouteWithChildren,
   ChatGithubRoute: ChatGithubRoute,
   ChatPluginsRoute: ChatPluginsRoute,
+  ChatResearchRoute: ChatResearchRouteWithChildren,
   ChatSettingsRoute: ChatSettingsRoute,
   ChatIndexRoute: ChatIndexRoute,
   ChatWorkspaceWorkspaceIdRoute: ChatWorkspaceWorkspaceIdRoute,
