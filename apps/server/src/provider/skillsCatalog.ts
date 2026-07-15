@@ -12,6 +12,7 @@ import * as fs from "node:fs/promises";
 import * as nodePath from "node:path";
 
 import type { ProviderKind, ProviderSkillDescriptor } from "@t3tools/contracts";
+import { ensureManagedResearchSkill } from "../research/researchLibrary";
 
 type FrontmatterValue = string | boolean;
 
@@ -364,6 +365,7 @@ export async function ensureChitauriSkillsDir(chitauriBaseDir: string): Promise<
   }
   try {
     await fs.mkdir(dir, { recursive: true });
+    await ensureManagedResearchSkill(chitauriBaseDir);
     ensuredChitauriSkillsDirs.add(dir);
   } catch {
     // Discovery still works without the folder; reads simply return nothing.

@@ -507,6 +507,10 @@ export function createWsNativeApi(): NativeApi {
     filesystem: {
       browse: (input) => transport.request(WS_METHODS.filesystemBrowse, input),
     },
+    research: {
+      list: (input = {}) => transport.request(WS_METHODS.researchList, input),
+      read: (input) => transport.request(WS_METHODS.researchRead, input),
+    },
     shell: {
       openInEditor: (cwd, editor) =>
         transport.request(WS_METHODS.shellOpenInEditor, { cwd, editor }),
