@@ -1,6 +1,6 @@
 // FILE: startContainerChat.ts
 // Purpose: Shared "ensure the hidden container project, then open a thread inside it" flow
-//          used by both the home-chat and Studio new-chat hooks.
+//          used by the home-chat new-chat hook.
 // Layer: Web orchestration helper
 // Exports: startContainerChat plus its result type.
 
@@ -11,8 +11,7 @@ export type StartContainerChatResult = { ok: true } | { ok: false; error: string
 
 /**
  * Resolves (creating if needed) the backing container project, then starts a thread inside it.
- * Both home chats and Studio chats share this exact flow; only the container resolver and the
- * user-facing failure label vary.
+ * The container resolver and user-facing failure label are supplied by the caller.
  */
 export async function startContainerChat(input: {
   readonly ensureProjectId: () => Promise<ProjectId | null>;

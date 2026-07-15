@@ -49,8 +49,6 @@ export function checkpointRefForThreadTurnLive(threadId: ThreadId, turnId: TurnI
  *   directory of their own: their `workspaceRoot` is not a real cwd until a
  *   worktree has actually been materialized for the thread, so it must be
  *   suppressed (treated as absent) until then.
- * - `studio` projects always have a real, durable cwd (the Studio root), so
- *   their `workspaceRoot` is used as-is, exactly like every other kind.
  * - Every other kind (including the default `project` kind, and an
  *   unresolved/undefined project) treats `workspaceRoot` as the real cwd.
  */

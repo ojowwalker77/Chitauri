@@ -152,7 +152,6 @@ export interface DispatchCommandNormalizerResult<E> {
 export interface DispatchCommandNormalizerOptions<E> {
   readonly attachmentsDir: string;
   readonly chatWorkspaceRoot?: string;
-  readonly studioWorkspaceRoot?: string;
   readonly fileSystem: FileSystem.FileSystem;
   readonly path: Path.Path;
   readonly canonicalizeProjectWorkspaceRoot: (
@@ -160,52 +159,33 @@ export interface DispatchCommandNormalizerOptions<E> {
     options?: { readonly createIfMissing?: boolean },
   ) => Effect.Effect<string, E>;
   readonly prepareChatWorkspaceRoot?: (workspaceRoot: string) => Effect.Effect<void, E>;
-  readonly prepareStudioWorkspaceRoot?: (workspaceRoot: string) => Effect.Effect<void, E>;
 }
 
-// Deferred workspace-root scaffolding (mkdir of managed subdirectories like Inbox/Outbox/
-// work/outputs) can transiently fail on a flaky filesystem even though the underlying
+// Deferred workspace-root scaffolding (mkdir of managed subdirectories like work/outputs)
+// can transiently fail on a flaky filesystem even though the underlying
 // operation is safe to retry (it's idempotent recursive directory creation). Since this runs
 // AFTER the orchestration decider has already accepted the dispatch (see wsRpc), a single
 // transient failure here would otherwise permanently strand the project row without its
-// managed subdirectories — Studio self-heals via studio.listRecentOutputs, but per-thread CHAT
-// workspace roots have no other re-run site. Retry a bounded number of times with a short
-// backoff before letting the failure surface to the caller.
+// managed subdirectories. Retry a bounded number of times with a short backoff before letting
+// the failure surface to the caller.
 const WORKSPACE_ROOT_PREPARE_RETRY_SCHEDULE = Schedule.exponential("100 millis").pipe(
   Schedule.take(2),
 );
 
 export function makeDispatchCommandNormalizer<E>(options: DispatchCommandNormalizerOptions<E>) {
-  // Shared "should we scaffold this managed workspace root's subdirectories" guard for both
-  // container kinds. The two kinds intentionally differ in exactly one respect
-  // (`prepareWhenEqualToRoot`):
-  //   - chat: per-thread project workspace roots always live strictly WITHIN chatWorkspaceRoot
-  //     (see buildChatWorkspaceFolderPath in chatFirstSend.ts); the shared chatWorkspaceRoot
-  //     itself is never used directly as a project's root, so exact equality must be excluded
-  //     to avoid ever scaffolding "work"/"outputs" straight into the shared parent directory.
-  //   - studio: the Studio container project's workspace root IS exactly studioWorkspaceRoot
-  //     (see ensureStudioProject in studioProjects.ts), so exact equality must trigger prepare.
-  const maybePrepareWorkspaceRoot = (input: {
-    readonly kind: "chat" | "studio";
-    readonly command: Extract<
+  // Per-thread chat workspace roots live strictly within chatWorkspaceRoot. Exact equality is
+  // excluded so the shared parent never receives a chat's work/outputs directories.
+  const maybePrepareChatWorkspaceRoot = (
+    command: Extract<
       ClientOrchestrationCommand,
       { type: "project.create" | "project.meta.update" }
-    >;
-    readonly workspaceRoot: string;
-    readonly configuredWorkspaceRoot: string | undefined;
-    readonly prepare: ((workspaceRoot: string) => Effect.Effect<void, E>) | undefined;
-    readonly prepareWhenEqualToRoot: boolean;
-  }) => {
-    const {
-      kind,
-      command,
-      workspaceRoot,
-      configuredWorkspaceRoot,
-      prepare,
-      prepareWhenEqualToRoot,
-    } = input;
+    >,
+    workspaceRoot: string,
+  ) => {
+    const configuredWorkspaceRoot = options.chatWorkspaceRoot;
+    const prepare = options.prepareChatWorkspaceRoot;
     if (
-      command.kind !== kind ||
+      command.kind !== "chat" ||
       command.createWorkspaceRootIfMissing !== true ||
       !configuredWorkspaceRoot ||
       !prepare
@@ -214,61 +194,11 @@ export function makeDispatchCommandNormalizer<E>(options: DispatchCommandNormali
     }
     const isWithin = isWorkspaceRootWithin(workspaceRoot, configuredWorkspaceRoot);
     const isEqual = workspaceRootsEqual(workspaceRoot, configuredWorkspaceRoot);
-    const shouldPrepare = prepareWhenEqualToRoot ? isWithin || isEqual : isWithin && !isEqual;
-    if (!shouldPrepare) {
+    if (!isWithin || isEqual) {
       return Effect.void;
     }
     return prepare(workspaceRoot).pipe(Effect.retry(WORKSPACE_ROOT_PREPARE_RETRY_SCHEDULE));
   };
-  const maybePrepareChatWorkspaceRoot = (
-    command: Extract<
-      ClientOrchestrationCommand,
-      { type: "project.create" | "project.meta.update" }
-    >,
-    workspaceRoot: string,
-  ) =>
-    maybePrepareWorkspaceRoot({
-      kind: "chat",
-      command,
-      workspaceRoot,
-      configuredWorkspaceRoot: options.chatWorkspaceRoot,
-      prepare: options.prepareChatWorkspaceRoot,
-      prepareWhenEqualToRoot: false,
-    });
-  const maybePrepareStudioWorkspaceRoot = (
-    command: Extract<
-      ClientOrchestrationCommand,
-      { type: "project.create" | "project.meta.update" }
-    >,
-    workspaceRoot: string,
-  ) =>
-    maybePrepareWorkspaceRoot({
-      kind: "studio",
-      command,
-      workspaceRoot,
-      configuredWorkspaceRoot: options.studioWorkspaceRoot,
-      prepare: options.prepareStudioWorkspaceRoot,
-      prepareWhenEqualToRoot: true,
-    });
-
-  // Combines the chat + studio scaffolding decisions into a single deferred effect. The
-  // decision logic (kinds, prepareWhenEqualToRoot, isWorkspaceRootWithin/workspaceRootsEqual)
-  // is evaluated eagerly here (it's pure and side-effect-free), but the resulting `prepare`
-  // effect is only *constructed*, never run, until the caller explicitly executes it.
-  const deferredPrepareWorkspaceRoot = (
-    command: Extract<
-      ClientOrchestrationCommand,
-      { type: "project.create" | "project.meta.update" }
-    >,
-    workspaceRoot: string,
-  ): Effect.Effect<void, E> =>
-    Effect.all(
-      [
-        maybePrepareChatWorkspaceRoot(command, workspaceRoot),
-        maybePrepareStudioWorkspaceRoot(command, workspaceRoot),
-      ],
-      { discard: true },
-    );
 
   return Effect.fnUntraced(function* (input: { readonly command: ClientOrchestrationCommand }) {
     if (input.command.type === "project.create") {
@@ -290,7 +220,7 @@ export function makeDispatchCommandNormalizer<E>(options: DispatchCommandNormali
       } satisfies OrchestrationCommand;
       return {
         command,
-        prepareWorkspaceRoot: deferredPrepareWorkspaceRoot(input.command, workspaceRoot),
+        prepareWorkspaceRoot: maybePrepareChatWorkspaceRoot(input.command, workspaceRoot),
       };
     }
 
@@ -308,7 +238,7 @@ export function makeDispatchCommandNormalizer<E>(options: DispatchCommandNormali
       } satisfies OrchestrationCommand;
       return {
         command,
-        prepareWorkspaceRoot: deferredPrepareWorkspaceRoot(input.command, workspaceRoot),
+        prepareWorkspaceRoot: maybePrepareChatWorkspaceRoot(input.command, workspaceRoot),
       };
     }
 

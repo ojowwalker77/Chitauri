@@ -1,7 +1,7 @@
 // FILE: config.test.ts
 // Purpose: Verifies pure server configuration path derivation helpers, plus the
-//          realpath canonicalization applied to homeDir/chatWorkspaceRoot/
-//          studioWorkspaceRoot so reported roots match the REALPATH-canonicalized
+//          realpath canonicalization applied to homeDir/chatWorkspaceRoot so reported roots
+//          match the REALPATH-canonicalized
 //          roots stored on project rows (see wsRpc.ts's
 //          canonicalizeProjectWorkspaceRoot).
 
@@ -15,7 +15,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   resolveCanonicalWorkspaceRoots,
   resolveDefaultChatWorkspaceRoot,
-  resolveDefaultStudioWorkspaceRoot,
   resolveStateDirName,
 } from "./config";
 
@@ -82,32 +81,6 @@ describe("resolveDefaultChatWorkspaceRoot", () => {
   });
 });
 
-describe("resolveDefaultStudioWorkspaceRoot", () => {
-  it("places the Studio workspace under Documents/Chitauri/Studio on macOS and Linux", () => {
-    expect(
-      resolveDefaultStudioWorkspaceRoot({
-        homeDir: "/Users/tester",
-        platform: "darwin",
-      }),
-    ).toBe("/Users/tester/Documents/Chitauri/Studio");
-    expect(
-      resolveDefaultStudioWorkspaceRoot({
-        homeDir: "/home/tester",
-        platform: "linux",
-      }),
-    ).toBe("/home/tester/Documents/Chitauri/Studio");
-  });
-
-  it("uses Windows separators when deriving the Studio workspace on Windows", () => {
-    expect(
-      resolveDefaultStudioWorkspaceRoot({
-        homeDir: "C:\\Users\\tester",
-        platform: "win32",
-      }),
-    ).toBe("C:\\Users\\tester\\Documents\\Chitauri\\Studio");
-  });
-});
-
 describe("resolveCanonicalWorkspaceRoots", () => {
   it("canonicalizes a symlinked home directory to match project row realpaths", async () => {
     const root = makeTempDir();
@@ -123,13 +96,10 @@ describe("resolveCanonicalWorkspaceRoots", () => {
 
     const expectedHomeDir = fs.realpathSync(realHome);
     expect(result.homeDir).toBe(expectedHomeDir);
-    // chatWorkspaceRoot/studioWorkspaceRoot don't exist yet under the resolved
-    // home, so they must be re-derived from the canonicalized (symlink-free)
+    // chatWorkspaceRoot doesn't exist yet under the resolved home, so it must be re-derived
+    // from the canonicalized (symlink-free)
     // home rather than the raw, symlinked input.
     expect(result.chatWorkspaceRoot).toBe(path.join(expectedHomeDir, "Documents", "Chitauri"));
-    expect(result.studioWorkspaceRoot).toBe(
-      path.join(expectedHomeDir, "Documents", "Chitauri", "Studio"),
-    );
   });
 
   it("canonicalizes the nearest existing ancestor when the workspace root itself does not exist yet", async () => {
@@ -140,7 +110,7 @@ describe("resolveCanonicalWorkspaceRoots", () => {
     fs.mkdirSync(homeDir, { recursive: true });
     // Symlink ~/Documents to a real directory elsewhere, matching the bug
     // report scenario (e.g. iCloud-managed Documents on macOS). Neither
-    // Chitauri/ nor Chitauri/Studio exist yet underneath it.
+    // Chitauri/ does not exist yet underneath it.
     const symlinkedDocuments = path.join(homeDir, "Documents");
     fs.symlinkSync(realDocuments, symlinkedDocuments, "dir");
 
@@ -152,14 +122,12 @@ describe("resolveCanonicalWorkspaceRoots", () => {
     const expectedDocuments = fs.realpathSync(realDocuments);
     expect(result.homeDir).toBe(fs.realpathSync(homeDir));
     expect(result.chatWorkspaceRoot).toBe(path.join(expectedDocuments, "Chitauri"));
-    expect(result.studioWorkspaceRoot).toBe(path.join(expectedDocuments, "Chitauri", "Studio"));
     expect(fs.existsSync(result.chatWorkspaceRoot)).toBe(false);
-    expect(fs.existsSync(result.studioWorkspaceRoot)).toBe(false);
 
     // Once the lazily-created directory shows up on disk, realpath must agree
     // with the previously-reported (pre-creation) canonicalized root.
-    fs.mkdirSync(result.studioWorkspaceRoot, { recursive: true });
-    expect(fs.realpathSync(result.studioWorkspaceRoot)).toBe(result.studioWorkspaceRoot);
+    fs.mkdirSync(result.chatWorkspaceRoot, { recursive: true });
+    expect(fs.realpathSync(result.chatWorkspaceRoot)).toBe(result.chatWorkspaceRoot);
   });
 });
 

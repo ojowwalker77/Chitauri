@@ -29,7 +29,6 @@ import { SessionCredentialService } from "./auth/Services/SessionCredentialServi
 import { CheckpointDiffQuery } from "./checkpointing/Services/CheckpointDiffQuery";
 import { ServerConfig } from "./config";
 import { realpathNearestExisting } from "./realpathNearestExisting";
-import { listRecentStudioOutputs } from "./studioOutputs";
 import { DevServerManager, findProjectDevServerForLocalServer } from "./devServerManager";
 import { GitCore, type GitCoreShape } from "./git/Services/GitCore";
 import { GitManager } from "./git/Services/GitManager";
@@ -65,21 +64,8 @@ import { bufferLiveUiStream, type LiveUiStreamDropReport } from "./wsStreamBackp
 const MAX_DIAGNOSTIC_CHILD_PROCESSES = 80;
 const MAX_DIAGNOSTIC_ARGS_CHARS = 500;
 
-// Relative subdirectories scaffolded under a freshly created container workspace root.
-// General chats get a minimal work/outputs split; Studio mirrors the Claude `~/Documents/Claude`
-// Outbox layout so generated content lands in predictable folders.
+// Relative subdirectories scaffolded under a freshly created chat workspace root.
 const CHAT_WORKSPACE_SUBDIRECTORIES = ["work", "outputs"] as const;
-const STUDIO_WORKSPACE_SUBDIRECTORIES = [
-  "Inbox",
-  "Context",
-  "Logs",
-  "Skills",
-  "Outbox/Content",
-  "Outbox/Daily",
-  "Outbox/Notion",
-  "Outbox/TikTok",
-  "Outbox/YouTube",
-] as const;
 
 interface ProcessTableRow {
   readonly pid: number;
@@ -420,10 +406,6 @@ export const makeWsRpcLayer = () =>
           Effect.provideService(Path.Path, path),
         );
       });
-      // One mkdir loop shared by every container kind; the relative directory set is the
-      // only thing that varies (general chats scaffold work/outputs, Studio mirrors the
-      // Claude Outbox layout). Keeping a single implementation keeps error handling and
-      // idempotency identical across kinds.
       const prepareWorkspaceSubdirectories = Effect.fnUntraced(function* (
         workspaceRoot: string,
         relativeDirnames: readonly string[],
@@ -443,18 +425,14 @@ export const makeWsRpcLayer = () =>
       });
       const prepareChatWorkspaceRoot = (workspaceRoot: string) =>
         prepareWorkspaceSubdirectories(workspaceRoot, CHAT_WORKSPACE_SUBDIRECTORIES);
-      const prepareStudioWorkspaceRoot = (workspaceRoot: string) =>
-        prepareWorkspaceSubdirectories(workspaceRoot, STUDIO_WORKSPACE_SUBDIRECTORIES);
 
       const normalizeDispatchCommand = makeDispatchCommandNormalizer<WsRpcError>({
         attachmentsDir: config.attachmentsDir,
         chatWorkspaceRoot: config.chatWorkspaceRoot,
-        studioWorkspaceRoot: config.studioWorkspaceRoot,
         fileSystem,
         path,
         canonicalizeProjectWorkspaceRoot,
         prepareChatWorkspaceRoot,
-        prepareStudioWorkspaceRoot,
       });
 
       const importThread = makeImportThreadHandler({
@@ -533,7 +511,6 @@ export const makeWsRpcLayer = () =>
           cwd: config.cwd,
           homeDir: config.homeDir,
           chatWorkspaceRoot: config.chatWorkspaceRoot,
-          studioWorkspaceRoot: config.studioWorkspaceRoot,
           worktreesDir: config.worktreesDir,
           keybindingsConfigPath: config.keybindingsConfigPath,
           keybindings: keybindingsConfig.keybindings,
@@ -764,23 +741,6 @@ export const makeWsRpcLayer = () =>
               label: "projects.dev-servers",
               onDroppedEvents: failLiveUiStreamForSnapshotResync,
             }),
-          ),
-        [WS_METHODS.studioListRecentOutputs]: (input) =>
-          rpcEffect(
-            Effect.gen(function* () {
-              // Self-heal the Studio folder tree: an accepted create whose deferred scaffold
-              // failed (crash, transient FS error) must not leave Studio without its Outbox
-              // forever. mkdir -p is idempotent and cheap, and this endpoint only fires while
-              // the Studio UI is actually open. Failures degrade to the empty-list behavior.
-              yield* prepareStudioWorkspaceRoot(config.studioWorkspaceRoot).pipe(
-                Effect.catch(() => Effect.void),
-              );
-              return yield* listRecentStudioOutputs({
-                outboxRoot: path.join(config.studioWorkspaceRoot, "Outbox"),
-                limit: input.limit,
-              });
-            }),
-            "Failed to list studio outputs",
           ),
         [WS_METHODS.filesystemBrowse]: (input) =>
           rpcEffect(workspaceEntries.browse(input), "Failed to browse filesystem"),
