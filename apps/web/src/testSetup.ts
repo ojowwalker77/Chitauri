@@ -4,7 +4,7 @@
 
 const values = new Map<string, string>();
 
-const localStorage: Storage = {
+const memoryLocalStorage: Storage = {
   get length() {
     return values.size;
   },
@@ -28,5 +28,5 @@ const localStorage: Storage = {
 Object.defineProperty(globalThis, "localStorage", {
   configurable: true,
   writable: true,
-  value: localStorage,
+  value: memoryLocalStorage,
 });
