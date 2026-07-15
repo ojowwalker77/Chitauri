@@ -33,6 +33,7 @@ import { DevServerManager, findProjectDevServerForLocalServer } from "./devServe
 import { GitCore, type GitCoreShape } from "./git/Services/GitCore";
 import { GitManager } from "./git/Services/GitManager";
 import { GitStatusBroadcaster } from "./git/Services/GitStatusBroadcaster";
+import { GitHubWorkbench } from "./github/Services/GitHubWorkbench";
 import { TextGeneration } from "./git/Services/TextGeneration";
 import { Keybindings } from "./keybindings";
 import { createLocalPreviewGrant } from "./localImageFiles";
@@ -341,6 +342,7 @@ export const makeWsRpcLayer = () =>
       const git = yield* GitCore;
       const gitManager = yield* GitManager;
       const gitStatusBroadcaster = yield* GitStatusBroadcaster;
+      const githubWorkbench = yield* GitHubWorkbench;
       const keybindings = yield* Keybindings;
       const open = yield* Open;
       const orchestrationEngine = yield* OrchestrationEngineService;
@@ -822,6 +824,16 @@ export const makeWsRpcLayer = () =>
               .pipe(Effect.tap(() => refreshGitStatus(input.cwd))),
             "Failed to prepare pull request thread",
           ),
+        [WS_METHODS.githubConnection]: (input) =>
+          rpcEffect(githubWorkbench.connection(input), "Failed to inspect GitHub CLI"),
+        [WS_METHODS.githubListWork]: (input) =>
+          rpcEffect(githubWorkbench.listWork(input), "Failed to load GitHub work"),
+        [WS_METHODS.githubWorkItemDetail]: (input) =>
+          rpcEffect(githubWorkbench.workItemDetail(input), "Failed to load GitHub item"),
+        [WS_METHODS.githubPullRequestDiff]: (input) =>
+          rpcEffect(githubWorkbench.pullRequestDiff(input), "Failed to load pull request diff"),
+        [WS_METHODS.githubWorkItemAction]: (input) =>
+          rpcEffect(githubWorkbench.workItemAction(input), "Failed to update GitHub item"),
         [WS_METHODS.gitListBranches]: (input) =>
           rpcEffect(git.listBranches(input), "Failed to list branches"),
         [WS_METHODS.gitCreateWorktree]: (input) =>

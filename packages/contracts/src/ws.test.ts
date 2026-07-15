@@ -95,6 +95,27 @@ it.effect("accepts git.deleteBranch requests", () =>
   }),
 );
 
+it.effect("accepts GitHub actions without confusing the RPC and action discriminants", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decode(WebSocketRequest, {
+      id: "req-github-comment-1",
+      body: {
+        _tag: WS_METHODS.githubWorkItemAction,
+        action: "comment",
+        cwd: "/repo",
+        kind: "pull_request",
+        repository: "acme/widgets",
+        number: 42,
+        body: "Ship it.",
+      },
+    });
+    assert.strictEqual(parsed.body._tag, WS_METHODS.githubWorkItemAction);
+    if (parsed.body._tag === WS_METHODS.githubWorkItemAction) {
+      assert.strictEqual(parsed.body.action, "comment");
+    }
+  }),
+);
+
 it.effect("accepts project script discovery requests", () =>
   Effect.gen(function* () {
     const parsed = yield* decode(WebSocketRequest, {

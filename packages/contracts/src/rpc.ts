@@ -62,6 +62,18 @@ import {
   GitUnstageFilesInput,
   GitUnstageFilesResult,
 } from "./git";
+import {
+  GitHubConnectionInput,
+  GitHubConnectionResult,
+  GitHubPullRequestDiffInput,
+  GitHubPullRequestDiffResult,
+  GitHubWorkItemActionInput,
+  GitHubWorkItemActionResult,
+  GitHubWorkItemDetailInput,
+  GitHubWorkItemDetailResult,
+  GitHubWorkListInput,
+  GitHubWorkListResult,
+} from "./github";
 import { KeybindingRule } from "./keybindings";
 import {
   ClientOrchestrationCommand,
@@ -526,6 +538,36 @@ export const WsGitHandoffThreadRpc = Rpc.make(WS_METHODS.gitHandoffThread, {
   error: WsRpcError,
 });
 
+export const WsGitHubConnectionRpc = Rpc.make(WS_METHODS.githubConnection, {
+  payload: GitHubConnectionInput,
+  success: GitHubConnectionResult,
+  error: WsRpcError,
+});
+
+export const WsGitHubListWorkRpc = Rpc.make(WS_METHODS.githubListWork, {
+  payload: GitHubWorkListInput,
+  success: GitHubWorkListResult,
+  error: WsRpcError,
+});
+
+export const WsGitHubWorkItemDetailRpc = Rpc.make(WS_METHODS.githubWorkItemDetail, {
+  payload: GitHubWorkItemDetailInput,
+  success: GitHubWorkItemDetailResult,
+  error: WsRpcError,
+});
+
+export const WsGitHubPullRequestDiffRpc = Rpc.make(WS_METHODS.githubPullRequestDiff, {
+  payload: GitHubPullRequestDiffInput,
+  success: GitHubPullRequestDiffResult,
+  error: WsRpcError,
+});
+
+export const WsGitHubWorkItemActionRpc = Rpc.make(WS_METHODS.githubWorkItemAction, {
+  payload: GitHubWorkItemActionInput,
+  success: GitHubWorkItemActionResult,
+  error: WsRpcError,
+});
+
 export const WsTerminalOpenRpc = Rpc.make(WS_METHODS.terminalOpen, {
   payload: TerminalOpenInput,
   success: TerminalSessionSnapshot,
@@ -880,6 +922,11 @@ export const WsRpcGroup = RpcGroup.make(
   WsGitStageFilesRpc,
   WsGitUnstageFilesRpc,
   WsGitHandoffThreadRpc,
+  WsGitHubConnectionRpc,
+  WsGitHubListWorkRpc,
+  WsGitHubWorkItemDetailRpc,
+  WsGitHubPullRequestDiffRpc,
+  WsGitHubWorkItemActionRpc,
   WsTerminalOpenRpc,
   WsTerminalWriteRpc,
   WsTerminalAckOutputRpc,

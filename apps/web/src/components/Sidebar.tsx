@@ -14,6 +14,7 @@ import {
   FolderIcon,
   FolderOpenIcon,
   GitMergedSimpleIcon,
+  GitHubIcon,
   GitPullRequestIcon,
   type LucideIcon,
   NewThreadIcon,
@@ -128,6 +129,9 @@ import {
   gitResolvePullRequestQueryOptions,
   gitStatusQueryOptions,
 } from "../lib/gitReactQuery";
+import { githubWorkListQueryOptions } from "../lib/githubReactQuery";
+import { useGitHubInboxStore } from "../githubInboxStore";
+import { isActionableGitHubReason, isGithubItemSnoozed } from "../githubWorkbench.logic";
 import {
   providerComposerCapabilitiesQueryOptions,
   supportsThreadImport,
@@ -1333,6 +1337,7 @@ export default function Sidebar() {
   });
   const isOnWorkspace = pathname.startsWith("/workspace");
   const isOnAutomations = pathname.startsWith("/automations");
+  const isOnGitHub = pathname.startsWith("/github");
   const isOnResearch = pathname.startsWith("/research");
   // Lightweight read of automations to drive the sidebar attention badge. Shares the
   // ["automations"] query cache with the Automations route (and its live stream updates).
@@ -1353,6 +1358,27 @@ export default function Sidebar() {
     if (!data) return 0;
     return automationAttentionCount(data.runs);
   }, [automationListQuery.data]);
+  const githubInboxQuery = useQuery(
+    githubWorkListQueryOptions({
+      cwd: projects[0]?.cwd ?? null,
+      kind: "inbox",
+      view: "attention",
+      query: null,
+      repository: null,
+      limit: 75,
+    }),
+  );
+  const githubSnoozedUntilByItemId = useGitHubInboxStore(
+    (state) => state.snoozedUntilByItemId,
+  );
+  const githubAttentionBadgeCount = useMemo(
+    () =>
+      (githubInboxQuery.data?.items ?? []).filter((item) =>
+        isActionableGitHubReason(item.reason) &&
+        !isGithubItemSnoozed(item.id, githubSnoozedUntilByItemId),
+      ).length,
+    [githubInboxQuery.data?.items, githubSnoozedUntilByItemId],
+  );
   // Heartbeat automations grouped by their target thread, so each thread row can show a
   // clock chip indicating an automation is attached (mirrors the Environment panel section).
   const automationsByThreadId = useMemo(
@@ -6532,6 +6558,15 @@ export default function Sidebar() {
                       active={isOnResearch}
                       onClick={() => {
                         void navigate({ to: "/research" });
+                      }}
+                    />
+                    <SidebarPrimaryAction
+                      icon={GitHubIcon}
+                      label="GitHub"
+                      active={isOnGitHub}
+                      badgeCount={githubAttentionBadgeCount}
+                      onClick={() => {
+                        void navigate({ to: "/github" });
                       }}
                     />
                   </>

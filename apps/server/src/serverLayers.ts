@@ -18,6 +18,7 @@ import { DevServerManagerLive } from "./devServerManager";
 import { KeybindingsLive } from "./keybindings";
 import { GitCoreLive } from "./git/Layers/GitCore";
 import { GitLayerLive, TextGenerationLayerLive } from "./git/runtimeLayer";
+import { GitHubWorkbenchLayerLive } from "./github/runtimeLayer";
 import { TerminalLayerLive } from "./terminal/runtimeLayer";
 import { AuthControlPlaneLive } from "./auth/Layers/AuthControlPlane";
 import { BootstrapCredentialServiceLive } from "./auth/Layers/BootstrapCredentialService";
@@ -125,6 +126,7 @@ export function makeServerRuntimeServicesLayer() {
     threadDeletionReactorLayer,
     devServerManagerLayer,
     GitLayerLive,
+    GitHubWorkbenchLayerLive,
     TextGenerationLayerLive,
     TerminalLayerLive,
     KeybindingsLive,
