@@ -4,7 +4,8 @@ This document covers how to run desktop releases from one tag, first without sig
 
 ## What the workflow does
 
-- Trigger: push tag matching `v*.*.*`.
+- Trigger: push a SemVer tag, either `vX.Y.Z` (the canonical form) or legacy
+  `X.Y.Z`. The published GitHub Release keeps the exact pushed tag name.
 - Runs quality gates first: lint, typecheck, test.
 - Builds four artifacts in parallel:
   - macOS `arm64` DMG
@@ -145,7 +146,7 @@ Checklist:
 
 1. Ensure `main` is green in CI.
 2. Bump app version as needed.
-3. Create release tag: `vX.Y.Z`.
+3. Create release tag: `vX.Y.Z` (preferred; legacy `X.Y.Z` tags are also supported).
 4. Push tag.
 5. Verify workflow steps:
    - preflight passes
