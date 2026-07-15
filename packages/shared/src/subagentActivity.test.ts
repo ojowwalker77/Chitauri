@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { deriveUnifiedSubagentStates } from "./subagentActivity";
 
-const createdAt = (seconds: number) =>
-  `2026-07-15T18:00:${String(seconds).padStart(2, "0")}.000Z`;
+const createdAt = (seconds: number) => `2026-07-15T18:00:${String(seconds).padStart(2, "0")}.000Z`;
 
 describe("deriveUnifiedSubagentStates", () => {
   it("normalizes Claude and Codex activity into the same live display state", () => {

@@ -141,8 +141,9 @@ export function makeListImportableDesktopThreadsHandler(
       .map((thread) => ({
         ...thread,
         chitauriThreadId:
-          importedThreadIdByExternalKey.get(importedThreadKey(thread.provider, thread.externalId)) ??
-          null,
+          importedThreadIdByExternalKey.get(
+            importedThreadKey(thread.provider, thread.externalId),
+          ) ?? null,
       }))
       .toSorted((left, right) => right.updatedAt.localeCompare(left.updatedAt));
 

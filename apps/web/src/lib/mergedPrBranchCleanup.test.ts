@@ -4,6 +4,38 @@ import type { NativeApi } from "@t3tools/contracts";
 import { deleteMergedLocalBranch } from "./mergedPrBranchCleanup";
 
 type GitApi = Pick<NativeApi["git"], "checkout" | "deleteBranch" | "listBranches" | "status">;
+type GitStatus = Awaited<ReturnType<GitApi["status"]>>;
+type GitStatusPr = NonNullable<GitStatus["pr"]>;
+
+function makeStatus(
+  overrides: Partial<Omit<GitStatus, "pr">> & { pr?: Partial<GitStatusPr> } = {},
+): GitStatus {
+  const { pr, ...rest } = overrides;
+  return {
+    branch: "feature/merged",
+    hasWorkingTreeChanges: false,
+    workingTree: { files: [], insertions: 0, deletions: 0 },
+    hasUpstream: true,
+    upstreamBranch: "origin/feature/merged",
+    aheadCount: 0,
+    behindCount: 0,
+    ...rest,
+    pr: {
+      number: 42,
+      title: "Merged work",
+      url: "https://github.com/acme/repo/pull/42",
+      baseBranch: "main",
+      headBranch: "feature/merged",
+      state: "merged",
+      isDraft: false,
+      mergeability: "unknown",
+      additions: 1,
+      deletions: 0,
+      changedFiles: 1,
+      ...pr,
+    },
+  };
+}
 
 function makeGitApi(overrides: Partial<GitApi> = {}): GitApi {
   return {
@@ -27,28 +59,7 @@ function makeGitApi(overrides: Partial<GitApi> = {}): GitApi {
         },
       ],
     })),
-    status: vi.fn(async () => ({
-      branch: "feature/merged",
-      hasWorkingTreeChanges: false,
-      workingTree: { files: [], insertions: 0, deletions: 0 },
-      hasUpstream: true,
-      upstreamBranch: "origin/feature/merged",
-      aheadCount: 0,
-      behindCount: 0,
-      pr: {
-        number: 42,
-        title: "Merged work",
-        url: "https://github.com/acme/repo/pull/42",
-        baseBranch: "main",
-        headBranch: "feature/merged",
-        state: "merged",
-        isDraft: false,
-        mergeability: "unknown",
-        additions: 1,
-        deletions: 0,
-        changedFiles: 1,
-      },
-    })),
+    status: vi.fn(async () => makeStatus()),
     checkout: vi.fn(async () => undefined),
     deleteBranch: vi.fn(async () => undefined),
     ...overrides,
@@ -78,28 +89,7 @@ describe("deleteMergedLocalBranch", () => {
 
   it("leaves a dirty current branch intact", async () => {
     const git = makeGitApi({
-      status: vi.fn(async () => ({
-        branch: "feature/merged",
-        hasWorkingTreeChanges: true,
-        workingTree: { files: [], insertions: 0, deletions: 0 },
-        hasUpstream: true,
-        upstreamBranch: "origin/feature/merged",
-        aheadCount: 0,
-        behindCount: 0,
-        pr: {
-          number: 42,
-          title: "Merged work",
-          url: "https://github.com/acme/repo/pull/42",
-          baseBranch: "main",
-          headBranch: "feature/merged",
-          state: "merged",
-          isDraft: false,
-          mergeability: "unknown",
-          additions: 1,
-          deletions: 0,
-          changedFiles: 1,
-        },
-      })),
+      status: vi.fn(async () => makeStatus({ hasWorkingTreeChanges: true })),
     });
 
     await expect(
@@ -130,28 +120,18 @@ describe("deleteMergedLocalBranch", () => {
 
   it("rechecks the live PR state before changing the checkout", async () => {
     const git = makeGitApi({
-      status: vi.fn(async () => ({
-        branch: "feature/merged",
-        hasWorkingTreeChanges: false,
-        workingTree: { files: [], insertions: 0, deletions: 0 },
-        hasUpstream: true,
-        upstreamBranch: "origin/feature/merged",
-        aheadCount: 1,
-        behindCount: 0,
-        pr: {
-          number: 43,
-          title: "New work",
-          url: "https://github.com/acme/repo/pull/43",
-          baseBranch: "main",
-          headBranch: "feature/merged",
-          state: "open",
-          isDraft: false,
-          mergeability: "mergeable",
-          additions: 1,
-          deletions: 0,
-          changedFiles: 1,
-        },
-      })),
+      status: vi.fn(async () =>
+        makeStatus({
+          aheadCount: 1,
+          pr: {
+            number: 43,
+            title: "New work",
+            url: "https://github.com/acme/repo/pull/43",
+            state: "open",
+            mergeability: "mergeable",
+          },
+        }),
+      ),
     });
 
     await expect(

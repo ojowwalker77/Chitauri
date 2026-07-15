@@ -2664,8 +2664,12 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     });
   }
 
-  private readCodexTimestamp(record: Record<string, unknown>, key: string): string | null {
-    const value = record[key];
+  private readCodexTimestamp(record: unknown, key: string): string | null {
+    if (!record || typeof record !== "object") {
+      return null;
+    }
+
+    const value = (record as Record<string, unknown>)[key];
     if (typeof value === "number" && Number.isFinite(value)) {
       const milliseconds = value < 10_000_000_000 ? value * 1_000 : value;
       const date = new Date(milliseconds);

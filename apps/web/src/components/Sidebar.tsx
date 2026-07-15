@@ -2277,12 +2277,7 @@ export default function Sidebar() {
     if (isOnWorkspace && !workspaceSectionVisible) {
       handleSidebarViewChange("threads");
     }
-  }, [
-    handleSidebarViewChange,
-    isOnSettings,
-    isOnWorkspace,
-    workspaceSectionVisible,
-  ]);
+  }, [handleSidebarViewChange, isOnSettings, isOnWorkspace, workspaceSectionVisible]);
 
   const handleCreateWorkspace = useCallback(() => {
     const workspaceId = createWorkspace();
@@ -2598,14 +2593,14 @@ export default function Sidebar() {
         request.kind === "desktop"
           ? request.thread.title
           : provider === "claudeAgent"
-          ? `Imported Claude session${suffix ? ` ${suffix}` : ""}`
-          : provider === "cursor"
-            ? `Imported Cursor session${suffix ? ` ${suffix}` : ""}`
-            : provider === "kilo"
-              ? `Imported Kilo session${suffix ? ` ${suffix}` : ""}`
-              : provider === "opencode"
-                ? `Imported OpenCode session${suffix ? ` ${suffix}` : ""}`
-                : `Imported Codex thread${suffix ? ` ${suffix}` : ""}`;
+            ? `Imported Claude session${suffix ? ` ${suffix}` : ""}`
+            : provider === "cursor"
+              ? `Imported Cursor session${suffix ? ` ${suffix}` : ""}`
+              : provider === "kilo"
+                ? `Imported Kilo session${suffix ? ` ${suffix}` : ""}`
+                : provider === "opencode"
+                  ? `Imported OpenCode session${suffix ? ` ${suffix}` : ""}`
+                  : `Imported Codex thread${suffix ? ` ${suffix}` : ""}`;
       let createdThread = false;
 
       try {
@@ -4643,10 +4638,7 @@ export default function Sidebar() {
     threadStoredPrTargets,
   ]);
   useEffect(() => {
-    if (
-      !appSettings.autoArchiveMergedPrThreads &&
-      !appSettings.autoDeleteMergedLocalBranches
-    ) {
+    if (!appSettings.autoArchiveMergedPrThreads && !appSettings.autoDeleteMergedLocalBranches) {
       mergedPrAutomationAttemptsRef.current.clear();
       return;
     }
@@ -4657,9 +4649,7 @@ export default function Sidebar() {
         thread.envMode === "local" ||
         (thread.envMode === undefined && thread.worktreePath === null);
       const shouldDeleteBranch =
-        appSettings.autoDeleteMergedLocalBranches &&
-        isLocalMode &&
-        thread.branch !== null;
+        appSettings.autoDeleteMergedLocalBranches && isLocalMode && thread.branch !== null;
       if (
         pullRequest?.state !== "merged" ||
         isThreadRunningTurn(thread) ||
@@ -6496,10 +6486,7 @@ export default function Sidebar() {
         ) : (
           <>
             <SidebarSegmentedPicker
-              views={[
-                "threads",
-                ...(workspaceSectionVisible ? (["workspace"] as const) : []),
-              ]}
+              views={["threads", ...(workspaceSectionVisible ? (["workspace"] as const) : [])]}
               activeView={isOnWorkspace ? "workspace" : "threads"}
               onSelectView={handleSidebarViewChange}
             />

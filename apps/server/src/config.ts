@@ -180,8 +180,9 @@ export class ServerConfig extends ServiceMap.Service<ServerConfig, ServerConfigS
         yield* fs.makeDirectory(derivedPaths.logsDir, { recursive: true });
         yield* fs.makeDirectory(derivedPaths.attachmentsDir, { recursive: true });
 
-        const { homeDir, chatWorkspaceRoot } =
-          yield* resolveCanonicalWorkspaceRoots({ homeDir: OS.homedir() });
+        const { homeDir, chatWorkspaceRoot } = yield* resolveCanonicalWorkspaceRoots({
+          homeDir: OS.homedir(),
+        });
 
         return {
           cwd,

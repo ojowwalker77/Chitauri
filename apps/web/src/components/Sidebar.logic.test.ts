@@ -25,7 +25,6 @@ import {
   getVisibleThreadsForProject,
   getProjectSortTimestamp,
   hasUnseenCompletion,
-  partitionSidebarThreadsByProjectIds,
   isLatestPinnedThreadMutation,
   isLoopbackHostname,
   isDuplicateProjectCreateError,

@@ -15,12 +15,14 @@ layer("052_RetireStudioProjectKind", (it) => {
     }),
   );
 
-  it.effect("converts persisted Studio projects and event payloads without changing their data", () =>
-    Effect.gen(function* () {
-      const sql = yield* SqlClient.SqlClient;
-      yield* runMigrations({ toMigrationInclusive: 51 });
+  it.effect(
+    "converts persisted Studio projects and event payloads without changing their data",
+    () =>
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
+        yield* runMigrations({ toMigrationInclusive: 51 });
 
-      yield* sql`
+        yield* sql`
         INSERT INTO projection_projects (
           project_id, kind, title, workspace_root, default_model_selection_json,
           scripts_json, is_pinned, created_at, updated_at, deleted_at
@@ -30,7 +32,7 @@ layer("052_RetireStudioProjectKind", (it) => {
           '2026-07-15T00:00:00.000Z', '2026-07-15T00:00:00.000Z', NULL
         )
       `;
-      yield* sql`
+        yield* sql`
         INSERT INTO projection_threads (
           thread_id, project_id, title, model_selection_json, runtime_mode,
           interaction_mode, env_mode, created_at, updated_at, deleted_at
@@ -40,7 +42,7 @@ layer("052_RetireStudioProjectKind", (it) => {
           '2026-07-15T00:00:00.000Z', '2026-07-15T00:00:00.000Z', NULL
         )
       `;
-      yield* sql`
+        yield* sql`
         INSERT INTO projection_thread_messages (
           message_id, thread_id, turn_id, role, text, is_streaming, created_at, updated_at
         ) VALUES (
@@ -48,7 +50,7 @@ layer("052_RetireStudioProjectKind", (it) => {
           '2026-07-15T00:00:00.000Z', '2026-07-15T00:00:00.000Z'
         )
       `;
-      yield* sql`
+        yield* sql`
         INSERT INTO orchestration_events (
           event_id, aggregate_kind, stream_id, stream_version, event_type, occurred_at,
           command_id, causation_event_id, correlation_id, actor_kind, payload_json, metadata_json
@@ -59,7 +61,7 @@ layer("052_RetireStudioProjectKind", (it) => {
           '{}'
         )
       `;
-      yield* sql`
+        yield* sql`
         INSERT INTO orchestration_events (
           event_id, aggregate_kind, stream_id, stream_version, event_type, occurred_at,
           command_id, causation_event_id, correlation_id, actor_kind, payload_json, metadata_json
@@ -71,32 +73,32 @@ layer("052_RetireStudioProjectKind", (it) => {
         )
       `;
 
-      yield* runMigrations();
+        yield* runMigrations();
 
-      const projects = yield* sql<{
-        readonly kind: string;
-        readonly scripts_json: string;
-        readonly title: string;
-        readonly workspace_root: string;
-      }>`
+        const projects = yield* sql<{
+          readonly kind: string;
+          readonly scripts_json: string;
+          readonly title: string;
+          readonly workspace_root: string;
+        }>`
         SELECT kind, title, workspace_root, scripts_json
         FROM projection_projects
         WHERE project_id = 'project-studio'
       `;
-      assert.deepStrictEqual(projects, [
-        {
-          kind: "project",
-          scripts_json: '[{"name":"build","command":"bun run build"}]',
-          title: "Studio",
-          workspace_root: "/Users/tester/Documents/Chitauri/Studio",
-        },
-      ]);
+        assert.deepStrictEqual(projects, [
+          {
+            kind: "project",
+            scripts_json: '[{"name":"build","command":"bun run build"}]',
+            title: "Studio",
+            workspace_root: "/Users/tester/Documents/Chitauri/Studio",
+          },
+        ]);
 
-      const events = yield* sql<{
-        readonly event_type: string;
-        readonly kind: string;
-        readonly title: string;
-      }>`
+        const events = yield* sql<{
+          readonly event_type: string;
+          readonly kind: string;
+          readonly title: string;
+        }>`
         SELECT
           event_type,
           json_extract(payload_json, '$.kind') AS kind,
@@ -105,25 +107,25 @@ layer("052_RetireStudioProjectKind", (it) => {
         WHERE event_id IN ('event-studio', 'event-studio-meta')
         ORDER BY stream_version
       `;
-      assert.deepStrictEqual(events, [
-        { event_type: "project.created", kind: "project", title: "Studio" },
-        { event_type: "project.meta-updated", kind: "project", title: "Renamed Studio" },
-      ]);
+        assert.deepStrictEqual(events, [
+          { event_type: "project.created", kind: "project", title: "Studio" },
+          { event_type: "project.meta-updated", kind: "project", title: "Renamed Studio" },
+        ]);
 
-      const chats = yield* sql<{
-        readonly text: string;
-        readonly thread_id: string;
-        readonly title: string;
-      }>`
+        const chats = yield* sql<{
+          readonly text: string;
+          readonly thread_id: string;
+          readonly title: string;
+        }>`
         SELECT threads.thread_id, threads.title, messages.text
         FROM projection_threads AS threads
         INNER JOIN projection_thread_messages AS messages
           ON messages.thread_id = threads.thread_id
         WHERE threads.project_id = 'project-studio'
       `;
-      assert.deepStrictEqual(chats, [
-        { thread_id: "thread-studio", title: "Existing chat", text: "Keep this chat" },
-      ]);
-    }),
+        assert.deepStrictEqual(chats, [
+          { thread_id: "thread-studio", title: "Existing chat", text: "Keep this chat" },
+        ]);
+      }),
   );
 });

@@ -870,7 +870,9 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                               </span>
                             </span>
                             <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-                              <span className="tabular-nums">{formatRelativeTime(thread.updatedAt)}</span>
+                              <span className="tabular-nums">
+                                {formatRelativeTime(thread.updatedAt)}
+                              </span>
                               {thread.chitauriThreadId ? (
                                 <span className="inline-flex items-center gap-1 text-foreground/80">
                                   <CheckIcon className="size-3.5" /> Open

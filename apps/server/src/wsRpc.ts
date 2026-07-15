@@ -609,10 +609,7 @@ export const makeWsRpcLayer = () =>
         [ORCHESTRATION_WS_METHODS.importThread]: (input) =>
           rpcEffect(importThread(input), "Failed to import thread"),
         [ORCHESTRATION_WS_METHODS.listImportableDesktopThreads]: () =>
-          rpcEffect(
-            listImportableDesktopThreads(),
-            "Failed to list importable desktop threads",
-          ),
+          rpcEffect(listImportableDesktopThreads(), "Failed to list importable desktop threads"),
         [ORCHESTRATION_WS_METHODS.getSnapshot]: () =>
           rpcEffect(
             projectionReadModelQuery.getSnapshot(),
