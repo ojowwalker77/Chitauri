@@ -184,7 +184,8 @@ jobs:
               echo "macOS signing enabled."
               args+=(--signed)
             else
-              echo "macOS signing disabled (missing one or more Apple signing secrets)."
+              echo "::error title=macOS release signing is required::Missing one or more of CSC_LINK, CSC_KEY_PASSWORD, APPLE_API_KEY, APPLE_API_KEY_ID, or APPLE_API_ISSUER. Refusing to publish a macOS artifact that Gatekeeper will reject."
+              exit 1
             fi
           elif [[ "${{ matrix.platform }}" == "win" ]]; then
             if has_all \

@@ -1,6 +1,6 @@
 # Release Checklist
 
-This document covers how to run desktop releases from one tag, first without signing, then with signing.
+This document covers how to run signed, notarized desktop releases from one tag.
 
 ## What the workflow does
 
@@ -17,7 +17,7 @@ This document covers how to run desktop releases from one tag, first without sig
   - Only plain `X.Y.Z` releases are marked as the repository's latest release.
 - Includes Electron auto-update metadata (for example `latest*.yml` and `*.blockmap`) in release assets.
 - Publishes the CLI package (`apps/server`, npm package `t3`) with OIDC trusted publishing.
-- Signing is optional and auto-detected per platform from secrets.
+- macOS signing and notarization are required. The workflow fails before packaging if any required Apple secret is missing, so it can never publish a Gatekeeper-rejected app.
 
 ## Desktop auto-update notes
 
@@ -74,11 +74,11 @@ Checklist:
   - `DPCODE_PUBLISH_CLI=1`
   - `DPCODE_FINALIZE_RELEASE=1`
 
-## 1) Dry-run release without signing
+## 1) Test release
 
-Use this first to validate the release pipeline.
+Use this to validate the release pipeline after Apple signing and notarization are configured.
 
-1. Confirm no signing secrets are required for this test.
+1. Confirm the Apple signing and notarization secrets below are configured.
 2. Create a test tag:
    - `git tag v0.0.0-test.1`
    - `git push origin v0.0.0-test.1`
