@@ -2,7 +2,11 @@ import type { OrchestrationThreadActivity } from "@t3tools/contracts";
 import { TurnId } from "@t3tools/contracts";
 import { describe, expect, it } from "vitest";
 
-import { deriveActiveBackgroundTasksState, deriveTurnBackgroundAgents } from "./session-logic";
+import {
+  deriveActiveBackgroundTasksState,
+  deriveTurnBackgroundAgents,
+  deriveWorkLogEntries,
+} from "./session-logic";
 
 const TURN = TurnId.makeUnsafe("turn-1");
 let seq = 0;
@@ -111,6 +115,91 @@ describe("deriveTurnBackgroundAgents", () => {
 
     expect(agents).toHaveLength(1);
     expect(agents[0]?.spawnCommand).toBe("agy --model gemini-3.5-flash -p 'x'");
+  });
+
+  it("keeps Codex pendingInit agents live and removes their generic tool lifecycle row", () => {
+    const activities = [
+      activity("tool.started", {
+        itemType: "collab_agent_tool_call",
+        status: "inProgress",
+        data: {
+          item: {
+            type: "collabAgentToolCall",
+            id: "spawn-call-1",
+            tool: "spawnAgent",
+            status: "inProgress",
+            receiverThreadIds: [],
+            prompt: "Map session toolbar components\nInspect the relevant UI files.",
+            model: "gpt-5.4-mini",
+            agentsStates: {},
+          },
+        },
+      }),
+      activity("tool.completed", {
+        itemType: "collab_agent_tool_call",
+        status: "completed",
+        data: {
+          item: {
+            type: "collabAgentToolCall",
+            id: "spawn-call-1",
+            tool: "spawnAgent",
+            status: "completed",
+            receiverThreadIds: ["child-thread-1"],
+            prompt: "Map session toolbar components\nInspect the relevant UI files.",
+            model: "gpt-5.4-mini",
+            agentsStates: {
+              "child-thread-1": {
+                status: "pendingInit",
+                message: null,
+              },
+            },
+          },
+        },
+      }),
+    ];
+
+    expect(deriveTurnBackgroundAgents(activities, TURN)).toEqual([
+      expect.objectContaining({
+        taskId: "child-thread-1",
+        taskType: "collab_subagent",
+        title: "Map session toolbar components",
+        status: "running",
+      }),
+    ]);
+    expect(deriveWorkLogEntries(activities, TURN)).toEqual([]);
+  });
+
+  it("maps Codex terminal agent states without leaving stale fleet rows", () => {
+    const statuses = {
+      completed: "completed",
+      errored: "failed",
+      interrupted: "stopped",
+      shutdown: "stopped",
+      notFound: "failed",
+    } as const;
+
+    for (const [rawStatus, expectedStatus] of Object.entries(statuses)) {
+      const agents = deriveTurnBackgroundAgents(
+        [
+          activity("tool.completed", {
+            itemType: "collab_agent_tool_call",
+            data: {
+              item: {
+                id: `wait-${rawStatus}`,
+                tool: "wait",
+                receiverThreadIds: ["child-thread-1"],
+                agentsStates: {
+                  "child-thread-1": { status: rawStatus },
+                },
+              },
+            },
+          }),
+        ],
+        TURN,
+      );
+
+      expect(agents[0]?.status).toBe(expectedStatus);
+    }
   });
 });
 

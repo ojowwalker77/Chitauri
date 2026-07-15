@@ -108,6 +108,10 @@
       "types": "./src/subagents.ts",
       "import": "./src/subagents.ts"
     },
+    "./subagentActivity": {
+      "types": "./src/subagentActivity.ts",
+      "import": "./src/subagentActivity.ts"
+    },
     "./agentMentions": {
       "types": "./src/agentMentions.ts",
       "import": "./src/agentMentions.ts"

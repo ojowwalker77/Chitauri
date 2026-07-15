@@ -1,17 +1,17 @@
 // FILE: BackgroundAgentsCard.tsx
-// Purpose: A compact, live list of the current turn's RUNNING background / sub agents (Claude-agent
-//          Task fan-outs, from the task.* stream), pinned above the composer. Deliberately minimal:
-//          one line per running agent (title · current tool · tokens), no completed rows, no meter.
+// Purpose: A compact, live list of the current turn's provider-agnostic RUNNING subagent states,
+//          pinned above the composer. Deliberately minimal: one line per running agent
+//          (title · current tool · tokens), no completed rows, no meter.
 // Layer: Chat composer UI
 // Exports: BackgroundAgentsCard
 
 import type { ProviderKind } from "@t3tools/contracts";
+import type { UnifiedSubagentState } from "@t3tools/shared/subagentActivity";
 import { pluralize } from "@t3tools/shared/text";
 import { memo } from "react";
 import { PiArrowsInSimple, PiArrowsOutSimple } from "react-icons/pi";
 
 import { formatContextWindowTokens } from "../../lib/contextWindow";
-import type { BackgroundAgent } from "../../session-logic";
 import { LoaderIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
@@ -30,10 +30,10 @@ import {
 
 interface BackgroundAgentsCardProps {
   /** Running agents only — completed/failed ones are filtered out by the caller. */
-  agents: ReadonlyArray<BackgroundAgent>;
+  agents: ReadonlyArray<UnifiedSubagentState>;
   /**
-   * The session's provider — task.* agents carry no per-agent model, so every row shows the
-   * provider running the turn (a status dot is the fallback when it is unknown).
+   * The session's provider — unified agents carry no display-provider field, so every row shows
+   * the provider running the turn (a status dot is the fallback when it is unknown).
    */
   provider: ProviderKind | null;
   compact: boolean;
