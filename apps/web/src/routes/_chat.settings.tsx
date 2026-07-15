@@ -167,6 +167,11 @@ import { formatRelativeTime } from "../lib/relativeTime";
 import { formatWorktreePathForDisplay } from "../worktreeCleanup";
 import { sameProviderOrder } from "../providerOrdering";
 import {
+  CHAT_HEADER_CONTROL_LABELS,
+  type ChatHeaderControlId,
+  sameChatHeaderControlOrder,
+} from "../chatHeaderLayout";
+import {
   getVisibleProviderUpdateStatuses,
   shouldShowProviderUpdateStatus,
 } from "../providerUpdates";
@@ -338,6 +343,15 @@ function setProviderHidden(
   return hidden ? [...withoutTarget, provider] : withoutTarget;
 }
 
+function setChatHeaderControlHidden(
+  current: ReadonlyArray<ChatHeaderControlId>,
+  control: ChatHeaderControlId,
+  hidden: boolean,
+): ChatHeaderControlId[] {
+  const withoutTarget = current.filter((entry) => entry !== control);
+  return hidden ? [...withoutTarget, control] : withoutTarget;
+}
+
 function SortableProviderVisibilityRow(props: {
   option: { provider: ProviderKind; title: string };
   isHidden: boolean;
@@ -383,8 +397,64 @@ function SortableProviderVisibilityRow(props: {
       </div>
       <Switch
         checked={!props.isHidden}
-        onCheckedChange={(checked) => props.onHiddenChange(!Boolean(checked))}
+        onCheckedChange={(checked) => props.onHiddenChange(!checked)}
         aria-label={`Show ${props.option.title} in the provider picker`}
+      />
+    </div>
+  );
+}
+
+function SortableChatHeaderControlRow(props: {
+  control: ChatHeaderControlId;
+  isHidden: boolean;
+  onHiddenChange: (hidden: boolean) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setActivatorNodeRef,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: props.control });
+  const { title, description } = CHAT_HEADER_CONTROL_LABELS[props.control];
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Translate.toString(transform),
+        transition,
+      }}
+      className={cn(
+        `flex items-center justify-between gap-3 ${SETTINGS_RADIUS_CLASS_NAME} border border-[color:var(--color-border)] bg-transparent px-3 py-2.5`,
+        isDragging && "z-10 opacity-80 shadow-lg",
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-2.5">
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          className={cn(
+            "inline-flex size-6 shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground transition-colors hover:bg-[var(--color-background-elevated-secondary)] hover:text-foreground active:cursor-grabbing",
+            SETTINGS_RADIUS_CLASS_NAME,
+          )}
+          aria-label={`Reorder ${title}`}
+          {...attributes}
+          {...listeners}
+        >
+          <CentralIcon name="dot-grid-2x3" className="size-4" />
+        </button>
+        <div className="min-w-0 space-y-0.5">
+          <div className="text-sm text-foreground">{title}</div>
+          <div className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>{description}</div>
+        </div>
+      </div>
+      <Switch
+        checked={!props.isHidden}
+        onCheckedChange={(checked) => props.onHiddenChange(!checked)}
+        aria-label={`Show ${title} in the chat header`}
       />
     </div>
   );
@@ -686,6 +756,7 @@ function SettingsRouteView() {
   const providerUpdatesRef = useRef<HTMLDivElement | null>(null);
   const providerInstallsRef = useRef<HTMLDivElement | null>(null);
   const environmentPanelRef = useRef<HTMLDivElement | null>(null);
+  const chatHeaderControlsRef = useRef<HTMLDivElement | null>(null);
   const [openInstallProviders, setOpenInstallProviders] = useState<Record<ProviderKind, boolean>>({
     codex: Boolean(settings.codexBinaryPath || settings.codexHomePath),
     claudeAgent: Boolean(settings.claudeBinaryPath),
@@ -759,6 +830,15 @@ function SettingsRouteView() {
     }),
   );
   const isProviderOrderDirty = !sameProviderOrder(settings.providerOrder, defaults.providerOrder);
+  const hiddenChatHeaderControlSet = useMemo(
+    () => new Set<ChatHeaderControlId>(settings.hiddenChatHeaderControls),
+    [settings.hiddenChatHeaderControls],
+  );
+  const hiddenChatHeaderControlCount = hiddenChatHeaderControlSet.size;
+  const isChatHeaderControlOrderDirty = !sameChatHeaderControlOrder(
+    settings.chatHeaderControlOrder,
+    defaults.chatHeaderControlOrder,
+  );
   const codexBinaryPath = settings.codexBinaryPath;
   const codexHomePath = settings.codexHomePath;
   const claudeBinaryPath = settings.claudeBinaryPath;
@@ -811,6 +891,11 @@ function SettingsRouteView() {
   useSettingsTargetScroll(
     activeSection === "general" && settingsTarget === SETTINGS_TARGETS.environmentPanel,
     environmentPanelRef,
+  );
+
+  useSettingsTargetScroll(
+    activeSection === "appearance" && settingsTarget === SETTINGS_TARGETS.chatHeaderControls,
+    chatHeaderControlsRef,
   );
 
   // Sidebar search deep-links to an individual row via its `settingRowAnchorId`. The active
@@ -1036,6 +1121,8 @@ function SettingsRouteView() {
     ...(isInstallSettingsDirty ? ["Provider installs"] : []),
     ...(hiddenProviderCount > 0 ? ["Provider visibility"] : []),
     ...(isProviderOrderDirty ? ["Provider order"] : []),
+    ...(hiddenChatHeaderControlCount > 0 ? ["Chat header visibility"] : []),
+    ...(isChatHeaderControlOrderDirty ? ["Chat header order"] : []),
   ];
 
   const openKeybindingsFile = useCallback(() => {
@@ -1145,6 +1232,24 @@ function SettingsRouteView() {
       });
     },
     [settings.providerOrder, updateSettings],
+  );
+
+  const handleChatHeaderControlOrderDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) {
+        return;
+      }
+      const fromIndex = settings.chatHeaderControlOrder.indexOf(active.id as ChatHeaderControlId);
+      const toIndex = settings.chatHeaderControlOrder.indexOf(over.id as ChatHeaderControlId);
+      if (fromIndex < 0 || toIndex < 0) {
+        return;
+      }
+      updateSettings({
+        chatHeaderControlOrder: arrayMove([...settings.chatHeaderControlOrder], fromIndex, toIndex),
+      });
+    },
+    [settings.chatHeaderControlOrder, updateSettings],
   );
 
   const runProviderUpdate = useCallback(
@@ -2098,6 +2203,66 @@ function SettingsRouteView() {
           }
         />
       </SettingsSection>
+
+      <div ref={chatHeaderControlsRef} id={SETTINGS_TARGETS.chatHeaderControls}>
+        <SettingsSection title="Chat header">
+          <SettingsRow
+            title="Header controls"
+            description="Drag to reorder the buttons in the chat header, and hide the ones you don't use. Controls only appear when they're relevant to the thread."
+            status={
+              hiddenChatHeaderControlCount > 0
+                ? `${hiddenChatHeaderControlCount} ${pluralize(hiddenChatHeaderControlCount, "control")} hidden`
+                : isChatHeaderControlOrderDirty
+                  ? "Custom order"
+                  : "All controls visible"
+            }
+            resetAction={
+              hiddenChatHeaderControlCount > 0 || isChatHeaderControlOrderDirty ? (
+                <SettingResetButton
+                  label="chat header"
+                  onClick={() =>
+                    updateSettings({
+                      hiddenChatHeaderControls: defaults.hiddenChatHeaderControls,
+                      chatHeaderControlOrder: defaults.chatHeaderControlOrder,
+                    })
+                  }
+                />
+              ) : null
+            }
+          >
+            <DndContext
+              sensors={providerVisibilitySensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis]}
+              onDragEnd={handleChatHeaderControlOrderDragEnd}
+            >
+              <SortableContext
+                items={[...settings.chatHeaderControlOrder]}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="mt-4 space-y-2">
+                  {settings.chatHeaderControlOrder.map((control) => (
+                    <SortableChatHeaderControlRow
+                      key={control}
+                      control={control}
+                      isHidden={hiddenChatHeaderControlSet.has(control)}
+                      onHiddenChange={(hidden) =>
+                        updateSettings({
+                          hiddenChatHeaderControls: setChatHeaderControlHidden(
+                            settings.hiddenChatHeaderControls,
+                            control,
+                            hidden,
+                          ),
+                        })
+                      }
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </SettingsRow>
+        </SettingsSection>
+      </div>
     </div>
   );
 

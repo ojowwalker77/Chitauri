@@ -32,6 +32,7 @@ export const SETTINGS_TARGETS = {
   providerUpdates: "provider-updates",
   providerInstalls: "provider-installs",
   environmentPanel: "environment-panel",
+  chatHeaderControls: "chat-header-controls",
 } as const;
 
 export type SettingsTargetId = (typeof SETTINGS_TARGETS)[keyof typeof SETTINGS_TARGETS];

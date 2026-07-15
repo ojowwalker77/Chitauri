@@ -31,6 +31,11 @@ import {
   normalizeHiddenProviders,
   normalizeProviderOrder,
 } from "./providerOrdering";
+import {
+  DEFAULT_CHAT_HEADER_CONTROL_ORDER,
+  normalizeChatHeaderControlOrder,
+  normalizeHiddenChatHeaderControls,
+} from "./chatHeaderLayout";
 import { ensureNativeApi } from "./nativeApi";
 import { providerDiscoveryQueryKeys } from "./lib/providerDiscoveryReactQuery";
 import { serverQueryKeys, serverSettingsQueryOptions } from "./lib/serverReactQuery";
@@ -84,6 +89,8 @@ export const DEFAULT_SIDEBAR_THREAD_SORT_ORDER: SidebarThreadSortOrder = "update
 export const UiDensity = Schema.Literals(UI_DENSITY_MODES);
 export type UiDensity = typeof UiDensity.Type;
 export { DEFAULT_UI_DENSITY };
+
+export const ChatHeaderControlIdSchema = Schema.Literals(DEFAULT_CHAT_HEADER_CONTROL_ORDER);
 
 export function getDefaultNativeFontSmoothing(platform = globalThis.navigator?.platform ?? "") {
   return /mac|iphone|ipad|ipod/i.test(platform);
@@ -212,6 +219,13 @@ export const AppSettingsSchema = Schema.Struct({
   hiddenProviders: Schema.Array(ProviderKind).pipe(withDefaults(() => [])),
   // Local-only UI preference: top-level provider order in Settings and the composer picker.
   providerOrder: Schema.Array(ProviderKind).pipe(withDefaults(() => [...DEFAULT_PROVIDER_ORDER])),
+  // Local-only UI preferences: which action buttons the chat header's right cluster shows and
+  // in what order. Hiding a control never changes when it is *relevant* — the header's own
+  // availability rules still decide that; these only subtract from what those rules allow.
+  hiddenChatHeaderControls: Schema.Array(ChatHeaderControlIdSchema).pipe(withDefaults(() => [])),
+  chatHeaderControlOrder: Schema.Array(ChatHeaderControlIdSchema).pipe(
+    withDefaults(() => [...DEFAULT_CHAT_HEADER_CONTROL_ORDER]),
+  ),
   // Deprecated local-only preference kept for backward-compatible decoding.
   // Model-level hiding caused too many edge cases, so the app now normalizes it away.
   hiddenModels: Schema.Array(
@@ -422,6 +436,8 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     customPiModels: normalizeCustomModelSlugs(settings.customPiModels, "pi"),
     hiddenProviders: normalizeHiddenProviders(settings.hiddenProviders),
     providerOrder: normalizeProviderOrder(settings.providerOrder),
+    hiddenChatHeaderControls: normalizeHiddenChatHeaderControls(settings.hiddenChatHeaderControls),
+    chatHeaderControlOrder: normalizeChatHeaderControlOrder(settings.chatHeaderControlOrder),
     hiddenModels: [],
   };
 }

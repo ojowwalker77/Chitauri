@@ -1,7 +1,8 @@
 // FILE: ChatHeader.tsx
 // Purpose: Renders the chat top bar with project actions and panel toggles.
 // Layer: Chat shell header
-// Depends on: project action controls, git actions, and panel toggle callbacks
+// Depends on: project action controls, git actions, panel toggle callbacks, and the
+//             user's chat header control order/visibility preferences.
 
 import {
   type EditorId,
@@ -14,6 +15,7 @@ import {
 } from "@t3tools/contracts";
 import { isGenericChatThreadTitle } from "@t3tools/shared/chatThreads";
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { FiGitBranch } from "react-icons/fi";
 import { HiMiniArrowsPointingOut } from "react-icons/hi2";
 import { TbExchange } from "react-icons/tb";
@@ -49,6 +51,11 @@ import ProjectScriptsControl, { type NewProjectScriptInput } from "../ProjectScr
 import { Toggle } from "../ui/toggle";
 import { useSidebar } from "../ui/sidebar";
 import { useAppSettings } from "../../appSettings";
+import {
+  type ChatHeaderControlId,
+  compareChatHeaderControlsByOrder,
+  DEFAULT_CHAT_HEADER_CONTROL_ORDER,
+} from "../../chatHeaderLayout";
 import { useStore } from "../../store";
 import { createSidebarDisplayThreadsSelector } from "../../storeSelectors";
 import { sortThreadsForSidebar } from "../Sidebar.logic";
@@ -105,9 +112,9 @@ interface ChatHeaderProps {
   diffDisabledReason?: string | null;
   surfaceMode?: "single" | "split";
   isSidechat?: boolean;
-  // When provided, the header collapses the
-  // Open-in-editor + git-actions + diff-toggle cluster into one Environment button that
-  // drives the Environment panel; otherwise the legacy cluster is rendered.
+  // When provided, the header replaces the Open-in-editor + git-actions controls (and the
+  // usage chip) with one Environment button that drives the Environment panel; otherwise
+  // those controls are available individually. The diff toggle survives either way.
   environment?: EnvironmentToggleState | null;
   chatLayoutAction?: {
     kind: "split" | "maximize";
@@ -521,6 +528,8 @@ export const ChatHeader = memo(function ChatHeader({
   onCloseThreadPane,
 }: ChatHeaderProps) {
   const { isMobile, state } = useSidebar();
+  const { settings } = useAppSettings();
+  const { chatHeaderControlOrder, hiddenChatHeaderControls } = settings;
   const headerRef = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
   const {
@@ -567,51 +576,162 @@ export const ChatHeader = memo(function ChatHeader({
     );
   };
 
-  // The right-side diff toggle (the "open the diff on the right" affordance). It stays in
-  // the header in both layouts — beside the Environment button when that is enabled, and
-  // inside the legacy cluster otherwise — so the familiar right-sidebar control is always a
-  // single click away. Declared once here to avoid duplicating the markup across branches.
-  const diffToggleControl = showDiffToggle ? (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Toggle
-            className={cn(
-              CHAT_HEADER_TOGGLE_CLASS_NAME,
-              showDiffTotals ? null : "!size-7 [&_svg,&_[data-slot=central-icon]]:mx-0",
-            )}
-            pressed={diffOpen}
-            onPressedChange={onToggleDiff}
-            aria-label="Toggle diff panel"
-            variant="default"
-            size="xs"
-            disabled={!isGitRepo || (diffDisabledReason !== null && !diffOpen)}
-          >
-            {showDiffTotals ? (
-              <span className="inline-flex items-center gap-1">
-                <span className="font-system-ui text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-xs,10px)] font-normal tracking-normal tabular-nums text-success">
-                  +{diffAdditions}
-                </span>
-                <span className="font-system-ui text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-xs,10px)] font-normal tracking-normal tabular-nums text-destructive">
-                  -{diffDeletions}
-                </span>
-              </span>
-            ) : null}
-            <SurfaceChipIcon icon={PanelRightCloseIcon} className="size-4" />
-          </Toggle>
-        }
-      />
-      <TooltipPopup side="bottom">
-        {!isGitRepo
-          ? "Diff panel is unavailable because this project is not a git repository."
-          : diffDisabledReason && !diffOpen
-            ? diffDisabledReason
-            : diffToggleShortcutLabel
-              ? `Toggle diff panel (${diffToggleShortcutLabel})`
-              : "Toggle diff panel"}
-      </TooltipPopup>
-    </Tooltip>
-  ) : null;
+  // Which of the configurable right-cluster controls are *relevant* to this thread. The
+  // user's visibility preference subtracts from this set; it can never add to it.
+  const orderedControlIds = useMemo(() => {
+    const available = new Set<ChatHeaderControlId>();
+    if (!hideHandoffControls && !environment) {
+      available.add("usage");
+    }
+    if (!hideHandoffControls) {
+      available.add("handoff");
+    }
+    if (activeProjectScripts) {
+      available.add("projectScripts");
+    }
+    if (environment) {
+      available.add("environment");
+    }
+    if (!environment && activeProjectName) {
+      available.add("openIn");
+    }
+    if (!environment && activeProjectName && showGitActions) {
+      available.add("gitActions");
+    }
+    if (showDiffToggle) {
+      available.add("diff");
+    }
+
+    const hidden = new Set<ChatHeaderControlId>(hiddenChatHeaderControls);
+    return DEFAULT_CHAT_HEADER_CONTROL_ORDER.filter(
+      (id) => available.has(id) && !hidden.has(id),
+    ).toSorted((left, right) =>
+      compareChatHeaderControlsByOrder(chatHeaderControlOrder, left, right),
+    );
+  }, [
+    activeProjectName,
+    activeProjectScripts,
+    chatHeaderControlOrder,
+    environment,
+    hiddenChatHeaderControls,
+    hideHandoffControls,
+    showDiffToggle,
+    showGitActions,
+  ]);
+
+  const renderControl = (id: ChatHeaderControlId): ReactNode => {
+    switch (id) {
+      case "usage":
+        return <ProviderUsageMenuControl provider={activeProvider} />;
+      case "handoff":
+        return (
+          <Menu modal={false}>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <MenuTrigger
+                    render={
+                      <ChatHeaderButton
+                        type="button"
+                        tone="outline"
+                        className={compact ? "gap-1" : "gap-1.5"}
+                        aria-label={handoffActionLabel}
+                        disabled={handoffDisabled || handoffActionTargetProviders.length === 0}
+                      />
+                    }
+                  >
+                    <HandoffIcon className="size-[1em] shrink-0 opacity-80" />
+                    {!compact ? <span className="truncate font-normal">Hand off</span> : null}
+                  </MenuTrigger>
+                }
+              />
+              <TooltipPopup side="bottom">{handoffActionLabel}</TooltipPopup>
+            </Tooltip>
+            <ComposerPickerMenuPopup align="end" side="bottom" className="w-48 min-w-48">
+              {handoffActionTargetProviders.map((provider) => (
+                <MenuItem key={provider} onClick={() => onCreateHandoff(provider)}>
+                  {renderProviderIcon(provider, "size-3.5 shrink-0")}
+                  <span>Handoff to {PROVIDER_DISPLAY_NAMES[provider]}</span>
+                </MenuItem>
+              ))}
+            </ComposerPickerMenuPopup>
+          </Menu>
+        );
+      case "projectScripts":
+        return activeProjectScripts ? (
+          <ProjectScriptsControl
+            scripts={activeProjectScripts}
+            keybindings={keybindings}
+            preferredScriptId={preferredScriptId}
+            hideInlineLabel={compact}
+            onRunScript={onRunProjectScript}
+            onAddScript={onAddProjectScript}
+            onUpdateScript={onUpdateProjectScript}
+            onDeleteScript={onDeleteProjectScript}
+          />
+        ) : null;
+      case "environment":
+        return environment ? <EnvironmentToggle environment={environment} /> : null;
+      case "openIn":
+        return (
+          <OpenInPicker
+            keybindings={keybindings}
+            availableEditors={availableEditors}
+            openInTarget={openInTarget}
+          />
+        );
+      case "gitActions":
+        return (
+          <GitActionsControl
+            gitCwd={gitCwd}
+            activeThreadId={activeThreadId}
+            hideQuickActionLabel={compact}
+          />
+        );
+      case "diff":
+        return (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Toggle
+                  className={cn(
+                    CHAT_HEADER_TOGGLE_CLASS_NAME,
+                    showDiffTotals ? null : "!size-7 [&_svg,&_[data-slot=central-icon]]:mx-0",
+                  )}
+                  pressed={diffOpen}
+                  onPressedChange={onToggleDiff}
+                  aria-label="Toggle diff panel"
+                  variant="default"
+                  size="xs"
+                  disabled={!isGitRepo || (diffDisabledReason !== null && !diffOpen)}
+                >
+                  {showDiffTotals ? (
+                    <span className="inline-flex items-center gap-1">
+                      <span className="font-system-ui text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-xs,10px)] font-normal tracking-normal tabular-nums text-success">
+                        +{diffAdditions}
+                      </span>
+                      <span className="font-system-ui text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-xs,10px)] font-normal tracking-normal tabular-nums text-destructive">
+                        -{diffDeletions}
+                      </span>
+                    </span>
+                  ) : null}
+                  <SurfaceChipIcon icon={PanelRightCloseIcon} className="size-4" />
+                </Toggle>
+              }
+            />
+            <TooltipPopup side="bottom">
+              {!isGitRepo
+                ? "Diff panel is unavailable because this project is not a git repository."
+                : diffDisabledReason && !diffOpen
+                  ? diffDisabledReason
+                  : diffToggleShortcutLabel
+                    ? `Toggle diff panel (${diffToggleShortcutLabel})`
+                    : "Toggle diff panel"}
+            </TooltipPopup>
+          </Tooltip>
+        );
+    }
+  };
 
   return (
     <div ref={headerRef} className={cn("flex min-w-0 flex-1 items-center gap-2", className)}>
@@ -742,55 +862,6 @@ export const ChatHeader = memo(function ChatHeader({
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2 [-webkit-app-region:no-drag]">
-        {!hideHandoffControls && !environment ? (
-          <ProviderUsageMenuControl provider={activeProvider} />
-        ) : null}
-        {!hideHandoffControls ? (
-          <Menu modal={false}>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <MenuTrigger
-                    render={
-                      <ChatHeaderButton
-                        type="button"
-                        tone="outline"
-                        className={compact ? "gap-1" : "gap-1.5"}
-                        aria-label={handoffActionLabel}
-                        disabled={handoffDisabled || handoffActionTargetProviders.length === 0}
-                      />
-                    }
-                  >
-                    <HandoffIcon className="size-[1em] shrink-0 opacity-80" />
-                    {!compact ? <span className="truncate font-normal">Hand off</span> : null}
-                  </MenuTrigger>
-                }
-              />
-              <TooltipPopup side="bottom">{handoffActionLabel}</TooltipPopup>
-            </Tooltip>
-            <ComposerPickerMenuPopup align="end" side="bottom" className="w-48 min-w-48">
-              {handoffActionTargetProviders.map((provider) => (
-                <MenuItem key={provider} onClick={() => onCreateHandoff(provider)}>
-                  {renderProviderIcon(provider, "size-3.5 shrink-0")}
-                  <span>Handoff to {PROVIDER_DISPLAY_NAMES[provider]}</span>
-                </MenuItem>
-              ))}
-            </ComposerPickerMenuPopup>
-          </Menu>
-        ) : null}
-        {activeProjectScripts ? (
-          <ProjectScriptsControl
-            scripts={activeProjectScripts}
-            keybindings={keybindings}
-            preferredScriptId={preferredScriptId}
-            hideInlineLabel={compact}
-            onRunScript={onRunProjectScript}
-            onAddScript={onAddProjectScript}
-            onUpdateScript={onUpdateProjectScript}
-            onDeleteScript={onDeleteProjectScript}
-          />
-        ) : null}
-
         {inlineChatLayoutAction ? (
           <Tooltip>
             <TooltipTrigger
@@ -826,37 +897,9 @@ export const ChatHeader = memo(function ChatHeader({
           </Tooltip>
         ) : null}
 
-        {/* Environment: one button consolidating Open-in-editor and git actions into the
-            Environment panel. The right-side diff toggle stays beside it so the familiar
-            "open the diff on the right" control is preserved. Falls back to the legacy split
-            controls when no environment is resolved. */}
-        {environment ? (
-          <>
-            <EnvironmentToggle environment={environment} />
-            {diffToggleControl}
-          </>
-        ) : (
-          <>
-            {/* Open in editor: dedicated split-button with an editor switcher; the project
-                action control now lives beside Hand off as its own project command surface. */}
-            {activeProjectName ? (
-              <OpenInPicker
-                keybindings={keybindings}
-                availableEditors={availableEditors}
-                openInTarget={openInTarget}
-              />
-            ) : null}
-
-            {activeProjectName && showGitActions ? (
-              <GitActionsControl
-                gitCwd={gitCwd}
-                activeThreadId={activeThreadId}
-                hideQuickActionLabel={compact}
-              />
-            ) : null}
-            {diffToggleControl}
-          </>
-        )}
+        {orderedControlIds.map((id) => (
+          <React.Fragment key={id}>{renderControl(id)}</React.Fragment>
+        ))}
       </div>
     </div>
   );
