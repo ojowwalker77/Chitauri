@@ -85,6 +85,11 @@ export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
     whenAst: whenNotTerminalFocus,
   },
   {
+    command: "rightPanel.toggle",
+    shortcut: commandShortcut("b", { altKey: true }),
+    whenAst: whenNotTerminalFocus,
+  },
+  {
     command: "sidebar.importThread",
     shortcut: commandShortcut("i"),
     whenAst: whenNotTerminalFocus,

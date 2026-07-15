@@ -114,6 +114,11 @@ const DEFAULT_BINDINGS = compile([
     command: "sidebar.toggle",
     whenAst: whenNot(whenIdentifier("terminalFocus")),
   },
+  {
+    shortcut: modShortcut("b", { altKey: true }),
+    command: "rightPanel.toggle",
+    whenAst: whenNot(whenIdentifier("terminalFocus")),
+  },
   { shortcut: modShortcut("k"), command: "sidebar.search" },
   { shortcut: modShortcut("j"), command: "terminal.toggle" },
   {
@@ -1044,6 +1049,30 @@ describe("chat/editor shortcuts", () => {
         platform: "MacIntel",
         context: { terminalFocus: true },
       }),
+    );
+  });
+
+  it("resolves rightPanel.toggle outside terminal focus", () => {
+    assert.strictEqual(
+      resolveShortcutCommand(
+        event({ key: "b", metaKey: true, altKey: true }),
+        DEFAULT_BINDINGS,
+        {
+          platform: "MacIntel",
+          context: { terminalFocus: false },
+        },
+      ),
+      "rightPanel.toggle",
+    );
+    assert.isNull(
+      resolveShortcutCommand(
+        event({ key: "b", metaKey: true, altKey: true }),
+        DEFAULT_BINDINGS,
+        {
+          platform: "MacIntel",
+          context: { terminalFocus: true },
+        },
+      ),
     );
   });
 
