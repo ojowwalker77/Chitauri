@@ -665,6 +665,8 @@ export function createWsNativeApi(): NativeApi {
           command: omitNullUserInputAnswers(command),
         });
       },
+      listImportableDesktopThreads: (input) =>
+        transport.request(ORCHESTRATION_WS_METHODS.listImportableDesktopThreads, input),
       importThread: (input) => transport.request(ORCHESTRATION_WS_METHODS.importThread, input),
       repairState: () => transport.request(ORCHESTRATION_WS_METHODS.repairState),
       getTurnDiff: (input) => transport.request(ORCHESTRATION_WS_METHODS.getTurnDiff, input),

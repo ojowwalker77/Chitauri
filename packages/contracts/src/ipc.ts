@@ -135,6 +135,8 @@ import type {
   OrchestrationGetFullThreadDiffResult,
   OrchestrationImportThreadInput,
   OrchestrationImportThreadResult,
+  OrchestrationListImportableDesktopThreadsInput,
+  OrchestrationListImportableDesktopThreadsResult,
   OrchestrationGetTurnDiffInput,
   OrchestrationGetTurnDiffResult,
   OrchestrationEvent,
@@ -542,6 +544,9 @@ export interface NativeApi {
     getSnapshot: () => Promise<OrchestrationReadModel>;
     getShellSnapshot: () => Promise<OrchestrationShellSnapshot>;
     dispatchCommand: (command: ClientOrchestrationCommand) => Promise<{ sequence: number }>;
+    listImportableDesktopThreads: (
+      input: OrchestrationListImportableDesktopThreadsInput,
+    ) => Promise<OrchestrationListImportableDesktopThreadsResult>;
     importThread: (
       input: OrchestrationImportThreadInput,
     ) => Promise<OrchestrationImportThreadResult>;
