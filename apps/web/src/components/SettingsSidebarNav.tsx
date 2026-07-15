@@ -73,7 +73,10 @@ function SettingsSearchResultRow(props: {
           SIDEBAR_THREAD_ROW_BASE_CLASS_NAME,
           SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME,
           SIDEBAR_ROW_HOVER_CLASS_NAME,
-          "flex items-center",
+          // These rows carry no leading glyph, so they align under their section
+          // header's *label* (row px-2 + size-4 icon + gap-2) rather than taking
+          // the thread row's narrower avatar-relative gutter.
+          "flex items-center pl-8",
         )}
         onClick={() => onSelect(entry)}
       >
