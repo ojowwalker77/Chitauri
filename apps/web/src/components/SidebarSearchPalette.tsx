@@ -13,18 +13,29 @@ import {
   SettingsIcon,
   SunIcon,
 } from "~/lib/icons";
-import { type FilesystemBrowseResult, type ProviderKind } from "@t3tools/contracts";
+import {
+  type FilesystemBrowseResult,
+  type ImportableDesktopThread,
+  type ImportableDesktopThreadProvider,
+  type ProviderKind,
+} from "@t3tools/contracts";
 import { isGenericChatThreadTitle } from "@t3tools/shared/chatThreads";
 import { BsChat } from "react-icons/bs";
 import { HiOutlineFolderOpen } from "react-icons/hi2";
-import { LuArrowDownToLine, LuArrowLeft, LuCornerLeftUp, LuFolderPlus } from "react-icons/lu";
+import {
+  LuArrowDownToLine,
+  LuArrowLeft,
+  LuCornerLeftUp,
+  LuFolderPlus,
+  LuRefreshCw,
+} from "react-icons/lu";
 import { type ComponentType, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FolderClosed } from "./FolderClosed";
 import { ProviderIcon as SharedProviderIcon } from "./ProviderIcon";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { readNativeApi } from "~/nativeApi";
-import { isMacPlatform } from "~/lib/utils";
+import { cn, isMacPlatform } from "~/lib/utils";
 import { Kbd, KbdGroup } from "./ui/kbd";
 import {
   appendBrowsePathSegment,
@@ -90,13 +101,24 @@ interface SidebarSearchPaletteProps {
   onOpenProject: (projectId: string) => void;
   onOpenThread: (threadId: string) => void;
   importProviders: readonly ImportProviderKind[];
-  onImportThread: (provider: ImportProviderKind, externalId: string) => Promise<void>;
+  onImportThread: (request: ImportThreadRequest) => Promise<void>;
 }
 
 export type ImportProviderKind = Extract<
   ProviderKind,
   "codex" | "claudeAgent" | "cursor" | "kilo" | "opencode"
 >;
+
+export type ImportThreadRequest =
+  | {
+      kind: "desktop";
+      thread: ImportableDesktopThread;
+    }
+  | {
+      kind: "manual";
+      provider: ImportProviderKind;
+      externalId: string;
+    };
 
 function actionHandler(
   actionId: string,
@@ -353,6 +375,11 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
   const [importProvider, setImportProvider] = useState<ImportProviderKind>(
     props.importProviders[0] ?? "codex",
   );
+  const [desktopImportProvider, setDesktopImportProvider] =
+    useState<ImportableDesktopThreadProvider>("codex");
+  const [desktopImportQuery, setDesktopImportQuery] = useState("");
+  const [showManualImport, setShowManualImport] = useState(false);
+  const [importingDesktopThreadKey, setImportingDesktopThreadKey] = useState<string | null>(null);
   const [importId, setImportId] = useState("");
   const [importError, setImportError] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -364,6 +391,10 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
       setQuery("");
       setHighlightedItemValue(null);
       setImportProvider(props.importProviders[0] ?? "codex");
+      setDesktopImportProvider("codex");
+      setDesktopImportQuery("");
+      setShowManualImport(false);
+      setImportingDesktopThreadKey(null);
       setImportId("");
       setImportError(null);
       setIsImporting(false);
@@ -378,6 +409,39 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
     }
     setImportProvider(props.importProviders[0] ?? "codex");
   }, [importProvider, props.importProviders]);
+
+  const desktopImportProviders = useMemo(
+    () =>
+      (["codex", "claudeAgent"] as const).filter((provider) =>
+        props.importProviders.includes(provider),
+      ),
+    [props.importProviders],
+  );
+
+  useEffect(() => {
+    if (desktopImportProviders.includes(desktopImportProvider)) return;
+    setDesktopImportProvider(desktopImportProviders[0] ?? "codex");
+  }, [desktopImportProvider, desktopImportProviders]);
+
+  const desktopThreadsQuery = useQuery({
+    queryKey: ["importable-desktop-threads"],
+    queryFn: async () => {
+      const api = readNativeApi();
+      if (!api) throw new Error("The app server is unavailable.");
+      return api.orchestration.listImportableDesktopThreads({});
+    },
+    enabled: props.open && props.mode === "import" && !showManualImport,
+    staleTime: 5_000,
+  });
+
+  const filteredDesktopThreads = useMemo(() => {
+    const query = desktopImportQuery.trim().toLowerCase();
+    return (desktopThreadsQuery.data?.threads ?? []).filter((thread) => {
+      if (thread.provider !== desktopImportProvider) return false;
+      if (!query) return true;
+      return `${thread.title} ${thread.cwd ?? ""}`.toLowerCase().includes(query);
+    });
+  }, [desktopImportProvider, desktopImportQuery, desktopThreadsQuery.data?.threads]);
 
   useEffect(() => {
     setAddProjectError(null);
@@ -582,12 +646,37 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
     setImportError(null);
     setIsImporting(true);
     try {
-      await props.onImportThread(importProvider, normalizedImportId);
+      await props.onImportThread({
+        kind: "manual",
+        provider: importProvider,
+        externalId: normalizedImportId,
+      });
       props.onOpenChange(false);
     } catch (error) {
       setImportError(error instanceof Error ? error.message : "Failed to import thread.");
     } finally {
       setIsImporting(false);
+    }
+  };
+
+  const submitDesktopImport = async (thread: ImportableDesktopThread) => {
+    if (importingDesktopThreadKey) return;
+    if (thread.chitauriThreadId) {
+      props.onOpenChange(false);
+      props.onOpenThread(thread.chitauriThreadId);
+      return;
+    }
+
+    const key = `${thread.provider}:${thread.externalId}`;
+    setImportError(null);
+    setImportingDesktopThreadKey(key);
+    try {
+      await props.onImportThread({ kind: "desktop", thread });
+      props.onOpenChange(false);
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : "Failed to import thread.");
+    } finally {
+      setImportingDesktopThreadKey(null);
     }
   };
 
@@ -604,108 +693,232 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                   className="-ml-1 mt-[-2px] size-8 shrink-0"
                   onClick={() => {
                     setImportError(null);
+                    if (showManualImport) {
+                      setShowManualImport(false);
+                      return;
+                    }
                     props.onModeChange("search");
                   }}
                 >
                   <LuArrowLeft className="size-4" />
                 </Button>
                 <div>
-                  <p className="text-sm font-medium text-foreground">Import thread from provider</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {showManualImport ? "Import by session ID" : "Import from desktop apps"}
+                  </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Create a local app thread and resume it from an existing provider id.
+                    {showManualImport
+                      ? "Resume a provider session when it does not appear in desktop history."
+                      : "Continue a Codex or Claude conversation in Chitauri."}
                   </p>
                 </div>
               </div>
             </div>
-            <div className="space-y-4 px-4 py-4">
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Provider</p>
-                <div className="flex gap-2">
-                  {props.importProviders.map((provider) => (
-                    <Button
-                      key={provider}
-                      className={
-                        importProvider === provider
-                          ? "flex-1 justify-start border-border bg-muted text-foreground hover:bg-muted/80"
-                          : "flex-1 justify-start"
-                      }
-                      variant="outline"
-                      onClick={() => setImportProvider(provider)}
-                    >
-                      <ProviderIcon provider={provider} />
-                      {provider === "claudeAgent"
-                        ? "Claude"
-                        : provider === "cursor"
-                          ? "Cursor"
-                          : provider === "kilo"
-                            ? "Kilo"
-                            : provider === "opencode"
-                              ? "OpenCode"
-                              : "Codex"}
-                    </Button>
-                  ))}
+            {showManualImport ? (
+              <div className="space-y-4 px-4 py-4">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Provider</p>
+                  <div className="flex flex-wrap gap-2">
+                    {props.importProviders.map((provider) => (
+                      <Button
+                        key={provider}
+                        className={
+                          importProvider === provider
+                            ? "flex-1 justify-start border-border bg-muted text-foreground hover:bg-muted/80"
+                            : "flex-1 justify-start"
+                        }
+                        variant="outline"
+                        onClick={() => setImportProvider(provider)}
+                      >
+                        <ProviderIcon provider={provider} />
+                        {provider === "claudeAgent"
+                          ? "Claude"
+                          : provider === "cursor"
+                            ? "Cursor"
+                            : provider === "kilo"
+                              ? "Kilo"
+                              : provider === "opencode"
+                                ? "OpenCode"
+                                : "Codex"}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-                {props.importProviders.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    No connected providers expose chat import in this build.
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">{importFieldLabel}</p>
+                  <Input
+                    autoFocus
+                    nativeInput
+                    placeholder={importPlaceholder}
+                    value={importId}
+                    disabled={props.importProviders.length === 0}
+                    onChange={(event) => setImportId(event.currentTarget.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void submitImport();
+                      }
+                    }}
+                  />
+                </div>
+                {importError ? (
+                  <p className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                    {importError}
                   </p>
                 ) : null}
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">{importFieldLabel}</p>
-                <Input
-                  autoFocus
-                  nativeInput
-                  placeholder={importPlaceholder}
-                  value={importId}
-                  disabled={props.importProviders.length === 0}
-                  onChange={(event) => setImportId(event.currentTarget.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      void submitImport();
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" onClick={() => props.onOpenChange(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    disabled={
+                      props.importProviders.length === 0 ||
+                      importId.trim().length === 0 ||
+                      isImporting
                     }
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {importProvider === "claudeAgent"
-                    ? "Claude resumes a persisted session by session id."
-                    : importProvider === "cursor"
-                      ? "Cursor resumes a persisted session by session id."
-                      : importProvider === "kilo"
-                        ? "Kilo resumes a persisted session by session id."
-                        : importProvider === "opencode"
-                          ? "OpenCode resumes a persisted session by session id."
-                          : "Codex resumes a persisted thread by thread id."}
-                </p>
+                    onClick={submitImport}
+                  >
+                    {isImporting ? "Importing..." : "Import"}
+                  </Button>
+                </div>
               </div>
-              {importError ? (
-                <p className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                  {importError}
-                </p>
-              ) : null}
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setImportError(null);
-                    props.onOpenChange(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  disabled={
-                    props.importProviders.length === 0 ||
-                    importId.trim().length === 0 ||
-                    isImporting
-                  }
-                  onClick={submitImport}
-                >
-                  {isImporting ? "Importing..." : "Import"}
-                </Button>
+            ) : (
+              <div className="flex min-h-0 flex-col">
+                <div className="space-y-3 px-4 py-4">
+                  <div className="flex gap-2">
+                    {desktopImportProviders.map((provider) => (
+                      <Button
+                        key={provider}
+                        className={
+                          desktopImportProvider === provider
+                            ? "flex-1 justify-start border-border bg-muted text-foreground hover:bg-muted/80"
+                            : "flex-1 justify-start"
+                        }
+                        variant="outline"
+                        onClick={() => setDesktopImportProvider(provider)}
+                      >
+                        <ProviderIcon provider={provider} />
+                        {provider === "claudeAgent" ? "Claude Desktop" : "Codex Desktop"}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      autoFocus
+                      nativeInput
+                      placeholder="Search desktop threads"
+                      value={desktopImportQuery}
+                      disabled={desktopImportProviders.length === 0}
+                      onChange={(event) => setDesktopImportQuery(event.currentTarget.value)}
+                    />
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      aria-label="Refresh desktop threads"
+                      title="Refresh desktop threads"
+                      disabled={desktopThreadsQuery.isFetching}
+                      onClick={() => void desktopThreadsQuery.refetch()}
+                    >
+                      <LuRefreshCw
+                        className={cn("size-4", desktopThreadsQuery.isFetching && "animate-spin")}
+                      />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="max-h-[min(24rem,55vh)] min-h-48 overflow-y-auto px-2 pb-2">
+                  {desktopImportProviders.length === 0 ? (
+                    <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                      Connect Codex or Claude to import its desktop threads.
+                    </div>
+                  ) : desktopThreadsQuery.isPending ? (
+                    <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                      Loading {desktopImportProvider === "codex" ? "Codex" : "Claude"} threads…
+                    </div>
+                  ) : desktopThreadsQuery.error ? (
+                    <div className="mx-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-3 text-sm text-destructive">
+                      {desktopThreadsQuery.error instanceof Error
+                        ? desktopThreadsQuery.error.message
+                        : "Desktop threads could not be loaded."}
+                    </div>
+                  ) : filteredDesktopThreads.length === 0 ? (
+                    <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                      {desktopImportQuery.trim()
+                        ? "No desktop threads match this search."
+                        : `No ${desktopImportProvider === "codex" ? "Codex" : "Claude"} desktop threads found.`}
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {filteredDesktopThreads.map((thread) => {
+                        const key = `${thread.provider}:${thread.externalId}`;
+                        const isImportingThread = importingDesktopThreadKey === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-muted/70 disabled:opacity-55"
+                            disabled={importingDesktopThreadKey !== null}
+                            onClick={() => void submitDesktopImport(thread)}
+                          >
+                            <ProviderIcon provider={thread.provider} />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-medium text-foreground">
+                                {thread.title}
+                              </span>
+                              <span className="block truncate text-xs text-muted-foreground">
+                                {thread.cwd ?? "Workspace unavailable"}
+                              </span>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                              <span className="tabular-nums">{formatRelativeTime(thread.updatedAt)}</span>
+                              {thread.chitauriThreadId ? (
+                                <span className="inline-flex items-center gap-1 text-foreground/80">
+                                  <CheckIcon className="size-3.5" /> Open
+                                </span>
+                              ) : isImportingThread ? (
+                                "Importing…"
+                              ) : (
+                                <LuArrowDownToLine className="size-4" />
+                              )}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {(desktopThreadsQuery.data?.warnings ?? [])
+                  .filter((warning) => warning.provider === desktopImportProvider)
+                  .map((warning) => (
+                    <p
+                      key={warning.provider}
+                      className="mx-4 mb-3 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive"
+                    >
+                      {warning.message}
+                    </p>
+                  ))}
+                {importError ? (
+                  <p className="mx-4 mb-3 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                    {importError}
+                  </p>
+                ) : null}
+                <div className="flex items-center justify-between border-t border-border/70 px-4 py-3">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setImportError(null);
+                      setShowManualImport(true);
+                    }}
+                  >
+                    Import by ID
+                  </Button>
+                  <Button variant="ghost" onClick={() => props.onOpenChange(false)}>
+                    Close
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         ) : (
           <>
@@ -855,6 +1068,8 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                               if (action.id === "import-thread") {
                                 setImportError(null);
                                 setImportId("");
+                                setDesktopImportQuery("");
+                                setShowManualImport(false);
                                 setImportProvider(props.importProviders[0] ?? "codex");
                                 props.onModeChange("import");
                                 return;

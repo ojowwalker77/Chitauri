@@ -40,6 +40,7 @@ import { listLocalServers, stopLocalServer } from "./localServerMonitor";
 import { Open, resolveAvailableEditors } from "./open";
 import { makeDispatchCommandNormalizer } from "./orchestration/dispatchCommandNormalization";
 import { makeImportThreadHandler } from "./orchestration/importThreadRoute";
+import { makeListImportableDesktopThreadsHandler } from "./orchestration/listImportableDesktopThreadsRoute";
 import { OrchestrationEngineService } from "./orchestration/Services/OrchestrationEngine";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { ProviderDiscoveryService } from "./provider/Services/ProviderDiscoveryService";
@@ -47,6 +48,7 @@ import { discoverSkillsCatalog, chitauriSkillsDir } from "./provider/skillsCatal
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
 import { ProviderHealth } from "./provider/Services/ProviderHealth";
 import { ProviderService } from "./provider/Services/ProviderService";
+import { ProviderSessionDirectory } from "./provider/Services/ProviderSessionDirectory";
 import { listProviderUsage } from "./providerUsage";
 import { getProviderUsageSnapshot } from "./providerUsageSnapshot";
 import { ProfileStatsQuery } from "./profileStats";
@@ -348,6 +350,7 @@ export const makeWsRpcLayer = () =>
       const providerDiscoveryService = yield* ProviderDiscoveryService;
       const providerHealth = yield* ProviderHealth;
       const providerService = yield* ProviderService;
+      const providerSessionDirectory = yield* ProviderSessionDirectory;
       const lifecycleEvents = yield* ServerLifecycleEvents;
       const runtimeStartup = yield* ServerRuntimeStartup;
       const serverEnvironment = yield* ServerEnvironment;
@@ -443,6 +446,10 @@ export const makeWsRpcLayer = () =>
         projectionSnapshotQuery: projectionReadModelQuery,
         providerAdapterRegistry,
         providerService,
+      });
+      const listImportableDesktopThreads = makeListImportableDesktopThreadsHandler({
+        providerAdapterRegistry,
+        providerSessionDirectory,
       });
 
       // Terminal-first threads are created with the generic "New terminal" placeholder.
@@ -601,6 +608,11 @@ export const makeWsRpcLayer = () =>
           ),
         [ORCHESTRATION_WS_METHODS.importThread]: (input) =>
           rpcEffect(importThread(input), "Failed to import thread"),
+        [ORCHESTRATION_WS_METHODS.listImportableDesktopThreads]: () =>
+          rpcEffect(
+            listImportableDesktopThreads(),
+            "Failed to list importable desktop threads",
+          ),
         [ORCHESTRATION_WS_METHODS.getSnapshot]: () =>
           rpcEffect(
             projectionReadModelQuery.getSnapshot(),

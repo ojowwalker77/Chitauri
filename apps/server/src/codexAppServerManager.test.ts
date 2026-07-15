@@ -1791,6 +1791,63 @@ describe("CodexAppServerManager discovery", () => {
 });
 
 describe("thread checkpoint control", () => {
+  it("lists resumable desktop threads with normalized metadata", async () => {
+    const manager = new CodexAppServerManager();
+    const context = { discovery: true };
+    vi.spyOn(
+      manager as unknown as { resolveContextForDiscovery: () => Promise<unknown> },
+      "resolveContextForDiscovery",
+    ).mockResolvedValue(context);
+    const sendRequest = vi
+      .spyOn(
+        manager as unknown as { sendRequest: (...args: unknown[]) => Promise<unknown> },
+        "sendRequest",
+      )
+      .mockResolvedValue({
+        data: [
+          {
+            id: "codex-desktop-1",
+            name: "Desktop title",
+            preview: "Fallback preview",
+            cwd: "/work/chitauri",
+            createdAt: 1_752_489_000,
+            updatedAt: 1_752_492_600,
+          },
+          {
+            id: "codex-desktop-2",
+            preview: "Preview title",
+            updatedAt: "2025-07-14T12:00:00.000Z",
+          },
+        ],
+      });
+
+    const result = await manager.listExternalThreads(2);
+
+    expect(sendRequest).toHaveBeenCalledWith(context, "thread/list", {
+      cursor: null,
+      limit: 2,
+      archived: false,
+      sortKey: "updated_at",
+      sortDirection: "desc",
+    });
+    expect(result).toEqual([
+      {
+        externalThreadId: "codex-desktop-1",
+        title: "Desktop title",
+        cwd: "/work/chitauri",
+        createdAt: "2025-07-14T10:30:00.000Z",
+        updatedAt: "2025-07-14T11:30:00.000Z",
+      },
+      {
+        externalThreadId: "codex-desktop-2",
+        title: "Preview title",
+        cwd: null,
+        createdAt: null,
+        updatedAt: "2025-07-14T12:00:00.000Z",
+      },
+    ]);
+  });
+
   it("reads thread turns from thread/read", async () => {
     const { manager, context, requireSession, sendRequest } = createThreadControlHarness();
     sendRequest.mockResolvedValue({

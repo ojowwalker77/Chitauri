@@ -213,6 +213,14 @@ export interface CodexThreadSnapshot {
   cwd?: string | null;
 }
 
+export interface CodexExternalThreadSummary {
+  externalThreadId: string;
+  title: string;
+  cwd: string | null;
+  createdAt: string | null;
+  updatedAt: string;
+}
+
 const CODEX_VERSION_CHECK_TIMEOUT_MS = 4_000;
 
 const ANSI_ESCAPE_CHAR = String.fromCharCode(27);
@@ -1353,6 +1361,18 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       includeTurns: true,
     });
     return this.parseThreadSnapshot("thread/read", response);
+  }
+
+  async listExternalThreads(limit: number): Promise<CodexExternalThreadSummary[]> {
+    const context = await this.resolveContextForDiscovery(undefined);
+    const response = await this.sendRequest(context, "thread/list", {
+      cursor: null,
+      limit,
+      archived: false,
+      sortKey: "updated_at",
+      sortDirection: "desc",
+    });
+    return this.parseExternalThreadList(response).slice(0, limit);
   }
 
   async forkThread(input: ProviderForkThreadInput): Promise<ProviderForkThreadResult> {
@@ -2615,6 +2635,47 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       turns,
       cwd: this.readString(threadRecord, "cwd") ?? this.readString(responseRecord, "cwd") ?? null,
     };
+  }
+
+  private parseExternalThreadList(response: unknown): CodexExternalThreadSummary[] {
+    const responseRecord = this.readObject(response);
+    const threads = this.readArray(responseRecord, "data") ?? [];
+
+    return threads.flatMap((value) => {
+      const thread = this.readObject(value);
+      const externalThreadId = this.readString(thread, "id")?.trim();
+      if (!externalThreadId) return [];
+
+      const title =
+        this.readString(thread, "name")?.trim() ||
+        this.readString(thread, "preview")?.trim() ||
+        `Codex thread ${externalThreadId.slice(-8)}`;
+      const updatedAt = this.readCodexTimestamp(thread, "updatedAt") ?? new Date().toISOString();
+
+      return [
+        {
+          externalThreadId,
+          title,
+          cwd: this.readString(thread, "cwd")?.trim() || null,
+          createdAt: this.readCodexTimestamp(thread, "createdAt"),
+          updatedAt,
+        },
+      ];
+    });
+  }
+
+  private readCodexTimestamp(record: Record<string, unknown>, key: string): string | null {
+    const value = record[key];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      const milliseconds = value < 10_000_000_000 ? value * 1_000 : value;
+      const date = new Date(milliseconds);
+      return Number.isNaN(date.getTime()) ? null : date.toISOString();
+    }
+    if (typeof value === "string" && value.trim().length > 0) {
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date.toISOString();
+    }
+    return null;
   }
 
   private toCodexReviewTarget(target: CodexAppServerReviewTarget): Record<string, unknown> {

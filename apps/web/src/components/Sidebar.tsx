@@ -35,7 +35,8 @@ import { autoAnimate } from "@formkit/auto-animate";
 import { FiGitBranch, FiPlus } from "react-icons/fi";
 import { GoRepoForked } from "react-icons/go";
 import { HiOutlineArchiveBox } from "react-icons/hi2";
-import { TbArrowsDiagonal, TbArrowsDiagonalMinimize2, TbCursorText } from "react-icons/tb";
+import { LuArrowDownToLine } from "react-icons/lu";
+import { TbArrowsDiagonal, TbArrowsDiagonalMinimize2 } from "react-icons/tb";
 import { IoFilter } from "react-icons/io5";
 import {
   useCallback,
@@ -187,6 +188,7 @@ import { terminalRuntimeRegistry } from "./terminal/terminalRuntimeRegistry";
 import {
   SidebarSearchPalette,
   type ImportProviderKind,
+  type ImportThreadRequest,
   type SidebarSearchPaletteMode,
 } from "./SidebarSearchPalette";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
@@ -1460,7 +1462,6 @@ export default function Sidebar() {
   const removeWorktreeMutation = useMutation(gitRemoveWorktreeMutationOptions({ queryClient }));
   const { activeProjectId: focusedProjectId } = useFocusedChatContext();
   const [addingProject, setAddingProject] = useState(false);
-  const [newCwd, setNewCwd] = useState("");
   const [searchPaletteOpen, setSearchPaletteOpen] = useState(false);
   const [searchPaletteMode, setSearchPaletteMode] = useState<SidebarSearchPaletteMode>("search");
   const [searchPaletteInitialQuery, setSearchPaletteInitialQuery] = useState<string | null>(null);
@@ -1469,14 +1470,12 @@ export default function Sidebar() {
   );
   const [projectRunDialogCommandDraft, setProjectRunDialogCommandDraft] = useState("");
   const [isPickingFolder, setIsPickingFolder] = useState(false);
-  const [showManualPathInput, setShowManualPathInput] = useState(false);
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [addProjectError, setAddProjectError] = useState<string | null>(null);
   const addProjectErrorMeaning = useMemo(
     () => (addProjectError ? describeAddProjectError(addProjectError) : null),
     [addProjectError],
   );
-  const addProjectInputRef = useRef<HTMLInputElement | null>(null);
   const archivePendingThreadIdsRef = useRef<Set<ThreadId>>(new Set());
   const archiveUndoPendingThreadIdsRef = useRef<Set<ThreadId>>(new Set());
   const [renameDialogThreadId, setRenameDialogThreadId] = useState<ThreadId | null>(null);
@@ -2372,7 +2371,6 @@ export default function Sidebar() {
       setIsAddingProject(true);
       const finishAddingProject = () => {
         setIsAddingProject(false);
-        setNewCwd("");
         setAddProjectError(null);
         setAddingProject(false);
       };
@@ -2464,16 +2462,6 @@ export default function Sidebar() {
     ],
   );
 
-  const handleAddProject = () => {
-    void addProjectFromPath(newCwd, { createIfMissing: true }).catch((error: unknown) => {
-      const description =
-        error instanceof Error ? error.message : "An error occurred while adding the project.";
-      setAddProjectError(description);
-    });
-  };
-
-  const canAddProject = newCwd.trim().length > 0 && !isAddingProject;
-
   // Keep the native folder picker and project creation in one awaited flow so
   // the UI can show whether we're still opening the dialog or creating the project.
   const handlePickFolder = useCallback(async () => {
@@ -2511,7 +2499,6 @@ export default function Sidebar() {
 
   const handleStartAddProject = useCallback(() => {
     setAddProjectError(null);
-    setShowManualPathInput(false);
     setAddingProject((prev) => !prev);
   }, []);
 
@@ -2539,27 +2526,57 @@ export default function Sidebar() {
   ]);
 
   const handleImportThread = useCallback(
-    async (provider: ImportProviderKind, externalId: string) => {
+    async (request: ImportThreadRequest) => {
       const api = readNativeApi();
       if (!api) {
         throw new Error("The app server is unavailable.");
       }
 
-      if (!currentProjectShortcutTargetId) {
-        throw new Error("Add a project before importing a thread.");
+      if (request.kind === "desktop" && request.thread.chitauriThreadId) {
+        await navigate({
+          to: "/$threadId",
+          params: { threadId: request.thread.chitauriThreadId },
+        });
+        return;
       }
 
-      const activeProject = projects.find(
-        (project) => project.id === currentProjectShortcutTargetId,
-      );
-      if (!activeProject) {
-        throw new Error("The target project could not be resolved.");
+      const provider = request.kind === "desktop" ? request.thread.provider : request.provider;
+      const externalId =
+        request.kind === "desktop" ? request.thread.externalId : request.externalId;
+      const desktopCwd = request.kind === "desktop" ? request.thread.cwd : null;
+      const targetProject = desktopCwd
+        ? findWorkspaceRootMatch(projects, desktopCwd, (project) => project.cwd)
+        : projects.find((project) => project.id === currentProjectShortcutTargetId);
+      let targetProjectId = targetProject?.id ?? null;
+      let targetDefaultModelSelection = targetProject?.defaultModelSelection ?? null;
+
+      if (!targetProjectId && desktopCwd) {
+        const creationResult = await createOrRecoverProjectFromPath({
+          api,
+          workspaceRoot: desktopCwd,
+          loadSnapshot: () => api.orchestration.getShellSnapshot().catch(() => null),
+          maxAttempts: ADD_PROJECT_SNAPSHOT_CATCH_UP_MAX_ATTEMPTS,
+          delayMs: ADD_PROJECT_SNAPSHOT_CATCH_UP_DELAY_MS,
+        });
+        if (creationResult.snapshot) {
+          syncServerShellSnapshot(creationResult.snapshot);
+        }
+        targetProjectId = creationResult.projectId;
+        targetDefaultModelSelection = creationResult.project?.defaultModelSelection ?? null;
+      }
+
+      if (!targetProjectId) {
+        throw new Error(
+          desktopCwd === null && request.kind === "desktop"
+            ? "This desktop thread does not include a workspace. Open a project and try again."
+            : "Add or open a project before importing this thread.",
+        );
       }
 
       const providerDefaultModel = getDefaultModel(provider);
       const modelSelection =
-        activeProject.defaultModelSelection?.provider === provider
-          ? activeProject.defaultModelSelection
+        targetDefaultModelSelection?.provider === provider
+          ? targetDefaultModelSelection
           : providerDefaultModel
             ? {
                 provider,
@@ -2567,14 +2584,18 @@ export default function Sidebar() {
               }
             : null;
       if (!modelSelection) {
-        throw new Error("Select a Pi model before importing a Pi thread.");
+        throw new Error(
+          `Select a ${PROVIDER_DISPLAY_NAMES[provider]} model before importing this thread.`,
+        );
       }
       const threadId = newThreadId();
       const createdAt = new Date().toISOString();
       const trimmedExternalId = externalId.trim();
       const suffix = trimmedExternalId.slice(-8);
       const title =
-        provider === "claudeAgent"
+        request.kind === "desktop"
+          ? request.thread.title
+          : provider === "claudeAgent"
           ? `Imported Claude session${suffix ? ` ${suffix}` : ""}`
           : provider === "cursor"
             ? `Imported Cursor session${suffix ? ` ${suffix}` : ""}`
@@ -2590,7 +2611,7 @@ export default function Sidebar() {
           type: "thread.create",
           commandId: newCommandId(),
           threadId,
-          projectId: activeProject.id,
+          projectId: targetProjectId,
           title,
           modelSelection,
           runtimeMode: "full-access",
@@ -2613,6 +2634,8 @@ export default function Sidebar() {
           to: "/$threadId",
           params: { threadId },
         });
+        setProjectExpanded(targetProjectId, true);
+        setAddingProject(false);
       } catch (error) {
         if (createdThread) {
           await api.orchestration
@@ -2626,7 +2649,14 @@ export default function Sidebar() {
         throw error;
       }
     },
-    [appSettings.defaultThreadEnvMode, currentProjectShortcutTargetId, navigate, projects],
+    [
+      appSettings.defaultThreadEnvMode,
+      currentProjectShortcutTargetId,
+      navigate,
+      projects,
+      setProjectExpanded,
+      syncServerShellSnapshot,
+    ],
   );
 
   const commitRename = useCallback(
@@ -6573,69 +6603,36 @@ export default function Sidebar() {
 
                 {shouldShowProjectPathEntry && (
                   <div className="mb-2.5 px-1">
-                    {!showManualPathInput ? (
-                      <div className="flex gap-1.5">
-                        {isElectron && (
-                          <button
-                            type="button"
-                            className="flex h-8 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-background-elevated-secondary)] px-2 text-[length:var(--app-font-size-ui,12px)] font-normal text-[var(--color-text-foreground-secondary)] transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] disabled:opacity-50"
-                            onClick={() => void handlePickFolder()}
-                            disabled={isPickingFolder || isAddingProject}
-                          >
-                            <SidebarGlyph icon={FolderIcon} variant="chrome" />
-                            {isPickingFolder
-                              ? "Opening..."
-                              : isAddingProject
-                                ? "Adding..."
-                                : "Browse"}
-                          </button>
-                        )}
+                    <div className="flex gap-1.5">
+                      {isElectron && (
                         <button
                           type="button"
-                          className="flex h-8 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-background-elevated-secondary)] px-2 text-[length:var(--app-font-size-ui,12px)] font-normal text-[var(--color-text-foreground-secondary)] transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)]"
-                          onClick={() => setShowManualPathInput(true)}
+                          className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-background-elevated-secondary)] px-2 text-[length:var(--app-font-size-ui,12px)] font-normal text-[var(--color-text-foreground-secondary)] transition-[background-color,color,scale] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] active:scale-[0.96] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
+                          onClick={() => void handlePickFolder()}
+                          disabled={isPickingFolder || isAddingProject}
                         >
-                          <SidebarGlyph icon={TbCursorText} variant="chrome" />
-                          Type path
+                          <SidebarGlyph icon={FolderIcon} variant="chrome" />
+                          {isPickingFolder
+                            ? "Opening..."
+                            : isAddingProject
+                              ? "Adding..."
+                              : "Browse"}
                         </button>
-                      </div>
-                    ) : (
-                      <div
-                        className={`flex items-center rounded-lg border bg-[var(--color-background-control-opaque)] transition-colors ${
-                          addProjectError
-                            ? "border-red-500/70 focus-within:border-red-500"
-                            : "border-[color:var(--color-border)] focus-within:border-[color:var(--color-border-focus)]"
-                        }`}
+                      )}
+                      <button
+                        type="button"
+                        className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-background-elevated-secondary)] px-2 text-[length:var(--app-font-size-ui,12px)] font-normal text-[var(--color-text-foreground-secondary)] transition-[background-color,color,scale] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
+                        onClick={() => {
+                          setAddingProject(false);
+                          setSearchPaletteMode("import");
+                          setSearchPaletteInitialQuery(null);
+                          setSearchPaletteOpen(true);
+                        }}
                       >
-                        <input
-                          ref={addProjectInputRef}
-                          className="min-w-0 flex-1 bg-transparent pl-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
-                          placeholder="/path/to/project"
-                          value={newCwd}
-                          onChange={(event) => {
-                            setNewCwd(event.target.value);
-                            setAddProjectError(null);
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") handleAddProject();
-                            if (event.key === "Escape") {
-                              setShowManualPathInput(false);
-                              setAddProjectError(null);
-                            }
-                          }}
-                          autoFocus
-                        />
-                        <button
-                          type="button"
-                          className="shrink-0 px-2.5 py-1.5 text-xs font-medium text-muted-foreground/50 transition-colors hover:text-foreground disabled:opacity-40"
-                          onClick={handleAddProject}
-                          disabled={!canAddProject}
-                          aria-label="Add project"
-                        >
-                          {isAddingProject ? "..." : "↵"}
-                        </button>
-                      </div>
-                    )}
+                        <SidebarGlyph icon={LuArrowDownToLine} variant="chrome" />
+                        Import threads
+                      </button>
+                    </div>
                     {addProjectError && (
                       <div className="mt-1 space-y-1 px-0.5">
                         <p className="text-xs leading-tight text-red-400">{addProjectError}</p>
@@ -7192,7 +7189,7 @@ function SidebarSearchPaletteController(props: {
   onOpenSettings: () => void;
   onOpenUsageSettings: () => void;
   onOpenProject: (projectId: string) => void;
-  onImportThread: (provider: ImportProviderKind, externalId: string) => Promise<void>;
+  onImportThread: (request: ImportThreadRequest) => Promise<void>;
   onOpenThread: (threadId: string) => void;
 }) {
   const selectAllThreads = useMemo(() => createAllThreadsSelector(), []);
