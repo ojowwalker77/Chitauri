@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.4.2 - 2026-07-15
+
+### Added
+
+- Added desktop thread import: the sidebar search palette can now pull existing sessions out of the Claude and Codex desktop apps, with per-provider tabs, search, refresh, and rows showing each thread's title, workspace directory, and last-active time. Threads already imported into Chitauri are cross-referenced against existing session bindings and marked as such.
+- Added chat header customization under Appearance → Chat header settings: reorder the header controls by drag-and-drop, or hide the ones you do not use (context usage, hand off, project actions, environment panel, open in editor, git actions, diff panel). The context-dependent pane actions stay fixed at the left edge of the right cluster.
+- Added two opt-in cleanup automations for merged pull requests: auto-archive the thread once its PR merges, and auto-delete the merged local branch. Branch deletion refuses to touch default branches, requires a clean checkout and a PR that GitHub still reports as merged, and switches back to the default branch first.
+
+### Changed
+
+- Retired the Studio feature and removed its views, routes, outputs section, and settings. Existing Studio container projects migrate to standard projects (migration `052_RetireStudioProjectKind`), so their threads, files, and history stay reachable.
+- Extracted provider-specific subagent state normalization and activity decoding out of the web client into `@t3tools/shared/subagentActivity`, decoupling the rules from React so the server and client share one implementation.
+- Gated macOS release artifacts behind the `RELEASE_MAC` repository variable. macOS builds hard-fail without the Apple signing and notarization secrets, which are not configured, so every tagged release previously died in the mac matrix and shipped nothing. Linux and Windows now always build, and macOS is produced locally until the Apple secrets exist.
+
+### Fixed
+
+- Fixed desktop thread import being unreachable from the UI. The feature shipped its contract schema, server route, and palette UI, but the client method was never wired into the `NativeApi` interface or the WebSocket client, so opening the import tab called an undefined function instead of the `orchestration.listImportableDesktopThreads` route that was already serving it.
+- Fixed thread rows reading as centered rather than anchored. Rows carried a 32px left gutter (`pl-8`), putting every project-nested thread's avatar 24px right of the project's folder icon; combined with the trailing chip reserve, the icon and title floated mid-row. The gutter drops to `pl-4`, and the subagent guide rail and PR-badge reserve follow the same base. Settings nav sub-items were riding on that gutter to align under their section label and are now pinned to `pl-8` explicitly.
+- Fixed Codex subagent fleet lifecycle tracking. Subagent states normalize with hyphens and underscores stripped (`pending_init` to running, `not_found` to failed, `shutdown` to stopped), fleet cards title subagents by nickname, role, or first system-prompt line instead of a generic fallback, and Codex start events that share a tool-call ID with a later subagent activity no longer leave a stray activity row behind.
+- Fixed `main` being red: `@t3tools/web` failed typecheck on a dead import in `Sidebar.logic.test.ts` and on `pr.state` widening to `string` in the `mergedPrBranchCleanup` mocks, `t3` failed on `readCodexTimestamp` rejecting the optional record its callers pass, and 10 committed files were unformatted.
+
+### Changed (internal)
+
+- Consolidated three duplicated git-status mocks in `mergedPrBranchCleanup.test.ts` into one contract-typed `makeStatus` helper, which is what stopped the literal widening at its source rather than per-call.
+- Widened `readCodexTimestamp` to accept `unknown` and narrow internally, matching its sibling readers (`readString`, `readObject`, `readArray`) in `codexAppServerManager.ts`.
+
+### Verification
+
+- `bun run fmt:check` passed across 3034 files (failed on 10 files before this release).
+- `bun run lint` passed with 170 warnings, 0 errors.
+- `bun run typecheck` passed across all 8 packages (2 packages failed before this release).
+- Full `bun run test` passed: 10 tasks successful in 2m59.655s. `t3` passed 147 files / 1606 tests, with 1 file and 6 tests skipped.
+
 ## 0.4.1 - 2026-07-15
 
 ### Fixed
