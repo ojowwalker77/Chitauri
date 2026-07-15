@@ -6,8 +6,8 @@
 import type { ProjectId, ProviderKind, ThreadId } from "@t3tools/contracts";
 import { isProviderKind } from "./providerOrdering";
 
-const EDITOR_VIEW_STATE_STORAGE_KEY = "synara.editor.viewStateByThreadId";
-const EDITOR_RAIL_CHAT_TABS_STORAGE_KEY = "synara.editor.railChatTabsByProjectId";
+const EDITOR_VIEW_STATE_STORAGE_KEY = "chitauri.editor.viewStateByThreadId";
+const EDITOR_RAIL_CHAT_TABS_STORAGE_KEY = "chitauri.editor.railChatTabsByProjectId";
 const MAX_PERSISTED_THREADS = 50;
 const MAX_EDITOR_RAIL_CHAT_TABS = 8;
 

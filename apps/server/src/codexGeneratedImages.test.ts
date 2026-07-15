@@ -73,14 +73,14 @@ describe("generatedImagePathFromRuntimeEvent", () => {
 });
 
 describe("resolveCodexGeneratedImagesRoot(s)", () => {
-  const previousSynaraHome = process.env.SYNARA_HOME;
+  const previousChitauriHome = process.env.SYNARA_HOME;
   const previousDpcodeHome = process.env.DPCODE_HOME;
   const previousT3codeHome = process.env.T3CODE_HOME;
   const previousDisableFlag = process.env.DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN;
 
   afterEach(() => {
-    if (previousSynaraHome === undefined) delete process.env.SYNARA_HOME;
-    else process.env.SYNARA_HOME = previousSynaraHome;
+    if (previousChitauriHome === undefined) delete process.env.SYNARA_HOME;
+    else process.env.SYNARA_HOME = previousChitauriHome;
     if (previousDpcodeHome === undefined) delete process.env.DPCODE_HOME;
     else process.env.DPCODE_HOME = previousDpcodeHome;
     if (previousT3codeHome === undefined) delete process.env.T3CODE_HOME;

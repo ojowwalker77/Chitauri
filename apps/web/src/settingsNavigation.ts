@@ -20,7 +20,7 @@ export const SETTINGS_SECTION_IDS = [
 ] as const;
 
 export type SettingsSectionId = (typeof SETTINGS_SECTION_IDS)[number];
-export type SettingsNavGroupId = "app" | "synara";
+export type SettingsNavGroupId = "app" | "chitauri";
 
 /**
  * Deep-link scroll targets inside a settings panel. Each id is shared by the element that owns
@@ -51,7 +51,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   label: string;
 }> = [
   { id: "app", label: "App" },
-  { id: "synara", label: "Synara" },
+  { id: "chitauri", label: "Chitauri" },
 ] as const;
 
 export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
@@ -99,7 +99,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     id: "shortcuts",
     group: "app",
     label: "Keyboard Shortcuts",
-    description: "Every keyboard shortcut available in Synara, grouped by context.",
+    description: "Every keyboard shortcut available in Chitauri, grouped by context.",
     icon: "shortcut",
     eyebrow: "Key bindings",
   },
@@ -107,7 +107,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     id: "worktrees",
     group: "app",
     label: "Worktrees",
-    description: "Review and clean up the worktrees created by Synara.",
+    description: "Review and clean up the worktrees created by Chitauri.",
     icon: "branch-simple",
     eyebrow: "Workspace management",
   },
@@ -121,7 +121,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "models",
-    group: "synara",
+    group: "chitauri",
     label: "Models",
     description: "Git writing defaults and custom model slugs.",
     icon: "brain",
@@ -129,7 +129,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "providers",
-    group: "synara",
+    group: "chitauri",
     label: "Providers",
     description: "Choose visible providers, review CLI installs, and update provider tools.",
     icon: "puzzle",
@@ -137,7 +137,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "skills",
-    group: "synara",
+    group: "chitauri",
     label: "Skills",
     description: "Every skill found across providers, with toggles to control availability.",
     icon: "building-blocks",
@@ -145,7 +145,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "usage",
-    group: "synara",
+    group: "chitauri",
     label: "Usage",
     description: "Remaining quota and credits for each signed-in provider.",
     icon: "gauge",
@@ -153,7 +153,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   },
   {
     id: "advanced",
-    group: "synara",
+    group: "chitauri",
     label: "Advanced",
     description: "Keybindings, recovery, and version info.",
     icon: "toolbox",

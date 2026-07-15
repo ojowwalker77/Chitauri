@@ -87,9 +87,9 @@ interface BrowserPanelProps {
 
 const BROWSER_BOUNDS_SYNC_BURST_FRAMES = 30;
 const BROWSER_BOUNDS_SYNC_STABLE_FRAME_TARGET = 2;
-const BROWSER_WEBVIEW_PARTITION = "persist:synara-browser";
+const BROWSER_WEBVIEW_PARTITION = "persist:chitauri-browser";
 const BROWSER_PERF_SAMPLE_INTERVAL_MS = 5_000;
-const SYNARA_BROWSER_LABEL = "Synara browser";
+const SYNARA_BROWSER_LABEL = "Chitauri browser";
 // The address field and tab pills share one chrome-control surface so the whole row reads
 // as a single cohesive control: matching height, radius, border width, and type scale.
 const BROWSER_CHROME_CONTROL_CLASS_NAME = "h-8 rounded-lg border text-xs";
@@ -333,7 +333,7 @@ function isBrowserPerfLoggingEnabled(): boolean {
 
   try {
     return (
-      window.localStorage.getItem("synara:browser-perf") === "1" ||
+      window.localStorage.getItem("chitauri:browser-perf") === "1" ||
       window.localStorage.getItem("dpcode:browser-perf") === "1" ||
       window.localStorage.getItem("t3code:browser-perf") === "1"
     );

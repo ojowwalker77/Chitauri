@@ -36,7 +36,7 @@ export interface SettingsSkillSection {
 const SHARED_SKILLS_SECTION = "shared";
 const PERSONAL_ORIGIN = "personal";
 export const ORIGIN_SECTION_ORDER = [
-  "synara",
+  "chitauri",
   "codex",
   "claude",
   "cursor",
@@ -59,8 +59,9 @@ export const PROVIDER_STACK_ORDER: readonly ProviderKind[] = [
 
 export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
   switch (scope) {
+    case "chitauri":
     case "synara":
-      return { label: "Synara", provider: null };
+      return { label: "Chitauri", provider: null };
     case "codex":
       return { label: PROVIDER_DISPLAY_NAMES.codex, provider: "codex" };
     case "claude":

@@ -1,6 +1,6 @@
 // FILE: storageKeyMigration.test.ts
-// Purpose: Verify legacy t3code/dpcode localStorage keys copy into Synara without overwriting
-// existing Synara values, so app boot never silently loses persisted state.
+// Purpose: Verify legacy t3code/dpcode localStorage keys copy into Chitauri without overwriting
+// existing Chitauri values, so app boot never silently loses persisted state.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -41,7 +41,7 @@ describe("storageKeyMigration", () => {
     vi.resetModules();
   });
 
-  it("copies a legacy t3code value to the Synara key when missing", async () => {
+  it("copies a legacy t3code value to the Chitauri key when missing", async () => {
     globalThis.localStorage.setItem(
       "t3code:split-view-state:v1",
       JSON.stringify({ state: {}, version: 2 }),
@@ -49,7 +49,7 @@ describe("storageKeyMigration", () => {
 
     await importMigrationFresh();
 
-    expect(globalThis.localStorage.getItem("synara:split-view-state:v1")).toBe(
+    expect(globalThis.localStorage.getItem("chitauri:split-view-state:v1")).toBe(
       JSON.stringify({ state: {}, version: 2 }),
     );
     // Legacy key is intentionally left in place so a downgrade still has its data.
@@ -58,23 +58,23 @@ describe("storageKeyMigration", () => {
     );
   });
 
-  it("copies a legacy dpcode value to the Synara key when missing", async () => {
+  it("copies a legacy dpcode value to the Chitauri key when missing", async () => {
     globalThis.localStorage.setItem("dpcode:theme", "dark");
 
     await importMigrationFresh();
 
-    expect(globalThis.localStorage.getItem("synara:theme")).toBe("dark");
+    expect(globalThis.localStorage.getItem("chitauri:theme")).toBe("dark");
     expect(globalThis.localStorage.getItem("dpcode:theme")).toBe("dark");
   });
 
-  it("does not overwrite an existing Synara value when legacy keys still hold data", async () => {
+  it("does not overwrite an existing Chitauri value when legacy keys still hold data", async () => {
     globalThis.localStorage.setItem("t3code:theme", "dark");
     globalThis.localStorage.setItem("dpcode:theme", "light");
-    globalThis.localStorage.setItem("synara:theme", "current");
+    globalThis.localStorage.setItem("chitauri:theme", "current");
 
     await importMigrationFresh();
 
-    expect(globalThis.localStorage.getItem("synara:theme")).toBe("current");
+    expect(globalThis.localStorage.getItem("chitauri:theme")).toBe("current");
     expect(globalThis.localStorage.getItem("dpcode:theme")).toBe("light");
     expect(globalThis.localStorage.getItem("t3code:theme")).toBe("dark");
   });
@@ -85,15 +85,15 @@ describe("storageKeyMigration", () => {
 
     await importMigrationFresh();
 
-    expect(globalThis.localStorage.getItem("synara:theme")).toBe("newer");
+    expect(globalThis.localStorage.getItem("chitauri:theme")).toBe("newer");
   });
 
   it("is a no-op when the legacy key is absent", async () => {
-    globalThis.localStorage.setItem("synara:renderer-state:v8", '{"projectNamesByCwd":{}}');
+    globalThis.localStorage.setItem("chitauri:renderer-state:v8", '{"projectNamesByCwd":{}}');
 
     await importMigrationFresh();
 
-    expect(globalThis.localStorage.getItem("synara:renderer-state:v8")).toBe(
+    expect(globalThis.localStorage.getItem("chitauri:renderer-state:v8")).toBe(
       '{"projectNamesByCwd":{}}',
     );
     expect(globalThis.localStorage.getItem("t3code:renderer-state:v8")).toBeNull();
@@ -106,9 +106,9 @@ describe("storageKeyMigration", () => {
 
     await importMigrationFresh();
 
-    expect(globalThis.localStorage.getItem("synara:composer-drafts:v1")).toBe("drafts");
-    expect(globalThis.localStorage.getItem("synara:pinned-threads:v1")).toBe("pinned");
-    expect(globalThis.localStorage.getItem("synara:last-editor")).toBe("vscode");
+    expect(globalThis.localStorage.getItem("chitauri:composer-drafts:v1")).toBe("drafts");
+    expect(globalThis.localStorage.getItem("chitauri:pinned-threads:v1")).toBe("pinned");
+    expect(globalThis.localStorage.getItem("chitauri:last-editor")).toBe("vscode");
   });
 
   it("swallows storage errors so the app can still boot", async () => {

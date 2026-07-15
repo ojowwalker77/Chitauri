@@ -205,7 +205,10 @@ function extractToolOutputDetails(input: {
     result?.exitCode,
     outputExitCode(input.detail),
   );
-  const truncated = rawOutput?.truncated === true || data?.__synaraTruncated === true;
+  const truncated =
+    rawOutput?.truncated === true ||
+    data?.__chitauriTruncated === true ||
+    data?.__synaraTruncated === true;
   if (!stdout && !stderr && !output && exitCode === undefined && !truncated) {
     return undefined;
   }

@@ -19,7 +19,7 @@ import {
   getLegacyImportMarkerPath,
   LEGACY_T3_HOME_DIRNAME,
   migrateLegacyHomeIfNeeded,
-  SYNARA_HOME_DIRNAME,
+  CHITAURI_HOME_DIRNAME,
 } from "./homeMigration";
 
 // Creates the minimal sqlite state the migration needs to prove DB contents moved correctly.
@@ -54,7 +54,7 @@ const readMarker = (markerPath: string) =>
   };
 
 it.layer(NodeServices.layer)("homeMigration", (it) => {
-  it.effect("imports legacy dpcode userdata into the Synara default home", () =>
+  it.effect("imports legacy dpcode userdata into the Chitauri default home", () =>
     Effect.gen(function* () {
       const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "synara-home-migration-"));
       yield* Effect.addFinalizer(() =>
@@ -62,7 +62,7 @@ it.layer(NodeServices.layer)("homeMigration", (it) => {
       );
 
       const legacyBaseDir = path.join(tempHome, LEGACY_DPCODE_HOME_DIRNAME);
-      const targetBaseDir = path.join(tempHome, SYNARA_HOME_DIRNAME);
+      const targetBaseDir = path.join(tempHome, CHITAURI_HOME_DIRNAME);
       const legacyPaths = yield* deriveServerPaths(legacyBaseDir, undefined);
       const targetPaths = yield* deriveServerPaths(targetBaseDir, undefined);
 
@@ -94,7 +94,7 @@ it.layer(NodeServices.layer)("homeMigration", (it) => {
 
       const dpcodeBaseDir = path.join(tempHome, LEGACY_DPCODE_HOME_DIRNAME);
       const t3BaseDir = path.join(tempHome, LEGACY_T3_HOME_DIRNAME);
-      const targetBaseDir = path.join(tempHome, SYNARA_HOME_DIRNAME);
+      const targetBaseDir = path.join(tempHome, CHITAURI_HOME_DIRNAME);
       const dpcodePaths = yield* deriveServerPaths(dpcodeBaseDir, undefined);
       const t3Paths = yield* deriveServerPaths(t3BaseDir, undefined);
       const targetPaths = yield* deriveServerPaths(targetBaseDir, undefined);
@@ -137,7 +137,7 @@ it.layer(NodeServices.layer)("homeMigration", (it) => {
       );
 
       const legacyBaseDir = path.join(tempHome, LEGACY_T3_HOME_DIRNAME);
-      const targetBaseDir = path.join(tempHome, SYNARA_HOME_DIRNAME);
+      const targetBaseDir = path.join(tempHome, CHITAURI_HOME_DIRNAME);
       const legacyPaths = yield* deriveServerPaths(legacyBaseDir, undefined);
       const targetPaths = yield* deriveServerPaths(targetBaseDir, undefined);
 
@@ -187,7 +187,7 @@ it.layer(NodeServices.layer)("homeMigration", (it) => {
       );
 
       const legacyBaseDir = path.join(tempHome, LEGACY_T3_HOME_DIRNAME);
-      const targetBaseDir = path.join(tempHome, SYNARA_HOME_DIRNAME);
+      const targetBaseDir = path.join(tempHome, CHITAURI_HOME_DIRNAME);
       const legacyPaths = yield* deriveServerPaths(legacyBaseDir, undefined);
       const targetPaths = yield* deriveServerPaths(targetBaseDir, undefined);
 
@@ -220,7 +220,7 @@ it.layer(NodeServices.layer)("homeMigration", (it) => {
       );
 
       const legacyBaseDir = path.join(tempHome, LEGACY_T3_HOME_DIRNAME);
-      const targetBaseDir = path.join(tempHome, SYNARA_HOME_DIRNAME);
+      const targetBaseDir = path.join(tempHome, CHITAURI_HOME_DIRNAME);
       const legacyPaths = yield* deriveServerPaths(legacyBaseDir, undefined);
       const targetPaths = yield* deriveServerPaths(targetBaseDir, undefined);
 
@@ -252,7 +252,7 @@ it.layer(NodeServices.layer)("homeMigration", (it) => {
       );
 
       const legacyBaseDir = path.join(tempHome, LEGACY_T3_HOME_DIRNAME);
-      const targetBaseDir = path.join(tempHome, SYNARA_HOME_DIRNAME);
+      const targetBaseDir = path.join(tempHome, CHITAURI_HOME_DIRNAME);
       const legacyPaths = yield* deriveServerPaths(legacyBaseDir, undefined);
       const targetPaths = yield* deriveServerPaths(targetBaseDir, undefined);
       const markerPath = yield* getLegacyImportMarkerPath(targetPaths.stateDir);
@@ -317,7 +317,7 @@ it.layer(NodeServices.layer)("homeMigration", (it) => {
       );
 
       const legacyBaseDir = path.join(tempHome, LEGACY_T3_HOME_DIRNAME);
-      const targetBaseDir = path.join(tempHome, SYNARA_HOME_DIRNAME);
+      const targetBaseDir = path.join(tempHome, CHITAURI_HOME_DIRNAME);
       const devUrl = new URL("http://127.0.0.1:5173");
       const legacyPaths = yield* deriveServerPaths(legacyBaseDir, devUrl);
       const targetPaths = yield* deriveServerPaths(targetBaseDir, devUrl);

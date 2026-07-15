@@ -44,7 +44,7 @@ export function toDisplayName(basename: string): string {
     .trim()
     .replace(/\s+/g, " ");
   if (!cleaned) {
-    return "Synara";
+    return "Chitauri";
   }
   return cleaned
     .split(" ")
@@ -59,7 +59,7 @@ export function normalizeHandle(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, "")
     .slice(0, 30);
-  return `@${slug || "synara"}`;
+  return `@${slug || "chitauri"}`;
 }
 
 // Pretty short date for "peak day" tooltips ("Apr 3").

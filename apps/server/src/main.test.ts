@@ -40,7 +40,7 @@ const serverStart = Effect.acquireRelease(
   () => Effect.sync(() => stop()),
 );
 const findAvailablePort = vi.fn((preferred: number) => Effect.succeed(preferred));
-let defaultSynaraHome = "";
+let defaultChitauriHome = "";
 const tempHomes = new Set<string>();
 
 function makeTempHome(prefix = "synara-main-test-"): string {
@@ -81,7 +81,7 @@ const runCli = (args: ReadonlyArray<string>, env: Record<string, string> = {}) =
       ConfigProvider.layer(
         ConfigProvider.fromEnv({
           env: {
-            SYNARA_HOME: defaultSynaraHome,
+            SYNARA_HOME: defaultChitauriHome,
             T3CODE_NO_BROWSER: "true",
             ...env,
           },
@@ -94,7 +94,7 @@ const runCli = (args: ReadonlyArray<string>, env: Record<string, string> = {}) =
 
 beforeEach(() => {
   vi.clearAllMocks();
-  defaultSynaraHome = makeTempHome();
+  defaultChitauriHome = makeTempHome();
   resolvedConfig = null;
   start.mockImplementation(() => undefined);
   stop.mockImplementation(() => undefined);

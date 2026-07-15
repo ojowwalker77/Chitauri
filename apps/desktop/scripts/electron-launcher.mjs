@@ -1,4 +1,4 @@
-// This file mostly exists because we want dev mode to say "Synara (Dev)" instead of "electron"
+// This file mostly exists because we want dev mode to say "Chitauri (Dev)" instead of "electron"
 
 import { spawnSync } from "node:child_process";
 import {
@@ -17,11 +17,13 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
-const APP_DISPLAY_NAME = isDevelopment ? "Synara (Dev)" : "Synara";
-const APP_BUNDLE_ID = isDevelopment ? "com.t3tools.synara.dev" : "com.t3tools.synara";
+const APP_DISPLAY_NAME = isDevelopment ? "Chitauri (Dev)" : "Chitauri";
+const APP_BUNDLE_ID = isDevelopment
+  ? "com.ojowwalker77.chitauri.dev"
+  : "com.ojowwalker77.chitauri";
 const LAUNCHER_VERSION = 2;
 const MICROPHONE_USAGE_DESCRIPTION =
-  "Synara needs microphone access so you can record voice notes and transcribe them into the chat composer.";
+  "Chitauri needs microphone access so you can record voice notes and transcribe them into the chat composer.";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const desktopDir = resolve(__dirname, "..");

@@ -64,11 +64,11 @@ Checklist:
    - build web + server
    - run `bun publish --access public`
 
-## Synara notes
+## Chitauri notes
 
-- `Synara` keeps the same release architecture as upstream `T3Code`, but publishes desktop artifacts under the Synara branding.
+- `Chitauri` publishes signed desktop artifacts for macOS, Windows, and Linux.
 - The desktop updater expects the GitHub Release in this repository to include the generated updater metadata files, not just the installers.
-- The published release title should read `Synara vX.Y.Z`.
+- The published release title should read `Chitauri vX.Y.Z`.
 - By default, the first-party desktop release path does not require CLI publish or post-release version-bump automation.
 - Optional jobs stay disabled unless repository variables enable them:
   - `DPCODE_PUBLISH_CLI=1`
@@ -88,13 +88,28 @@ Use this to validate the release pipeline after Apple signing and notarization a
 
 ## 2) Apple signing + notarization setup (macOS)
 
-Required secrets used by the workflow:
+The workflow requires a signing certificate and one notarization credential set.
+It accepts both Chitauri's canonical names and BonsAI's existing aliases.
+
+Signing certificate (choose either naming pair):
 
 - `CSC_LINK`
 - `CSC_KEY_PASSWORD`
-- `APPLE_API_KEY`
-- `APPLE_API_KEY_ID`
-- `APPLE_API_ISSUER`
+
+or:
+
+- `MACOS_CERT_P12_BASE64`
+- `MACOS_CERT_PASSWORD`
+
+Notarization via App Store Connect API key:
+
+- `APPLE_API_KEY`, `APPLE_API_KEY_ID`, and `APPLE_API_ISSUER`
+
+or notarization via Apple ID:
+
+- `APPLE_ID`, `APPLE_TEAM_ID`, and `APPLE_APP_SPECIFIC_PASSWORD`
+- BonsAI's `APPLE_APP_PASSWORD` name is accepted as an alias for
+  `APPLE_APP_SPECIFIC_PASSWORD`.
 
 Checklist:
 
@@ -102,19 +117,29 @@ Checklist:
    - Team has rights to create Developer ID certificates.
 2. Create `Developer ID Application` certificate.
 3. Export certificate + private key as `.p12` from Keychain.
-4. Base64-encode the `.p12` and store as `CSC_LINK`.
-5. Store the `.p12` export password as `CSC_KEY_PASSWORD`.
-6. In App Store Connect, create an API key (Team key).
-7. Add API key values:
-   - `APPLE_API_KEY`: contents of the downloaded `.p8`
-   - `APPLE_API_KEY_ID`: Key ID
-   - `APPLE_API_ISSUER`: Issuer ID
-8. Re-run a tag release and confirm macOS artifacts are signed/notarized.
+4. Base64-encode the `.p12` and store it as `CSC_LINK` or
+   `MACOS_CERT_P12_BASE64`.
+5. Store the `.p12` export password as `CSC_KEY_PASSWORD` or
+   `MACOS_CERT_PASSWORD`.
+6. Configure one notarization method:
+   - App Store Connect API key (recommended for CI):
+     - `APPLE_API_KEY`: contents of the downloaded `.p8`
+     - `APPLE_API_KEY_ID`: Key ID
+     - `APPLE_API_ISSUER`: Issuer ID
+   - Apple ID:
+     - `APPLE_ID`: Apple Developer account email
+     - `APPLE_TEAM_ID`: Developer team ID
+     - `APPLE_APP_SPECIFIC_PASSWORD` or BonsAI's `APPLE_APP_PASSWORD`: an
+       app-specific password, not the Apple ID password
+7. Re-run a tag release and confirm macOS artifacts are signed/notarized.
 
 Notes:
 
-- `APPLE_API_KEY` is stored as raw key text in secrets.
-- The workflow writes it to a temporary `AuthKey_<id>.p8` file at runtime.
+- `APPLE_API_KEY` is stored as raw key text in secrets. The workflow writes it
+  to a temporary `AuthKey_<id>.p8` file at runtime.
+- GitHub Actions secrets are repository-scoped and write-only. Secrets already
+  present in BonsAI must be added to Chitauri separately, using either supported
+  naming convention.
 
 ## 3) Azure Trusted Signing setup (Windows)
 

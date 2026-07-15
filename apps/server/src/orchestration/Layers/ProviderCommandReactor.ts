@@ -230,7 +230,7 @@ function buildGeneratedWorktreeBranchName(raw: string): string {
     .replace(/^refs\/heads\//, "")
     .replace(/['"`]/g, "");
 
-  const withoutPrefix = normalized.replace(/^(synara|dpcode|t3code)\//, "");
+  const withoutPrefix = normalized.replace(/^(chitauri|synara|dpcode|t3code)\//, "");
 
   const branchFragment = withoutPrefix
     .replace(/[^a-z0-9/_-]+/g, "-")
@@ -1041,7 +1041,7 @@ const make = Effect.gen(function* () {
             }
 
             // Claude cannot continue from a missing native session; clear the
-            // dead cursor and replay once with Synara transcript context.
+            // dead cursor and replay once with Chitauri transcript context.
             yield* clearStaleProviderResumeState({
               threadId: input.threadId,
               cause: error,

@@ -1,6 +1,6 @@
 # Keybindings
 
-Synara reads keybindings from:
+Chitauri reads keybindings from:
 
 - `~/.dpcode/userdata/keybindings.json`
 

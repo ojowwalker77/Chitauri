@@ -15,7 +15,7 @@ const MAX_HASH_OFFSET = 3000;
 const MAX_PORT = 65535;
 
 export const DEFAULT_T3_HOME = Effect.map(Effect.service(Path.Path), (path) =>
-  path.join(homedir(), ".synara"),
+  path.join(homedir(), ".chitauri"),
 );
 
 const MODE_ARGS = {
@@ -74,10 +74,16 @@ const OffsetConfig = Config.all({
   devInstance: optionalStringConfig("T3CODE_DEV_INSTANCE"),
 });
 const HomeConfig = Config.all({
+  chitauriHome: optionalStringConfig("CHITAURI_HOME"),
   synaraHome: optionalStringConfig("SYNARA_HOME"),
   t3Home: optionalStringConfig("T3CODE_HOME"),
   dpcodeHome: optionalStringConfig("DPCODE_HOME"),
-}).pipe(Config.map(({ synaraHome, t3Home, dpcodeHome }) => synaraHome ?? t3Home ?? dpcodeHome));
+}).pipe(
+  Config.map(
+    ({ chitauriHome, synaraHome, t3Home, dpcodeHome }) =>
+      chitauriHome ?? synaraHome ?? t3Home ?? dpcodeHome,
+  ),
+);
 
 export function resolveOffset(config: {
   readonly portOffset: number | undefined;
@@ -162,6 +168,7 @@ export function createDevRunnerEnv({
       ELECTRON_RENDERER_PORT: String(webPort),
       VITE_WS_URL: `ws://[::1]:${serverPort}`,
       VITE_DEV_SERVER_URL: devUrl?.toString() ?? `http://localhost:${webPort}`,
+      CHITAURI_HOME: resolvedBaseDir,
       SYNARA_HOME: resolvedBaseDir,
       DPCODE_HOME: resolvedBaseDir,
       T3CODE_HOME: resolvedBaseDir,
@@ -173,8 +180,10 @@ export function createDevRunnerEnv({
 
     const trimmedStateNamespace = stateNamespace?.trim();
     if (trimmedStateNamespace) {
+      output.CHITAURI_STATE_NAMESPACE = trimmedStateNamespace;
       output.SYNARA_STATE_NAMESPACE = trimmedStateNamespace;
     } else {
+      delete output.CHITAURI_STATE_NAMESPACE;
       delete output.SYNARA_STATE_NAMESPACE;
     }
 
@@ -454,7 +463,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
         : "";
 
     yield* Effect.logInfo(
-      `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.T3CODE_PORT)} webPort=${String(env.PORT)} baseDir=${String(env.SYNARA_HOME)}`,
+      `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.T3CODE_PORT)} webPort=${String(env.PORT)} baseDir=${String(env.CHITAURI_HOME)}`,
     );
 
     if (input.dryRun) {
@@ -503,7 +512,7 @@ const devRunnerCli = Command.make("dev-runner", {
     Argument.withDescription("Development mode to run."),
   ),
   t3Home: Flag.string("home-dir").pipe(
-    Flag.withDescription("Base directory for all Synara data (equivalent to SYNARA_HOME)."),
+    Flag.withDescription("Base directory for all Chitauri data (equivalent to CHITAURI_HOME)."),
     Flag.withFallbackConfig(HomeConfig),
   ),
   authToken: Flag.string("auth-token").pipe(
@@ -542,10 +551,10 @@ const devRunnerCli = Command.make("dev-runner", {
   ),
   stateNamespace: Flag.string("state-namespace").pipe(
     Flag.withDescription(
-      "State-dir namespace under the home dir (forwards to SYNARA_STATE_NAMESPACE). " +
+      "State-dir namespace under the home dir (forwards to CHITAURI_STATE_NAMESPACE). " +
         "Use `userdata` to share the production desktop state instead of the isolated `dev` namespace.",
     ),
-    Flag.withFallbackConfig(optionalStringConfig("SYNARA_STATE_NAMESPACE")),
+    Flag.withFallbackConfig(optionalStringConfig("CHITAURI_STATE_NAMESPACE")),
   ),
   dryRun: Flag.boolean("dry-run").pipe(
     Flag.withDescription("Resolve mode/ports/env and print, but do not spawn turbo."),

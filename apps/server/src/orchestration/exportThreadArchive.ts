@@ -1,5 +1,5 @@
 // FILE: exportThreadArchive.ts
-// Purpose: Build a ZIP archive that exports a single Synara thread so a user
+// Purpose: Build a ZIP archive that exports a single Chitauri thread so a user
 //          can download the conversation as a portable, compressed package —
 //          mirroring the `/export` affordance of agent CLIs.
 // Layer: Orchestration utility (plain async module; HTTP composes it through
@@ -133,7 +133,7 @@ const MESSAGE_ROLE_HEADING: Record<string, string> = {
 
 // One chunk for the header, then one chunk per message; nothing accumulates.
 function* transcriptMarkdownChunks(thread: OrchestrationThread): Generator<string> {
-  yield `# ${thread.title}\n\n> Exported from Synara.\n`;
+  yield `# ${thread.title}\n\n> Exported from Chitauri.\n`;
   for (const message of thread.messages) {
     const heading = MESSAGE_ROLE_HEADING[message.role] ?? "Message";
     yield `\n## ${heading} \`${message.createdAt}\`\n\n${message.text}\n`;
@@ -253,5 +253,5 @@ export function threadArchiveFileName(input: {
   readonly isoTimestamp: string;
 }): string {
   const dateBucket = input.isoTimestamp.slice(0, 10).replaceAll("-", "");
-  return `synara-thread-${slugifyTitle(input.title)}-${dateBucket}.zip`;
+  return `chitauri-thread-${slugifyTitle(input.title)}-${dateBucket}.zip`;
 }

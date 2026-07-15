@@ -62,7 +62,7 @@ describe("resolveAllowedLocalPreviewFile", () => {
   });
 
   it("allows images written to the SYNARA_HOME codex-home-overlay generated_images root", async () => {
-    // Codex app-server is launched with CODEX_HOME pointing at a Synara overlay
+    // Codex app-server is launched with CODEX_HOME pointing at a Chitauri overlay
     // directory (see resolveDpCodeCodexHomeOverlayPath). Generated images therefore
     // live under <SYNARA_HOME>/codex-home-overlay/generated_images/<thread>/<call>.png,
     // which sits outside both the user's `~/.codex` source home and any workspace
@@ -84,7 +84,7 @@ describe("resolveAllowedLocalPreviewFile", () => {
     mkdirSync(overlayImageDir, { recursive: true });
     writeFileSync(imagePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
 
-    const previousSynaraHome = process.env.SYNARA_HOME;
+    const previousChitauriHome = process.env.SYNARA_HOME;
     process.env.SYNARA_HOME = synaraHome;
     try {
       const result = await resolveAllowedLocalPreviewFile({
@@ -95,10 +95,10 @@ describe("resolveAllowedLocalPreviewFile", () => {
 
       assert.equal(result?.path, realpathSync(imagePath));
     } finally {
-      if (previousSynaraHome === undefined) {
+      if (previousChitauriHome === undefined) {
         delete process.env.SYNARA_HOME;
       } else {
-        process.env.SYNARA_HOME = previousSynaraHome;
+        process.env.SYNARA_HOME = previousChitauriHome;
       }
       rmSync(fakeRoot, { recursive: true, force: true });
     }
@@ -123,9 +123,9 @@ describe("resolveAllowedLocalPreviewFile", () => {
 
   it("allows PDFs inside a per-thread scratch workspace without a cwd", async () => {
     // Sessions that start before a project workspace exists run in
-    // <tmpdir>/synara-codex-workspaces/<threadId>; files agents create there
+    // <tmpdir>/chitauri-codex-workspaces/<threadId>; files agents create there
     // are workspace-equivalent, so documents must be servable from that root.
-    const scratchRoot = path.join(os.tmpdir(), "synara-codex-workspaces");
+    const scratchRoot = path.join(os.tmpdir(), "chitauri-codex-workspaces");
     const threadDir = path.join(scratchRoot, `test-thread-${process.pid}-${Date.now()}`);
     const pdfPath = path.join(threadDir, "viewer-test.pdf");
     mkdirSync(threadDir, { recursive: true });

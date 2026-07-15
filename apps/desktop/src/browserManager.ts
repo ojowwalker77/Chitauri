@@ -45,7 +45,7 @@ import {
   resolveCopyableBrowserTabUrl,
 } from "@t3tools/shared/browserSession";
 
-const BROWSER_SESSION_PARTITION = "persist:synara-browser";
+const BROWSER_SESSION_PARTITION = "persist:chitauri-browser";
 const BROWSER_INACTIVE_TAB_SUSPEND_DELAY_MS = 1_500;
 const BROWSER_INACTIVE_TAB_SUSPEND_DELAY_PRESSURED_MS = 400;
 const BROWSER_MAX_WARM_INACTIVE_RUNTIMES_PER_THREAD = 1;

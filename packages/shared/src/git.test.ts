@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   WORKTREE_BRANCH_PREFIX,
-  buildSynaraBranchName,
+  buildChitauriBranchName,
   buildTemporaryWorktreeBranchName,
   isTemporaryWorktreeBranch,
-  resolveUniqueSynaraBranchName,
+  resolveUniqueChitauriBranchName,
   resolveThreadBranchRegressionGuard,
 } from "./git";
 
@@ -59,38 +59,38 @@ describe("resolveThreadBranchRegressionGuard", () => {
   });
 });
 
-describe("buildSynaraBranchName", () => {
+describe("buildChitauriBranchName", () => {
   it("uses synara as the branch namespace", () => {
-    expect(buildSynaraBranchName("fix toast copy")).toBe("synara/fix-toast-copy");
+    expect(buildChitauriBranchName("fix toast copy")).toBe("chitauri/fix-toast-copy");
   });
 
-  it("keeps non-Synara namespaces inside the Synara branch", () => {
-    expect(buildSynaraBranchName("feature/refine-toolbar-actions")).toBe(
-      "synara/feature/refine-toolbar-actions",
+  it("keeps non-Chitauri namespaces inside the Chitauri branch", () => {
+    expect(buildChitauriBranchName("feature/refine-toolbar-actions")).toBe(
+      "chitauri/feature/refine-toolbar-actions",
     );
   });
 
   it("normalizes legacy prefixes before rebuilding the branch", () => {
-    expect(buildSynaraBranchName("t3code/refine toolbar actions")).toBe(
-      "synara/refine-toolbar-actions",
+    expect(buildChitauriBranchName("t3code/refine toolbar actions")).toBe(
+      "chitauri/refine-toolbar-actions",
     );
-    expect(buildSynaraBranchName("dpcode/refine toolbar actions")).toBe(
-      "synara/refine-toolbar-actions",
+    expect(buildChitauriBranchName("dpcode/refine toolbar actions")).toBe(
+      "chitauri/refine-toolbar-actions",
     );
   });
 
-  it("falls back to synara/update when no preferred name is provided", () => {
-    expect(buildSynaraBranchName()).toBe("synara/update");
+  it("falls back to chitauri/update when no preferred name is provided", () => {
+    expect(buildChitauriBranchName()).toBe("chitauri/update");
   });
 });
 
-describe("resolveUniqueSynaraBranchName", () => {
-  it("increments suffix when the Synara branch already exists", () => {
+describe("resolveUniqueChitauriBranchName", () => {
+  it("increments suffix when the Chitauri branch already exists", () => {
     expect(
-      resolveUniqueSynaraBranchName(
-        ["main", "synara/fix-toast-copy", "synara/fix-toast-copy-2"],
+      resolveUniqueChitauriBranchName(
+        ["main", "chitauri/fix-toast-copy", "chitauri/fix-toast-copy-2"],
         "fix toast copy",
       ),
-    ).toBe("synara/fix-toast-copy-3");
+    ).toBe("chitauri/fix-toast-copy-3");
   });
 });

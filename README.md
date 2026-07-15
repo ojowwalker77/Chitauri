@@ -11,14 +11,14 @@ It brings chats, terminals, browser previews, diffs, branches, provider sessions
 - Keep split chats, terminals, browser previews, and agent output visible in the same window.
 - Hand off a thread to another provider when you want a second model to pick up with the same context.
 - Review diffs, create branches, commit, push, and open PRs from the app.
-- Keep your workspace local. Synara stores chats, projects, and history on your machine and talks directly to the providers you choose.
+- Keep your workspace local. Chitauri stores chats, projects, and history on your machine and talks directly to the providers you choose.
 
 
 ## Privacy
 
-Chitauri runs as the workspace layer on your machine. There is no Synara cloud holding your repositories, chats, or project history.
+Chitauri runs as the workspace layer on your machine. There is no Chitauri cloud holding your repositories, chats, or project history.
 
-The provider you choose still receives the prompts, file snippets, diffs, terminal output, or tool results needed for a session, but that traffic goes to the provider you picked rather than through a separate Synara-hosted workspace.
+The provider you choose still receives the prompts, file snippets, diffs, terminal output, or tool results needed for a session, but that traffic goes to the provider you picked rather than through a separate Chitauri-hosted workspace.
 
 ## Some notes
 
@@ -29,9 +29,3 @@ Focused issues and PRs are welcome, especially bug fixes, reliability fixes, and
 ## Contributing
 
 Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening an issue or PR.
-
-## Origins
-
-Chitauri began as a fork of Synara, but it has since become a substantially different product with its own branding, packaging, release system, provider orchestration, desktop app behavior, and product direction.
-
-Synara began as a fork of [T3Code](https://github.com/pingdotgg/t3code), but it has since become a substantially different product with its own branding, packaging, release system, provider orchestration, desktop app behavior, and product direction.

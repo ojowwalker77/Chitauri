@@ -1186,7 +1186,7 @@ describe("buildCursorAcpModelDescriptorsFromAvailableModels", () => {
       defaultReasoningEffort: "medium",
     });
     expect(gpt?.supportsThinkingToggle).toBeUndefined();
-    // Cursor's "extra-high" reasoning value normalizes to Synara's "xhigh".
+    // Cursor's "extra-high" reasoning value normalizes to Chitauri's "xhigh".
     expect(gpt?.supportedReasoningEfforts?.map((effort) => effort.value)).toEqual([
       "low",
       "medium",
@@ -1195,7 +1195,7 @@ describe("buildCursorAcpModelDescriptorsFromAvailableModels", () => {
     ]);
   });
 
-  it("maps the ACP 'default' model id to Synara's 'auto' slug and skips empty option sets", () => {
+  it("maps the ACP 'default' model id to Chitauri's 'auto' slug and skips empty option sets", () => {
     const descriptors = buildCursorAcpModelDescriptorsFromAvailableModels(availableModels);
     const auto = descriptors.find((descriptor) => descriptor.slug === "auto");
     expect(auto?.name).toBe("Auto");

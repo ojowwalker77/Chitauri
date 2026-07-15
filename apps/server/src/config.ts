@@ -71,7 +71,8 @@ export const DEV_STATE_DIR_NAME = "dev";
  * By default the namespace tracks whether the UI is served from a Vite dev
  * server (`dev`) or a packaged build (`userdata`), so routine `bun dev`
  * experiments never pollute real desktop data. An explicit override
- * (`SYNARA_STATE_NAMESPACE`) lets a dev build deliberately share the production
+ * (`CHITAURI_STATE_NAMESPACE`, with `SYNARA_STATE_NAMESPACE` as a legacy alias)
+ * lets a dev build deliberately share the production
  * namespace so threads continue across both. The override must be a single safe
  * path segment; anything else (empty, separators, parent refs) is ignored and
  * the devUrl-derived default applies.
@@ -125,7 +126,7 @@ export function resolveDefaultChatWorkspaceRoot(input: {
   const homeDir = input.homeDir.trim();
   const platform = input.platform ?? process.platform;
   const pathApi = platform === "win32" ? pathWin32 : pathPosix;
-  return pathApi.join(homeDir, "Documents", "Synara");
+  return pathApi.join(homeDir, "Documents", "Chitauri");
 }
 
 export function resolveDefaultStudioWorkspaceRoot(input: {

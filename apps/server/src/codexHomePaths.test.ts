@@ -53,7 +53,7 @@ describe("resolveDpCodeCodexHomeOverlayPath", () => {
   it("derives a default overlay sibling of the source home", () => {
     assert.equal(
       resolveDpCodeCodexHomeOverlayPath({}, "/users/me/.codex"),
-      path.join("/users/me", ".synara", "runtime", "codex-home-overlay"),
+      path.join("/users/me", ".chitauri", "runtime", "codex-home-overlay"),
     );
   });
 });

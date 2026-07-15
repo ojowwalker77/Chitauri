@@ -7,7 +7,7 @@
 import type { ProviderKind } from "@t3tools/contracts";
 
 // A spawn resolves either to a real ProviderKind (which has a ProviderIcon) or to "gemini", which
-// has a Central icon asset but is not a first-class provider in Synara.
+// has a Central icon asset but is not a first-class provider in Chitauri.
 export type SpawnAgentProvider = ProviderKind | "gemini";
 
 // Word-boundary matchers, ordered so a specific CLI wins. `opencode` is matched before any generic

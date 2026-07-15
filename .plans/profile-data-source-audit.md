@@ -1,6 +1,6 @@
 # Audit (READ-ONLY): Profile stats data-source scoping — make it production-correct, no dev/prod mixing
 
-You are GPT-5.5 (xhigh) in the Synara monorepo at `/Users/emanueledipietro/Developer/synara`.
+You are GPT-5.5 (xhigh) in the Chitauri monorepo at `/Users/emanueledipietro/Developer/synara`.
 This is a **diagnosis / research task — DO NOT EDIT ANY FILES.** Produce a findings report + options.
 We (you + Claude/Opus + the user) will decide the fix together afterward.
 
@@ -16,7 +16,7 @@ the app already resolves those sources.
 - `config.homeDir` = `OS.homedir()` ALWAYS (`apps/server/src/main.ts:172,217`) — it is NOT affected by
   `--home-dir`.
 - `config.baseDir` = `--home-dir` / `SYNARA_HOME` (dev: `./.synara/electron-dev`; prod: `~/.synara` or
-  `~/Documents/Synara`). `config.dbPath` = `baseDir/{dev|userdata}/state.sqlite`.
+  `~/Documents/Chitauri`). `config.dbPath` = `baseDir/{dev|userdata}/state.sqlite`.
 - So the **projection DB is correctly per-instance** (dev→dev 40 turns, prod→prod 437 turns). ✅
 - The **token archives** are read via `config.homeDir`: codex = `codexHomePath || process.env.CODEX_HOME
   || homeDir/.codex`; claude = `homeDir/.claude/projects` (see `apps/server/src/providerUsageSnapshot.ts`).

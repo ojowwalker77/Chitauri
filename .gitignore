@@ -16,6 +16,8 @@ release/
 /.dpcode/electron-dev
 /.dpcode/backups
 /.dpcode-*/
+/.chitauri/
+/.chitauri-*/
 /.synara/
 /.synara-*/
 .idea/

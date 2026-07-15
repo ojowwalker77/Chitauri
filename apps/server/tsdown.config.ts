@@ -1,5 +1,5 @@
 // FILE: tsdown.config.ts
-// Purpose: Builds the Synara server CLI and controls diagnostic source maps.
+// Purpose: Builds the Chitauri server CLI and controls diagnostic source maps.
 // Layer: Server build config
 // Depends on: tsdown.
 

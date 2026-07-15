@@ -466,8 +466,8 @@ function findTrackedProjectRunServer(
 }
 
 type DebugFeatureFlagsWindow = Window & {
-  synaraShowFeatureFlags?: () => void;
-  synaraHideFeatureFlags?: () => void;
+  chitauriShowFeatureFlags?: () => void;
+  chitauriHideFeatureFlags?: () => void;
   dpcodeShowFeatureFlags?: () => void;
   dpcodeHideFeatureFlags?: () => void;
 };
@@ -1443,8 +1443,8 @@ export default function Sidebar() {
       updateVisibility();
     };
 
-    debugWindow.synaraShowFeatureFlags = showFeatureFlags;
-    debugWindow.synaraHideFeatureFlags = hideFeatureFlags;
+    debugWindow.chitauriShowFeatureFlags = showFeatureFlags;
+    debugWindow.chitauriHideFeatureFlags = hideFeatureFlags;
     debugWindow.dpcodeShowFeatureFlags = showFeatureFlags;
     debugWindow.dpcodeHideFeatureFlags = hideFeatureFlags;
     window.addEventListener("storage", updateVisibility);
@@ -1452,11 +1452,11 @@ export default function Sidebar() {
 
     return () => {
       window.removeEventListener("storage", updateVisibility);
-      if (debugWindow.synaraShowFeatureFlags === showFeatureFlags) {
-        delete debugWindow.synaraShowFeatureFlags;
+      if (debugWindow.chitauriShowFeatureFlags === showFeatureFlags) {
+        delete debugWindow.chitauriShowFeatureFlags;
       }
-      if (debugWindow.synaraHideFeatureFlags === hideFeatureFlags) {
-        delete debugWindow.synaraHideFeatureFlags;
+      if (debugWindow.chitauriHideFeatureFlags === hideFeatureFlags) {
+        delete debugWindow.chitauriHideFeatureFlags;
       }
       if (debugWindow.dpcodeShowFeatureFlags === showFeatureFlags) {
         delete debugWindow.dpcodeShowFeatureFlags;
@@ -4347,7 +4347,7 @@ export default function Sidebar() {
   }, [discoveredScriptTargetsByProjectId, standardProjects]);
   projectRunCommandByProjectIdRef.current = projectRunCommandByProjectId;
   // Keep manual server attribution alive without repeating the expensive
-  // port/process scan while no Synara-owned run needs near-real-time status.
+  // port/process scan while no Chitauri-owned run needs near-real-time status.
   const hasActiveProjectRun = useMemo(
     () => Object.keys(projectRunsByProjectId).length > 0,
     [projectRunsByProjectId],
@@ -4361,7 +4361,7 @@ export default function Sidebar() {
   const projectRunServerByProjectId = useMemo(() => {
     const servers = projectRunLocalServersQuery.data?.servers ?? [];
     const serverByProjectId = new Map<ProjectId, ServerLocalServerProcess>();
-    // 1. Authoritative: Synara-tracked runs matched by pid/ppid.
+    // 1. Authoritative: Chitauri-tracked runs matched by pid/ppid.
     for (const run of Object.values(projectRunsByProjectId)) {
       const server = findTrackedProjectRunServer(run, servers);
       if (server) {
@@ -4369,7 +4369,7 @@ export default function Sidebar() {
       }
     }
     // 2. Fallback: attribute remaining servers to a project by cwd, so dev
-    //    servers started outside Synara still light up the running indicator.
+    //    servers started outside Chitauri still light up the running indicator.
     for (const server of servers) {
       if (!server.cwd) {
         continue;
@@ -5632,8 +5632,8 @@ export default function Sidebar() {
     const projectFolderIconClassName = isProjectPinned ? "opacity-0" : undefined;
     const projectRun = projectRunsByProjectId[project.id] ?? null;
     const projectRunServer = projectRunServerByProjectId.get(project.id) ?? null;
-    // A project reads as "running" when Synara tracks a run for it or when a
-    // local server (possibly started outside Synara) is attributed by cwd.
+    // A project reads as "running" when Chitauri tracks a run for it or when a
+    // local server (possibly started outside Chitauri) is attributed by cwd.
     const isProjectRunning = projectRun !== null || projectRunServer !== null;
     const collapsedProjectStatus = project.expanded ? null : projectStatus;
     // The "open dev server" affordance now lives in the project context menu, so
@@ -6316,7 +6316,7 @@ export default function Sidebar() {
             toastManager.add({
               type: "info",
               title: "Preparing update",
-              description: `Synara is preparing version ${nextState.availableVersion ?? "available"} in the background.`,
+              description: `Chitauri is preparing version ${nextState.availableVersion ?? "available"} in the background.`,
             });
             return;
           }
@@ -6325,7 +6325,7 @@ export default function Sidebar() {
             toastManager.add({
               type: "info",
               title: "Preparing update",
-              description: "Synara is downloading the update in the background.",
+              description: "Chitauri is downloading the update in the background.",
             });
             return;
           }
@@ -6343,7 +6343,7 @@ export default function Sidebar() {
             toastManager.add({
               type: "info",
               title: "You're up to date",
-              description: `Synara ${nextState.currentVersion} is already the newest version.`,
+              description: `Chitauri ${nextState.currentVersion} is already the newest version.`,
             });
             return;
           }

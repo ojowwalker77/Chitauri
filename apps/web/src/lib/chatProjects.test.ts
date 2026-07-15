@@ -53,35 +53,35 @@ afterEach(() => {
 });
 
 describe("isHomeChatContainerProject", () => {
-  it("matches the managed Documents/Synara general-chat root used by older drafts", () => {
+  it("matches the managed Documents/Chitauri general-chat root used by older drafts", () => {
     expect(
       isHomeChatContainerProject(
         {
-          cwd: "/Users/tester/Documents/Synara",
+          cwd: "/Users/tester/Documents/Chitauri",
           kind: "chat",
           name: "Home",
           remoteName: "Home",
         },
         {
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+          chatWorkspaceRoot: "/Users/tester/Documents/Chitauri",
         },
       ),
     ).toBe(true);
   });
 
-  it("matches Codex-style date/slug chat workspaces under Documents/Synara", () => {
+  it("matches Codex-style date/slug chat workspaces under Documents/Chitauri", () => {
     expect(
       isHomeChatContainerProject(
         {
-          cwd: "/Users/tester/Documents/Synara/2026-06-11/yes-it-takes-all-the-skills",
+          cwd: "/Users/tester/Documents/Chitauri/2026-06-11/yes-it-takes-all-the-skills",
           kind: "chat",
           name: "Yes it takes",
           remoteName: "Yes it takes",
         },
         {
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+          chatWorkspaceRoot: "/Users/tester/Documents/Chitauri",
         },
       ),
     ).toBe(true);
@@ -98,7 +98,7 @@ describe("isHomeChatContainerProject", () => {
         },
         {
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+          chatWorkspaceRoot: "/Users/tester/Documents/Chitauri",
         },
       ),
     ).toBe(true);
@@ -110,7 +110,7 @@ describe("isHomeChatContainerProject", () => {
     expect(
       isHomeChatContainerProject(
         {
-          cwd: "/Users/tester/Documents/Synara/2026-06-11/some-chat",
+          cwd: "/Users/tester/Documents/Chitauri/2026-06-11/some-chat",
           kind: "chat",
           name: "Some chat",
           remoteName: "Some chat",
@@ -131,18 +131,18 @@ describe("isHomeChatContainerProject", () => {
     ).toBe(false);
   });
 
-  it("does not classify ordinary projects under Documents/Synara as home chat containers", () => {
+  it("does not classify ordinary projects under Documents/Chitauri as home chat containers", () => {
     expect(
       isHomeChatContainerProject(
         {
-          cwd: "/Users/tester/Documents/Synara",
+          cwd: "/Users/tester/Documents/Chitauri",
           kind: "project",
-          name: "Synara",
-          remoteName: "Synara",
+          name: "Chitauri",
+          remoteName: "Chitauri",
         },
         {
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+          chatWorkspaceRoot: "/Users/tester/Documents/Chitauri",
         },
       ),
     ).toBe(false);
@@ -152,14 +152,14 @@ describe("isHomeChatContainerProject", () => {
     expect(
       isHomeChatContainerProject(
         {
-          cwd: "/Users/tester/Documents/Synara/2026-06-11/yes-it-takes-all-the-skills",
+          cwd: "/Users/tester/Documents/Chitauri/2026-06-11/yes-it-takes-all-the-skills",
           kind: "project",
           name: "yes-it-takes-all-the-skills",
           remoteName: "yes-it-takes-all-the-skills",
         },
         {
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+          chatWorkspaceRoot: "/Users/tester/Documents/Chitauri",
         },
       ),
     ).toBe(false);
@@ -174,7 +174,7 @@ describe("isHomeChatContainerProject", () => {
 
     const projectPromise = ensureHomeChatProject({
       homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+      chatWorkspaceRoot: "/Users/tester/Documents/Chitauri",
     });
     await Promise.resolve();
 
@@ -212,7 +212,7 @@ describe("isHomeChatContainerProject", () => {
 
       const projectPromise = ensureHomeChatProject({
         homeDir: "/Users/tester",
-        chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+        chatWorkspaceRoot: "/Users/tester/Documents/Chitauri",
       });
 
       await vi.advanceTimersByTimeAsync(PROJECT_SNAPSHOT_HYDRATION_TIMEOUT_MS);
@@ -233,7 +233,7 @@ describe("isHomeChatContainerProject", () => {
 
     const paths = {
       homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+      chatWorkspaceRoot: "/Users/tester/Documents/Chitauri",
     };
     const firstProjectPromise = ensureHomeChatProject(paths);
     const secondProjectPromise = ensureHomeChatProject(paths);
@@ -278,7 +278,7 @@ describe("isHomeChatContainerProject", () => {
 
     const projectId = await ensureHomeChatProject({
       homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+      chatWorkspaceRoot: "/Users/tester/Documents/Chitauri",
     });
 
     expect(projectId).toBe(existingProjectId);
@@ -325,7 +325,7 @@ describe("isHomeChatContainerProject", () => {
 
     const projectId = await ensureHomeChatProject({
       homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+      chatWorkspaceRoot: "/Users/tester/Documents/Chitauri",
     });
 
     expect(projectId).toBe(existingProjectId);
@@ -370,7 +370,7 @@ describe("isHomeChatContainerProject", () => {
     await expect(
       ensureHomeChatProject({
         homeDir: "/Users/tester",
-        chatWorkspaceRoot: "/Users/tester/Documents/Synara",
+        chatWorkspaceRoot: "/Users/tester/Documents/Chitauri",
       }),
     ).rejects.toThrow(duplicateError.message);
     expect(dispatchCommand).not.toHaveBeenCalledWith(

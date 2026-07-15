@@ -1340,32 +1340,32 @@ describe("resolveAutoFeatureBranchName", () => {
 });
 
 describe("resolveDefaultCreateBranchName", () => {
-  it("uses Synara as the default namespace", () => {
+  it("uses Chitauri as the default namespace", () => {
     const branch = resolveDefaultCreateBranchName(["main"], "fix toast copy");
-    assert.equal(branch, "synara/fix-toast-copy");
+    assert.equal(branch, "chitauri/fix-toast-copy");
   });
 
   it("normalizes an existing legacy dpcode namespace", () => {
     const branch = resolveDefaultCreateBranchName(["main"], "dpcode/refine-toolbar-actions");
-    assert.equal(branch, "synara/refine-toolbar-actions");
+    assert.equal(branch, "chitauri/refine-toolbar-actions");
   });
 
-  it("preserves nested namespaces under Synara", () => {
+  it("preserves nested namespaces under Chitauri", () => {
     const branch = resolveDefaultCreateBranchName(["main"], "feature/refine-toolbar-actions");
-    assert.equal(branch, "synara/feature/refine-toolbar-actions");
+    assert.equal(branch, "chitauri/feature/refine-toolbar-actions");
   });
 
-  it("increments suffix when the Synara branch already exists", () => {
+  it("increments suffix when the Chitauri branch already exists", () => {
     const branch = resolveDefaultCreateBranchName(
-      ["main", "synara/fix-toast-copy", "synara/fix-toast-copy-2"],
+      ["main", "chitauri/fix-toast-copy", "chitauri/fix-toast-copy-2"],
       "fix toast copy",
     );
-    assert.equal(branch, "synara/fix-toast-copy-3");
+    assert.equal(branch, "chitauri/fix-toast-copy-3");
   });
 
-  it("falls back to synara/update when no preferred name is provided", () => {
+  it("falls back to chitauri/update when no preferred name is provided", () => {
     const branch = resolveDefaultCreateBranchName(["main"]);
-    assert.equal(branch, "synara/update");
+    assert.equal(branch, "chitauri/update");
   });
 });
 
@@ -1373,7 +1373,7 @@ describe("resolveLiveThreadBranchUpdate", () => {
   it("does not regress a semantic thread branch back to a temporary worktree branch", () => {
     const update = resolveLiveThreadBranchUpdate({
       threadBranch: "feature/semantic-branch",
-      gitStatus: status({ branch: "synara/deadbeef" }),
+      gitStatus: status({ branch: "chitauri/deadbeef" }),
     });
 
     assert.equal(update, null);
@@ -1390,7 +1390,7 @@ describe("resolveLiveThreadBranchUpdate", () => {
 });
 
 describe("shouldOfferCreateBranchPrompt", () => {
-  const temporaryBranch = "synara/deadbeef";
+  const temporaryBranch = "chitauri/deadbeef";
 
   it("shows the create-branch prompt for temporary worktree branches without upstream", () => {
     assert.isTrue(

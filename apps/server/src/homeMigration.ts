@@ -1,6 +1,6 @@
 /**
  * FILE: homeMigration.ts
- * Purpose: Imports legacy ~/.dpcode or ~/.t3 state into the new ~/.synara home on first startup.
+ * Purpose: Imports legacy ~/.synara, ~/.dpcode, or ~/.t3 state into ~/.chitauri on first startup.
  * Layer: Startup utility
  * Depends on: config path derivation, Effect filesystem/path services, and sqlite snapshots
  */
@@ -8,7 +8,8 @@ import { Data, Effect, FileSystem, Path } from "effect";
 
 import { deriveServerPaths, type ServerDerivedPaths } from "./config";
 
-export const SYNARA_HOME_DIRNAME = ".synara";
+export const CHITAURI_HOME_DIRNAME = ".chitauri";
+export const LEGACY_SYNARA_HOME_DIRNAME = ".synara";
 export const LEGACY_DPCODE_HOME_DIRNAME = ".dpcode";
 export const LEGACY_T3_HOME_DIRNAME = ".t3";
 const MIGRATIONS_DIRNAME = "migrations";
@@ -39,8 +40,8 @@ interface LegacyHomeMigrationInput {
   readonly baseDir: string;
   readonly homeDir: string;
   readonly devUrl: URL | undefined;
-  // Explicit state-dir namespace override (SYNARA_STATE_NAMESPACE). When set, the
-  // migration targets the same namespace the running server uses so a shared-state
+  // Explicit state-dir namespace override (CHITAURI_STATE_NAMESPACE or legacy
+  // SYNARA_STATE_NAMESPACE). When set, the migration targets the same namespace the running server uses so a shared-state
   // dev build imports into the dir it actually reads from.
   readonly stateDirNameOverride?: string | undefined;
 }
@@ -58,7 +59,11 @@ interface MigrationMarker {
 }
 
 const IMPORTABLE_ARTIFACTS = ["database", "keybindings", "attachments", "anonymousId"] as const;
-const LEGACY_HOME_DIRNAMES = [LEGACY_DPCODE_HOME_DIRNAME, LEGACY_T3_HOME_DIRNAME] as const;
+const LEGACY_HOME_DIRNAMES = [
+  LEGACY_SYNARA_HOME_DIRNAME,
+  LEGACY_DPCODE_HOME_DIRNAME,
+  LEGACY_T3_HOME_DIRNAME,
+] as const;
 type ImportableArtifact = (typeof IMPORTABLE_ARTIFACTS)[number];
 type LegacyHomeSnapshot = {
   readonly dirname: (typeof LEGACY_HOME_DIRNAMES)[number];
@@ -166,7 +171,7 @@ const snapshotSqliteDatabase = (sourcePath: string, targetPath: string) =>
     },
     catch: (cause) =>
       new HomeMigrationError({
-        message: `Failed to snapshot legacy sqlite database from ${sourcePath} to ${targetPath}. Close other Synara processes and retry.`,
+        message: `Failed to snapshot legacy sqlite database from ${sourcePath} to ${targetPath}. Close other Chitauri processes and retry.`,
         cause,
       }),
   });
@@ -215,7 +220,7 @@ const cleanUpStagingDir = (stagingBaseDir: string) =>
 export const migrateLegacyHomeIfNeeded = Effect.fn(function* (input: LegacyHomeMigrationInput) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const canonicalTargetBaseDir = path.resolve(path.join(input.homeDir, SYNARA_HOME_DIRNAME));
+  const canonicalTargetBaseDir = path.resolve(path.join(input.homeDir, CHITAURI_HOME_DIRNAME));
   if (path.resolve(input.baseDir) !== canonicalTargetBaseDir) {
     return {
       status: "skipped",
@@ -318,7 +323,7 @@ export const migrateLegacyHomeIfNeeded = Effect.fn(function* (input: LegacyHomeM
 
   const stagingBaseDir = path.join(
     input.homeDir,
-    `.${SYNARA_HOME_DIRNAME.slice(1)}-migration-${process.pid}-${Date.now()}`,
+    `.${CHITAURI_HOME_DIRNAME.slice(1)}-migration-${process.pid}-${Date.now()}`,
   );
   const stagingPaths = yield* deriveServerPaths(
     stagingBaseDir,
@@ -344,7 +349,7 @@ export const migrateLegacyHomeIfNeeded = Effect.fn(function* (input: LegacyHomeM
         : `legacy homes (${usedLegacyHomes
             .map((legacyHome) => `~/${legacyHome.dirname}`)
             .join(", ")})`;
-    const targetDisplayName = `~/${SYNARA_HOME_DIRNAME}`;
+    const targetDisplayName = `~/${CHITAURI_HOME_DIRNAME}`;
 
     // Persist the in-progress marker before moving any live artifact so retries can resume safely.
     yield* writeMigrationMarker(markerPath, {
@@ -429,7 +434,7 @@ export const migrateLegacyHomeIfNeeded = Effect.fn(function* (input: LegacyHomeM
       ],
     });
 
-    yield* Effect.logInfo("imported legacy state into Synara home", {
+    yield* Effect.logInfo("imported legacy state into Chitauri home", {
       sourceStateDir: primaryLegacyHome.paths.stateDir,
       targetStateDir: targetPaths.stateDir,
       sourceHomeDirname: primaryLegacyHome.dirname,
@@ -450,7 +455,7 @@ export const migrateLegacyHomeIfNeeded = Effect.fn(function* (input: LegacyHomeM
       error instanceof HomeMigrationError
         ? error
         : new HomeMigrationError({
-            message: "Failed to import legacy state into ~/.synara.",
+            message: "Failed to import legacy state into ~/.chitauri.",
             cause: error,
           }),
     ),

@@ -71,7 +71,7 @@ function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): S
 }
 
 describe("getVisibleProviderUpdateStatuses", () => {
-  it("excludes providers hidden from Synara so unchecked providers do not nag", () => {
+  it("excludes providers hidden from Chitauri so unchecked providers do not nag", () => {
     const result = getVisibleProviderUpdateStatuses({
       providers: [providerStatus("codex"), providerStatus("pi")],
       hiddenProviders: ["pi"],

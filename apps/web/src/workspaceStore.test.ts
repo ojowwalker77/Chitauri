@@ -60,10 +60,10 @@ describe("workspaceStore", () => {
 
     const { useWorkspaceStore } = await import("./workspaceStore");
 
-    useWorkspaceStore.getState().setChatWorkspaceRoot("/Users/tester/Documents/Synara");
+    useWorkspaceStore.getState().setChatWorkspaceRoot("/Users/tester/Documents/Chitauri");
     useWorkspaceStore.getState().setChatWorkspaceRoot(undefined);
 
-    expect(useWorkspaceStore.getState().chatWorkspaceRoot).toBe("/Users/tester/Documents/Synara");
+    expect(useWorkspaceStore.getState().chatWorkspaceRoot).toBe("/Users/tester/Documents/Chitauri");
   });
 
   it("keeps studio workspace root while server config is still loading", async () => {
@@ -72,11 +72,11 @@ describe("workspaceStore", () => {
 
     const { useWorkspaceStore } = await import("./workspaceStore");
 
-    useWorkspaceStore.getState().setStudioWorkspaceRoot("/Users/tester/Documents/Synara/Studio");
+    useWorkspaceStore.getState().setStudioWorkspaceRoot("/Users/tester/Documents/Chitauri/Studio");
     useWorkspaceStore.getState().setStudioWorkspaceRoot(undefined);
 
     expect(useWorkspaceStore.getState().studioWorkspaceRoot).toBe(
-      "/Users/tester/Documents/Synara/Studio",
+      "/Users/tester/Documents/Chitauri/Studio",
     );
   });
 
@@ -88,14 +88,14 @@ describe("workspaceStore", () => {
 
     useWorkspaceStore.getState().setServerWorkspacePaths({
       homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/Synara",
-      studioWorkspaceRoot: "/Users/tester/Documents/Synara/Studio",
+      chatWorkspaceRoot: "/Users/tester/Documents/Chitauri",
+      studioWorkspaceRoot: "/Users/tester/Documents/Chitauri/Studio",
     });
 
     expect(useWorkspaceStore.getState().homeDir).toBe("/Users/tester");
-    expect(useWorkspaceStore.getState().chatWorkspaceRoot).toBe("/Users/tester/Documents/Synara");
+    expect(useWorkspaceStore.getState().chatWorkspaceRoot).toBe("/Users/tester/Documents/Chitauri");
     expect(useWorkspaceStore.getState().studioWorkspaceRoot).toBe(
-      "/Users/tester/Documents/Synara/Studio",
+      "/Users/tester/Documents/Chitauri/Studio",
     );
   });
 
@@ -106,8 +106,8 @@ describe("workspaceStore", () => {
     let workspaceModule = await import("./workspaceStore");
     workspaceModule.useWorkspaceStore.getState().setServerWorkspacePaths({
       homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/Synara",
-      studioWorkspaceRoot: "/Users/tester/Documents/Synara/Studio",
+      chatWorkspaceRoot: "/Users/tester/Documents/Chitauri",
+      studioWorkspaceRoot: "/Users/tester/Documents/Chitauri/Studio",
     });
 
     vi.resetModules();
@@ -115,7 +115,7 @@ describe("workspaceStore", () => {
 
     expect(workspaceModule.useWorkspaceStore.getState().homeDir).toBe("/Users/tester");
     expect(workspaceModule.useWorkspaceStore.getState().chatWorkspaceRoot).toBe(
-      "/Users/tester/Documents/Synara",
+      "/Users/tester/Documents/Chitauri",
     );
     expect(workspaceModule.useWorkspaceStore.getState().studioWorkspaceRoot).toBeNull();
   });

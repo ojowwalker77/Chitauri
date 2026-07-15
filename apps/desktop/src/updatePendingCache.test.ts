@@ -12,10 +12,10 @@ import {
 
 describe("resolveElectronUpdaterCacheDirName", () => {
   it("matches electron-updater's cache directory fallback", () => {
-    expect(resolveElectronUpdaterCacheDirName(null, "Synara")).toBe("Synara");
+    expect(resolveElectronUpdaterCacheDirName(null, "Chitauri")).toBe("Chitauri");
     expect(
-      resolveElectronUpdaterCacheDirName({ updaterCacheDirName: "Synara-updater" }, "Synara"),
-    ).toBe("Synara-updater");
+      resolveElectronUpdaterCacheDirName({ updaterCacheDirName: "Chitauri-updater" }, "Chitauri"),
+    ).toBe("Chitauri-updater");
   });
 });
 
@@ -23,55 +23,55 @@ describe("resolveElectronUpdaterPendingCacheDir", () => {
   it("matches electron-updater's pending cache path on macOS", () => {
     expect(
       resolveElectronUpdaterPendingCacheDir({
-        cacheDirName: "Synara-updater",
+        cacheDirName: "Chitauri-updater",
         platform: "darwin",
         homeDir: "/Users/test",
       }),
-    ).toBe("/Users/test/Library/Caches/Synara-updater/pending");
+    ).toBe("/Users/test/Library/Caches/Chitauri-updater/pending");
   });
 
   it("matches electron-updater's pending cache path on Windows", () => {
     expect(
       resolveElectronUpdaterPendingCacheDir({
-        cacheDirName: "Synara-updater",
+        cacheDirName: "Chitauri-updater",
         platform: "win32",
         homeDir: "C:\\Users\\test",
         localAppData: "C:\\Users\\test\\AppData\\Local",
       }),
-    ).toBe("C:\\Users\\test\\AppData\\Local\\Synara-updater\\pending");
+    ).toBe("C:\\Users\\test\\AppData\\Local\\Chitauri-updater\\pending");
   });
 
   it("falls back from an empty Windows cache env var like electron-updater", () => {
     expect(
       resolveElectronUpdaterPendingCacheDir({
-        cacheDirName: "Synara-updater",
+        cacheDirName: "Chitauri-updater",
         platform: "win32",
         homeDir: "C:\\Users\\test",
         localAppData: "",
       }),
-    ).toBe("C:\\Users\\test\\AppData\\Local\\Synara-updater\\pending");
+    ).toBe("C:\\Users\\test\\AppData\\Local\\Chitauri-updater\\pending");
   });
 
   it("matches electron-updater's pending cache path on Linux", () => {
     expect(
       resolveElectronUpdaterPendingCacheDir({
-        cacheDirName: "Synara-updater",
+        cacheDirName: "Chitauri-updater",
         platform: "linux",
         homeDir: "/home/test",
         xdgCacheHome: "/tmp/cache",
       }),
-    ).toBe("/tmp/cache/Synara-updater/pending");
+    ).toBe("/tmp/cache/Chitauri-updater/pending");
   });
 
   it("falls back from an empty Linux cache env var like electron-updater", () => {
     expect(
       resolveElectronUpdaterPendingCacheDir({
-        cacheDirName: "Synara-updater",
+        cacheDirName: "Chitauri-updater",
         platform: "linux",
         homeDir: "/home/test",
         xdgCacheHome: "",
       }),
-    ).toBe("/home/test/.cache/Synara-updater/pending");
+    ).toBe("/home/test/.cache/Chitauri-updater/pending");
   });
 
   it("returns null when no cache dir is configured", () => {

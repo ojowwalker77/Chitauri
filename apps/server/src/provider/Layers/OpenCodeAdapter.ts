@@ -2940,7 +2940,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           }
 
           // Newer OpenCode servers can emit session.next.* events for the active
-          // agent loop. Mirror them into Synara's canonical transcript stream.
+          // agent loop. Mirror them into Chitauri's canonical transcript stream.
           case "session.next.text.delta": {
             if (!turnId || event.properties.delta.length === 0) {
               break;
@@ -3710,7 +3710,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                           : {}),
                         ...(initialAgent ? { agent: initialAgent } : {}),
                         permission: buildOpenCodePermissionRules(input.runtimeMode),
-                        title: `Synara ${input.threadId}`,
+                        title: `Chitauri ${input.threadId}`,
                       };
                       return client.session.create(
                         sessionCreateInput as unknown as Parameters<
@@ -3892,7 +3892,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         context.activeTurnSawFinalAssistant = false;
         context.activeTurnToolCallIdleWatchdogStarted = false;
         context.activeInteractionMode = input.interactionMode === "plan" ? "plan" : "default";
-        // Always pin Synara's interaction mode to OpenCode's primary agent.
+        // Always pin Chitauri's interaction mode to OpenCode's primary agent.
         // Otherwise a user config with default agent=plan can trap default turns in plan mode.
         context.activeAgent =
           agent ??

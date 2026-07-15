@@ -544,9 +544,9 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
   mockUpdateServerPort: string | undefined,
 ) {
   const buildConfig: Record<string, unknown> = {
-    appId: "com.t3tools.synara",
+    appId: "com.ojowwalker77.chitauri",
     productName,
-    artifactName: "Synara-${version}-${arch}.${ext}",
+    artifactName: "Chitauri-${version}-${arch}.${ext}",
     directories: {
       buildResources: "apps/desktop/resources",
     },
@@ -730,18 +730,18 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   yield* fs.copy(stageResourcesDir, path.join(stageAppDir, "apps/desktop/prod-resources"));
 
   const stagePackageJson: StagePackageJson = {
-    name: "synara-desktop",
+    name: "chitauri-desktop",
     version: appVersion,
     buildVersion: appVersion,
     t3codeCommitHash: commitHash,
     private: true,
-    description: "Synara desktop build",
-    author: "Emanuele Di Pietro",
+    description: "Chitauri desktop build",
+    author: "Jonatas Walker",
     main: "apps/desktop/dist-electron/main.js",
     build: yield* createBuildConfig(
       options.platform,
       options.target,
-      desktopPackageJson.productName ?? "Synara",
+      desktopPackageJson.productName ?? "Chitauri",
       options.signed,
       options.mockUpdates,
       options.mockUpdateServerPort,
@@ -922,7 +922,7 @@ const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
     Flag.optional,
   ),
 }).pipe(
-  Command.withDescription("Build a desktop artifact for Synara."),
+  Command.withDescription("Build a desktop artifact for Chitauri."),
   Command.withHandler((input) => Effect.flatMap(resolveBuildOptions(input), buildDesktopArtifact)),
 );
 

@@ -11,7 +11,7 @@ export const StudioListRecentOutputsInput = Schema.Struct({
 export type StudioListRecentOutputsInput = typeof StudioListRecentOutputsInput.Type;
 
 export const StudioOutputEntry = Schema.Struct({
-  /** File name, e.g. "2026-06-09_synara_local_dev_server_x_posts.md". */
+  /** File name, e.g. "2026-06-09_chitauri_local_dev_server_x_posts.md". */
   name: TrimmedNonEmptyString,
   /** Path relative to the Outbox root, e.g. "Content/2026-06-09_....md". */
   relativePath: TrimmedNonEmptyString,

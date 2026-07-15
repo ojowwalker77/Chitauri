@@ -1,6 +1,6 @@
 # Brief: Fix & harden Profile-stats data layer (server + contract + query hooks)
 
-You are GPT-5.5 (xhigh) working in the Synara monorepo at `/Users/emanueledipietro/Developer/synara`.
+You are GPT-5.5 (xhigh) working in the Chitauri monorepo at `/Users/emanueledipietro/Developer/synara`.
 A "Profile / stats" feature was just built. The DATA is wrong in three places and the loading is
 slow. Your job is the DATA/LOGIC/PERF layer ONLY. A separate agent (Opus) owns all React UI.
 

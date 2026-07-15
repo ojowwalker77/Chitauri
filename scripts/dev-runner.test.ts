@@ -46,7 +46,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
   });
 
   describe("createDevRunnerEnv", () => {
-    it.effect("defaults SYNARA_HOME to ~/.synara when not provided", () =>
+    it.effect("defaults CHITAURI_HOME to ~/.chitauri when not provided", () =>
       Effect.gen(function* () {
         const env = yield* createDevRunnerEnv({
           mode: "dev",
@@ -64,8 +64,9 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           stateNamespace: undefined,
         });
 
-        assert.equal(env.SYNARA_HOME, resolve(homedir(), ".synara"));
-        assert.equal(env.T3CODE_HOME, resolve(homedir(), ".synara"));
+        assert.equal(env.CHITAURI_HOME, resolve(homedir(), ".chitauri"));
+        assert.equal(env.SYNARA_HOME, resolve(homedir(), ".chitauri"));
+        assert.equal(env.T3CODE_HOME, resolve(homedir(), ".chitauri"));
       }),
     );
 
@@ -88,6 +89,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         });
 
         assert.equal(env.T3CODE_HOME, resolve("/tmp/custom-t3"));
+        assert.equal(env.CHITAURI_HOME, resolve("/tmp/custom-t3"));
         assert.equal(env.SYNARA_HOME, resolve("/tmp/custom-t3"));
         assert.equal(env.T3CODE_PORT, "4222");
         assert.equal(env.VITE_WS_URL, "ws://[::1]:4222");
