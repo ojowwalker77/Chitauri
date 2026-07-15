@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSubagentIdentityDirectory,
   collectSubagentProviderThreadIds,
+  decodeSubagentAgentStates,
   decodeSubagentReceiverAgents,
   extractSubagentIdentityHints,
   resolveSubagentIdentityHint,
@@ -60,6 +61,27 @@ describe("decodeSubagentReceiverAgents", () => {
         prompt: "Inspect the sidebar tree",
       },
     ]);
+  });
+});
+
+describe("decodeSubagentAgentStates", () => {
+  it("keeps status messages as progress without overwriting the task prompt", () => {
+    expect(
+      decodeSubagentAgentStates({
+        agentsStates: {
+          "child-provider-1": {
+            status: "running",
+            message: "Inspecting ChatView.tsx",
+          },
+        },
+      }),
+    ).toEqual({
+      "child-provider-1": {
+        threadId: "child-provider-1",
+        status: "running",
+        message: "Inspecting ChatView.tsx",
+      },
+    });
   });
 });
 

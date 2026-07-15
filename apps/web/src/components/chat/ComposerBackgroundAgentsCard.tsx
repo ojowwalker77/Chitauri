@@ -5,14 +5,14 @@
 // Exports: ComposerBackgroundAgentsCard
 
 import type { ProviderKind } from "@t3tools/contracts";
+import type { UnifiedSubagentState } from "@t3tools/shared/subagentActivity";
 import { memo } from "react";
 
-import type { BackgroundAgent } from "../../session-logic";
 import { BackgroundAgentsCard } from "./BackgroundAgentsCard";
 import { ComposerStackedPanel } from "./ComposerStackedPanel";
 
 interface ComposerBackgroundAgentsCardProps {
-  agents: ReadonlyArray<BackgroundAgent>;
+  agents: ReadonlyArray<UnifiedSubagentState>;
   provider: ProviderKind | null;
   compact: boolean;
   onCompactChange: (compact: boolean) => void;

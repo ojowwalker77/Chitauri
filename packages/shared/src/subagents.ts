@@ -344,8 +344,8 @@ function buildSubagentAgentState(
           ]),
         }
       : {}),
-    ...(firstStringValue(object, ["prompt", "task", "message"])
-      ? { prompt: firstStringValue(object, ["prompt", "task", "message"]) }
+    ...(firstStringValue(object, ["prompt", "task"])
+      ? { prompt: firstStringValue(object, ["prompt", "task"]) }
       : {}),
     ...(firstStringValue(object, ["status", "state"])
       ? { status: firstStringValue(object, ["status", "state"]) }
