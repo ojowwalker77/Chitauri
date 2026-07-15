@@ -71,6 +71,18 @@ import type {
   GitUnstageFilesResult,
 } from "./git";
 import type {
+  GitHubConnectionInput,
+  GitHubConnectionResult,
+  GitHubPullRequestDiffInput,
+  GitHubPullRequestDiffResult,
+  GitHubWorkItemActionInput,
+  GitHubWorkItemActionResult,
+  GitHubWorkItemDetailInput,
+  GitHubWorkItemDetailResult,
+  GitHubWorkListInput,
+  GitHubWorkListResult,
+} from "./github";
+import type {
   ProjectCreateLocalFilePreviewGrantInput,
   ProjectCreateLocalFilePreviewGrantResult,
   ProjectDevServerEvent,
@@ -477,6 +489,13 @@ export interface NativeApi {
     summarizeDiff: (input: GitSummarizeDiffInput) => Promise<GitSummarizeDiffResult>;
     runStackedAction: (input: GitRunStackedActionInput) => Promise<GitRunStackedActionResult>;
     onActionProgress: (callback: (event: GitActionProgressEvent) => void) => () => void;
+  };
+  github: {
+    connection: (input: GitHubConnectionInput) => Promise<GitHubConnectionResult>;
+    listWork: (input: GitHubWorkListInput) => Promise<GitHubWorkListResult>;
+    workItemDetail: (input: GitHubWorkItemDetailInput) => Promise<GitHubWorkItemDetailResult>;
+    pullRequestDiff: (input: GitHubPullRequestDiffInput) => Promise<GitHubPullRequestDiffResult>;
+    workItemAction: (input: GitHubWorkItemActionInput) => Promise<GitHubWorkItemActionResult>;
   };
   contextMenu: {
     show: <T extends string>(

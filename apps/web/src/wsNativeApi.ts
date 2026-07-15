@@ -570,6 +570,13 @@ export function createWsNativeApi(): NativeApi {
         };
       },
     },
+    github: {
+      connection: (input) => transport.request(WS_METHODS.githubConnection, input),
+      listWork: (input) => transport.request(WS_METHODS.githubListWork, input),
+      workItemDetail: (input) => transport.request(WS_METHODS.githubWorkItemDetail, input),
+      pullRequestDiff: (input) => transport.request(WS_METHODS.githubPullRequestDiff, input),
+      workItemAction: (input) => transport.request(WS_METHODS.githubWorkItemAction, input),
+    },
     contextMenu: {
       show: async <T extends string>(
         items: readonly ContextMenuItem<T>[],

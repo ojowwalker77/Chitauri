@@ -60,6 +60,13 @@ import {
   GitUnstageFilesInput,
 } from "./git";
 import {
+  GitHubConnectionInput,
+  GitHubPullRequestDiffInput,
+  GitHubWorkItemActionInput,
+  GitHubWorkItemDetailInput,
+  GitHubWorkListInput,
+} from "./github";
+import {
   TerminalAckOutputInput,
   TerminalClearInput,
   TerminalCloseInput,
@@ -160,6 +167,13 @@ export const WS_METHODS = {
   gitResolvePullRequest: "git.resolvePullRequest",
   gitPullRequestSnapshot: "git.pullRequestSnapshot",
   gitPreparePullRequestThread: "git.preparePullRequestThread",
+
+  // GitHub daily-work methods
+  githubConnection: "github.connection",
+  githubListWork: "github.listWork",
+  githubWorkItemDetail: "github.workItemDetail",
+  githubPullRequestDiff: "github.pullRequestDiff",
+  githubWorkItemAction: "github.workItemAction",
 
   // Terminal methods
   terminalOpen: "terminal.open",
@@ -316,6 +330,15 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.gitResolvePullRequest, GitPullRequestRefInput),
   tagRequestBody(WS_METHODS.gitPullRequestSnapshot, GitPullRequestSnapshotInput),
   tagRequestBody(WS_METHODS.gitPreparePullRequestThread, GitPreparePullRequestThreadInput),
+
+  // GitHub daily-work methods
+  tagRequestBody(WS_METHODS.githubConnection, GitHubConnectionInput),
+  tagRequestBody(WS_METHODS.githubListWork, GitHubWorkListInput),
+  tagRequestBody(WS_METHODS.githubWorkItemDetail, GitHubWorkItemDetailInput),
+  tagRequestBody(WS_METHODS.githubPullRequestDiff, GitHubPullRequestDiffInput),
+  ...GitHubWorkItemActionInput.mapMembers((members) =>
+    members.map((member) => tagRequestBody(WS_METHODS.githubWorkItemAction, member)),
+  ).members,
 
   // Terminal methods
   tagRequestBody(WS_METHODS.terminalOpen, TerminalOpenInput),
