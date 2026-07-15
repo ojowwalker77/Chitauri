@@ -39,6 +39,7 @@ import type {
 import { autoUpdater, BaseUpdater, CancellationToken } from "electron-updater";
 
 import type { ContextMenuItem } from "@t3tools/contracts";
+import { DESKTOP_APP_HOST, DESKTOP_SCHEME } from "@t3tools/shared/desktopAppOrigin";
 import { getMacTrafficLightPosition } from "@t3tools/shared/desktopChrome";
 import { NetService } from "@t3tools/shared/Net";
 import { RotatingFileSink } from "@t3tools/shared/logging";
@@ -157,7 +158,6 @@ const BASE_DIR =
   process.env.T3CODE_HOME?.trim() ||
   Path.join(OS.homedir(), ".chitauri");
 const STATE_DIR = Path.join(BASE_DIR, "userdata");
-const DESKTOP_SCHEME = "chitauri";
 const ROOT_DIR = Path.resolve(__dirname, "../../..");
 const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
 const APP_DISPLAY_NAME = isDevelopment ? "Chitauri (Dev)" : "Chitauri";
@@ -2652,7 +2652,7 @@ function createWindow(): BrowserWindow {
     void window.loadURL(process.env.VITE_DEV_SERVER_URL as string);
     window.webContents.openDevTools({ mode: "detach" });
   } else {
-    void window.loadURL(`${DESKTOP_SCHEME}://app/index.html`);
+    void window.loadURL(`${DESKTOP_SCHEME}://${DESKTOP_APP_HOST}/index.html`);
   }
 
   window.on("closed", () => {

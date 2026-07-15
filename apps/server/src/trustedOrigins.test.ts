@@ -2,6 +2,7 @@
 // Purpose: Pins which browser origins can use local-data HTTP/WS surfaces.
 // Layer: Server utility tests
 
+import { DESKTOP_APP_CORS_ORIGIN } from "@t3tools/shared/desktopAppOrigin";
 import { describe, expect, it } from "vitest";
 
 import type { ServerConfigShape } from "./config";
@@ -33,7 +34,7 @@ describe("trustedOrigins", () => {
     ).toBe(true);
     expect(
       isTrustedAppOrigin({
-        origin: "t3://app",
+        origin: DESKTOP_APP_CORS_ORIGIN,
         requestOrigin: "http://127.0.0.1:58090",
         config,
       }),
@@ -82,7 +83,20 @@ describe("trustedOrigins", () => {
   });
 
   it("normalizes desktop origins with trailing slashes", () => {
-    expect(normalizeCorsOrigin("t3://app/")).toBe("t3://app");
+    expect(normalizeCorsOrigin(`${DESKTOP_APP_CORS_ORIGIN}/`)).toBe(DESKTOP_APP_CORS_ORIGIN);
+  });
+
+  // The packaged renderer loads over a custom scheme, so its Origin never parses to a
+  // real origin. If this constant drifts from the scheme the desktop actually uses, the
+  // app's own /ws upgrade 403s and the UI only ever shows "SocketOpenError".
+  it("accepts the packaged desktop renderer origin on websocket-style gates", () => {
+    expect(
+      shouldRejectUntrustedRequestOrigin({
+        rawOrigin: DESKTOP_APP_CORS_ORIGIN,
+        requestOrigin: "http://127.0.0.1:58090",
+        config,
+      }),
+    ).toBe(false);
   });
 
   it("rejects present but untrusted request origins for websocket-style gates", () => {

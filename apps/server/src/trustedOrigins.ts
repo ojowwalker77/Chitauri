@@ -5,10 +5,12 @@
 // Exports: normalizeCorsOrigin, isTrustedAppOrigin,
 //          shouldRejectUntrustedRequestOrigin
 
+import { DESKTOP_APP_CORS_ORIGIN } from "@t3tools/shared/desktopAppOrigin";
+
 import type { ServerConfigShape } from "./config";
 import { isLoopbackHost, isWildcardHost } from "./startupAccess";
 
-export const DESKTOP_APP_CORS_ORIGIN = "t3://app";
+export { DESKTOP_APP_CORS_ORIGIN };
 
 export function normalizeCorsOrigin(rawOrigin: string | ReadonlyArray<string> | undefined) {
   const value = Array.isArray(rawOrigin) ? rawOrigin[0] : rawOrigin;
