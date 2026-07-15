@@ -720,19 +720,28 @@ function normalizeBackgroundAgentStatus(rawStatus: unknown): BackgroundAgent["st
 function collabSubagentToBackgroundStatus(
   rawStatus: string | undefined | null,
 ): BackgroundAgent["status"] {
-  const normalized = typeof rawStatus === "string" ? rawStatus.trim().toLowerCase() : "";
+  const normalized =
+    typeof rawStatus === "string"
+      ? rawStatus.trim().toLowerCase().replaceAll("_", "").replaceAll("-", "")
+      : "";
   if (
     !normalized ||
     normalized === "running" ||
-    normalized === "in_progress" ||
-    normalized === "pending"
+    normalized === "inprogress" ||
+    normalized === "pending" ||
+    normalized === "pendinginit"
   ) {
     return "running";
   }
   if (normalized === "completed" || normalized === "done" || normalized === "success") {
     return "completed";
   }
-  if (normalized === "failed" || normalized === "error" || normalized === "errored") {
+  if (
+    normalized === "failed" ||
+    normalized === "error" ||
+    normalized === "errored" ||
+    normalized === "notfound"
+  ) {
     return "failed";
   }
   if (
@@ -740,11 +749,29 @@ function collabSubagentToBackgroundStatus(
     normalized === "cancelled" ||
     normalized === "canceled" ||
     normalized === "interrupted" ||
-    normalized === "aborted"
+    normalized === "aborted" ||
+    normalized === "shutdown"
   ) {
     return "stopped";
   }
   return "completed";
+}
+
+function subagentBackgroundTitle(subagent: WorkLogSubagent): string | null {
+  const identity = subagent.nickname ?? subagent.role;
+  if (identity) {
+    return identity;
+  }
+
+  const promptLine = subagent.prompt
+    ?.split("\n")
+    .map((line) => line.trim())
+    .find((line) => line.length > 0);
+  if (promptLine) {
+    return promptLine.length > 120 ? `${promptLine.slice(0, 117).trimEnd()}...` : promptLine;
+  }
+
+  return subagent.model ?? null;
 }
 
 // Reconstructs the per-agent state of the active turn's background/sub agents from the task.*
@@ -814,7 +841,7 @@ export function deriveTurnBackgroundAgents(
           byId.set(collabTaskId, {
             ...existing,
             taskType: "collab_subagent",
-            title: subagent.nickname ?? subagent.role ?? subagent.model ?? existing.title,
+            title: subagentBackgroundTitle(subagent) ?? existing.title,
             currentDetail: subagent.latestUpdate ?? existing.currentDetail,
             status: collabSubagentToBackgroundStatus(subagent.rawStatus),
             updatedAt: activity.createdAt,
@@ -940,14 +967,43 @@ export function hasLiveTurnTailWork(input: {
   return false;
 }
 
-function shouldOmitRoutedCollabAgentToolActivity(activity: OrchestrationThreadActivity): boolean {
+function collectRoutedCollabAgentToolCallIds(
+  activities: ReadonlyArray<OrchestrationThreadActivity>,
+): ReadonlySet<string> {
+  const routedToolCallIds = new Set<string>();
+  for (const activity of activities) {
+    const payload = asRecord(activity.payload);
+    if (
+      asTrimmedString(payload?.itemType) !== "collab_agent_tool_call" ||
+      extractCollabSubagents(payload).length === 0
+    ) {
+      continue;
+    }
+    const toolCallId = extractToolCallId(payload);
+    if (toolCallId) {
+      routedToolCallIds.add(toolCallId);
+    }
+  }
+  return routedToolCallIds;
+}
+
+function shouldOmitRoutedCollabAgentToolActivity(
+  activity: OrchestrationThreadActivity,
+  routedToolCallIds: ReadonlySet<string>,
+): boolean {
   const payload = asRecord(activity.payload);
   if (asTrimmedString(payload?.itemType) !== "collab_agent_tool_call") {
     return false;
   }
   // Routed subagent activity is rendered through child-thread/subagent surfaces;
-  // generic OpenCode task calls have no receiver metadata and need a chat row.
-  return extractCollabSubagents(payload).length > 0;
+  // generic OpenCode task calls have no receiver metadata and need a chat row. Codex's start
+  // event has no receiver yet, so use the shared tool-call id to suppress its whole lifecycle
+  // once a later event identifies the routed child.
+  if (extractCollabSubagents(payload).length > 0) {
+    return true;
+  }
+  const toolCallId = extractToolCallId(payload);
+  return toolCallId !== null && routedToolCallIds.has(toolCallId);
 }
 
 export function findLatestProposedPlan(
@@ -1033,9 +1089,13 @@ export function deriveWorkLogEntries(
 ): WorkLogEntry[] {
   const visibleTurnIds = options.visibleTurnIds;
   const ordered = orderedActivities(activities);
+  const routedCollabAgentToolCallIds = collectRoutedCollabAgentToolCallIds(ordered);
   const entries = ordered
     .filter((activity) => shouldKeepActivityForWorkLog(activity, latestTurnId, visibleTurnIds))
-    .filter((activity) => !shouldOmitRoutedCollabAgentToolActivity(activity))
+    .filter(
+      (activity) =>
+        !shouldOmitRoutedCollabAgentToolActivity(activity, routedCollabAgentToolCallIds),
+    )
     .filter((activity) => activity.kind !== "task.started" && activity.kind !== "task.completed")
     .filter((activity) => !isQuietTurnLifecycleActivity(activity))
     .filter((activity) => activity.kind !== "account.rate-limits.updated")
