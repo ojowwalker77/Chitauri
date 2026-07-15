@@ -1481,27 +1481,6 @@ function makeSidebarThreadSummary(
   };
 }
 
-describe("partitionSidebarThreadsByProjectIds", () => {
-  it("splits Studio threads from the regular Threads surface by project id", () => {
-    const projectThread = makeSidebarThreadSummary({
-      id: ThreadId.makeUnsafe("thread-project"),
-      projectId: ProjectId.makeUnsafe("project-app"),
-    });
-    const studioThread = makeSidebarThreadSummary({
-      id: ThreadId.makeUnsafe("thread-studio"),
-      projectId: ProjectId.makeUnsafe("project-studio"),
-    });
-
-    const partitioned = partitionSidebarThreadsByProjectIds(
-      [projectThread, studioThread],
-      new Set([ProjectId.makeUnsafe("project-studio")]),
-    );
-
-    expect(partitioned.nonStudioThreads.map((thread) => thread.id)).toEqual(["thread-project"]);
-    expect(partitioned.studioThreads.map((thread) => thread.id)).toEqual(["thread-studio"]);
-  });
-});
-
 describe("deriveSidebarProjectData", () => {
   it("keeps pinned threads in the total project thread count", () => {
     const project = makeProject();

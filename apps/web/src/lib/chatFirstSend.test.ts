@@ -31,7 +31,6 @@ describe("resolveFirstSendTarget", () => {
       createdAt: new Date(2026, 5, 11, 23, 30, 43),
       isFirstMessage: true,
       isHomeChatContainer: true,
-      isStudioContainer: false,
       projects: [makeProject()],
       selectedWorkspaceRoot: null,
       title: "Yes it takes",
@@ -56,7 +55,6 @@ describe("resolveFirstSendTarget", () => {
       createdAt: new Date(2026, 5, 11, 23, 30, 43),
       isFirstMessage: true,
       isHomeChatContainer: true,
-      isStudioContainer: false,
       projects: [makeProject()],
       selectedWorkspaceRoot: "/Users/tester/Developer/app",
       title: "Use app",
@@ -82,7 +80,6 @@ describe("resolveFirstSendTarget", () => {
       createdAt: new Date(2026, 5, 11, 23, 30, 43),
       isFirstMessage: false,
       isHomeChatContainer: false,
-      isStudioContainer: false,
       projects: [activeProject],
       selectedWorkspaceRoot: null,
       title: "Follow up",
@@ -98,66 +95,4 @@ describe("resolveFirstSendTarget", () => {
     });
   });
 
-  it("keeps a plain Studio first send in the Studio container", () => {
-    const activeProject = makeProject({
-      id: "project-studio" as ProjectId,
-      kind: "studio",
-      name: "Studio",
-      remoteName: "Studio",
-      cwd: "/Users/tester/Documents/Chitauri/Studio",
-    });
-    const result = resolveFirstSendTarget({
-      activeProject,
-      chatWorkspaceRoot: "/Users/tester/Documents/Chitauri",
-      createdAt: new Date(2026, 5, 11, 23, 30, 43),
-      isFirstMessage: true,
-      isHomeChatContainer: false,
-      isStudioContainer: true,
-      projects: [activeProject],
-      selectedWorkspaceRoot: null,
-      title: "Write content",
-      titleSeed: "Write content",
-    });
-
-    expect(result).toMatchObject({
-      kind: "current",
-      target: {
-        targetProjectId: "project-studio",
-        targetProjectKind: "studio",
-        targetProjectCwd: "/Users/tester/Documents/Chitauri/Studio",
-      },
-    });
-  });
-
-  it("promotes a Studio folder pick to an ordinary project", () => {
-    const activeProject = makeProject({
-      id: "project-studio" as ProjectId,
-      kind: "studio",
-      name: "Studio",
-      remoteName: "Studio",
-      cwd: "/Users/tester/Documents/Chitauri/Studio",
-    });
-    const result = resolveFirstSendTarget({
-      activeProject,
-      chatWorkspaceRoot: "/Users/tester/Documents/Chitauri",
-      createdAt: new Date(2026, 5, 11, 23, 30, 43),
-      isFirstMessage: true,
-      isHomeChatContainer: false,
-      isStudioContainer: true,
-      projects: [activeProject],
-      selectedWorkspaceRoot: "/Users/tester/Developer/app",
-      title: "Use app",
-      titleSeed: "Use app",
-    });
-
-    expect(result).toMatchObject({
-      kind: "create-project",
-      creation: {
-        workspaceRoot: "/Users/tester/Developer/app",
-        title: "app",
-        kind: "project",
-        createWorkspaceRootIfMissing: false,
-      },
-    });
-  });
 });
