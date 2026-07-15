@@ -7,17 +7,40 @@ This document covers how to run signed, notarized desktop releases from one tag.
 - Trigger: push a SemVer tag, either `vX.Y.Z` (the canonical form) or legacy
   `X.Y.Z`. The published GitHub Release keeps the exact pushed tag name.
 - Runs quality gates first: lint, typecheck, test.
-- Builds four artifacts in parallel:
-  - macOS `arm64` DMG
-  - macOS `x64` DMG
+- Builds artifacts in parallel:
   - Linux `x64` AppImage
   - Windows `x64` NSIS installer
+  - macOS `arm64` + `x64` DMG — **only when the repository variable `RELEASE_MAC` is set to `1`**
 - Publishes one GitHub Release with all produced files.
   - Versions with a suffix after `X.Y.Z` (for example `1.2.3-alpha.1`) are published as GitHub prereleases.
   - Only plain `X.Y.Z` releases are marked as the repository's latest release.
 - Includes Electron auto-update metadata (for example `latest*.yml` and `*.blockmap`) in release assets.
 - Publishes the CLI package (`apps/server`, npm package `t3`) with OIDC trusted publishing.
 - macOS signing and notarization are required. The workflow fails before packaging if any required Apple secret is missing, so it can never publish a Gatekeeper-rejected app.
+
+## macOS is currently built locally
+
+The Apple signing secrets are not configured yet, so `RELEASE_MAC` is unset and CI
+ships Linux and Windows only. macOS builds are produced locally instead, signing
+directly from the `Developer ID Application` identity in the login Keychain — no
+`.p12` and no repository secrets involved:
+
+```bash
+T3CODE_DESKTOP_UPDATE_REPOSITORY=<owner>/<repo> \
+  bun run dist:desktop:artifact -- --platform mac --target dmg --arch arm64 --signed
+```
+
+`T3CODE_DESKTOP_UPDATE_REPOSITORY` is required: it supplies the publish config that
+makes electron-builder emit `latest-mac.yml`. Without it the build fails late, in
+update-zip finalization, with `Expected at least one macOS update manifest, found 0`.
+The build never uploads (`--publish never` is hard-coded); the artifact lands in
+`release/`.
+
+A locally-built app is signed but **not notarized**. That is fine on the machine that
+built it (no quarantine attribute), and not fine for distribution to anyone else.
+
+To put macOS back into the release: configure the Apple secrets in section 2 below,
+then set the repository variable `RELEASE_MAC=1` (`gh variable set RELEASE_MAC --body 1`).
 
 ## Desktop auto-update notes
 
