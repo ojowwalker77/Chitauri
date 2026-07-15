@@ -191,6 +191,13 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     keywords:
       "System default follows your browser or OS clock preference. timestamp 12-hour 24-hour locale",
   },
+  {
+    id: "appearance:chat-header-controls",
+    section: "appearance",
+    title: "Header controls",
+    keywords:
+      "Chat header. Drag to reorder the buttons in the chat header and hide the ones you don't use. top bar toolbar actions usage hand off project actions environment open in editor git actions diff panel visibility order clutter",
+  },
 
   // ── Notifications ─────────────────────────────────────────────────────────────
   {
