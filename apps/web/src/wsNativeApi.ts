@@ -548,6 +548,7 @@ export function createWsNativeApi(): NativeApi {
       createDetachedWorktree: (input) =>
         transport.request(WS_METHODS.gitCreateDetachedWorktree, input),
       removeWorktree: (input) => transport.request(WS_METHODS.gitRemoveWorktree, input),
+      deleteBranch: (input) => transport.request(WS_METHODS.gitDeleteBranch, input),
       createBranch: (input) => transport.request(WS_METHODS.gitCreateBranch, input),
       checkout: (input) => transport.request(WS_METHODS.gitCheckout, input),
       stashAndCheckout: (input) => transport.request(WS_METHODS.gitStashAndCheckout, input),

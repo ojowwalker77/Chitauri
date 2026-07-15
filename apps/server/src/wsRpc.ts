@@ -824,6 +824,11 @@ export const makeWsRpcLayer = () =>
             git.removeWorktree(input).pipe(Effect.tap(() => refreshGitStatus(input.cwd))),
             "Failed to remove worktree",
           ),
+        [WS_METHODS.gitDeleteBranch]: (input) =>
+          rpcEffect(
+            git.deleteBranch(input).pipe(Effect.tap(() => refreshGitStatus(input.cwd))),
+            "Failed to delete branch",
+          ),
         [WS_METHODS.gitCreateBranch]: (input) =>
           rpcEffect(
             git.createBranch(input).pipe(Effect.tap(() => refreshGitStatus(input.cwd))),

@@ -15,6 +15,7 @@ import type {
   GitCreateDetachedWorktreeResult,
   GitCreateWorktreeInput,
   GitCreateWorktreeResult,
+  GitDeleteBranchInput,
   GitInitInput,
   GitListBranchesInput,
   GitListBranchesResult,
@@ -114,12 +115,6 @@ export interface GitRenameBranchInput {
 
 export interface GitRenameBranchResult {
   branch: string;
-}
-
-export interface GitDeleteBranchInput {
-  cwd: string;
-  branch: string;
-  force?: boolean | undefined;
 }
 
 export interface GitFetchPullRequestBranchInput {

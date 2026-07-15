@@ -33,6 +33,7 @@ import type {
   GitCreateBranchInput,
   GitCreateDetachedWorktreeInput,
   GitCreateDetachedWorktreeResult,
+  GitDeleteBranchInput,
   GitHubRepositoryInput,
   GitHubRepositoryResult,
   GitHandoffThreadInput,
@@ -447,6 +448,7 @@ export interface NativeApi {
       input: GitCreateDetachedWorktreeInput,
     ) => Promise<GitCreateDetachedWorktreeResult>;
     removeWorktree: (input: GitRemoveWorktreeInput) => Promise<void>;
+    deleteBranch: (input: GitDeleteBranchInput) => Promise<void>;
     createBranch: (input: GitCreateBranchInput) => Promise<void>;
     checkout: (input: GitCheckoutInput) => Promise<void>;
     stashAndCheckout: (input: GitStashAndCheckoutInput) => Promise<void>;
