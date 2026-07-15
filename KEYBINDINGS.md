@@ -19,6 +19,7 @@ See the full schema for more details: [`packages/contracts/src/keybindings.ts`](
 
 ```json
 [
+  { "key": "mod+alt+b", "command": "rightPanel.toggle", "when": "!terminalFocus" },
   { "key": "mod+j", "command": "terminal.toggle" },
   { "key": "mod+d", "command": "terminal.split", "when": "terminalFocus" },
   { "key": "mod+n", "command": "terminal.new", "when": "terminalFocus" },
@@ -52,6 +53,7 @@ Invalid rules are ignored. Invalid config files are ignored. Warnings are logged
 - `terminal.split`: split terminal (in focused terminal context by default)
 - `terminal.new`: create new terminal (in focused terminal context by default)
 - `terminal.close`: close/kill the focused terminal (in focused terminal context by default)
+- `rightPanel.toggle`: collapse or reveal the active thread's right panel
 - `chat.new`: create a new chat thread preserving the active thread's branch/worktree state
 - `chat.newLocal`: create a new chat thread for the active project in a new environment (local/worktree determined by app settings (default `local`))
 - `chat.newTerminal`: create a new terminal-first thread preserving the active thread's branch/worktree state

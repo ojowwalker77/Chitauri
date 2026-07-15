@@ -5786,6 +5786,14 @@ export default function ChatView({
         return;
       }
 
+      if (command === "rightPanel.toggle") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!hasRightDockPanes) return;
+        toggleRightDock();
+        return;
+      }
+
       if (command === "chat.split") {
         event.preventDefault();
         event.stopPropagation();
@@ -5833,11 +5841,13 @@ export default function ChatView({
     hasLiveTurn,
     handleModelPickerOpenChange,
     handleTraitsPickerOpenChange,
+    hasRightDockPanes,
     isComposerApprovalState,
     setTerminalWorkspaceTab,
     surfaceMode,
     scheduleComposerFocus,
     toggleComposerFocus,
+    toggleRightDock,
     toggleTerminalVisibility,
   ]);
 

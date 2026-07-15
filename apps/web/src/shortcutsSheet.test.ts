@@ -139,4 +139,35 @@ describe("buildShortcutSheetSections", () => {
 
     expect(sections[0]?.entries.some((entry) => entry.id === "sidebar.toggle")).toBe(true);
   });
+
+  it("lists a configured right-panel toggle", () => {
+    const sections = buildShortcutSheetSections({
+      keybindings: [
+        {
+          command: "rightPanel.toggle",
+          shortcut: {
+            key: "b",
+            modKey: true,
+            metaKey: false,
+            ctrlKey: false,
+            shiftKey: false,
+            altKey: true,
+          },
+        },
+      ],
+      projectScripts: [],
+      platform: "MacIntel",
+      context: {
+        terminalFocus: false,
+        terminalOpen: false,
+        terminalWorkspaceOpen: false,
+      },
+    });
+
+    expect(
+      sections[0]?.entries.some(
+        (entry) => entry.id === "rightPanel.toggle" && entry.shortcutLabel === "⌥⌘B",
+      ),
+    ).toBe(true);
+  });
 });
