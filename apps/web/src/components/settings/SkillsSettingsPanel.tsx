@@ -115,7 +115,9 @@ export function SkillsSettingsPanel() {
           description="Skills placed here are available on every provider. When a provider already ships its own copy of a skill, that copy is used; otherwise Chitauri's copy is the fallback."
           status={
             chitauriSkillsDir ? (
-              <code className="break-all text-[11px] text-muted-foreground">{chitauriSkillsDir}</code>
+              <code className="break-all text-[11px] text-muted-foreground">
+                {chitauriSkillsDir}
+              </code>
             ) : null
           }
           control={

@@ -40,7 +40,8 @@ export function resolveDpCodeCodexHomeOverlayPath(
     env.SYNARA_HOME?.trim() ||
     env.DPCODE_HOME?.trim() ||
     env.T3CODE_HOME?.trim();
-  const overlayRoot = runtimeHome || path.join(path.dirname(sourceHomePath), ".chitauri", "runtime");
+  const overlayRoot =
+    runtimeHome || path.join(path.dirname(sourceHomePath), ".chitauri", "runtime");
   return path.join(overlayRoot, DPCODE_CODEX_HOME_OVERLAY_DIR);
 }
 

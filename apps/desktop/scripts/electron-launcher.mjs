@@ -18,9 +18,7 @@ import { fileURLToPath } from "node:url";
 
 const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
 const APP_DISPLAY_NAME = isDevelopment ? "Chitauri (Dev)" : "Chitauri";
-const APP_BUNDLE_ID = isDevelopment
-  ? "com.ojowwalker77.chitauri.dev"
-  : "com.ojowwalker77.chitauri";
+const APP_BUNDLE_ID = isDevelopment ? "com.ojowwalker77.chitauri.dev" : "com.ojowwalker77.chitauri";
 const LAUNCHER_VERSION = 2;
 const MICROPHONE_USAGE_DESCRIPTION =
   "Chitauri needs microphone access so you can record voice notes and transcribe them into the chat composer.";

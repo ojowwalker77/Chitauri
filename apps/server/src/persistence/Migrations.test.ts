@@ -22,46 +22,48 @@ layer("reconcileMigrationLineage", (it) => {
   // mark is at or beyond Chitauri's latest migration ID. The migrator's max-ID
   // gate then skips every Chitauri migration — including the #032 self-heal —
   // and startup crashes on the missing env_mode column.
-  it.effect("re-runs skipped migrations when an imported tracker outruns Chitauri's latest ID", () =>
-    Effect.gen(function* () {
-      const sql = yield* SqlClient.SqlClient;
+  it.effect(
+    "re-runs skipped migrations when an imported tracker outruns Chitauri's latest ID",
+    () =>
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
 
-      // Bring the schema to where T3 Code and Chitauri last agreed.
-      yield* runMigrations({ toMigrationInclusive: 16 });
+        // Bring the schema to where T3 Code and Chitauri last agreed.
+        yield* runMigrations({ toMigrationInclusive: 16 });
 
-      // Record foreign T3 Code migrations 17 through past Chitauri's latest ID.
-      const latestChitauriId = Math.max(...migrationEntries.map(([id]) => id));
-      for (let id = 17; id <= latestChitauriId + 3; id++) {
-        yield* sql`
+        // Record foreign T3 Code migrations 17 through past Chitauri's latest ID.
+        const latestChitauriId = Math.max(...migrationEntries.map(([id]) => id));
+        for (let id = 17; id <= latestChitauriId + 3; id++) {
+          yield* sql`
           INSERT INTO effect_sql_migrations (migration_id, name)
           VALUES (${id}, ${`T3CodeMigration${id}`})
         `;
-      }
+        }
 
-      // T3 Code's own later migrations added some of the same columns, so the
-      // re-run must tolerate columns that already exist.
-      yield* sql`ALTER TABLE projection_threads ADD COLUMN archived_at TEXT`;
+        // T3 Code's own later migrations added some of the same columns, so the
+        // re-run must tolerate columns that already exist.
+        yield* sql`ALTER TABLE projection_threads ADD COLUMN archived_at TEXT`;
 
-      const beforeColumns = yield* projectionThreadsColumnNames(sql);
-      assert.notInclude(beforeColumns, "env_mode");
+        const beforeColumns = yield* projectionThreadsColumnNames(sql);
+        assert.notInclude(beforeColumns, "env_mode");
 
-      const executed = yield* runMigrations();
-      assert.deepStrictEqual(
-        executed.map(([id]) => id),
-        migrationEntries.map(([id]) => id).filter((id) => id >= 17),
-      );
+        const executed = yield* runMigrations();
+        assert.deepStrictEqual(
+          executed.map(([id]) => id),
+          migrationEntries.map(([id]) => id).filter((id) => id >= 17),
+        );
 
-      const afterColumns = yield* projectionThreadsColumnNames(sql);
-      assert.include(afterColumns, "env_mode");
-      assert.include(afterColumns, "archived_at");
+        const afterColumns = yield* projectionThreadsColumnNames(sql);
+        assert.include(afterColumns, "env_mode");
+        assert.include(afterColumns, "archived_at");
 
-      // The tracker now mirrors the Chitauri lineage exactly; foreign rows are gone.
-      const rows = yield* trackerRows(sql);
-      assert.deepStrictEqual(
-        rows.map((row) => [row.migration_id, row.name]),
-        migrationEntries.map(([id, name]) => [id, name]),
-      );
-    }),
+        // The tracker now mirrors the Chitauri lineage exactly; foreign rows are gone.
+        const rows = yield* trackerRows(sql);
+        assert.deepStrictEqual(
+          rows.map((row) => [row.migration_id, row.name]),
+          migrationEntries.map(([id, name]) => [id, name]),
+        );
+      }),
   );
 
   it.effect("leaves a healthy tracker alone", () =>

@@ -340,7 +340,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           const currentCodex = currentStatuses.find((status) => status.provider === "codex");
           assert.strictEqual(currentCodex?.available, true);
           assert.strictEqual(currentCodex?.authStatus, "authenticated");
-          assert.notStrictEqual(currentCodex?.message, "Provider is disabled in Chitauri settings.");
+          assert.notStrictEqual(
+            currentCodex?.message,
+            "Provider is disabled in Chitauri settings.",
+          );
           assert.strictEqual(spawnCount, 0);
         }).pipe(Effect.provide(layer));
       }),

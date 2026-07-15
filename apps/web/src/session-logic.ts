@@ -685,9 +685,7 @@ function readTaskUsage(payload: Record<string, unknown>): {
   };
 }
 
-function isCollabAgentToolCallActivity(
-  activity: OrchestrationThreadActivity,
-): boolean {
+function isCollabAgentToolCallActivity(activity: OrchestrationThreadActivity): boolean {
   if (
     activity.kind !== "tool.started" &&
     activity.kind !== "tool.updated" &&
@@ -731,11 +729,7 @@ function collabSubagentToBackgroundStatus(
   ) {
     return "running";
   }
-  if (
-    normalized === "completed" ||
-    normalized === "done" ||
-    normalized === "success"
-  ) {
+  if (normalized === "completed" || normalized === "done" || normalized === "success") {
     return "completed";
   }
   if (normalized === "failed" || normalized === "error" || normalized === "errored") {

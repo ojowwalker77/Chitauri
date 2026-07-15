@@ -13,7 +13,6 @@ It brings chats, terminals, browser previews, diffs, branches, provider sessions
 - Review diffs, create branches, commit, push, and open PRs from the app.
 - Keep your workspace local. Chitauri stores chats, projects, and history on your machine and talks directly to the providers you choose.
 
-
 ## Privacy
 
 Chitauri runs as the workspace layer on your machine. There is no Chitauri cloud holding your repositories, chats, or project history.

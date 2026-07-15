@@ -49,9 +49,9 @@ describe("localServerAddressLabel", () => {
 
 describe("localServerPrimaryLabel", () => {
   it("prefers the live page title when one was resolved", () => {
-    expect(localServerPrimaryLabel(makeServer({ pageTitle: "Chitauri", displayName: "Vite" }))).toBe(
-      "Chitauri",
-    );
+    expect(
+      localServerPrimaryLabel(makeServer({ pageTitle: "Chitauri", displayName: "Vite" })),
+    ).toBe("Chitauri");
   });
 
   it("falls back to the detected display name when no page title is known", () => {

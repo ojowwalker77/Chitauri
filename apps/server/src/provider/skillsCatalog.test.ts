@@ -75,7 +75,11 @@ describe("discoverSkillsCatalog", () => {
   });
 
   it("aggregates skills from synara and provider home folders with origin scopes", async () => {
-    await writeSkill(path.join(chitauriBaseDir, "skills", "portable"), "portable", "Chitauri skill");
+    await writeSkill(
+      path.join(chitauriBaseDir, "skills", "portable"),
+      "portable",
+      "Chitauri skill",
+    );
     await writeSkill(path.join(homeDir, ".codex", "skills", "codex-only"), "codex-only", "Codex");
     await writeSkill(
       path.join(homeDir, ".claude", "skills", "claude-only"),
@@ -146,7 +150,11 @@ describe("discoverSkillsCatalog", () => {
   it("prefers the provider-native copy and falls back to Chitauri for that provider", async () => {
     await writeSkill(path.join(chitauriBaseDir, "skills", "shared"), "shared", "Chitauri copy");
     await writeSkill(path.join(homeDir, ".codex", "skills", "shared"), "shared", "Codex copy");
-    await writeSkill(path.join(chitauriBaseDir, "skills", "only-synara"), "only-synara", "Fallback");
+    await writeSkill(
+      path.join(chitauriBaseDir, "skills", "only-synara"),
+      "only-synara",
+      "Fallback",
+    );
 
     const codexView = await discoverSkillsCatalog({ homeDir, chitauriBaseDir, provider: "codex" });
     const codexShared = codexView.find((skill) => skill.name === "shared");

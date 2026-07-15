@@ -112,20 +112,13 @@ export function seedDesktopUserDataProfileFromLegacy(input: {
         force: false,
       });
     }
-    const legacyBrowserPartitionPath = Path.join(
-      input.targetPath,
-      "Partitions",
-      "synara-browser",
-    );
+    const legacyBrowserPartitionPath = Path.join(input.targetPath, "Partitions", "synara-browser");
     const chitauriBrowserPartitionPath = Path.join(
       input.targetPath,
       "Partitions",
       "chitauri-browser",
     );
-    if (
-      FS.existsSync(legacyBrowserPartitionPath) &&
-      !FS.existsSync(chitauriBrowserPartitionPath)
-    ) {
+    if (FS.existsSync(legacyBrowserPartitionPath) && !FS.existsSync(chitauriBrowserPartitionPath)) {
       FS.cpSync(legacyBrowserPartitionPath, chitauriBrowserPartitionPath, {
         recursive: true,
         errorOnExist: false,
