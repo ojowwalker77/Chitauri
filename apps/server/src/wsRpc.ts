@@ -52,6 +52,7 @@ import { ProviderSessionDirectory } from "./provider/Services/ProviderSessionDir
 import { listProviderUsage } from "./providerUsage";
 import { getProviderUsageSnapshot } from "./providerUsageSnapshot";
 import { ProfileStatsQuery } from "./profileStats";
+import { listResearchDocuments, readResearchDocument } from "./research/researchLibrary";
 import { ServerEnvironment } from "./environment/Services/ServerEnvironment";
 import { ServerLifecycleEvents } from "./serverLifecycleEvents";
 import { ServerRuntimeStartup } from "./serverRuntimeStartup";
@@ -753,6 +754,23 @@ export const makeWsRpcLayer = () =>
           ),
         [WS_METHODS.filesystemBrowse]: (input) =>
           rpcEffect(workspaceEntries.browse(input), "Failed to browse filesystem"),
+
+        [WS_METHODS.researchList]: () =>
+          rpcEffect(
+            Effect.promise(() => listResearchDocuments(config.baseDir)),
+            "Failed to list research documents",
+          ),
+        [WS_METHODS.researchRead]: (input) =>
+          rpcEffect(
+            Effect.promise(() => readResearchDocument(config.baseDir, input.id)).pipe(
+              Effect.flatMap((document) =>
+                document
+                  ? Effect.succeed({ document })
+                  : Effect.fail(new WsRpcError({ message: "Research document was not found." })),
+              ),
+            ),
+            "Failed to read research document",
+          ),
         [WS_METHODS.shellOpenInEditor]: (input) =>
           rpcEffect(open.openInEditor(input), "Failed to open editor"),
 

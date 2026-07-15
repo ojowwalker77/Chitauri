@@ -144,7 +144,12 @@ describe("discoverSkillsCatalog", () => {
       includeDuplicateOrigins: true,
     });
     expect(settingsCatalog.filter((skill) => skill.name === "reviewer")).toHaveLength(2);
-    expect(settingsCatalog.map((skill) => skill.scope).sort()).toEqual(["claude", "codex"]);
+    expect(
+      settingsCatalog
+        .filter((skill) => skill.name === "reviewer")
+        .map((skill) => skill.scope)
+        .sort(),
+    ).toEqual(["claude", "codex"]);
   });
 
   it("prefers the provider-native copy and falls back to Chitauri for that provider", async () => {
@@ -218,16 +223,16 @@ description: Direct Pi markdown skill
     await writeSkill(path.join(chitauriBaseDir, "skills", "first"), "first", "First skill");
 
     const initial = await discoverSkillsCatalog({ homeDir, chitauriBaseDir });
-    expect(initial.map((skill) => skill.name)).toEqual(["first"]);
+    expect(initial.map((skill) => skill.name).sort()).toEqual(["first", "research"]);
 
     // A skill added after the first scan is invisible to the cached entry...
     await writeSkill(path.join(chitauriBaseDir, "skills", "second"), "second", "Second skill");
     const cached = await discoverSkillsCatalog({ homeDir, chitauriBaseDir });
-    expect(cached.map((skill) => skill.name)).toEqual(["first"]);
+    expect(cached.map((skill) => skill.name).sort()).toEqual(["first", "research"]);
 
     // ...but forceReload bypasses the cache and refreshes it.
     const reloaded = await discoverSkillsCatalog({ homeDir, chitauriBaseDir, forceReload: true });
-    expect(reloaded.map((skill) => skill.name).sort()).toEqual(["first", "second"]);
+    expect(reloaded.map((skill) => skill.name).sort()).toEqual(["first", "research", "second"]);
   });
 
   it("includes project-level .synara skills when a cwd is provided", async () => {

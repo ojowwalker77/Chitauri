@@ -77,6 +77,12 @@ import {
 } from "./orchestration";
 import { ProviderCompactThreadInput } from "./provider";
 import {
+  ResearchListInput,
+  ResearchListResult,
+  ResearchReadInput,
+  ResearchReadResult,
+} from "./research";
+import {
   ProviderGetComposerCapabilitiesInput,
   ProviderComposerCapabilities,
   ProviderListAgentsInput,
@@ -354,6 +360,18 @@ export const WsSubscribeProjectDevServerEventsRpc = Rpc.make(
 export const WsFilesystemBrowseRpc = Rpc.make(WS_METHODS.filesystemBrowse, {
   payload: FilesystemBrowseInput,
   success: FilesystemBrowseResult,
+  error: WsRpcError,
+});
+
+export const WsResearchListRpc = Rpc.make(WS_METHODS.researchList, {
+  payload: ResearchListInput,
+  success: ResearchListResult,
+  error: WsRpcError,
+});
+
+export const WsResearchReadRpc = Rpc.make(WS_METHODS.researchRead, {
+  payload: ResearchReadInput,
+  success: ResearchReadResult,
   error: WsRpcError,
 });
 
@@ -835,6 +853,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsProjectsListDevServersRpc,
   WsSubscribeProjectDevServerEventsRpc,
   WsFilesystemBrowseRpc,
+  WsResearchListRpc,
+  WsResearchReadRpc,
   WsShellOpenInEditorRpc,
   WsGitGithubRepositoryRpc,
   WsGitStatusRpc,
