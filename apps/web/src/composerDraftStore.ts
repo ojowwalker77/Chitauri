@@ -2345,9 +2345,7 @@ function normalizePersistedDraftsByThreadId(
         ? draftCandidate.interactionMode
         : null;
     const orchestratorMode =
-      typeof draftCandidate.orchestratorMode === "boolean"
-        ? draftCandidate.orchestratorMode
-        : null;
+      typeof draftCandidate.orchestratorMode === "boolean" ? draftCandidate.orchestratorMode : null;
     const prompt = ensureInlineTerminalContextPlaceholders(
       promptCandidate,
       terminalContexts.length,
@@ -2698,9 +2696,7 @@ function partializeComposerDraftStoreState(
         : {}),
       ...(draft.runtimeMode ? { runtimeMode: draft.runtimeMode } : {}),
       ...(draft.interactionMode ? { interactionMode: draft.interactionMode } : {}),
-      ...(draft.orchestratorMode !== null
-        ? { orchestratorMode: draft.orchestratorMode }
-        : {}),
+      ...(draft.orchestratorMode !== null ? { orchestratorMode: draft.orchestratorMode } : {}),
     };
     persistedDraftsByThreadId[threadId as ThreadId] = persistedDraft;
   }
@@ -3066,9 +3062,7 @@ function toHydratedThreadDraft(
     runtimeMode: persistedDraft.runtimeMode ?? null,
     interactionMode: persistedDraft.interactionMode ?? null,
     orchestratorMode:
-      typeof persistedDraft.orchestratorMode === "boolean"
-        ? persistedDraft.orchestratorMode
-        : null,
+      typeof persistedDraft.orchestratorMode === "boolean" ? persistedDraft.orchestratorMode : null,
   };
 }
 

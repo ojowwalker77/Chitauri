@@ -1616,9 +1616,7 @@ export default function ChatView({
     provider: "codex",
     model: DEFAULT_MODEL_BY_PROVIDER.codex,
   };
-  const composerThreadMode = composerThreadModeFromOrchestratorFlag(
-    isComposerOrchestratorMode,
-  );
+  const composerThreadMode = composerThreadModeFromOrchestratorFlag(isComposerOrchestratorMode);
   const canCheckoutPullRequestIntoThread = isLocalDraftThread;
   const diffOpen = rawSearch.panel === "diff";
   const browserOpen = rawSearch.panel === "browser";

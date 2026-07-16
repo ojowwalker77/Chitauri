@@ -13,6 +13,6 @@ describe("ComposerThreadModePicker", () => {
     );
 
     expect(markup).toContain(label);
-    expect(markup).toContain("data-testid=\"composer-thread-mode-trigger\"");
+    expect(markup).toContain('data-testid="composer-thread-mode-trigger"');
   });
 });

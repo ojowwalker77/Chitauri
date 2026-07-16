@@ -28,7 +28,7 @@ it("accepts an atomic orchestrator routing policy patch", () => {
 
 it("rejects orchestrator seats that cannot receive the control-plane MCP", () => {
   assert.throws(() =>
-    Schema.decodeSync(ServerSettingsPatch)({
+    Schema.decodeUnknownSync(ServerSettingsPatch)({
       orchestrator: {
         ...DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
         seatModels: [{ provider: "cursor", model: "unsupported-seat" }],

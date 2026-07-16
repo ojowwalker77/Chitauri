@@ -3718,8 +3718,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           const createCommand = wsRequests
             .map(readDispatchedCommand)
             .find(
-              (command) =>
-                command?.type === "thread.create" && command.threadId === newThreadId,
+              (command) => command?.type === "thread.create" && command.threadId === newThreadId,
             );
           expect(createCommand).toMatchObject({
             orchestratorMode: true,
@@ -3761,9 +3760,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
           useComposerDraftStore.getState().draftsByThreadId[newThreadId]?.orchestratorMode,
         ).toBe(false);
       });
-      await expect.element(page.getByTestId("composer-thread-mode-trigger")).toHaveTextContent(
-        "Single Agent",
-      );
+      await expect
+        .element(page.getByTestId("composer-thread-mode-trigger"))
+        .toHaveTextContent("Single Agent");
 
       useComposerDraftStore.getState().setPrompt(newThreadId, "Handle this directly");
       const composerEditor = await waitForComposerEditor();
@@ -3779,8 +3778,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           const createCommand = wsRequests
             .map(readDispatchedCommand)
             .find(
-              (command) =>
-                command?.type === "thread.create" && command.threadId === newThreadId,
+              (command) => command?.type === "thread.create" && command.threadId === newThreadId,
             );
           expect(createCommand).toMatchObject({
             orchestratorMode: false,
