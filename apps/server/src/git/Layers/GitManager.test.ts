@@ -2452,7 +2452,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     }),
   );
 
-  it.effect("rejects worktree prep when the PR head branch is checked out in the main repo", () =>
+  it.effect("reuses the main repo when it already has the PR head branch checked out", () =>
     Effect.gen(function* () {
       const repoDir = yield* makeTempDir("t3code-git-manager-");
       yield* initRepo(repoDir);
@@ -2471,16 +2471,17 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         },
       });
 
-      const errorMessage = yield* preparePullRequestThread(manager, {
+      const result = yield* preparePullRequestThread(manager, {
         cwd: repoDir,
         reference: "79",
         mode: "worktree",
-      }).pipe(
-        Effect.flip,
-        Effect.map((error) => error.message),
-      );
+      });
 
-      expect(errorMessage).toContain("already checked out in the main repo");
+      expect(result.branch).toBe("feature/pr-root-only");
+      expect(result.worktreePath).toBeNull();
+      expect((yield* runGit(repoDir, ["branch", "--show-current"])).stdout.trim()).toBe(
+        "feature/pr-root-only",
+      );
     }),
   );
 
