@@ -39,9 +39,9 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
   --diffs-font-family: var(--font-chat-code-family);
   --diffs-header-font-family: var(--font-ui-family);
   /* Honor the user-chosen chat code font size from settings instead of the library default (13px). */
-  --diffs-font-size: var(--app-font-size-chat-code, 11px);
+  --diffs-font-size: var(--app-font-size-chat-code,13px);
   font-family: var(--font-chat-code-family) !important;
-  font-size: var(--app-font-size-chat-code, 11px) !important;
+  font-size: var(--app-font-size-chat-code,13px) !important;
 }
 
 [data-diffs-header],
@@ -49,7 +49,7 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
 [data-file],
 [data-error-wrapper],
 [data-virtualizer-buffer] {
-  --diffs-font-size: var(--app-font-size-chat-code, 11px) !important;
+  --diffs-font-size: var(--app-font-size-chat-code,13px) !important;
   --diffs-bg: color-mix(in srgb, var(--card) 90%, var(--background)) !important;
   --diffs-light-bg: color-mix(in srgb, var(--card) 90%, var(--background)) !important;
   --diffs-dark-bg: color-mix(in srgb, var(--card) 90%, var(--background)) !important;
@@ -85,12 +85,12 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
   /* Re-assert the code font inside diff hunks because these nodes live in shadow-rooted markup. */
   --diffs-font-family: var(--font-chat-code-family) !important;
   font-family: var(--font-chat-code-family) !important;
-  font-size: var(--app-font-size-chat-code, 11px) !important;
+  font-size: var(--app-font-size-chat-code,13px) !important;
 }
 
 [data-file-info] {
   font-family: var(--font-ui-family) !important;
-  font-size: var(--app-font-size-ui, 12px) !important;
+  font-size: var(--app-font-size-ui,14px) !important;
   background-color: color-mix(in srgb, var(--card) 94%, var(--foreground)) !important;
   border-block-color: var(--border) !important;
   color: var(--foreground) !important;
@@ -99,7 +99,7 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
 [data-diffs-header] {
   --diffs-header-font-family: var(--font-ui-family) !important;
   font-family: var(--font-ui-family) !important;
-  font-size: var(--app-font-size-ui, 12px) !important;
+  font-size: var(--app-font-size-ui,14px) !important;
   position: sticky !important;
   top: 0;
   z-index: 4;
@@ -128,7 +128,7 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
 [data-title],
 [data-prev-name] {
   font-family: var(--font-ui-family) !important;
-  font-size: var(--app-font-size-ui, 12px) !important;
+  font-size: var(--app-font-size-ui,14px) !important;
   font-weight: 400 !important;
   cursor: pointer;
   color: var(--foreground) !important;

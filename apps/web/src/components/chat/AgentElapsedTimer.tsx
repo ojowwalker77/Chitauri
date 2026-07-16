@@ -18,7 +18,7 @@ export const AgentElapsedTimer = memo(function AgentElapsedTimer({
   }
 
   return (
-    <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground/45">
+    <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground/45">
       {formatClockDuration(elapsedMs)}
     </span>
   );

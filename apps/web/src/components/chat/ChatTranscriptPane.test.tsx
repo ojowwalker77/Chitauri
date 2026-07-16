@@ -11,6 +11,7 @@ function renderTranscriptPaneMarkup(
   return renderToStaticMarkup(
     <ChatTranscriptPane
       activeThreadId="thread-1"
+      assistantProvider="codex"
       activeTurnId={null}
       activeTurnInProgress={false}
       activeTurnStartedAt={null}

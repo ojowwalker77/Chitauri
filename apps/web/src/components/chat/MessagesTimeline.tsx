@@ -5,6 +5,7 @@
 
 import {
   type MessageId,
+  type ProviderKind,
   type ProviderMentionReference,
   ThreadId,
   type ThreadMarker,
@@ -41,6 +42,7 @@ import {
 } from "../../types";
 import ChatMarkdown from "../ChatMarkdown";
 import { InlineLinkChip } from "../InlineLinkChip";
+import { ProviderIcon } from "../ProviderIcon";
 import {
   ArrowUpCircleIcon,
   BotIcon,
@@ -322,7 +324,7 @@ function WorktreeSetupStepGlyph({ status }: { status: WorktreeSetupStep["status"
 // status chip rather than a full-width block.
 function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> }) {
   return (
-    <div className="w-fit max-w-full rounded-xl border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-primary)] px-3.5 py-3 font-system-ui shadow-xs">
+    <div className="w-fit max-w-full rounded-xl border border-panel-border bg-panel px-3.5 py-3 font-system-ui">
       <div className="flex items-center gap-2">
         <WorktreeIcon className="size-3.5 shrink-0 text-[var(--color-text-foreground-tertiary)]" />
         <span className="shimmer text-[13px] font-medium text-[var(--color-text-foreground-secondary)]">
@@ -370,6 +372,7 @@ function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> 
 }
 
 interface MessagesTimelineProps {
+  assistantProvider?: ProviderKind;
   hasMessages: boolean;
   isWorking: boolean;
   activeTurnInProgress: boolean;
@@ -435,6 +438,7 @@ interface MessagesTimelineProps {
 }
 
 export const MessagesTimeline = memo(function MessagesTimeline({
+  assistantProvider,
   hasMessages,
   isWorking,
   activeTurnInProgress,
@@ -945,11 +949,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       className={cn(
         CHAT_COLUMN_FRAME_CLASS_NAME,
         "px-1 transition-colors duration-500",
-        row.kind === "work" ||
-          row.kind === "working-header" ||
-          (row.kind === "message" && row.message.role === "assistant")
-          ? "pb-2"
-          : "pb-4",
+        row.kind === "work" || row.kind === "working-header" ? "pb-2" : "pb-6",
         row.kind === "message" && row.message.role === "assistant" ? "group/assistant" : null,
         row.kind === "message" && row.message.id === highlightedMessageId
           ? "rounded-xl bg-[var(--color-background-elevated-secondary)]"
@@ -1105,7 +1105,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               <div
                 className={cn(
                   "group flex flex-col items-end gap-px",
-                  isEditingThisMessage ? "w-full max-w-full" : "max-w-[80%]",
+                  isEditingThisMessage ? "w-full max-w-full" : "max-w-[78%]",
                 )}
               >
                 {/* Keep user-message chrome outside the bubble so the message reads as one simple block. */}
@@ -1393,11 +1393,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                   />
                 ) : null}
                 {narrationItems.length > 0 ? (
-                  <section
-                    className="border-t border-[color:color-mix(in_srgb,var(--foreground)_6%,transparent)] px-3 py-2.5"
-                    data-ledger-section="notes"
-                  >
-                    <div className="mb-1.5 font-chat-code text-[8px] font-medium tracking-[0.08em] text-muted-foreground/38 uppercase">
+                  <section className="pt-1.5" data-ledger-section="notes">
+                    <div className="mb-1.5 font-system-ui text-[10px] font-medium text-muted-foreground/48">
                       Agent notes · {narrationItems.length}
                     </div>
                     <div className="space-y-2 text-muted-foreground/72">
@@ -1484,7 +1481,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     <CollapsibleTrigger
                       // ChatView's click anchor preserves this trigger's screen position
                       // while the disclosure height animates, so opening it should not tail-scroll.
-                      className="block w-full text-left transition-[background-color,scale] duration-150 ease-out hover:bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)] active:scale-[0.99]"
+                      className="block w-full text-left transition-colors duration-150 ease-out hover:bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)]"
                     >
                       <WorkLedgerHeaderContent
                         status="settled"
@@ -1510,6 +1507,19 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 </WorkLedgerFrame>
               )}
               <div className="group min-w-0 py-0.5">
+                <div
+                  className="mb-2.5 flex items-center gap-2 font-system-ui text-[11px] text-muted-foreground"
+                  data-assistant-provider={assistantProvider ?? "unknown"}
+                >
+                  <span aria-hidden="true" className="flex size-4 items-center justify-center">
+                    <ProviderIcon
+                      provider={assistantProvider}
+                      fallback={<BotIcon className="size-3.5 text-muted-foreground" />}
+                      className="size-3.5"
+                    />
+                  </span>
+                  <span>{row.message.streaming ? "Working" : "Agent"}</span>
+                </div>
                 {hasActiveLedger ? (
                   <WorkLedgerFrame className="mb-3">
                     <WorkLedgerHeaderContent
@@ -2269,7 +2279,7 @@ const UserImageAttachmentThumbnail = memo(function UserImageAttachmentThumbnail(
   return (
     <button
       type="button"
-      className="flex size-15 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-background/82 text-left shadow-[0_1px_0_rgba(255,255,255,0.2)_inset] transition-colors hover:bg-background/94"
+      className="flex size-15 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-panel-border bg-background/82 text-left transition-colors hover:bg-background/94"
       aria-label={`Preview ${props.image.name}`}
       title={props.image.name}
       onClick={() => {
@@ -2910,10 +2920,7 @@ function ToolRowTooltip(props: { content: ReactNode; children: ReactElement }) {
 function WorkLedgerFrame(props: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={cn(
-        "overflow-hidden rounded-[0.7rem] bg-[color-mix(in_srgb,var(--color-background-elevated-secondary)_48%,transparent)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--foreground)_8%,transparent),0_2px_7px_-5px_color-mix(in_srgb,var(--foreground)_18%,transparent)]",
-        props.className,
-      )}
+      className={cn("border-l border-foreground/9 pl-3", props.className)}
       data-work-ledger="true"
     >
       {props.children}
@@ -2941,7 +2948,7 @@ function WorkLedgerHeaderContent(props: {
   ].filter((part): part is string => Boolean(part));
 
   return (
-    <span className="grid min-h-10 w-full grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-2 px-2.5 text-left">
+    <span className="grid min-h-10 w-full grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-2 text-left">
       <span
         className={cn(
           "flex size-4 items-center justify-center",
@@ -2962,7 +2969,7 @@ function WorkLedgerHeaderContent(props: {
       </span>
       <span className="flex min-w-0 items-center gap-1.5">
         {summaryParts.length > 0 ? (
-          <span className="font-chat-code truncate text-[9px] tabular-nums text-muted-foreground/48">
+          <span className="font-system-ui truncate text-[10px] tabular-nums text-muted-foreground/48">
             {summaryParts.join(" · ")}
           </span>
         ) : null}
@@ -2984,10 +2991,10 @@ function WorkLedgerSections(props: {
   }
 
   return (
-    <div className="border-t border-[color:color-mix(in_srgb,var(--foreground)_6%,transparent)] py-1.5">
+    <div className="space-y-1 pb-1.5">
       {sections.map((section) => (
         <section key={section.kind} className="py-1" data-ledger-section={section.kind}>
-          <div className="flex items-center gap-2 px-2.5 pb-0.5 font-chat-code text-[8px] font-medium tracking-[0.08em] text-muted-foreground/38 uppercase">
+          <div className="flex items-center gap-2 pb-0.5 font-system-ui text-[10px] font-medium text-muted-foreground/45">
             <span>{section.label}</span>
             <span className="tabular-nums">{section.entries.length}</span>
           </div>
@@ -2995,7 +3002,7 @@ function WorkLedgerSections(props: {
             {section.entries.map((entry) => (
               <div
                 key={entry.entry.id}
-                className="grid min-w-0 grid-cols-[1.55rem_minmax(0,1fr)] items-start px-2.5"
+                className="grid min-w-0 grid-cols-[1.55rem_minmax(0,1fr)] items-start"
                 data-ledger-sequence={entry.sequence}
                 data-work-ledger-entry-id={entry.entry.id}
               >
@@ -3023,18 +3030,15 @@ function WorkLedgerEditedFilesSection(props: {
   }
 
   return (
-    <section
-      className="border-t border-[color:color-mix(in_srgb,var(--foreground)_6%,transparent)] py-2"
-      data-ledger-section="modify"
-    >
-      <div className="flex items-center gap-2 px-2.5 pb-0.5 font-chat-code text-[8px] font-medium tracking-[0.08em] text-muted-foreground/38 uppercase">
+    <section className="py-1.5" data-ledger-section="modify">
+      <div className="flex items-center gap-2 pb-0.5 font-system-ui text-[10px] font-medium text-muted-foreground/45">
         <span>Modify</span>
         <span className="tabular-nums">{props.files.length}</span>
       </div>
       {props.files.map((file, index) => (
         <div
           key={file.path}
-          className="grid min-w-0 grid-cols-[1.55rem_minmax(0,1fr)] items-center px-2.5"
+          className="grid min-w-0 grid-cols-[1.55rem_minmax(0,1fr)] items-center"
           data-ledger-sequence={props.startSequence + index}
         >
           <span className="font-chat-code text-[9px] leading-5 tabular-nums text-muted-foreground/28">
@@ -3071,7 +3075,7 @@ function WorkLedgerOverflowToggle(props: {
     return null;
   }
   return (
-    <div className="border-t border-[color:color-mix(in_srgb,var(--foreground)_6%,transparent)] px-2.5">
+    <div>
       <button
         type="button"
         className="min-h-10 font-system-ui text-muted-foreground/52 transition-[color,scale] duration-150 ease-out hover:text-foreground/75 active:scale-[0.96]"

@@ -143,11 +143,11 @@ function ChecksMenuRow({
     <MenuRow
       url={check.url}
       onOpenUrl={onOpenUrl}
-      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-2 py-1 text-[length:var(--app-font-size-ui,12px)]"
+      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-2 py-1 text-[length:var(--app-font-size-ui,14px)]"
     >
       <CheckStatusIcon status={check.status} />
       <span className="min-w-0 truncate text-[var(--color-text-foreground)]">{check.name}</span>
-      <span className="shrink-0 text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground">
+      <span className="shrink-0 text-[length:var(--app-font-size-ui-xs,12px)] text-muted-foreground">
         {PULL_REQUEST_CHECK_STATUS_LABELS[check.status]}
       </span>
     </MenuRow>
@@ -170,15 +170,15 @@ function CommentsMenuRow({
       onOpenUrl={onOpenUrl}
       className="flex flex-col items-stretch gap-0.5 px-2 py-1.5"
     >
-      <span className="line-clamp-2 text-[length:var(--app-font-size-ui,12px)] text-[var(--color-text-foreground)]">
+      <span className="line-clamp-2 text-[length:var(--app-font-size-ui,14px)] text-[var(--color-text-foreground)]">
         {display.title}
       </span>
       {display.snippet ? (
-        <span className="line-clamp-2 text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground">
+        <span className="line-clamp-2 text-[length:var(--app-font-size-ui-xs,12px)] text-muted-foreground">
           {display.snippet}
         </span>
       ) : null}
-      <span className="flex items-center justify-between gap-2 text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground/70">
+      <span className="flex items-center justify-between gap-2 text-[length:var(--app-font-size-ui-xs,12px)] text-muted-foreground/70">
         <span className="min-w-0 truncate">{comment.path ?? comment.author ?? ""}</span>
         {comment.createdAt ? (
           <span className="shrink-0 tabular-nums">{formatRelativeTime(comment.createdAt)}</span>
@@ -190,7 +190,7 @@ function CommentsMenuRow({
 
 function MenuPlaceholder({ text }: { text: string }) {
   return (
-    <div className="px-3 py-3 text-center text-[length:var(--app-font-size-ui,12px)] text-muted-foreground">
+    <div className="px-3 py-3 text-center text-[length:var(--app-font-size-ui,14px)] text-muted-foreground">
       {text}
     </div>
   );
@@ -287,7 +287,7 @@ export function EnvironmentPullRequestSection({
           <span className="flex min-w-0 items-center gap-1.5">
             <span className="truncate">{`#${displayPr.number} ${displayPr.title}`}</span>
             {displayPr.isDraft ? (
-              <span className="shrink-0 rounded-full bg-[var(--color-background-elevated-secondary)] px-1.5 py-px text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground">
+              <span className="shrink-0 rounded-full bg-[var(--color-background-elevated-secondary)] px-1.5 py-px text-[length:var(--app-font-size-ui-xs,12px)] text-muted-foreground">
                 Draft
               </span>
             ) : null}
@@ -342,7 +342,7 @@ export function EnvironmentPullRequestSection({
               type="button"
               onClick={handleResolveConflicts}
               title="Drafts a prompt in the composer asking the agent to resolve the merge conflicts — review it, then send"
-              className="shrink-0 cursor-pointer rounded-md px-2 py-1 text-[length:var(--app-font-size-ui,12px)] text-[var(--color-text-foreground)] transition-colors hover:bg-[var(--color-background-elevated-secondary)]"
+              className="shrink-0 cursor-pointer rounded-md px-2 py-1 text-[length:var(--app-font-size-ui,14px)] text-[var(--color-text-foreground)] transition-colors hover:bg-[var(--color-background-elevated-secondary)]"
             >
               Fix
             </button>
@@ -502,10 +502,10 @@ export function EnvironmentPullRequestSection({
                         >
                           <BotIcon className="mt-px size-3.5 shrink-0" aria-hidden />
                           <span className="flex min-w-0 flex-col gap-0.5">
-                            <span className="text-[length:var(--app-font-size-ui,12px)] text-[var(--color-text-foreground)]">
+                            <span className="text-[length:var(--app-font-size-ui,14px)] text-[var(--color-text-foreground)]">
                               Fix with agent
                             </span>
-                            <span className="text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground">
+                            <span className="text-[length:var(--app-font-size-ui-xs,12px)] text-muted-foreground">
                               Drafts a prompt with these comments in the composer — review it, then
                               send.
                             </span>
@@ -522,7 +522,7 @@ export function EnvironmentPullRequestSection({
                 type="button"
                 onClick={handleFixComments}
                 title="Drafts a prompt in the composer asking the agent to address these review comments — review it, then send"
-                className="shrink-0 cursor-pointer rounded-md px-2 py-1 text-[length:var(--app-font-size-ui,12px)] text-[var(--color-text-foreground)] transition-colors hover:bg-[var(--color-background-elevated-secondary)]"
+                className="shrink-0 cursor-pointer rounded-md px-2 py-1 text-[length:var(--app-font-size-ui,14px)] text-[var(--color-text-foreground)] transition-colors hover:bg-[var(--color-background-elevated-secondary)]"
               >
                 Fix
               </button>

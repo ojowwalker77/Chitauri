@@ -22,7 +22,7 @@ export function showConfirmDialogFallback(message: string): Promise<boolean> {
     // Popup
     const popup = document.createElement("div");
     popup.className =
-      "flex w-full max-w-[22rem] flex-col rounded-xl border border-[color:var(--color-border-light)] bg-[var(--composer-surface)] text-[var(--color-text-foreground)] shadow-xl";
+      "flex w-full max-w-[22rem] flex-col rounded-[14px] border border-panel-border bg-panel text-[var(--color-text-foreground)] shadow-[0_16px_44px_rgba(0,0,0,0.5)]";
     popup.style.cssText = "animation:scaleIn .15s ease-out";
 
     // Header

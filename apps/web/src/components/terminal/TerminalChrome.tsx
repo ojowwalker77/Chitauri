@@ -107,7 +107,7 @@ export function TerminalWorkspaceTabBar(props: {
               }
               trailing={
                 terminalGroup.terminalIds.length > 1 ? (
-                  <span className="shrink-0 text-[10px] text-current/55">
+                  <span className="shrink-0 text-[11px] text-current/55">
                     {terminalGroup.terminalIds.length}
                   </span>
                 ) : null
@@ -157,7 +157,7 @@ export function TerminalSidebar(props: {
               {props.showGroupHeaders && (
                 <button
                   type="button"
-                  className={`flex w-full items-center px-1 py-0.5 text-[10px] ${
+                  className={`flex w-full items-center px-1 py-0.5 text-[11px] ${
                     isGroupActive
                       ? "bg-[var(--sidebar-accent-active)] text-foreground"
                       : "text-muted-foreground hover:bg-[var(--sidebar-accent)] hover:text-foreground"
@@ -190,7 +190,7 @@ export function TerminalSidebar(props: {
                       }`}
                     >
                       {props.showGroupHeaders && (
-                        <span className="text-[10px] text-muted-foreground/80">└</span>
+                        <span className="text-[11px] text-muted-foreground/80">└</span>
                       )}
                       <button
                         type="button"

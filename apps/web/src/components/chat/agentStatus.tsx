@@ -12,14 +12,14 @@ import {
 } from "../../lib/subagentPresentation";
 import type { OrchestrationSummary } from "./orchestrationSummary.logic";
 
-// Status palette shared by the per-agent pill and the census chips: running=sky, completed=emerald,
-// failed=rose, stopped=amber, queued=violet, idle=muted. Identical strings the transcript used.
+// Status palette shared by the per-agent pill and census chips. Coral is live
+// agent identity, green is health, gold is attention, and queued/idle stay quiet.
 export const STATUS_KIND_CLASSES: Record<SubagentStatusKind, string> = {
-  running: "border-sky-500/18 bg-sky-500/8 text-sky-200/90",
-  completed: "border-emerald-500/18 bg-emerald-500/8 text-emerald-200/90",
+  running: "border-claude/18 bg-claude/8 text-claude",
+  completed: "border-success/18 bg-success/8 text-success",
   failed: "border-rose-500/18 bg-rose-500/8 text-rose-200/90",
-  stopped: "border-amber-500/18 bg-amber-500/8 text-amber-200/90",
-  queued: "border-violet-500/18 bg-violet-500/8 text-violet-200/90",
+  stopped: "border-gold/18 bg-gold/8 text-gold",
+  queued: "border-border bg-hover text-muted-foreground",
   idle: "border-border/45 bg-background/85 text-muted-foreground/68",
 };
 
@@ -71,7 +71,7 @@ export function OrchestrationCensusChips({
         <span
           key={chip.kind}
           className={cn(
-            "rounded-full border px-1.5 py-0.5 text-[9px] font-medium tabular-nums tracking-[0.04em]",
+            "rounded-full border px-1.5 py-0.5 text-[11px] font-medium tabular-nums tracking-[0.04em]",
             STATUS_KIND_CLASSES[chip.kind],
           )}
         >
@@ -82,12 +82,12 @@ export function OrchestrationCensusChips({
   );
 }
 
-/** Slim emerald completion meter (completed / total). */
+/** Slim success completion meter (completed / total). */
 export function OrchestrationCensusMeter({ ratio }: { ratio: number }) {
   return (
     <div className="h-1 overflow-hidden rounded-full bg-muted-foreground/12">
       <div
-        className="h-full rounded-full bg-emerald-400/55 transition-[width] duration-220 ease-out motion-reduce:transition-none"
+        className="h-full rounded-full bg-success/55 transition-[width] duration-220 ease-out motion-reduce:transition-none"
         style={{ width: `${Math.round(ratio * 100)}%` }}
       />
     </div>

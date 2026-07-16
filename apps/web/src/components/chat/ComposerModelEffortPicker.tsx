@@ -255,7 +255,7 @@ export const ComposerModelEffortPicker = memo(function ComposerModelEffortPicker
                 <span>Change model</span>
                 <ShortcutKbd
                   shortcutLabel={props.shortcutLabel}
-                  className="h-4 min-w-4 px-1 text-[length:var(--app-font-size-ui-2xs,9px)] text-muted-foreground"
+                  className="h-4 min-w-4 px-1 text-[length:var(--app-font-size-ui-2xs,11px)] text-muted-foreground"
                 />
               </span>
             </TooltipPopup>
