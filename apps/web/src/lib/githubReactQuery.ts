@@ -37,9 +37,7 @@ export function githubWorkListQueryOptions(input: GitHubWorkListInput) {
   });
 }
 
-export function githubWorkItemDetailQueryOptions(
-  input: GitHubWorkItemDetailInput | null,
-) {
+export function githubWorkItemDetailQueryOptions(input: GitHubWorkItemDetailInput | null) {
   return queryOptions({
     queryKey: input ? githubQueryKeys.detail(input) : ["github-workbench", "detail", null],
     queryFn: () => {

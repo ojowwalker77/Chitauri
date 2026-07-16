@@ -107,10 +107,8 @@ import {
 } from "./browserIpc";
 import {
   BrowserUsePipeServer,
-  DPCODE_BROWSER_USE_PIPE_ENV,
-  SYNARA_BROWSER_USE_PIPE_ENV,
-  SYNARA_BROWSER_USE_PIPE_PATH,
-  T3CODE_BROWSER_USE_PIPE_ENV,
+  CHITAURI_BROWSER_USE_PIPE_ENV,
+  CHITAURI_BROWSER_USE_PIPE_PATH,
 } from "./browserUsePipeServer";
 import {
   DESKTOP_WS_URL_CHANNEL,
@@ -151,12 +149,7 @@ const UPDATE_DOWNLOAD_CHANNEL = "desktop:update-download";
 const UPDATE_INSTALL_CHANNEL = "desktop:update-install";
 const NOTIFICATIONS_IS_SUPPORTED_CHANNEL = "desktop:notifications-is-supported";
 const NOTIFICATIONS_SHOW_CHANNEL = "desktop:notifications-show";
-const BASE_DIR =
-  process.env.CHITAURI_HOME?.trim() ||
-  process.env.SYNARA_HOME?.trim() ||
-  process.env.DPCODE_HOME?.trim() ||
-  process.env.T3CODE_HOME?.trim() ||
-  Path.join(OS.homedir(), ".chitauri");
+const BASE_DIR = process.env.CHITAURI_HOME?.trim() || Path.join(OS.homedir(), ".chitauri");
 const STATE_DIR = Path.join(BASE_DIR, "userdata");
 const ROOT_DIR = Path.resolve(__dirname, "../../..");
 const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
@@ -187,22 +180,15 @@ const AUTO_UPDATE_STALLED_DOWNLOAD_CANCELLATION_SUPPRESSION_MS = 2 * 60 * 1000;
 const AUTO_UPDATE_INSTALL_WATCHDOG_MS = 15 * 1000;
 const BACKEND_FORCE_KILL_DELAY_MS = 8_000;
 const BACKEND_SHUTDOWN_TIMEOUT_MS = 10_000;
-const BACKEND_MAX_OLD_SPACE_ENV_KEYS = [
-  "SYNARA_BACKEND_MAX_OLD_SPACE_MB",
-  "T3CODE_BACKEND_MAX_OLD_SPACE_MB",
-  "DPCODE_BACKEND_MAX_OLD_SPACE_MB",
-] as const;
+const BACKEND_MAX_OLD_SPACE_ENV_KEY = "CHITAURI_BACKEND_MAX_OLD_SPACE_MB";
 const DESKTOP_UPDATE_CHANNEL = "latest";
 const DESKTOP_UPDATE_ALLOW_PRERELEASE = false;
 const BROWSER_PERF_SAMPLE_INTERVAL_MS = 5_000;
 const DESKTOP_MENU_ZOOM_FACTOR_STEP = 1.1;
 const DESKTOP_MENU_MIN_ZOOM_FACTOR = 0.25;
 const DESKTOP_MENU_MAX_ZOOM_FACTOR = 5;
-const SYNARA_BROWSER_LABEL = "Chitauri browser";
-const browserPerfLoggingEnabled =
-  process.env.SYNARA_BROWSER_PERF === "1" ||
-  process.env.DPCODE_BROWSER_PERF === "1" ||
-  process.env.T3CODE_BROWSER_PERF === "1";
+const CHITAURI_BROWSER_LABEL = "Chitauri browser";
+const browserPerfLoggingEnabled = process.env.CHITAURI_BROWSER_PERF === "1";
 
 type DesktopUpdateErrorContext = DesktopUpdateState["errorContext"];
 
@@ -262,7 +248,7 @@ function startBrowserPerformanceLogging(): void {
         name: metric.name,
       }));
 
-    console.info(`[${SYNARA_BROWSER_LABEL} perf]`, {
+    console.info(`[${CHITAURI_BROWSER_LABEL} perf]`, {
       ...snapshot.counters,
       trackedProcessIds: snapshot.trackedProcessIds,
       processes: processMetrics,
@@ -442,9 +428,7 @@ async function reserveBackendEndpoint(reason: string): Promise<void> {
   );
   backendHttpUrl = `http://127.0.0.1:${backendPort}`;
   backendWsUrl = `ws://127.0.0.1:${backendPort}/?token=${encodeURIComponent(backendAuthToken)}`;
-  process.env.SYNARA_DESKTOP_WS_URL = backendWsUrl;
-  process.env.DPCODE_DESKTOP_WS_URL = backendWsUrl;
-  process.env.T3CODE_DESKTOP_WS_URL = backendWsUrl;
+  process.env.CHITAURI_DESKTOP_WS_URL = backendWsUrl;
   writeDesktopLogHeader(`${reason} resolved backend endpoint port=${backendPort}`);
 }
 
@@ -765,7 +749,7 @@ function resolveAboutCommitHash(): string | null {
     return aboutCommitHashCache;
   }
 
-  const envCommitHash = normalizeCommitHash(process.env.T3CODE_COMMIT_HASH);
+  const envCommitHash = normalizeCommitHash(process.env.CHITAURI_COMMIT_HASH);
   if (envCommitHash) {
     aboutCommitHashCache = envCommitHash;
     return aboutCommitHashCache;
@@ -953,7 +937,7 @@ function adjustWindowZoomFromMenu(multiplier: number): void {
 // A configured app-update.yml (or the mock-updates flag) is the prerequisite for any
 // auto-update activity; centralized so the menu and the enable check stay in lockstep.
 function hasConfiguredUpdateFeed(): boolean {
-  return readAppUpdateYml() !== null || Boolean(process.env.T3CODE_DESKTOP_MOCK_UPDATES);
+  return readAppUpdateYml() !== null || Boolean(process.env.CHITAURI_DESKTOP_MOCK_UPDATES);
 }
 
 function resolveAutoUpdateDisabledReason(): string | null {
@@ -962,7 +946,7 @@ function resolveAutoUpdateDisabledReason(): string | null {
     isPackaged: app.isPackaged,
     platform: process.platform,
     appImage: process.env.APPIMAGE,
-    disabledByEnv: process.env.T3CODE_DISABLE_AUTO_UPDATE === "1",
+    disabledByEnv: process.env.CHITAURI_DISABLE_AUTO_UPDATE === "1",
     hasUpdateFeedConfig: hasConfiguredUpdateFeed(),
   });
 }
@@ -1937,10 +1921,9 @@ function configureAutoUpdater(): void {
 }
 // Builds process-local Node args so provider/tool children do not inherit Chitauri's heap guard.
 function backendNodeArgs(): string[] {
+  const rawMaxOldSpaceMb = process.env[BACKEND_MAX_OLD_SPACE_ENV_KEY];
   const configuredMaxOldSpaceMb =
-    BACKEND_MAX_OLD_SPACE_ENV_KEYS.map((key) => process.env[key]).find(
-      (value) => value !== undefined && value.trim().length > 0,
-    ) ?? null;
+    rawMaxOldSpaceMb !== undefined && rawMaxOldSpaceMb.trim().length > 0 ? rawMaxOldSpaceMb : null;
   return resolveBackendNodeArgs({
     configuredMaxOldSpaceMb,
     existingNodeOptions: process.env.NODE_OPTIONS,
@@ -1951,21 +1934,12 @@ function backendNodeArgs(): string[] {
 function backendEnv(): NodeJS.ProcessEnv {
   return {
     ...process.env,
-    DPCODE_MODE: "desktop",
-    DPCODE_NO_BROWSER: "1",
-    DPCODE_PORT: String(backendPort),
-    DPCODE_HOME: BASE_DIR,
-    DPCODE_AUTH_TOKEN: backendAuthToken,
-    [DPCODE_BROWSER_USE_PIPE_ENV]: SYNARA_BROWSER_USE_PIPE_PATH,
-    [SYNARA_BROWSER_USE_PIPE_ENV]: SYNARA_BROWSER_USE_PIPE_PATH,
-    T3CODE_MODE: "desktop",
-    T3CODE_NO_BROWSER: "1",
-    T3CODE_PORT: String(backendPort),
-    T3CODE_HOME: BASE_DIR,
-    T3CODE_AUTH_TOKEN: backendAuthToken,
+    CHITAURI_MODE: "desktop",
+    CHITAURI_NO_BROWSER: "1",
+    CHITAURI_PORT: String(backendPort),
     CHITAURI_HOME: BASE_DIR,
-    SYNARA_HOME: BASE_DIR,
-    [T3CODE_BROWSER_USE_PIPE_ENV]: SYNARA_BROWSER_USE_PIPE_PATH,
+    CHITAURI_AUTH_TOKEN: backendAuthToken,
+    [CHITAURI_BROWSER_USE_PIPE_ENV]: CHITAURI_BROWSER_USE_PIPE_PATH,
   };
 }
 

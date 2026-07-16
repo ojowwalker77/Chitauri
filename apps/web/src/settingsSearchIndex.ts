@@ -211,6 +211,13 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 
   // ── Behavior ──────────────────────────────────────────────────────────────────
   {
+    id: "behavior:task-list-location",
+    section: "behavior",
+    title: "Task list location",
+    keywords:
+      "Choose where active tasks open by default. right sidebar vertical above composer inline plan steps",
+  },
+  {
     id: "behavior:assistant-output",
     section: "behavior",
     title: "Assistant output",
@@ -281,6 +288,43 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     section: "models",
     title: "Saved model slugs",
     keywords: "Add custom model slugs for supported providers. custom model",
+  },
+
+  // ── Orchestrator ──────────────────────────────────────────────────────────────
+  {
+    id: "orchestrator:seat-models",
+    section: "orchestrator",
+    title: "Seat models",
+    keywords:
+      "Provider and model pairs allowed to hold an orchestrator seat. orchestrator mode delegation control plane allowed models",
+  },
+  {
+    id: "orchestrator:bulk-lane",
+    section: "orchestrator",
+    title: "Bulk lane",
+    keywords:
+      "Provider, model, effort, and manual escalation order for new delegated work. orchestrator routing delegate heavy implementation",
+  },
+  {
+    id: "orchestrator:ui-lane",
+    section: "orchestrator",
+    title: "Ui lane",
+    keywords:
+      "Provider, model, effort, and manual escalation order for new delegated work. orchestrator routing delegate frontend design",
+  },
+  {
+    id: "orchestrator:explore-lane",
+    section: "orchestrator",
+    title: "Explore lane",
+    keywords:
+      "Provider, model, effort, and manual escalation order for new delegated work. orchestrator routing delegate research read-only scouting",
+  },
+  {
+    id: "orchestrator:verify-lane",
+    section: "orchestrator",
+    title: "Verify lane",
+    keywords:
+      "Provider, model, effort, and manual escalation order for new delegated work. orchestrator routing delegate review checks",
   },
 
   // ── Providers ─────────────────────────────────────────────────────────────────

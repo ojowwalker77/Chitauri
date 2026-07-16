@@ -6,7 +6,7 @@ import {
   resolveActiveCodexHomeWritePath,
   resolveBaseCodexHomePath,
   resolveCodexHomeAllowlistCandidates,
-  resolveDpCodeCodexHomeOverlayPath,
+  resolveChitauriCodexHomeOverlayPath,
   shouldDisableDpCodeBrowserPlugin,
 } from "./codexHomePaths.ts";
 
@@ -28,31 +28,20 @@ describe("resolveBaseCodexHomePath", () => {
   });
 });
 
-describe("resolveDpCodeCodexHomeOverlayPath", () => {
-  it("anchors the overlay under SYNARA_HOME when set", () => {
+describe("resolveChitauriCodexHomeOverlayPath", () => {
+  it("anchors the overlay under CHITAURI_HOME when set", () => {
     assert.equal(
-      resolveDpCodeCodexHomeOverlayPath({ SYNARA_HOME: "/synara/runtime" }, "/users/me/.codex"),
-      path.join("/synara/runtime", "codex-home-overlay"),
-    );
-  });
-
-  it("honours the legacy DPCODE_HOME variable", () => {
-    assert.equal(
-      resolveDpCodeCodexHomeOverlayPath({ DPCODE_HOME: "/dp/runtime" }, "/users/me/.codex"),
-      path.join("/dp/runtime", "codex-home-overlay"),
-    );
-  });
-
-  it("honours the legacy T3CODE_HOME variable", () => {
-    assert.equal(
-      resolveDpCodeCodexHomeOverlayPath({ T3CODE_HOME: "/t3/runtime" }, "/users/me/.codex"),
-      path.join("/t3/runtime", "codex-home-overlay"),
+      resolveChitauriCodexHomeOverlayPath(
+        { CHITAURI_HOME: "/chitauri/runtime" },
+        "/users/me/.codex",
+      ),
+      path.join("/chitauri/runtime", "codex-home-overlay"),
     );
   });
 
   it("derives a default overlay sibling of the source home", () => {
     assert.equal(
-      resolveDpCodeCodexHomeOverlayPath({}, "/users/me/.codex"),
+      resolveChitauriCodexHomeOverlayPath({}, "/users/me/.codex"),
       path.join("/users/me", ".chitauri", "runtime", "codex-home-overlay"),
     );
   });
@@ -65,7 +54,7 @@ describe("shouldDisableDpCodeBrowserPlugin", () => {
 
   it("respects the explicit '0' opt-out", () => {
     assert.equal(
-      shouldDisableDpCodeBrowserPlugin({ DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN: "0" }),
+      shouldDisableDpCodeBrowserPlugin({ CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN: "0" }),
       false,
     );
   });
@@ -75,10 +64,10 @@ describe("resolveActiveCodexHomeWritePath", () => {
   it("returns the overlay home when the plugin is disabled (default)", () => {
     assert.equal(
       resolveActiveCodexHomeWritePath({
-        env: { SYNARA_HOME: "/synara/runtime" },
+        env: { CHITAURI_HOME: "/chitauri/runtime" },
         homePath: "/users/me/.codex",
       }),
-      path.join("/synara/runtime", "codex-home-overlay"),
+      path.join("/chitauri/runtime", "codex-home-overlay"),
     );
   });
 
@@ -86,8 +75,8 @@ describe("resolveActiveCodexHomeWritePath", () => {
     assert.equal(
       resolveActiveCodexHomeWritePath({
         env: {
-          DPCODE_HOME: "/dp/runtime",
-          DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN: "0",
+          CHITAURI_HOME: "/chitauri/runtime",
+          CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN: "0",
         },
         homePath: "/users/me/.codex",
       }),
@@ -99,18 +88,18 @@ describe("resolveActiveCodexHomeWritePath", () => {
 describe("resolveCodexHomeAllowlistCandidates", () => {
   it("includes both source and overlay homes when distinct", () => {
     const candidates = resolveCodexHomeAllowlistCandidates({
-      env: { SYNARA_HOME: "/synara/runtime" },
+      env: { CHITAURI_HOME: "/chitauri/runtime" },
       homePath: "/users/me/.codex",
     });
     assert.deepEqual(candidates, [
       "/users/me/.codex",
-      path.join("/synara/runtime", "codex-home-overlay"),
+      path.join("/chitauri/runtime", "codex-home-overlay"),
     ]);
   });
 
   it("returns just the source when overlay equals source", () => {
     const candidates = resolveCodexHomeAllowlistCandidates({
-      env: { DPCODE_HOME: "/users/me" },
+      env: { CHITAURI_HOME: "/users/me" },
       homePath: path.join("/users/me", "codex-home-overlay"),
     });
     assert.deepEqual(candidates, [path.join("/users/me", "codex-home-overlay")]);

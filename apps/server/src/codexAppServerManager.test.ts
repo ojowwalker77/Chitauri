@@ -20,6 +20,7 @@ import {
 } from "./codexProcessEnv";
 import {
   buildCodexInitializeParams,
+  buildCodexMcpConfig,
   CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS,
   CODEX_PLAN_MODE_DEVELOPER_INSTRUCTIONS,
   CodexAppServerManager,
@@ -386,7 +387,7 @@ describe("buildCodexProcessEnv", () => {
         env: {
           SHELL: "/bin/zsh",
           PATH: "/usr/bin",
-          DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN: "0",
+          CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN: "0",
         },
         homePath: tempDir,
         platform: "darwin",
@@ -415,7 +416,7 @@ describe("buildCodexProcessEnv", () => {
         PATH: "/usr/bin",
         CODEX_HOME: "/tmp/.codex",
         AZURE_OPENAI_API_KEY: "existing-secret",
-        DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN: "0",
+        CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN: "0",
       },
       platform: "darwin",
       readEnvironment,
@@ -428,9 +429,9 @@ describe("buildCodexProcessEnv", () => {
   it("allows the configured desktop browser-use socket in the Codex sandbox", () => {
     const env = buildCodexProcessEnv({
       env: {
-        SYNARA_BROWSER_USE_PIPE_PATH: "/tmp/codex-browser-use/synara.sock",
+        CHITAURI_BROWSER_USE_PIPE_PATH: "/tmp/codex-browser-use/synara.sock",
         NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS: "/tmp/existing.sock",
-        DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN: "0",
+        CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN: "0",
       },
       platform: "darwin",
     });
@@ -443,7 +444,7 @@ describe("buildCodexProcessEnv", () => {
   it("resolves the browser-use pipe path from desktop env aliases", () => {
     expect(
       resolveCodexBrowserUsePipePath({
-        env: { T3CODE_BROWSER_USE_PIPE_PATH: "/tmp/codex-browser-use/t3.sock" },
+        env: { CHITAURI_BROWSER_USE_PIPE_PATH: "/tmp/codex-browser-use/t3.sock" },
         platform: "darwin",
       }),
     ).toBe("/tmp/codex-browser-use/t3.sock");
@@ -466,7 +467,7 @@ describe("buildCodexProcessEnv", () => {
       );
 
       const env = buildCodexProcessEnv({
-        env: { SYNARA_HOME: runtimeHome },
+        env: { CHITAURI_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -499,7 +500,7 @@ describe("buildCodexProcessEnv", () => {
       writeFileSync(overlayMemoryPath, "stale-overlay-db", "utf8");
 
       const env = buildCodexProcessEnv({
-        env: { SYNARA_HOME: runtimeHome },
+        env: { CHITAURI_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -527,7 +528,7 @@ describe("buildCodexProcessEnv", () => {
       writeFileSync(overlayAuthPath, '{"tokens":{"access_token":"stale"}}', "utf8");
 
       const env = buildCodexProcessEnv({
-        env: { SYNARA_HOME: runtimeHome },
+        env: { CHITAURI_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -558,7 +559,7 @@ describe("buildCodexProcessEnv", () => {
       writeFileSync(overlayImagePath, "overlay-image", "utf8");
 
       const env = buildCodexProcessEnv({
-        env: { SYNARA_HOME: runtimeHome },
+        env: { CHITAURI_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -715,6 +716,28 @@ describe("startSession", () => {
   it("uses an isolated scratch workspace path when no cwd is provided", () => {
     const cwd = ensureIsolatedScratchWorkspace(asThreadId("thread-1"));
     expect(cwd).toContain(`${path.sep}chitauri-codex-workspaces${path.sep}thread-1`);
+  });
+
+  it("maps orchestrator MCP servers to official Codex per-thread config", () => {
+    expect(
+      buildCodexMcpConfig([
+        {
+          name: "chitauri_orchestrator",
+          url: "http://127.0.0.1:5173/api/orchestrator/mcp",
+          headers: { Authorization: "Bearer seat-token" },
+          toolTimeoutMs: 3_600_000,
+        },
+      ]),
+    ).toEqual({
+      mcp_servers: {
+        chitauri_orchestrator: {
+          url: "http://127.0.0.1:5173/api/orchestrator/mcp",
+          http_headers: { Authorization: "Bearer seat-token" },
+          tool_timeout_sec: 3_600,
+          required: true,
+        },
+      },
+    });
   });
 
   it("fails fast with an upgrade message when codex is below the minimum supported version", async () => {

@@ -390,7 +390,7 @@ function ColorPill({
               type="button"
               className={cn(
                 SETTINGS_CONTROL_RADIUS_CLASS_NAME,
-                "group relative flex h-8 min-w-44 items-center gap-2 overflow-hidden border px-2 pr-3 text-left transition-[transform,box-shadow] hover:scale-[1.005] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                "group relative flex h-8 min-w-44 items-center gap-2 overflow-hidden border px-2 pr-3 text-left transition-[scale,box-shadow] duration-press ease-out hover:scale-[1.005] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 motion-reduce:transition-none motion-reduce:active:scale-100",
               )}
               // borderColor rides the readable color so a near-white fill still shows
               // a crisp edge against the (also near-white) settings card.

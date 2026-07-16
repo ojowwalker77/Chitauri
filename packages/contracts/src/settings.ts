@@ -1,7 +1,84 @@
 import { Schema } from "effect";
 import { TrimmedString } from "./baseSchemas";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
-import { ModelSelection, ProviderKind, ThreadEnvironmentMode } from "./orchestration";
+import {
+  ClaudeModelSelection,
+  CodexModelSelection,
+  ModelSelection,
+  ProviderKind,
+  ThreadEnvironmentMode,
+} from "./orchestration";
+
+export const OrchestratorLane = Schema.Literals(["bulk", "ui", "explore", "verify"]);
+export type OrchestratorLane = typeof OrchestratorLane.Type;
+
+export const OrchestratorLaneRoute = Schema.Struct({
+  modelSelection: ModelSelection,
+  escalation: Schema.Array(ModelSelection).pipe(Schema.withDecodingDefault(() => [])),
+});
+export type OrchestratorLaneRoute = typeof OrchestratorLaneRoute.Type;
+
+export const OrchestratorSeatModelSelection = Schema.Union([
+  CodexModelSelection,
+  ClaudeModelSelection,
+]);
+export type OrchestratorSeatModelSelection = typeof OrchestratorSeatModelSelection.Type;
+
+export const OrchestratorRoutingPolicy = Schema.Struct({
+  // The control-plane MCP is injected through the official Codex and Claude
+  // harnesses. ACP-backed providers do not currently expose this capability.
+  seatModels: Schema.Array(OrchestratorSeatModelSelection).check(Schema.isMinLength(1)),
+  lanes: Schema.Struct({
+    bulk: OrchestratorLaneRoute,
+    ui: OrchestratorLaneRoute,
+    explore: OrchestratorLaneRoute,
+    verify: OrchestratorLaneRoute,
+  }),
+  autoVerifyDiffs: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
+});
+export type OrchestratorRoutingPolicy = typeof OrchestratorRoutingPolicy.Type;
+
+export const DEFAULT_ORCHESTRATOR_ROUTING_POLICY: OrchestratorRoutingPolicy = {
+  seatModels: [
+    { provider: "codex", model: "gpt-5.6-sol" },
+    { provider: "claudeAgent", model: "claude-fable-5" },
+  ],
+  lanes: {
+    bulk: {
+      modelSelection: {
+        provider: "codex",
+        model: "gpt-5.6-terra",
+        options: { reasoningEffort: "high" },
+      },
+      escalation: [{ provider: "codex", model: "gpt-5.6-sol" }],
+    },
+    ui: {
+      modelSelection: {
+        provider: "claudeAgent",
+        model: "claude-opus-4-8",
+        options: { effort: "high" },
+      },
+      escalation: [{ provider: "claudeAgent", model: "claude-fable-5" }],
+    },
+    explore: {
+      modelSelection: {
+        provider: "codex",
+        model: "gpt-5.6-luna",
+        options: { reasoningEffort: "medium" },
+      },
+      escalation: [],
+    },
+    verify: {
+      modelSelection: {
+        provider: "codex",
+        model: "gpt-5.6-sol",
+        options: { reasoningEffort: "high" },
+      },
+      escalation: [{ provider: "claudeAgent", model: "claude-fable-5" }],
+    },
+  },
+  autoVerifyDiffs: false,
+};
 
 const StringSetting = TrimmedString.check(Schema.isMaxLength(4096));
 const CustomModels = Schema.Array(Schema.String.check(Schema.isMaxLength(256))).pipe(
@@ -99,6 +176,9 @@ export const ServerSettings = Schema.Struct({
     pi: PiServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   }).pipe(Schema.withDecodingDefault(() => ({}))),
   skills: SkillsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+  orchestrator: OrchestratorRoutingPolicy.pipe(
+    Schema.withDecodingDefault(() => DEFAULT_ORCHESTRATOR_ROUTING_POLICY),
+  ),
 });
 export type ServerSettings = typeof ServerSettings.Type;
 
@@ -172,6 +252,7 @@ export const ServerSettingsPatch = Schema.Struct({
       disabled: Schema.optionalKey(Schema.Array(Schema.String.check(Schema.isMaxLength(256)))),
     }),
   ),
+  orchestrator: Schema.optionalKey(OrchestratorRoutingPolicy),
 });
 export type ServerSettingsPatch = typeof ServerSettingsPatch.Type;
 

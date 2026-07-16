@@ -101,7 +101,7 @@ export function buildGitHubAgentPrompt(
 ): string {
   const target = `${item.repository.nameWithOwner}#${item.number}`;
   if (intent === "review") {
-    return `Review pull request ${target}: ${item.title}\n\nUse the checked-out PR as the source of truth. Inspect the full diff and relevant callers, verify every finding, and do not post anything to GitHub without my explicit approval.\n\n${item.url}`;
+    return `$Splus PR Review\n\nReview pull request ${target}: ${item.title}\n\nUse the checked-out PR as the source of truth. Run the full Splus PR Review workflow and post the verified review to GitHub.\n\n${item.url}`;
   }
   if (intent === "fix_ci") {
     return `Diagnose and fix the failing CI for pull request ${target}: ${item.title}. Inspect the exact failing checks and logs first, make the smallest robust fix, run focused verification, and leave all GitHub posting or merging for my explicit approval.\n\n${item.url}`;

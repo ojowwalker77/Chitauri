@@ -425,6 +425,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           }),
           createBranchFlowCompleted: command.createBranchFlowCompleted,
           isPinned: command.isPinned,
+          orchestratorMode: command.orchestratorMode,
           parentThreadId: command.parentThreadId,
           subagentAgentId: command.subagentAgentId,
           subagentNickname: command.subagentNickname,
@@ -756,6 +757,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
             ? { createBranchFlowCompleted: command.createBranchFlowCompleted }
             : {}),
           ...(command.isPinned !== undefined ? { isPinned: command.isPinned } : {}),
+          ...(command.orchestratorMode !== undefined
+            ? { orchestratorMode: command.orchestratorMode }
+            : {}),
           ...(command.parentThreadId !== undefined
             ? { parentThreadId: command.parentThreadId }
             : {}),

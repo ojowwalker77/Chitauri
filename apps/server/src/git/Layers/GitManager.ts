@@ -1564,11 +1564,13 @@ export const makeGitManager = Effect.gen(function* () {
           worktreePath: existingBranchBeforeFetch.worktreePath,
         };
       }
-      if (existingBranchBeforeFetchPath === rootWorktreePath) {
-        return yield* gitManagerError(
-          "preparePullRequestThread",
-          "This PR branch is already checked out in the main repo. Use Local, or switch the main repo off that branch before creating a worktree thread.",
-        );
+      if (existingBranchBeforeFetch && existingBranchBeforeFetchPath === rootWorktreePath) {
+        yield* ensureExistingWorktreeUpstream(input.cwd);
+        return {
+          pullRequest,
+          branch: existingBranchBeforeFetch.name,
+          worktreePath: null,
+        };
       }
 
       yield* materializePullRequestHeadBranch(
@@ -1592,11 +1594,13 @@ export const makeGitManager = Effect.gen(function* () {
           worktreePath: existingBranchAfterFetch.worktreePath,
         };
       }
-      if (existingBranchAfterFetchPath === rootWorktreePath) {
-        return yield* gitManagerError(
-          "preparePullRequestThread",
-          "This PR branch is already checked out in the main repo. Use Local, or switch the main repo off that branch before creating a worktree thread.",
-        );
+      if (existingBranchAfterFetch && existingBranchAfterFetchPath === rootWorktreePath) {
+        yield* ensureExistingWorktreeUpstream(input.cwd);
+        return {
+          pullRequest,
+          branch: existingBranchAfterFetch.name,
+          worktreePath: null,
+        };
       }
 
       const worktree = yield* gitCore.createWorktree({

@@ -178,7 +178,7 @@ export function EditProfileDialog({
                       onClick={() => setDraftColor(color)}
                       aria-label={`Use ${color}`}
                       className={cn(
-                        "size-5 rounded-full transition-transform hover:scale-110",
+                        "size-5 rounded-full transition-transform duration-press ease-out hover:scale-110 active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100",
                         !draftImage &&
                           draftColor === color &&
                           "ring-2 ring-foreground/70 ring-offset-2 ring-offset-popover",

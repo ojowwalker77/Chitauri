@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.5.0 - 2026-07-16
+
+### Added
+
+- Added orchestrator control-plane mode: an orchestrator thread can delegate scoped work to child "seat" threads over a local MCP control plane that exposes `delegate`, `status`, and `result` tools. Delegation follows a configurable routing policy with four lanes (bulk, ui, explore, verify), each with its own model selection and escalation chain, all editable under Settings. Seat threads run with a locked seat model, and the composer surfaces an orchestrator delegation panel.
+- Added a GitHub daily workbench: browse pull requests and issues across your repositories with a detail panel for summary, timeline, and code/diff, and act on them inline — comment, review (approve / request changes / comment), change state, assign yourself, edit labels, mark ready, update the branch, merge (merge / squash / rebase, with optional auto-merge and branch delete), rerun checks, create issues, and mark notifications read or done.
+- Added a durable Research workspace: research documents persist with their references and can be reopened in a dedicated document view, and any document can be spun into a new revision thread. A managed "research" skill is now part of the skills catalog.
+
+### Changed
+
+- Unified all web motion on a shared set of easing and duration tokens, added press feedback (a subtle scale) to every button and toggle, and fixed a class of transitions that compiled cleanly but never animated — Tailwind v4 emits `scale`/`translate` as standalone properties that `transition-property: transform` does not cover. Disclosure drift, the environment panel slide, overlay enter/exit, and several other motions now animate as intended, with `motion-reduce` fallbacks throughout.
+
+### Fixed
+
+- Fixed GitHub agent thread creation.
+- Fixed the right-panel toggle keybinding.
+- Fixed orchestrator lane provider switching: changing a lane's provider now rebuilds a valid model selection for the new provider (its default model and effort) instead of carrying the previous provider's model and options forward.
+
 ## 0.4.2 - 2026-07-15
 
 ### Added

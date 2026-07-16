@@ -107,8 +107,8 @@ export interface FileRoutesByFullPath {
   '/': typeof ChatIndexRoute
   '/$threadId': typeof ChatThreadIdRoute
   '/automations': typeof ChatAutomationsRouteWithChildren
-  '/github': typeof ChatGithubRoute
   '/computer-scripts': typeof ChatComputerScriptsRoute
+  '/github': typeof ChatGithubRoute
   '/plugins': typeof ChatPluginsRoute
   '/research': typeof ChatResearchRouteWithChildren
   '/settings': typeof ChatSettingsRoute
@@ -121,8 +121,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/$threadId': typeof ChatThreadIdRoute
-  '/github': typeof ChatGithubRoute
   '/computer-scripts': typeof ChatComputerScriptsRoute
+  '/github': typeof ChatGithubRoute
   '/plugins': typeof ChatPluginsRoute
   '/settings': typeof ChatSettingsRoute
   '/': typeof ChatIndexRoute
@@ -138,8 +138,8 @@ export interface FileRoutesById {
   '/_chat': typeof ChatRouteWithChildren
   '/_chat/$threadId': typeof ChatThreadIdRoute
   '/_chat/automations': typeof ChatAutomationsRouteWithChildren
-  '/_chat/github': typeof ChatGithubRoute
   '/_chat/computer-scripts': typeof ChatComputerScriptsRoute
+  '/_chat/github': typeof ChatGithubRoute
   '/_chat/plugins': typeof ChatPluginsRoute
   '/_chat/research': typeof ChatResearchRouteWithChildren
   '/_chat/settings': typeof ChatSettingsRoute
@@ -157,8 +157,8 @@ export interface FileRouteTypes {
     | '/'
     | '/$threadId'
     | '/automations'
-    | '/github'
     | '/computer-scripts'
+    | '/github'
     | '/plugins'
     | '/research'
     | '/settings'
@@ -171,8 +171,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/$threadId'
-    | '/github'
     | '/computer-scripts'
+    | '/github'
     | '/plugins'
     | '/settings'
     | '/'
@@ -187,8 +187,8 @@ export interface FileRouteTypes {
     | '/_chat'
     | '/_chat/$threadId'
     | '/_chat/automations'
-    | '/_chat/github'
     | '/_chat/computer-scripts'
+    | '/_chat/github'
     | '/_chat/plugins'
     | '/_chat/research'
     | '/_chat/settings'
@@ -346,8 +346,8 @@ const ChatResearchRouteWithChildren = ChatResearchRoute._addFileChildren(
 interface ChatRouteChildren {
   ChatThreadIdRoute: typeof ChatThreadIdRoute
   ChatAutomationsRoute: typeof ChatAutomationsRouteWithChildren
-  ChatGithubRoute: typeof ChatGithubRoute
   ChatComputerScriptsRoute: typeof ChatComputerScriptsRoute
+  ChatGithubRoute: typeof ChatGithubRoute
   ChatPluginsRoute: typeof ChatPluginsRoute
   ChatResearchRoute: typeof ChatResearchRouteWithChildren
   ChatSettingsRoute: typeof ChatSettingsRoute
@@ -359,8 +359,8 @@ interface ChatRouteChildren {
 const ChatRouteChildren: ChatRouteChildren = {
   ChatThreadIdRoute: ChatThreadIdRoute,
   ChatAutomationsRoute: ChatAutomationsRouteWithChildren,
-  ChatGithubRoute: ChatGithubRoute,
   ChatComputerScriptsRoute: ChatComputerScriptsRoute,
+  ChatGithubRoute: ChatGithubRoute,
   ChatPluginsRoute: ChatPluginsRoute,
   ChatResearchRoute: ChatResearchRouteWithChildren,
   ChatSettingsRoute: ChatSettingsRoute,

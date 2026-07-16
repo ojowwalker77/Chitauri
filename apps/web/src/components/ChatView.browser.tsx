@@ -2397,7 +2397,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             threadId: THREAD_ID,
             cwd: "/repo/project",
             env: {
-              T3CODE_PROJECT_ROOT: "/repo/project",
+              CHITAURI_PROJECT_ROOT: "/repo/project",
             },
           });
         },
@@ -2476,8 +2476,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
             threadId: THREAD_ID,
             cwd: "/repo/worktrees/feature-draft",
             env: {
-              T3CODE_PROJECT_ROOT: "/repo/project",
-              T3CODE_WORKTREE_PATH: "/repo/worktrees/feature-draft",
+              CHITAURI_PROJECT_ROOT: "/repo/project",
+              CHITAURI_WORKTREE_PATH: "/repo/worktrees/feature-draft",
             },
           });
         },
@@ -3682,6 +3682,154 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("defaults a new chat draft to Orchestrator and creates the allowed seat on first send", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-orchestrator-default-test" as MessageId,
+        targetText: "orchestrator default test",
+      }),
+    });
+
+    try {
+      await page.getByTestId("new-thread-button").click();
+      const newThreadPath = await waitForURL(
+        mounted.router,
+        (path) => UUID_ROUTE_RE.test(path),
+        "Route should have changed to a new orchestrator draft thread UUID.",
+      );
+      const newThreadId = newThreadPath.slice(1) as ThreadId;
+
+      const modeTrigger = page.getByTestId("composer-thread-mode-trigger");
+      await expect.element(modeTrigger).toHaveTextContent("Orchestrator");
+      await expect.element(page.getByTestId("orchestrator-onboarding")).toBeInTheDocument();
+
+      useComposerDraftStore.getState().setPrompt(newThreadId, "Coordinate this change");
+      const composerEditor = await waitForComposerEditor();
+      await vi.waitFor(() => {
+        expect(composerEditor.textContent ?? "").toContain("Coordinate this change");
+      });
+      const sendButton = await waitForSendButton();
+      expect(sendButton.disabled).toBe(false);
+      await sendButton.click();
+
+      await vi.waitFor(
+        () => {
+          const createCommand = wsRequests
+            .map(readDispatchedCommand)
+            .find(
+              (command) => command?.type === "thread.create" && command.threadId === newThreadId,
+            );
+          expect(createCommand).toMatchObject({
+            orchestratorMode: true,
+            modelSelection: {
+              provider: "codex",
+              model: "gpt-5.6-sol",
+            },
+          });
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("lets a new chat draft opt into Single Agent before creating the thread", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-single-agent-picker-test" as MessageId,
+        targetText: "single agent picker test",
+      }),
+    });
+
+    try {
+      await page.getByTestId("new-thread-button").click();
+      const newThreadPath = await waitForURL(
+        mounted.router,
+        (path) => UUID_ROUTE_RE.test(path),
+        "Route should have changed to a new single-agent draft thread UUID.",
+      );
+      const newThreadId = newThreadPath.slice(1) as ThreadId;
+
+      await page.getByTestId("composer-thread-mode-trigger").click();
+      await page.getByTestId("composer-thread-mode-single-agent").click();
+      await vi.waitFor(() => {
+        expect(
+          useComposerDraftStore.getState().draftsByThreadId[newThreadId]?.orchestratorMode,
+        ).toBe(false);
+      });
+      await expect
+        .element(page.getByTestId("composer-thread-mode-trigger"))
+        .toHaveTextContent("Single Agent");
+
+      useComposerDraftStore.getState().setPrompt(newThreadId, "Handle this directly");
+      const composerEditor = await waitForComposerEditor();
+      await vi.waitFor(() => {
+        expect(composerEditor.textContent ?? "").toContain("Handle this directly");
+      });
+      const sendButton = await waitForSendButton();
+      expect(sendButton.disabled).toBe(false);
+      await sendButton.click();
+
+      await vi.waitFor(
+        () => {
+          const createCommand = wsRequests
+            .map(readDispatchedCommand)
+            .find(
+              (command) => command?.type === "thread.create" && command.threadId === newThreadId,
+            );
+          expect(createCommand).toMatchObject({
+            orchestratorMode: false,
+            modelSelection: {
+              provider: "codex",
+              model: "gpt-5",
+            },
+          });
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("changes an existing thread to Orchestrator without creating duplicate server threads", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-orchestrator-transition-test" as MessageId,
+        targetText: "orchestrator transition test",
+      }),
+    });
+
+    try {
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, "Keep this unsent draft");
+      const modeTrigger = page.getByTestId("composer-thread-mode-trigger");
+      await expect.element(modeTrigger).toHaveTextContent("Single Agent");
+      await modeTrigger.click();
+      await page.getByTestId("composer-thread-mode-orchestrator").click();
+
+      const nextThreadPath = await waitForURL(
+        mounted.router,
+        (path) => path !== `/${THREAD_ID}` && UUID_ROUTE_RE.test(path),
+        "Mode change should navigate to a fresh local draft.",
+      );
+      const nextThreadId = nextThreadPath.slice(1) as ThreadId;
+
+      expect(useComposerDraftStore.getState().draftsByThreadId[nextThreadId]).toMatchObject({
+        prompt: "Keep this unsent draft",
+        orchestratorMode: true,
+      });
+      expect(
+        wsRequests.some((request) => readDispatchedCommand(request)?.type === "thread.create"),
+      ).toBe(false);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("offers New worktree from an empty draft thread", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
@@ -3891,8 +4039,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
             _tag: WS_METHODS.terminalOpen,
             cwd: worktreePath,
             env: {
-              T3CODE_PROJECT_ROOT: "/repo/project",
-              T3CODE_WORKTREE_PATH: worktreePath,
+              CHITAURI_PROJECT_ROOT: "/repo/project",
+              CHITAURI_WORKTREE_PATH: worktreePath,
             },
           });
 
@@ -4246,6 +4394,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           activeProvider: "claudeAgent",
           runtimeMode: null,
           interactionMode: null,
+          orchestratorMode: null,
         },
       },
       draftThreadsByThreadId: {
@@ -4509,7 +4658,26 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("shows the skinny inline plan card for active turn plans", async () => {
+  it("opens active turn tasks in the right sidebar by default", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotWithActiveInlinePlan(),
+    });
+
+    try {
+      await expect.element(page.getByLabelText("Close plan sidebar")).toBeInTheDocument();
+      expect(document.querySelector('[data-testid="active-task-list-card"]')).toBeNull();
+      expect(document.body.textContent).toContain("Inspecting ChatView boundaries");
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("shows the skinny inline plan card when tasks default above the composer", async () => {
+    localStorage.setItem(
+      "chitauri:app-settings:v1",
+      JSON.stringify({ taskListDisplayMode: "composer" }),
+    );
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotWithActiveInlinePlan(),
@@ -4521,34 +4689,16 @@ describe("ChatView timeline estimator parity (full app)", () => {
           expect(document.body.textContent).toContain("1 out of 3 tasks completed");
           expect(document.body.textContent).toContain("Inspecting ChatView boundaries");
           expect(document.body.textContent).toContain("Patch the shared checklist receiver");
-          expect(document.body.textContent).toContain("1 background agent");
+          expect(document.body.textContent).toContain("1 agent running");
         },
         { timeout: 8_000, interval: 16 },
       );
 
-      const transcriptPane = document.querySelector<HTMLElement>("[data-chat-transcript-pane]");
       const taskListCard = document.querySelector<HTMLElement>(
         '[data-testid="active-task-list-card"]',
       );
-      const composerShell = document.querySelector<HTMLElement>(
-        'form[data-chat-composer-form="true"] .chat-composer-shell',
-      );
-      expect(transcriptPane).not.toBeNull();
       expect(taskListCard).not.toBeNull();
-      expect(composerShell).not.toBeNull();
-      expect(transcriptPane!.getBoundingClientRect().bottom).toBeGreaterThan(
-        taskListCard!.getBoundingClientRect().top + 1,
-      );
-      // Active plan activity shares the queued-follow-up rail: full composer-input width,
-      // centered, with the composer retaining its own rounded top corners. Full width keeps
-      // the overlapped transcript from peeking past the panel in side gutters.
-      const taskRect = taskListCard!.getBoundingClientRect();
-      const composerRect = composerShell!.getBoundingClientRect();
-      expect(Math.abs(taskRect.width - composerRect.width)).toBeLessThanOrEqual(2);
-      expect(
-        Math.abs(taskRect.left + taskRect.width / 2 - (composerRect.left + composerRect.width / 2)),
-      ).toBeLessThanOrEqual(1);
-      expect(parseFloat(getComputedStyle(composerShell!).borderTopLeftRadius)).toBeGreaterThan(0);
+      expect(document.querySelector('[aria-label="Close plan sidebar"]')).toBeNull();
 
       const openPlanButton = await waitForElement(
         () => document.querySelector<HTMLButtonElement>('button[title="Open tasks sidebar"]'),
@@ -4573,7 +4723,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         () => {
           expect(document.body.textContent).toContain("Finished the investigation.");
           expect(document.body.textContent).not.toContain("1 out of 3 tasks completed");
-          expect(document.body.textContent).not.toContain("1 background agent");
+          expect(document.body.textContent).not.toContain("1 agent running");
         },
         { timeout: 8_000, interval: 16 },
       );

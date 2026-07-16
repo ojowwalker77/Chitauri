@@ -58,6 +58,16 @@ export const ProviderSessionStartInput = Schema.Struct({
   approvalPolicy: Schema.optional(ProviderApprovalPolicy),
   sandboxMode: Schema.optional(ProviderSandboxMode),
   providerOptions: Schema.optional(ProviderStartOptions),
+  mcpServers: Schema.optional(
+    Schema.Array(
+      Schema.Struct({
+        name: TrimmedNonEmptyString,
+        url: TrimmedNonEmptyString,
+        headers: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+        toolTimeoutMs: Schema.optional(Schema.Number),
+      }),
+    ),
+  ),
   runtimeMode: RuntimeMode,
 });
 export type ProviderSessionStartInput = typeof ProviderSessionStartInput.Type;

@@ -10,10 +10,15 @@ import { Switch as SwitchPrimitive } from "@base-ui/react/switch";
 import { cn } from "~/lib/utils";
 
 const SWITCH_TRACK_CLASS_NAME =
-  "inline-flex h-[calc(var(--thumb-size)+4px)] w-[calc(var(--thumb-size)*2)] shrink-0 cursor-pointer items-center rounded-full border p-px outline-none transition-[background-color,box-shadow,border-color] duration-200 [--thumb-size:--spacing(5)] focus-visible:ring-2 focus-visible:ring-[color:var(--color-border-focus)]/60 focus-visible:ring-offset-1 focus-visible:ring-offset-background data-checked:border-[color:var(--color-text-accent)] data-checked:bg-[var(--color-text-accent)] data-unchecked:border-[color:color-mix(in_srgb,var(--color-text-foreground)_14%,transparent)] data-unchecked:bg-[color-mix(in_srgb,var(--color-text-foreground)_20%,var(--color-background-control-opaque))] data-disabled:cursor-not-allowed data-disabled:opacity-64 sm:[--thumb-size:--spacing(4)]";
+  "inline-flex h-[calc(var(--thumb-size)+4px)] w-[calc(var(--thumb-size)*2)] shrink-0 cursor-pointer items-center rounded-full border p-px outline-none transition-[background-color,box-shadow,border-color] duration-menu [--thumb-size:--spacing(5)] focus-visible:ring-2 focus-visible:ring-[color:var(--color-border-focus)]/60 focus-visible:ring-offset-1 focus-visible:ring-offset-background data-checked:border-[color:var(--color-text-accent)] data-checked:bg-[var(--color-text-accent)] data-unchecked:border-[color:color-mix(in_srgb,var(--color-text-foreground)_14%,transparent)] data-unchecked:bg-[color-mix(in_srgb,var(--color-text-foreground)_20%,var(--color-background-control-opaque))] data-disabled:cursor-not-allowed data-disabled:opacity-64 sm:[--thumb-size:--spacing(4)]";
 
+// The thumb's travel uses `var(--ease-out)` rather than the bare `ease-out` keyword: inside
+// an arbitrary `[transition:…]` value, `ease-out` is the CSS built-in (the weak
+// cubic-bezier(0,0,0.2,1)), NOT the app's token — so the switch would drift off the shared
+// curve while every utility-driven `ease-out` in the app followed it. The staggered squash
+// (`scale .1s .1s`, `border-radius .15s`) is hand-tuned; those micro-durations are left alone.
 const SWITCH_THUMB_CLASS_NAME =
-  "pointer-events-none block aspect-square h-full origin-left translate-x-0 rounded-full bg-white shadow-sm ring-1 ring-black/5 will-change-transform [transition:translate_.2s_ease-out,border-radius_.15s,scale_.1s_.1s,transform-origin_.15s]";
+  "pointer-events-none block aspect-square h-full origin-left translate-x-0 rounded-full bg-white shadow-sm ring-1 ring-black/5 will-change-transform [transition:translate_.2s_var(--ease-out),border-radius_.15s,scale_.1s_.1s,transform-origin_.15s]";
 
 function Switch({ className, ...props }: SwitchPrimitive.Root.Props) {
   return (

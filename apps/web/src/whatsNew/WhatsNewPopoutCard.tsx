@@ -74,8 +74,13 @@ export function WhatsNewPopoutCard({
         className={cn(
           "group relative flex cursor-pointer flex-col overflow-hidden rounded-xl",
           "border border-white/[0.08] bg-popover/90 text-popover-foreground shadow-xl backdrop-blur-xl",
-          "transition-[transform,box-shadow,border-color] duration-150",
+          // `transform` AND `scale` are both listed: the hover lift is a real `transform`
+          // (arbitrary `[transform:…]`), while the press is Tailwind's `scale-*`, which
+          // compiles to the standalone `scale:` property. They're independent properties,
+          // so a press while hovering composes (lifted + pushed in) instead of fighting.
+          "transition-[transform,scale,box-shadow,border-color] duration-press ease-out motion-reduce:transition-none",
           "hover:border-primary/40 hover:shadow-2xl hover:[transform:translateY(-1px)]",
+          "active:scale-[0.98] motion-reduce:active:scale-100",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         )}
       >

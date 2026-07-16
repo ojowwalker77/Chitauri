@@ -56,6 +56,10 @@ export const COMPOSER_PICKER_MODEL_ROW_LABEL_INDENT_CLASS_NAME = "pl-[1.125rem]"
 /** Muted accent text for effort labels and empty-landing folder names. */
 export const COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME = "text-muted-foreground/45";
 
+/** Calm but unmistakable accent for the composer thread-mode control. */
+export const ORCHESTRATOR_MODE_ACCENT_CLASS_NAME =
+  "[--orchestrator-mode-accent:var(--color-indigo-600,#4f46e5)] bg-indigo-500/8 text-indigo-700 hover:bg-indigo-500/12 hover:text-indigo-800 data-pressed:bg-indigo-500/12 data-pressed:text-indigo-800 dark:[--orchestrator-mode-accent:var(--color-indigo-300,#a5b4fc)] dark:text-indigo-300 dark:hover:text-indigo-200 dark:data-pressed:text-indigo-200";
+
 // NOTE: Composer picker section headers (Effort, Thinking, Mode, …) now render
 // through the shared `MenuGroupLabel` primitive (../ui/menu) so they stay in
 // sync with dropdown group labels like "Git actions". Picker padding is still
@@ -213,12 +217,14 @@ export const COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME =
 export const ENVIRONMENT_PANEL_SURFACE_CLASS_NAME = `relative overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground ${COMPOSER_SURFACE_SHADOW_CLASS_NAME}`;
 
 /** Slide + inset timing matched to `SIDEBAR_OFFCANVAS_MOTION_CLASS` (right dock / thread sidebar). */
+// `translate`, not `transform`: the panel slides via `translate-x-*`, which compiles to the
+// standalone `translate:` property in Tailwind v4 and is not covered by `transform`.
 export const ENVIRONMENT_PANEL_MOTION_CLASS =
-  "transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none";
+  "transition-[translate,opacity] duration-sheet ease-drawer motion-reduce:transition-none";
 
 /** Transcript/composer right inset when the docked Environment card opens. */
 export const ENVIRONMENT_CONTENT_INSET_MOTION_CLASS =
-  "transition-[padding-right] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none";
+  "transition-[padding-right] duration-sheet ease-drawer motion-reduce:transition-none";
 
 /** Anchors the command menu above the composer editor without shifting layout. */
 export const COMPOSER_COMMAND_MENU_FLOATING_WRAPPER_CLASS_NAME =

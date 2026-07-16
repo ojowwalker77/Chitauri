@@ -32,6 +32,7 @@ import {
   WorktreeIcon,
   XIcon,
 } from "~/lib/icons";
+import { CentralIcon } from "~/lib/central-icons";
 import { PinStatusIcon, pinActionLabel } from "~/lib/pin";
 import { ensureNativeApi } from "~/nativeApi";
 import { autoAnimate } from "@formkit/auto-animate";
@@ -1216,7 +1217,7 @@ function SidebarSegmentedPicker({
         <div
           aria-hidden
           className={cn(
-            "sidebar-segmented-thumb pointer-events-none absolute inset-y-0.5 left-0.5 z-0 rounded-md transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+            "sidebar-segmented-thumb pointer-events-none absolute inset-y-0.5 left-0.5 z-0 rounded-md transition-transform duration-sheet ease-drawer",
             activeIndex < 0 && "opacity-0",
           )}
           style={{
@@ -1370,14 +1371,13 @@ export default function Sidebar() {
       limit: 75,
     }),
   );
-  const githubSnoozedUntilByItemId = useGitHubInboxStore(
-    (state) => state.snoozedUntilByItemId,
-  );
+  const githubSnoozedUntilByItemId = useGitHubInboxStore((state) => state.snoozedUntilByItemId);
   const githubAttentionBadgeCount = useMemo(
     () =>
-      (githubInboxQuery.data?.items ?? []).filter((item) =>
-        isActionableGitHubReason(item.reason) &&
-        !isGithubItemSnoozed(item.id, githubSnoozedUntilByItemId),
+      (githubInboxQuery.data?.items ?? []).filter(
+        (item) =>
+          isActionableGitHubReason(item.reason) &&
+          !isGithubItemSnoozed(item.id, githubSnoozedUntilByItemId),
       ).length,
     [githubInboxQuery.data?.items, githubSnoozedUntilByItemId],
   );
@@ -5159,6 +5159,15 @@ export default function Sidebar() {
                   thread.title
                 )}
               </span>
+              {thread.orchestratorMode ? (
+                <span
+                  className="inline-flex shrink-0 items-center gap-0.5 rounded-sm bg-indigo-500/9 px-1.5 py-0.5 text-[9px] font-medium text-indigo-700 dark:text-indigo-300"
+                  title="Orchestrator thread"
+                >
+                  <CentralIcon name="agent-network" className="size-2.5" />
+                  Orchestrator
+                </span>
+              ) : null}
               {!isSubagentThread && threadStatus?.label === "Pending Approval" ? (
                 <span
                   aria-label="Pending approval"
@@ -5427,6 +5436,15 @@ export default function Sidebar() {
                   thread.title
                 )}
               </span>
+              {thread.orchestratorMode ? (
+                <span
+                  className="inline-flex shrink-0 items-center gap-0.5 rounded-sm bg-indigo-500/9 px-1.5 py-0.5 text-[9px] font-medium text-indigo-700 dark:text-indigo-300"
+                  title="Orchestrator thread"
+                >
+                  <CentralIcon name="agent-network" className="size-2.5" />
+                  Orchestrator
+                </span>
+              ) : null}
               {!isSubagentThread && threadStatus?.label === "Pending Approval" ? (
                 <span
                   aria-label="Pending approval"

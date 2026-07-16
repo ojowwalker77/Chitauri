@@ -72,16 +72,25 @@ describe("GitHub workbench logic", () => {
 
   it("builds a safe agent handoff prompt", () => {
     const prompt = buildGitHubAgentPrompt(item, "review");
+    expect(prompt.startsWith("$Splus PR Review")).toBe(true);
     expect(prompt).toContain("ojowwalker77/Chitauri#9");
-    expect(prompt).toContain("do not post anything to GitHub without my explicit approval");
+    expect(prompt).toContain("post the verified review to GitHub");
   });
 
   it("hides only active snoozes", () => {
     expect(
-      isGithubItemSnoozed(item.id, { [item.id]: "2026-07-16T00:00:00Z" }, Date.parse("2026-07-15T00:00:00Z")),
+      isGithubItemSnoozed(
+        item.id,
+        { [item.id]: "2026-07-16T00:00:00Z" },
+        Date.parse("2026-07-15T00:00:00Z"),
+      ),
     ).toBe(true);
     expect(
-      isGithubItemSnoozed(item.id, { [item.id]: "2026-07-14T00:00:00Z" }, Date.parse("2026-07-15T00:00:00Z")),
+      isGithubItemSnoozed(
+        item.id,
+        { [item.id]: "2026-07-14T00:00:00Z" },
+        Date.parse("2026-07-15T00:00:00Z"),
+      ),
     ).toBe(false);
   });
 });

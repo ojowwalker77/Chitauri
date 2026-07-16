@@ -32,7 +32,6 @@ export interface GitHubWorkbenchShape {
   ) => Effect.Effect<GitHubWorkItemActionResult, GitHubCliError>;
 }
 
-export class GitHubWorkbench extends ServiceMap.Service<
-  GitHubWorkbench,
-  GitHubWorkbenchShape
->()("t3/github/Services/GitHubWorkbench") {}
+export class GitHubWorkbench extends ServiceMap.Service<GitHubWorkbench, GitHubWorkbenchShape>()(
+  "t3/github/Services/GitHubWorkbench",
+) {}

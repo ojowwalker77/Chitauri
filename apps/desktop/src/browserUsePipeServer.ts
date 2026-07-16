@@ -20,9 +20,6 @@ const BROWSER_USE_PANEL_READY_POLL_MS = 50;
 const BROWSER_USE_PIPE_DIR = "codex-browser-use";
 const BROWSER_USE_PIPE_NAME_PREFIX = "chitauri-iab";
 export const CHITAURI_BROWSER_USE_PIPE_ENV = "CHITAURI_BROWSER_USE_PIPE_PATH";
-export const SYNARA_BROWSER_USE_PIPE_ENV = "SYNARA_BROWSER_USE_PIPE_PATH";
-export const DPCODE_BROWSER_USE_PIPE_ENV = "DPCODE_BROWSER_USE_PIPE_PATH";
-export const T3CODE_BROWSER_USE_PIPE_ENV = "T3CODE_BROWSER_USE_PIPE_PATH";
 
 type BrowserUseRpcId = string | number;
 
@@ -58,17 +55,11 @@ export function resolveConfiguredBrowserUsePipePath(
   env: NodeJS.ProcessEnv = process.env,
   platform = process.platform,
 ): string {
-  const configured =
-    env[CHITAURI_BROWSER_USE_PIPE_ENV]?.trim() ||
-    env[SYNARA_BROWSER_USE_PIPE_ENV]?.trim() ||
-    env[DPCODE_BROWSER_USE_PIPE_ENV]?.trim() ||
-    env[T3CODE_BROWSER_USE_PIPE_ENV]?.trim();
+  const configured = env[CHITAURI_BROWSER_USE_PIPE_ENV]?.trim();
   return configured || resolveDefaultBrowserUsePipePath(platform);
 }
 
 export const CHITAURI_BROWSER_USE_PIPE_PATH = resolveConfiguredBrowserUsePipePath();
-export const SYNARA_BROWSER_USE_PIPE_PATH = CHITAURI_BROWSER_USE_PIPE_PATH;
-export const DPCODE_BROWSER_USE_PIPE_PATH = CHITAURI_BROWSER_USE_PIPE_PATH;
 
 function asObject(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -165,10 +156,10 @@ export class BrowserUsePipeServer {
 
   constructor(
     private readonly browserManager: DesktopBrowserManager,
-    options: BrowserUsePipeServerOptions | string = SYNARA_BROWSER_USE_PIPE_PATH,
+    options: BrowserUsePipeServerOptions | string = CHITAURI_BROWSER_USE_PIPE_PATH,
   ) {
     this.pipePath =
-      typeof options === "string" ? options : (options.pipePath ?? SYNARA_BROWSER_USE_PIPE_PATH);
+      typeof options === "string" ? options : (options.pipePath ?? CHITAURI_BROWSER_USE_PIPE_PATH);
     this.requestOpenPanel = typeof options === "string" ? undefined : options.requestOpenPanel;
     this.server = Net.createServer((socket) => this.handleSocketConnection(socket));
   }

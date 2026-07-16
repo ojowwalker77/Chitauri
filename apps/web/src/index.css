@@ -59,6 +59,48 @@
   }
 }
 
+/* ─── Motion tokens: the single source of easing for the whole app ─────────────
+   Tailwind's stock curves are deliberately weak (--ease-out is cubic-bezier(0,0,0.2,1)),
+   which reads as mushy on UI that is supposed to feel instant. Overriding the theme
+   tokens here retunes EVERY existing `ease-out` / `ease-in-out` / bare `transition-*`
+   utility in the app at once — no call site has to change, and new code gets the right
+   curve by default.
+
+   Pick by what the element is doing (this is the whole decision tree):
+     • entering or exiting        → `ease-out`   (starts fast = immediate response)
+     • moving/morphing in place   → `ease-in-out`
+     • sliding sheets/drawers     → `ease-drawer`
+     • constant motion (spinners) → `linear`
+   Never `ease-in` for UI: it stalls at the exact moment the user is watching, so the
+   same duration *feels* slower. Nothing in the app uses it — keep it that way.
+
+   Plain `@theme` (not `@theme inline`) on purpose: it emits the custom properties to
+   :root, so hand-written CSS below can say `var(--ease-drawer)` instead of respelling
+   the literal curve. */
+@theme {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  /* iOS/Ionic drawer curve. Already the de-facto sheet curve here — it was spelled out
+     literally in five places before this token existed. */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Utilities that name no easing (`transition-colors`, `transition-[width,opacity]`, …)
+     fall back to this. Stock Tailwind points it at a symmetric ease-in-out, which puts a
+     slow ramp on hover feedback; ease-out keeps the default responsive. */
+  --default-transition-timing-function: var(--ease-out);
+
+  /* Durations, named by the job so the value is chosen once and the intent survives.
+     Ceiling for interactive UI is ~300ms; past that a transition reads as latency.
+     The namespace must be `--transition-duration-*`: that is what backs the `duration-*`
+     utilities. A `--duration-*` token compiles clean and silently generates nothing, so
+     every `duration-press` would quietly fall back to --default-transition-duration. */
+  --transition-duration-press: 140ms;
+  --transition-duration-tooltip: 160ms;
+  --transition-duration-menu: 200ms;
+  --transition-duration-disclosure: 220ms;
+  --transition-duration-sheet: 300ms;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/30;
@@ -169,7 +211,7 @@
        still never paints over the window corner. */
     display: block;
     opacity: 0;
-    transition: opacity 300ms cubic-bezier(0.32, 0.72, 0, 1);
+    transition: opacity var(--transition-duration-sheet) var(--ease-drawer);
     width: var(--app-content-card-radius, 0.75rem);
     pointer-events: none;
     background-color: var(--app-sidebar-surface, var(--card));
@@ -213,12 +255,12 @@
        seam edge rather than fanning across the sidebar, just enough to lift the card. */
     box-shadow: var(--seam-shadow-x) 0 12px -10px var(--seam-shadow-color);
     /* Match the left sidebar shell's SIDEBAR_OFFCANVAS_MOTION_CLASS slide
-       (`duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]`) so the seam corner
-       rounds/squares and the depth shadow fades IN STEP with the offcanvas animation
-       instead of snapping at frame 0 (the collapsed rule below flips both). */
+       (`duration-sheet ease-drawer`) so the seam corner rounds/squares and the depth
+       shadow fades IN STEP with the offcanvas animation instead of snapping at frame 0
+       (the collapsed rule below flips both). */
     transition:
-      box-shadow 300ms cubic-bezier(0.32, 0.72, 0, 1),
-      border-radius 300ms cubic-bezier(0.32, 0.72, 0, 1);
+      box-shadow var(--transition-duration-sheet) var(--ease-drawer),
+      border-radius var(--transition-duration-sheet) var(--ease-drawer);
   }
 
   .dark .chat-content-card {
@@ -242,7 +284,7 @@
     box-shadow: inset 0 0 0 1px var(--seam-line);
     /* Fade the seam ring with the slide (collapsed rule sets opacity:0) — `display`
        can't transition, so opacity is what keeps this in step with the animation. */
-    transition: opacity 300ms cubic-bezier(0.32, 0.72, 0, 1);
+    transition: opacity var(--transition-duration-sheet) var(--ease-drawer);
   }
 
   /* Keep only the seam-side radius strip: the vertical edge + both curves on that

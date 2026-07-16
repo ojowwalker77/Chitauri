@@ -32,9 +32,25 @@ const headerButtonDarkBorderClassName =
 // Adding a new variant? Mirror an existing one's border/focus treatment so the
 // family stays visually coherent. Prefer adding a variant over passing a
 // className override at the call site.
+//
+// Press feedback (`active:scale-[0.96]`) lives on the BASE, so every variant and size
+// answers a press instantly — that acknowledgement is what makes a control feel like it
+// heard you, and a button that only reacts on release reads as broken. `link` opts out
+// below (it renders as inline text, which shouldn't squash).
+//
+// The property list names `scale`, NOT `transform`, and that distinction is load-bearing:
+// Tailwind v4's `scale-*` utilities compile to the standalone `scale:` property, which
+// `transition-property: transform` does not cover. Naming `transform` here would leave the
+// press snapping to 0.96 with no tween — visually broken, but silent (it still compiles,
+// typechecks, and lints). `transition-transform` would also work since it expands to
+// `transform, translate, scale, rotate`, but spelling the list keeps `transition-all` out.
+//
+// Careful at call sites: `cn` runs tailwind-merge, which collapses ALL `transition-*` into
+// one group — so passing any `transition-…` via className REPLACES this list wholesale and
+// silently drops the press tween. Prefer a variant over a call-site transition override.
 const buttonVariants = cva(
   extendButtonIconChildSelectors(
-    "[&_svg]:-mx-0.5 relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-medium text-[length:var(--app-font-size-ui,12px)] outline-none transition-colors duration-200 ease-out pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11 focus-visible:ring-1 focus-visible:ring-ring/60 focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-64 sm:text-[length:var(--app-font-size-ui,12px)] [&_svg:not([class*='opacity-'])]:opacity-80 [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+    "[&_svg]:-mx-0.5 relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-medium text-[length:var(--app-font-size-ui,12px)] outline-none transition-[color,background-color,border-color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100 pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11 focus-visible:ring-1 focus-visible:ring-ring/60 focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-64 sm:text-[length:var(--app-font-size-ui,12px)] [&_svg:not([class*='opacity-'])]:opacity-80 [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   ),
   {
     defaultVariants: {
@@ -82,13 +98,18 @@ const buttonVariants = cva(
           "border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] text-destructive [:hover,[data-pressed]]:border-destructive/32 [:hover,[data-pressed]]:bg-destructive/4 [:hover,[data-pressed]]:text-destructive",
         ghost:
           "border-transparent bg-transparent text-[var(--color-text-foreground-secondary)] focus-visible:ring-[color:var(--color-border-focus)]/60 focus-visible:ring-offset-0 [:hover,[data-pressed]]:bg-[var(--color-background-button-secondary-hover)] [:hover,[data-pressed]]:text-[var(--color-text-foreground)] data-pressed:bg-[var(--color-background-button-secondary)] data-pressed:text-[var(--color-text-foreground)]",
-        link: "border-transparent underline-offset-4 [:hover,[data-pressed]]:underline",
+        // Renders as inline text rather than a button surface, so it takes the underline
+        // as its press/hover answer and opts out of the base squash.
+        link: "border-transparent underline-offset-4 active:scale-100 [:hover,[data-pressed]]:underline",
         outline:
           "border-[color:var(--color-border)] bg-transparent text-[var(--color-text-foreground)] focus-visible:ring-[color:var(--color-border-focus)]/60 [:hover,[data-pressed]]:bg-[var(--color-background-elevated-secondary)] dark:[:hover,[data-pressed]]:bg-[var(--color-background-elevated-secondary)]",
         "primary-outline":
           "border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] text-primary [:hover,[data-pressed]]:border-primary/32 [:hover,[data-pressed]]:bg-primary/4",
+        // Lifts on hover, so its press has to read from BOTH rest (1.0) and hover (1.05):
+        // landing under rest is what still registers as "pushed" on a touchscreen, where
+        // the hover lift never happens.
         prominent:
-          "rounded-full border-transparent bg-[var(--color-text-foreground)] text-[var(--color-background-surface)] transition-[transform,opacity] duration-150 hover:scale-105 disabled:opacity-20 disabled:hover:scale-100",
+          "rounded-full border-transparent bg-[var(--color-text-foreground)] text-[var(--color-background-surface)] transition-[scale,opacity] duration-press ease-out hover:scale-105 active:scale-[0.98] disabled:opacity-20 disabled:hover:scale-100 disabled:active:scale-100",
         secondary:
           "border-transparent bg-secondary text-secondary-foreground [:active,[data-pressed]]:bg-secondary/80 [:hover,[data-pressed]]:bg-secondary/90",
         "secondary-outline":

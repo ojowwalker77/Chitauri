@@ -624,6 +624,7 @@ function toProjectedThreadShellFromStoredSummary(input: {
     sidechatSourceThreadId: threadRow.sidechatSourceThreadId ?? null,
     lastKnownPr: threadRow.lastKnownPr,
     latestTurn: input.latestTurn,
+    orchestratorMode: threadRow.orchestratorMode,
     latestUserMessageAt: threadRow.latestUserMessageAt,
     hasPendingApprovals: threadRow.pendingApprovalCount > 0,
     hasPendingUserInput: threadRow.pendingUserInputCount > 0,

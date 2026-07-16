@@ -5,6 +5,10 @@
 
 import {
   PROVIDER_DISPLAY_NAMES,
+  type GrokModelOptions,
+  type ModelSelection,
+  type OrchestratorLane,
+  type OrchestratorSeatModelSelection,
   type ProviderKind,
   type ServerProviderStatus,
   type ThreadId,
@@ -13,7 +17,7 @@ import {
 } from "@t3tools/contracts";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getModelOptions, normalizeModelSlug } from "@t3tools/shared/model";
+import { getDefaultModel, getModelOptions, normalizeModelSlug } from "@t3tools/shared/model";
 import { pluralize } from "@t3tools/shared/text";
 import {
   type ReactNode,
@@ -42,6 +46,7 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import {
   type AppSettings,
+  type TaskListDisplayMode,
   DEFAULT_UI_DENSITY,
   type UiDensity,
   MAX_CHAT_FONT_SIZE_PX,
@@ -258,6 +263,20 @@ const HIGHLIGHT_COLOR_OPTIONS: ReadonlyArray<{
   },
 ];
 
+const TASK_LIST_DISPLAY_OPTIONS = [
+  {
+    value: "sidebar",
+    label: "Right sidebar",
+  },
+  {
+    value: "composer",
+    label: "Above composer",
+  },
+] as const satisfies ReadonlyArray<{
+  value: TaskListDisplayMode;
+  label: string;
+}>;
+
 const PROVIDER_SELECT_OPTIONS = [
   "codex",
   "claudeAgent",
@@ -267,6 +286,76 @@ const PROVIDER_SELECT_OPTIONS = [
   "kilo",
   "pi",
 ] as const satisfies readonly ProviderKind[];
+
+const ORCHESTRATOR_LANES = [
+  "bulk",
+  "ui",
+  "explore",
+  "verify",
+] as const satisfies readonly OrchestratorLane[];
+const ORCHESTRATOR_SEAT_PROVIDER_OPTIONS = ["codex", "claudeAgent"] as const;
+const ORCHESTRATOR_EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
+
+function isOrchestratorSeatProvider(value: string): value is "codex" | "claudeAgent" {
+  return value === "codex" || value === "claudeAgent";
+}
+
+function orchestratorEffort(selection: ModelSelection): string {
+  const options = selection.options;
+  if (!options) return "high";
+  if ("reasoningEffort" in options && options.reasoningEffort) return options.reasoningEffort;
+  if ("effort" in options && options.effort) return options.effort;
+  if ("thinkingLevel" in options && options.thinkingLevel) return options.thinkingLevel;
+  return "high";
+}
+
+function withOrchestratorEffort(selection: ModelSelection, effort: string): ModelSelection {
+  if (selection.provider === "claudeAgent") {
+    return {
+      ...selection,
+      options: { effort: effort as "low" | "medium" | "high" | "xhigh" | "max" },
+    };
+  }
+  if (selection.provider === "pi") {
+    return {
+      ...selection,
+      options: {
+        thinkingLevel: effort === "max" ? "xhigh" : (effort as "low" | "medium" | "high" | "xhigh"),
+      },
+    };
+  }
+  if (selection.provider === "codex" || selection.provider === "cursor") {
+    return { ...selection, options: { reasoningEffort: effort } };
+  }
+  if (selection.provider === "grok") {
+    return {
+      ...selection,
+      options: { reasoningEffort: effort as NonNullable<GrokModelOptions["reasoningEffort"]> },
+    };
+  }
+  // opencode and kilo have no representable effort-style option.
+  return selection;
+}
+
+function formatEscalation(selection: ModelSelection): string {
+  return `${selection.provider}:${selection.model}`;
+}
+
+function parseEscalation(value: string, fallbackProvider: ProviderKind): ModelSelection[] {
+  return value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const separator = entry.indexOf(":");
+      if (separator <= 0) return { provider: fallbackProvider, model: entry };
+      const provider = entry.slice(0, separator);
+      const model = entry.slice(separator + 1).trim();
+      return isProviderSelectOption(provider) && model
+        ? { provider, model }
+        : { provider: fallbackProvider, model: entry };
+    });
+}
 
 const TIMESTAMP_FORMAT_LABELS = {
   locale: "System default",
@@ -1099,6 +1188,9 @@ function SettingsRouteView() {
       ? ["Provider update checks"]
       : []),
     ...(settings.diffWordWrap !== defaults.diffWordWrap ? ["Diff line wrapping"] : []),
+    ...(settings.taskListDisplayMode !== defaults.taskListDisplayMode
+      ? ["Task list location"]
+      : []),
     ...(settings.autoArchiveMergedPrThreads !== defaults.autoArchiveMergedPrThreads
       ? ["Auto-archive merged PRs"]
       : []),
@@ -2321,8 +2413,265 @@ function SettingsRouteView() {
     </div>
   );
 
+  const updateOrchestratorLane = (
+    lane: OrchestratorLane,
+    route: AppSettings["orchestratorRoutingPolicy"]["lanes"][OrchestratorLane],
+  ) => {
+    updateSettings({
+      orchestratorRoutingPolicy: {
+        ...settings.orchestratorRoutingPolicy,
+        lanes: {
+          ...settings.orchestratorRoutingPolicy.lanes,
+          [lane]: route,
+        },
+      },
+    });
+  };
+
+  const updateOrchestratorSeatModels = (seatModels: OrchestratorSeatModelSelection[]) => {
+    if (seatModels.length === 0) return;
+    updateSettings({
+      orchestratorRoutingPolicy: {
+        ...settings.orchestratorRoutingPolicy,
+        seatModels,
+      },
+    });
+  };
+
+  const renderOrchestratorPanel = () => (
+    <div className="space-y-6">
+      <SettingsSection title="Orchestrator seat">
+        <SettingsRow
+          title="Seat models"
+          description="Models trusted to coordinate delegated work. The composer prefers a seat from the selected provider and uses the first row as its fallback."
+          resetAction={
+            JSON.stringify(settings.orchestratorRoutingPolicy.seatModels) !==
+            JSON.stringify(defaults.orchestratorRoutingPolicy.seatModels) ? (
+              <SettingResetButton
+                label="seat models"
+                onClick={() =>
+                  updateSettings({
+                    orchestratorRoutingPolicy: {
+                      ...settings.orchestratorRoutingPolicy,
+                      seatModels: defaults.orchestratorRoutingPolicy.seatModels,
+                    },
+                  })
+                }
+              />
+            ) : null
+          }
+        >
+          <div className="mt-4 space-y-2">
+            {settings.orchestratorRoutingPolicy.seatModels.map((seatModel, index) => (
+              <div
+                key={`${seatModel.provider}:${index}`}
+                className="grid grid-cols-[8.5rem_minmax(0,1fr)_2rem] items-center gap-2"
+              >
+                <SettingsSelectControl
+                  value={seatModel.provider}
+                  onValueChange={(value) => {
+                    if (!isOrchestratorSeatProvider(value)) return;
+                    const next = [...settings.orchestratorRoutingPolicy.seatModels];
+                    next[index] = {
+                      provider: value,
+                      model: getDefaultModel(value),
+                    } as OrchestratorSeatModelSelection;
+                    updateOrchestratorSeatModels(next);
+                  }}
+                  ariaLabel={`Seat ${index + 1} provider`}
+                  valueContent={PROVIDER_DISPLAY_NAMES[seatModel.provider]}
+                >
+                  {ORCHESTRATOR_SEAT_PROVIDER_OPTIONS.map((provider) => (
+                    <SelectItem hideIndicator key={provider} value={provider}>
+                      <ProviderOptionLabel
+                        provider={provider}
+                        label={PROVIDER_DISPLAY_NAMES[provider]}
+                      />
+                    </SelectItem>
+                  ))}
+                </SettingsSelectControl>
+                <DebouncedSettingTextInput
+                  size="sm"
+                  variant="soft"
+                  value={seatModel.model}
+                  onCommit={(model) => {
+                    const normalized = model.trim();
+                    if (!normalized) return;
+                    const next = [...settings.orchestratorRoutingPolicy.seatModels];
+                    next[index] = { ...seatModel, model: normalized };
+                    updateOrchestratorSeatModels(next);
+                  }}
+                  aria-label={`Seat ${index + 1} model`}
+                />
+                <Button
+                  type="button"
+                  size="icon-xs"
+                  variant="ghost"
+                  disabled={settings.orchestratorRoutingPolicy.seatModels.length === 1}
+                  onClick={() =>
+                    updateOrchestratorSeatModels(
+                      settings.orchestratorRoutingPolicy.seatModels.filter(
+                        (_, modelIndex) => modelIndex !== index,
+                      ),
+                    )
+                  }
+                  aria-label={`Remove ${seatModel.provider} seat model`}
+                  title={
+                    settings.orchestratorRoutingPolicy.seatModels.length === 1
+                      ? "At least one seat model is required"
+                      : "Remove seat model"
+                  }
+                >
+                  <XIcon className="size-3.5" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              onClick={() =>
+                updateOrchestratorSeatModels([
+                  ...settings.orchestratorRoutingPolicy.seatModels,
+                  {
+                    provider: "codex",
+                    model: getDefaultModel("codex"),
+                  },
+                ])
+              }
+            >
+              <PlusIcon className="size-3.5" />
+              Add seat model
+            </Button>
+          </div>
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection title="Lane routing">
+        {ORCHESTRATOR_LANES.map((lane) => {
+          const route = settings.orchestratorRoutingPolicy.lanes[lane];
+          return (
+            <SettingsRow
+              key={lane}
+              title={`${lane[0]!.toUpperCase()}${lane.slice(1)} lane`}
+              description="Provider, model, effort, and manual escalation order for new delegated work."
+              resetAction={
+                JSON.stringify(route) !==
+                JSON.stringify(defaults.orchestratorRoutingPolicy.lanes[lane]) ? (
+                  <SettingResetButton
+                    label={`${lane} lane`}
+                    onClick={() =>
+                      updateOrchestratorLane(lane, defaults.orchestratorRoutingPolicy.lanes[lane])
+                    }
+                  />
+                ) : null
+              }
+            >
+              <div className="mt-4 grid gap-2 sm:grid-cols-[9rem_minmax(0,1fr)_8rem]">
+                <SettingsSelectControl
+                  value={route.modelSelection.provider}
+                  onValueChange={(value) => {
+                    if (!isProviderSelectOption(value)) return;
+                    updateOrchestratorLane(lane, {
+                      ...route,
+                      modelSelection: withOrchestratorEffort(
+                        { provider: value, model: getDefaultModel(value) } as ModelSelection,
+                        orchestratorEffort(route.modelSelection),
+                      ),
+                    });
+                  }}
+                  ariaLabel={`${lane} lane provider`}
+                  valueContent={PROVIDER_DISPLAY_NAMES[route.modelSelection.provider]}
+                >
+                  {PROVIDER_SELECT_OPTIONS.map((provider) => (
+                    <SelectItem hideIndicator key={provider} value={provider}>
+                      <ProviderOptionLabel
+                        provider={provider}
+                        label={PROVIDER_DISPLAY_NAMES[provider]}
+                      />
+                    </SelectItem>
+                  ))}
+                </SettingsSelectControl>
+                <DebouncedSettingTextInput
+                  size="sm"
+                  variant="soft"
+                  value={route.modelSelection.model}
+                  onCommit={(model) => {
+                    const normalized = model.trim();
+                    if (!normalized) return;
+                    updateOrchestratorLane(lane, {
+                      ...route,
+                      modelSelection: { ...route.modelSelection, model: normalized },
+                    });
+                  }}
+                  aria-label={`${lane} lane model`}
+                />
+                <SettingsSelectControl
+                  value={orchestratorEffort(route.modelSelection)}
+                  onValueChange={(effort) =>
+                    updateOrchestratorLane(lane, {
+                      ...route,
+                      modelSelection: withOrchestratorEffort(route.modelSelection, effort),
+                    })
+                  }
+                  ariaLabel={`${lane} lane effort`}
+                  valueContent={orchestratorEffort(route.modelSelection)}
+                >
+                  {ORCHESTRATOR_EFFORTS.map((effort) => (
+                    <SelectItem hideIndicator key={effort} value={effort}>
+                      {effort}
+                    </SelectItem>
+                  ))}
+                </SettingsSelectControl>
+              </div>
+              <DebouncedSettingTextInput
+                size="sm"
+                variant="soft"
+                className="mt-2"
+                value={route.escalation.map(formatEscalation).join(", ")}
+                onCommit={(value) =>
+                  updateOrchestratorLane(lane, {
+                    ...route,
+                    escalation: parseEscalation(value, route.modelSelection.provider),
+                  })
+                }
+                placeholder="codex:gpt-5.6-sol, claudeAgent:claude-fable-5"
+                aria-label={`${lane} lane escalation order`}
+              />
+            </SettingsRow>
+          );
+        })}
+      </SettingsSection>
+    </div>
+  );
+
   const renderBehaviorPanel = () => (
     <div className="space-y-6">
+      <SettingsSection title="Task lists">
+        <SettingsRow
+          title="Task list location"
+          description="Choose where active task lists open by default. You can still switch views from the task controls."
+          resetAction={
+            settings.taskListDisplayMode !== defaults.taskListDisplayMode ? (
+              <SettingResetButton
+                label="task list location"
+                onClick={() =>
+                  updateSettings({ taskListDisplayMode: defaults.taskListDisplayMode })
+                }
+              />
+            ) : null
+          }
+          control={
+            <SettingsSegmentedControl
+              value={settings.taskListDisplayMode}
+              onValueChange={(value) => updateSettings({ taskListDisplayMode: value })}
+              ariaLabel="Default task list location"
+              options={TASK_LIST_DISPLAY_OPTIONS}
+            />
+          }
+        />
+      </SettingsSection>
+
       <SettingsSection title="Runtime behavior">
         {renderBooleanSettingRow({
           settingKey: "enableAssistantStreaming",
@@ -3530,6 +3879,8 @@ function SettingsRouteView() {
         return renderArchivedPanel();
       case "models":
         return renderModelsPanel();
+      case "orchestrator":
+        return renderOrchestratorPanel();
       case "providers":
         return renderProvidersPanel();
       case "profile":

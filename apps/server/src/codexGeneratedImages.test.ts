@@ -73,26 +73,19 @@ describe("generatedImagePathFromRuntimeEvent", () => {
 });
 
 describe("resolveCodexGeneratedImagesRoot(s)", () => {
-  const previousChitauriHome = process.env.SYNARA_HOME;
-  const previousDpcodeHome = process.env.DPCODE_HOME;
-  const previousT3codeHome = process.env.T3CODE_HOME;
-  const previousDisableFlag = process.env.DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN;
+  const previousChitauriHome = process.env.CHITAURI_HOME;
+  const previousDisableFlag = process.env.CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN;
 
   afterEach(() => {
-    if (previousChitauriHome === undefined) delete process.env.SYNARA_HOME;
-    else process.env.SYNARA_HOME = previousChitauriHome;
-    if (previousDpcodeHome === undefined) delete process.env.DPCODE_HOME;
-    else process.env.DPCODE_HOME = previousDpcodeHome;
-    if (previousT3codeHome === undefined) delete process.env.T3CODE_HOME;
-    else process.env.T3CODE_HOME = previousT3codeHome;
-    if (previousDisableFlag === undefined)
-      delete process.env.DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN;
-    else process.env.DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN = previousDisableFlag;
+    if (previousChitauriHome === undefined) delete process.env.CHITAURI_HOME;
+    else process.env.CHITAURI_HOME = previousChitauriHome;
+    if (previousDisableFlag === undefined) delete process.env.CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN;
+    else process.env.CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN = previousDisableFlag;
   });
 
   it("returns the overlay generated_images directory as the active write root by default", () => {
-    process.env.SYNARA_HOME = "/synara-test/runtime";
-    delete process.env.DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN;
+    process.env.CHITAURI_HOME = "/synara-test/runtime";
+    delete process.env.CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN;
     assert.equal(
       resolveCodexGeneratedImagesRoot("/codex-test/.codex"),
       path.join("/synara-test/runtime", "codex-home-overlay", "generated_images"),
@@ -100,8 +93,8 @@ describe("resolveCodexGeneratedImagesRoot(s)", () => {
   });
 
   it("returns the source generated_images directory when the dpcode-browser plugin is enabled", () => {
-    process.env.SYNARA_HOME = "/synara-test/runtime";
-    process.env.DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN = "0";
+    process.env.CHITAURI_HOME = "/synara-test/runtime";
+    process.env.CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN = "0";
     assert.equal(
       resolveCodexGeneratedImagesRoot("/codex-test/.codex"),
       path.join("/codex-test/.codex", "generated_images"),
@@ -109,8 +102,8 @@ describe("resolveCodexGeneratedImagesRoot(s)", () => {
   });
 
   it("returns both source and overlay generated_images roots for the allowlist", () => {
-    process.env.SYNARA_HOME = "/synara-test/runtime";
-    delete process.env.DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN;
+    process.env.CHITAURI_HOME = "/synara-test/runtime";
+    delete process.env.CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN;
     assert.deepEqual(resolveCodexGeneratedImagesRoots("/codex-test/.codex"), [
       path.join("/codex-test/.codex", "generated_images"),
       path.join("/synara-test/runtime", "codex-home-overlay", "generated_images"),
@@ -118,14 +111,12 @@ describe("resolveCodexGeneratedImagesRoot(s)", () => {
   });
 
   it("collapses to a single root when overlay equals source", () => {
-    delete process.env.SYNARA_HOME;
-    delete process.env.DPCODE_HOME;
-    delete process.env.T3CODE_HOME;
-    // The overlay falls under `<dirname(source)>/.synara/runtime/codex-home-overlay`,
+    delete process.env.CHITAURI_HOME;
+    // The overlay falls under `<dirname(source)>/.chitauri/runtime/codex-home-overlay`,
     // which is always distinct from `<source>` itself, so the helper still returns
     // both candidates; this test guards the dedupe path with an artificial home
     // whose dirname happens to equal the overlay root.
-    const homePath = "/runtime/.synara/runtime/codex-home-overlay";
+    const homePath = "/runtime/.chitauri/runtime/codex-home-overlay";
     const roots = resolveCodexGeneratedImagesRoots(homePath);
     assert.ok(roots.length >= 1 && roots.length <= 2, `expected 1-2 roots, got ${roots.length}`);
     assert.ok(roots.includes(path.join(homePath, "generated_images")));

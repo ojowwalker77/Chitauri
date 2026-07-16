@@ -1,4 +1,4 @@
-import { Schema, Struct } from "effect";
+import { Schema, Struct, Tuple } from "effect";
 import { NonNegativeInt, ProjectId, ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
 
 import {
@@ -370,8 +370,8 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.githubListWork, GitHubWorkListInput),
   tagRequestBody(WS_METHODS.githubWorkItemDetail, GitHubWorkItemDetailInput),
   tagRequestBody(WS_METHODS.githubPullRequestDiff, GitHubPullRequestDiffInput),
-  ...GitHubWorkItemActionInput.mapMembers((members) =>
-    members.map((member) => tagRequestBody(WS_METHODS.githubWorkItemAction, member)),
+  ...GitHubWorkItemActionInput.mapMembers(
+    Tuple.map(Schema.fieldsAssign({ _tag: Schema.tag(WS_METHODS.githubWorkItemAction) })),
   ).members,
 
   // Terminal methods

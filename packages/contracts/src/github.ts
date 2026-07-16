@@ -137,12 +137,7 @@ export const GitHubCheck = Schema.Struct({
 });
 export type GitHubCheck = typeof GitHubCheck.Type;
 
-export const GitHubTimelineEntryType = Schema.Literals([
-  "comment",
-  "review",
-  "commit",
-  "state",
-]);
+export const GitHubTimelineEntryType = Schema.Literals(["comment", "review", "commit", "state"]);
 export type GitHubTimelineEntryType = typeof GitHubTimelineEntryType.Type;
 
 export const GitHubTimelineEntry = Schema.Struct({

@@ -112,7 +112,7 @@ export function EnvironmentCollapsibleSection({
         <ChevronDownIcon
           aria-hidden
           className={cn(
-            "size-3 shrink-0 text-[var(--color-text-foreground-secondary)] opacity-60 transition-transform duration-220 ease-out motion-reduce:transition-none",
+            "size-3 shrink-0 text-[var(--color-text-foreground-secondary)] opacity-60 transition-transform duration-disclosure ease-out motion-reduce:transition-none",
             open ? "rotate-0" : "-rotate-90",
           )}
         />

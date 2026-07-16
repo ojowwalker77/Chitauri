@@ -9,7 +9,9 @@ import { Option, Schema } from "effect";
 import {
   type AssistantDeliveryMode,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
+  DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
   DEFAULT_SERVER_SETTINGS,
+  OrchestratorRoutingPolicy,
   TrimmedNonEmptyString,
   ProviderKind,
   type ProviderStartOptions,
@@ -85,6 +87,9 @@ export const DEFAULT_SIDEBAR_PROJECT_SORT_ORDER: SidebarProjectSortOrder = "manu
 export const SidebarThreadSortOrder = Schema.Literals(["updated_at", "created_at"]);
 export type SidebarThreadSortOrder = typeof SidebarThreadSortOrder.Type;
 export const DEFAULT_SIDEBAR_THREAD_SORT_ORDER: SidebarThreadSortOrder = "updated_at";
+export const TaskListDisplayMode = Schema.Literals(["sidebar", "composer"]);
+export type TaskListDisplayMode = typeof TaskListDisplayMode.Type;
+export const DEFAULT_TASK_LIST_DISPLAY_MODE: TaskListDisplayMode = "sidebar";
 
 export const UiDensity = Schema.Literals(UI_DENSITY_MODES);
 export type UiDensity = typeof UiDensity.Type;
@@ -171,6 +176,7 @@ export const AppSettingsSchema = Schema.Struct({
   confirmThreadArchive: Schema.Boolean.pipe(withDefaults(() => false)),
   confirmTerminalTabClose: Schema.Boolean.pipe(withDefaults(() => true)),
   diffWordWrap: Schema.Boolean.pipe(withDefaults(() => false)),
+  taskListDisplayMode: TaskListDisplayMode.pipe(withDefaults(() => DEFAULT_TASK_LIST_DISPLAY_MODE)),
   // Local-only UI preferences for hiding sidebar surfaces a user doesn't want.
   // `showChatsSection` controls the standalone "Chats" list in the sidebar footer
   // (rootless chats not tied to a project). `showWorkspaceSection` controls the optional tab
@@ -197,6 +203,9 @@ export const AppSettingsSchema = Schema.Struct({
   enableNativeFontSmoothing: Schema.Boolean.pipe(withDefaults(getDefaultNativeFontSmoothing)),
   enableTaskCompletionToasts: Schema.Boolean.pipe(withDefaults(() => true)),
   enableSystemTaskCompletionNotifications: Schema.Boolean.pipe(withDefaults(() => true)),
+  orchestratorRoutingPolicy: OrchestratorRoutingPolicy.pipe(
+    withDefaults(() => DEFAULT_ORCHESTRATOR_ROUTING_POLICY),
+  ),
   sidebarProjectSortOrder: SidebarProjectSortOrder.pipe(
     withDefaults(() => DEFAULT_SIDEBAR_PROJECT_SORT_ORDER),
   ),
@@ -473,6 +482,7 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     customPiModels: settings.providers.pi.customModels,
     textGenerationProvider: settings.textGenerationModelSelection.provider,
     textGenerationModel: settings.textGenerationModelSelection.model,
+    orchestratorRoutingPolicy: settings.orchestrator,
   };
 }
 
@@ -528,6 +538,9 @@ function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): Ser
       }),
       model,
     };
+  }
+  if (patch.orchestratorRoutingPolicy) {
+    serverPatch.orchestrator = patch.orchestratorRoutingPolicy;
   }
 
   if (

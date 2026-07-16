@@ -35,7 +35,10 @@ export function ThreadPinToggleButton({
       size="icon-xs"
       variant="ghost"
       className={cn(
-        "sidebar-icon-button pointer-events-auto size-5 rounded-sm border-transparent bg-transparent shadow-none transition-all hover:text-foreground/82 sm:size-5",
+        // No `transition-*` here on purpose: tailwind-merge collapses `transition-*` to a
+        // single class, so any list here would REPLACE the Button base's and silently drop
+        // the press tween. Inherit the base (`duration-press ease-out`, colors + scale).
+        "sidebar-icon-button pointer-events-auto size-5 rounded-sm border-transparent bg-transparent shadow-none hover:text-foreground/82 sm:size-5",
         toneClassName ?? "text-muted-foreground/34",
         presentation === "overlay"
           ? cn(

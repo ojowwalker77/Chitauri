@@ -15,13 +15,13 @@ the app already resolves those sources.
 
 - `config.homeDir` = `OS.homedir()` ALWAYS (`apps/server/src/main.ts:172,217`) — it is NOT affected by
   `--home-dir`.
-- `config.baseDir` = `--home-dir` / `SYNARA_HOME` (dev: `./.synara/electron-dev`; prod: `~/.synara` or
-  `~/Documents/Chitauri`). `config.dbPath` = `baseDir/{dev|userdata}/state.sqlite`.
+- `config.baseDir` = `--home-dir` / `CHITAURI_HOME` (default: `~/.chitauri`).
+  `config.dbPath` = `baseDir/{dev|userdata}/state.sqlite`.
 - So the **projection DB is correctly per-instance** (dev→dev 40 turns, prod→prod 437 turns). ✅
 - The **token archives** are read via `config.homeDir`: codex = `codexHomePath || process.env.CODEX_HOME
   || homeDir/.codex`; claude = `homeDir/.claude/projects` (see `apps/server/src/providerUsageSnapshot.ts`).
   Because `homeDir` is always the OS home, BOTH dev and prod read the GLOBAL `~/.codex` and `~/.claude`.
-- The dev runner sets `SYNARA_HOME/DPCODE_HOME/T3CODE_HOME=baseDir` but does NOT set `CODEX_HOME` or
+- The dev runner sets `CHITAURI_HOME=baseDir` but does NOT set `CODEX_HOME` or
   `CLAUDE_CONFIG_DIR`; the dev baseDir has no `.codex`/`.claude` of its own. So dev's own Codex/Claude
   sessions ALSO land in the global `~/.codex`/`~/.claude`.
 - The Usage panel passes a `homePath` (the `codexHomePath` setting = `settings.providers.codex.homePath`)
