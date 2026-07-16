@@ -11,11 +11,7 @@ const BodyText = Schema.String.check(Schema.isMaxLength(100_000));
 export const GitHubWorkItemKind = Schema.Literals(["pull_request", "issue"]);
 export type GitHubWorkItemKind = typeof GitHubWorkItemKind.Type;
 
-export const GitHubWorkListKind = Schema.Literals(["inbox", "pull_request", "issue"]);
-export type GitHubWorkListKind = typeof GitHubWorkListKind.Type;
-
 export const GitHubWorkListView = Schema.Literals([
-  "attention",
   "reviewing",
   "authored",
   "assigned",
@@ -77,7 +73,7 @@ export type GitHubConnectionResult = typeof GitHubConnectionResult.Type;
 
 export const GitHubWorkListInput = Schema.Struct({
   cwd: Schema.NullOr(TrimmedNonEmptyString),
-  kind: GitHubWorkListKind,
+  kind: GitHubWorkItemKind,
   view: GitHubWorkListView,
   query: SearchText,
   repository: Schema.NullOr(RepositoryName),
@@ -87,7 +83,6 @@ export type GitHubWorkListInput = typeof GitHubWorkListInput.Type;
 
 export const GitHubWorkItemSummary = Schema.Struct({
   id: TrimmedNonEmptyString,
-  notificationId: NullableTrimmedText,
   kind: GitHubWorkItemKind,
   repository: GitHubRepositorySummary,
   number: PositiveInt,
@@ -95,8 +90,6 @@ export const GitHubWorkItemSummary = Schema.Struct({
   url: TrimmedNonEmptyString,
   state: GitHubWorkItemState,
   isDraft: Schema.Boolean,
-  unread: Schema.Boolean,
-  reason: NullableTrimmedText,
   author: Schema.NullOr(GitHubActor),
   labels: Schema.Array(GitHubLabel),
   assignees: Schema.Array(GitHubActor),
@@ -260,12 +253,6 @@ export const GitHubWorkItemActionInput = Schema.Union([
     kind: Schema.Literal("pull_request"),
     runId: PositiveInt,
     failedOnly: Schema.Boolean,
-  }),
-  Schema.Struct({
-    action: Schema.Literal("mark_notification"),
-    cwd: Schema.NullOr(TrimmedNonEmptyString),
-    notificationId: TrimmedNonEmptyString,
-    mode: Schema.Literals(["read", "done"]),
   }),
   Schema.Struct({
     action: Schema.Literal("create_issue"),

@@ -12,6 +12,8 @@ import type {
   ResearchReference,
 } from "@t3tools/contracts";
 
+import { parseManagedWorktreeWorkspaceRoot } from "../workspace/managedWorktree";
+
 const RESEARCH_DIRECTORY_NAME = "research";
 const MANIFEST_SUFFIX = ".research.json";
 const MAX_DOCUMENT_BYTES = 2_000_000;
@@ -116,6 +118,35 @@ function repositoryRecord(manifest: JsonRecord | null): JsonRecord | null {
   return isRecord(manifest?.repository) ? manifest.repository : null;
 }
 
+// Research created inside a linked git worktree frequently records the worktree as
+// "repository.root". Resolve the main checkout so project matching downstream lands
+// on the originating project instead of minting a new project per worktree.
+async function normalizeRepositoryPlacement(input: {
+  repositoryRoot: string | null;
+  worktreePath: string | null;
+}): Promise<{ repositoryRoot: string | null; worktreePath: string | null }> {
+  if (!input.repositoryRoot) return input;
+  let gitPointerFileContents: string;
+  try {
+    const gitPath = nodePath.join(input.repositoryRoot, ".git");
+    const gitStat = await fs.stat(gitPath);
+    if (!gitStat.isFile()) return input;
+    gitPointerFileContents = await fs.readFile(gitPath, "utf8");
+  } catch {
+    return input;
+  }
+  const mainRoot = parseManagedWorktreeWorkspaceRoot({
+    gitPointerFileContents,
+    path: nodePath,
+    worktreePath: input.repositoryRoot,
+  });
+  if (!mainRoot) return input;
+  return {
+    repositoryRoot: mainRoot,
+    worktreePath: input.worktreePath ?? input.repositoryRoot,
+  };
+}
+
 async function loadDocument(input: {
   plansRoot: string;
   documentPath: string;
@@ -142,6 +173,10 @@ async function loadDocument(input: {
   const manifestResult = await readManifest(documentManifestPath(resolvedDocumentPath));
   const manifest = manifestResult.value;
   const repository = repositoryRecord(manifest);
+  const placement = await normalizeRepositoryPlacement({
+    repositoryRoot: optionalString(repository?.root ?? manifest?.repositoryRoot),
+    worktreePath: optionalString(repository?.worktree ?? manifest?.worktreePath),
+  });
   const references = normalizeReferences(manifest);
   const title = optionalString(manifest?.title) ?? titleFromFilename(resolvedDocumentPath);
   const content = input.includeContent ? await fs.readFile(resolvedDocumentPath, "utf8") : "";
@@ -153,8 +188,8 @@ async function loadDocument(input: {
     format: extension === ".html" ? "html" : "markdown",
     repositoryName:
       optionalString(repository?.name ?? manifest?.repositoryName) ?? repositoryName ?? "Research",
-    repositoryRoot: optionalString(repository?.root ?? manifest?.repositoryRoot),
-    worktreePath: optionalString(repository?.worktree ?? manifest?.worktreePath),
+    repositoryRoot: placement.repositoryRoot,
+    worktreePath: placement.worktreePath,
     branch: optionalString(repository?.branch ?? manifest?.branch),
     createdAt: optionalString(manifest?.createdAt) ?? stat.birthtime.toISOString(),
     updatedAt: optionalString(manifest?.updatedAt) ?? stat.mtime.toISOString(),
@@ -294,6 +329,8 @@ Write valid JSON with this shape:
   ]
 }
 \`\`\`
+
+\`repository.root\` MUST be the main repository checkout (the folder the user added as a project), never a temporary or linked worktree (for example anything under \`.chitauri/worktrees\`). If you are running inside a worktree, resolve the main checkout with \`git rev-parse --path-format=absolute --git-common-dir\` (the root is its parent directory), put that in \`root\`, and put the worktree you are working in under \`worktree\`.
 
 Allowed reference kinds are \`file\`, \`url\`, \`command\`, \`issue\`, \`pull-request\`, and \`other\`. Use absolute paths for file references and HTTPS URLs for web references. Omit \`line\` when it does not apply. Use JSON \`null\` for an unavailable worktree or branch.
 

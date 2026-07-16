@@ -231,7 +231,6 @@ function summaryFromSearch(value: unknown, kind: GitHubWorkItemKind): GitHubWork
   if (!repository || !number || !title || !url || !updatedAt) return null;
   return {
     id: `${kind}:${repository.nameWithOwner}:${number}`,
-    notificationId: null,
     kind,
     repository,
     number,
@@ -239,8 +238,6 @@ function summaryFromSearch(value: unknown, kind: GitHubWorkItemKind): GitHubWork
     url,
     state: stateFrom(record.state, record.mergedAt),
     isDraft: record.isDraft === true,
-    unread: false,
-    reason: null,
     author: actorFrom(record.author),
     labels: labelsFrom(record.labels),
     assignees: actorsFrom(record.assignees),
@@ -251,45 +248,6 @@ function summaryFromSearch(value: unknown, kind: GitHubWorkItemKind): GitHubWork
     reviewDecision: stringValue(record.reviewDecision),
     checkStatus: null,
     createdAt: stringValue(record.createdAt),
-    updatedAt,
-  };
-}
-
-function notificationSummary(value: unknown): GitHubWorkItemSummary | null {
-  const record = asRecord(value);
-  const subject = asRecord(record.subject);
-  const repository = repositoryFrom(record.repository);
-  const apiUrl = stringValue(subject.url);
-  const match = apiUrl?.match(/\/repos\/([^/]+)\/([^/]+)\/(pulls|issues)\/(\d+)/);
-  const notificationId = stringValue(record.id);
-  const title = stringValue(subject.title);
-  const updatedAt = stringValue(record.updated_at);
-  if (!repository || !match || !notificationId || !title || !updatedAt) return null;
-  const kind: GitHubWorkItemKind = match[3] === "pulls" ? "pull_request" : "issue";
-  const number = Number(match[4]);
-  const webSegment = kind === "pull_request" ? "pull" : "issues";
-  return {
-    id: `${kind}:${repository.nameWithOwner}:${number}`,
-    notificationId,
-    kind,
-    repository,
-    number,
-    title,
-    url: `${repository.url}/${webSegment}/${number}`,
-    state: "open",
-    isDraft: false,
-    unread: record.unread !== false,
-    reason: stringValue(record.reason),
-    author: null,
-    labels: [],
-    assignees: [],
-    commentsCount: 0,
-    additions: null,
-    deletions: null,
-    changedFiles: null,
-    reviewDecision: null,
-    checkStatus: null,
-    createdAt: null,
     updatedAt,
   };
 }
@@ -315,9 +273,6 @@ function searchArgs(input: GitHubWorkListInput): string[] {
       break;
     case "participating":
       args.push("--involves", "@me");
-      break;
-    case "attention":
-      args.push(kind === "prs" ? "--review-requested" : "--assignee", "@me");
       break;
     case "all":
       break;
@@ -348,7 +303,6 @@ function summaryFromDetail(
     `${repository.url}/${input.kind === "pull_request" ? "pull" : "issues"}/${input.number}`;
   return {
     id: `${input.kind}:${input.repository}:${input.number}`,
-    notificationId: null,
     kind: input.kind,
     repository,
     number: positiveNumber(raw.number) ?? input.number,
@@ -356,8 +310,6 @@ function summaryFromDetail(
     url,
     state: stateFrom(raw.state, raw.mergedAt),
     isDraft: raw.isDraft === true,
-    unread: false,
-    reason: null,
     author: actorFrom(raw.author),
     labels: labelsFrom(raw.labels),
     assignees: actorsFrom(raw.assignees),
@@ -478,17 +430,6 @@ function actionCommand(input: GitHubWorkItemActionInput): {
   stdin?: string;
   message: string;
 } {
-  if (input.action === "mark_notification") {
-    return {
-      args: [
-        "api",
-        `notifications/threads/${input.notificationId}`,
-        "--method",
-        input.mode === "done" ? "DELETE" : "PATCH",
-      ],
-      message: input.mode === "done" ? "Notification marked done." : "Notification marked read.",
-    };
-  }
   if (input.action === "create_issue") {
     const args = [
       "issue",
@@ -670,29 +611,13 @@ export const GitHubWorkbenchLive = Layer.effect(
         ),
       );
 
-    const listWork: GitHubWorkbenchShape["listWork"] = (input) => {
-      const args =
-        input.kind === "inbox"
-          ? [
-              "api",
-              "notifications",
-              "--method",
-              "GET",
-              "-f",
-              "all=false",
-              "-f",
-              `per_page=${input.limit}`,
-            ]
-          : searchArgs(input);
-      return cli.execute({ cwd: cwdFor(input.cwd), args }).pipe(
+    const listWork: GitHubWorkbenchShape["listWork"] = (input) =>
+      cli.execute({ cwd: cwdFor(input.cwd), args: searchArgs(input) }).pipe(
         Effect.flatMap((result) => parseJson(result.stdout, "listWork")),
         Effect.map((value) => {
           const items = arrayValue(value)
             .flatMap((entry) => {
-              const item =
-                input.kind === "inbox"
-                  ? notificationSummary(entry)
-                  : summaryFromSearch(entry, input.kind);
+              const item = summaryFromSearch(entry, input.kind);
               return item ? [item] : [];
             })
             .filter(
@@ -710,7 +635,6 @@ export const GitHubWorkbenchLive = Layer.effect(
           return { items, totalCount: items.length, syncedAt: new Date().toISOString() };
         }),
       );
-    };
 
     const workItemDetail: GitHubWorkbenchShape["workItemDetail"] = (input) =>
       cli

@@ -3,7 +3,6 @@ import type {
   GitHubWorkItemActionInput,
   GitHubWorkItemDetail,
   GitHubWorkItemSummary,
-  GitHubWorkListKind,
   GitHubWorkListView,
 } from "@t3tools/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -33,15 +32,12 @@ import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import { Textarea } from "~/components/ui/textarea";
 import { useComposerDraftStore } from "~/composerDraftStore";
-import { useGitHubInboxStore } from "~/githubInboxStore";
 import {
+  DEFAULT_GITHUB_VIEW,
   GITHUB_WORK_VIEWS,
   buildGitHubAgentPrompt,
-  defaultGitHubView,
   findProjectForGitHubItem,
-  githubReasonLabel,
-  isActionableGitHubReason,
-  isGithubItemSnoozed,
+  groupGitHubItemsByRepository,
 } from "~/githubWorkbench.logic";
 import { useHandleNewThread } from "~/hooks/useHandleNewThread";
 import { useTheme } from "~/hooks/useTheme";
@@ -58,7 +54,6 @@ import {
   ArrowUpRightIcon,
   CheckCircle2Icon,
   CircleAlertIcon,
-  ClockIcon,
   ExternalLinkIcon,
   GitHubIcon,
   GitMergeIcon,
@@ -84,15 +79,6 @@ export const Route = createFileRoute("/_chat/github")({
 
 type DetailTab = "summary" | "timeline" | "code";
 type ComposerMode = "comment" | "review" | null;
-
-const WORK_KIND_TABS: ReadonlyArray<{
-  value: GitHubWorkListKind;
-  label: string;
-}> = [
-  { value: "inbox", label: "Inbox" },
-  { value: "pull_request", label: "Pull requests" },
-  { value: "issue", label: "Issues" },
-];
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "GitHub request failed.";
@@ -140,13 +126,12 @@ function WorkListRow({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const reason = githubReasonLabel(item.reason);
   return (
     <button
       type="button"
       onClick={onSelect}
       className={cn(
-        "group flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2.5 text-left outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring/60",
+        "group flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring/60",
         selected
           ? "bg-[var(--color-background-elevated-secondary)]"
           : "hover:bg-[var(--color-background-elevated-secondary)]/70",
@@ -154,20 +139,11 @@ function WorkListRow({
     >
       <ItemGlyph item={item} />
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5">
-          <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
-            {item.title}
-          </span>
-          {item.unread ? <span className="size-1.5 shrink-0 rounded-full bg-claude" /> : null}
-        </span>
-        <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
-          <span className="truncate">{item.repository.nameWithOwner}</span>
+        <span className="block truncate text-[13px] font-medium text-foreground">{item.title}</span>
+        <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <span>#{item.number}</span>
           {item.isDraft ? <span>Draft</span> : null}
-        </span>
-        <span className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground/85">
-          {reason ? <span className="truncate">{reason}</span> : null}
-          {reason ? <span>·</span> : null}
+          <span>·</span>
           <span className="shrink-0">{formatRelativeTime(item.updatedAt)}</span>
           <span className="ml-auto">
             <StatusDot status={item.checkStatus} />
@@ -178,15 +154,7 @@ function WorkListRow({
   );
 }
 
-function EmptyList({
-  kind,
-  loading,
-  error,
-}: {
-  kind: GitHubWorkListKind;
-  loading: boolean;
-  error: unknown;
-}) {
+function EmptyList({ loading, error }: { loading: boolean; error: unknown }) {
   if (loading) {
     return (
       <div className="flex flex-1 items-center justify-center gap-2 text-xs text-muted-foreground">
@@ -204,7 +172,7 @@ function EmptyList({
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center text-xs text-muted-foreground">
       <CheckCircle2Icon className="size-5 text-success/80" />
-      <p>{kind === "inbox" ? "Nothing needs your attention." : "No matching GitHub work."}</p>
+      <p>No matching GitHub work.</p>
     </div>
   );
 }
@@ -683,37 +651,42 @@ function GitHubWorkbenchRoute() {
   const projects = useStore((state) => state.projects);
   const { handleNewThread } = useHandleNewThread();
   const firstProjectCwd = projects[0]?.cwd ?? null;
-  const [kind, setKind] = useState<GitHubWorkListKind>("inbox");
-  const [view, setView] = useState<GitHubWorkListView>("attention");
+  const [view, setView] = useState<GitHubWorkListView>(DEFAULT_GITHUB_VIEW);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>("summary");
   const [composerMode, setComposerMode] = useState<ComposerMode>(null);
   const [createIssueOpen, setCreateIssueOpen] = useState(false);
-  const snoozedUntilByItemId = useGitHubInboxStore((state) => state.snoozedUntilByItemId);
-  const snooze = useGitHubInboxStore((state) => state.snooze);
-  const pruneExpired = useGitHubInboxStore((state) => state.pruneExpired);
-  useEffect(() => pruneExpired(), [pruneExpired]);
 
   const connectionQuery = useQuery(githubConnectionQueryOptions(firstProjectCwd));
-  const listInput = useMemo(
+  const listInputBase = useMemo(
     () => ({
       cwd: firstProjectCwd,
-      kind,
       view,
       query: query.trim() || null,
       repository: null,
       limit: 75,
     }),
-    [firstProjectCwd, kind, query, view],
+    [firstProjectCwd, query, view],
   );
-  const listQuery = useQuery(githubWorkListQueryOptions(listInput));
-  const visibleItems = useMemo(
+  const pullRequestListQuery = useQuery(
+    githubWorkListQueryOptions({ ...listInputBase, kind: "pull_request" }),
+  );
+  const issueListQuery = useQuery(githubWorkListQueryOptions({ ...listInputBase, kind: "issue" }));
+  const listLoading = pullRequestListQuery.isPending || issueListQuery.isPending;
+  const listError = pullRequestListQuery.error ?? issueListQuery.error;
+  const listSyncedAt = pullRequestListQuery.data?.syncedAt ?? issueListQuery.data?.syncedAt ?? null;
+  const repositoryGroups = useMemo(
     () =>
-      (listQuery.data?.items ?? []).filter(
-        (item) => !isGithubItemSnoozed(item.id, snoozedUntilByItemId),
-      ),
-    [listQuery.data?.items, snoozedUntilByItemId],
+      groupGitHubItemsByRepository([
+        pullRequestListQuery.data?.items ?? [],
+        issueListQuery.data?.items ?? [],
+      ]),
+    [issueListQuery.data?.items, pullRequestListQuery.data?.items],
+  );
+  const visibleItems = useMemo(
+    () => repositoryGroups.flatMap((group) => group.items),
+    [repositoryGroups],
   );
   useEffect(() => {
     if (visibleItems.length === 0) {
@@ -740,9 +713,8 @@ function GitHubWorkbenchRoute() {
   const detail = detailQuery.data?.detail ?? null;
   const actionMutation = useMutation(githubWorkItemActionMutationOptions(queryClient));
 
-  const changeKind = (nextKind: GitHubWorkListKind) => {
-    setKind(nextKind);
-    setView(defaultGitHubView(nextKind));
+  const changeView = (nextView: GitHubWorkListView) => {
+    setView(nextView);
     setSelectedId(null);
     setDetailTab("summary");
   };
@@ -814,10 +786,6 @@ function GitHubWorkbenchRoute() {
 
   const connection = connectionQuery.data;
   const connectionBlocked = connection && (!connection.available || !connection.authenticated);
-  const actionNeededCount = (listQuery.data?.items ?? []).filter(
-    (item) =>
-      isActionableGitHubReason(item.reason) && !isGithubItemSnoozed(item.id, snoozedUntilByItemId),
-  ).length;
 
   return (
     <RouteInsetSurface>
@@ -876,47 +844,23 @@ function GitHubWorkbenchRoute() {
               )}
             >
               <div className="border-b border-border/70 p-3">
-                <div className="flex rounded-lg bg-muted/55 p-0.5">
-                  {WORK_KIND_TABS.map((tab) => (
+                <div className="flex gap-1 overflow-x-auto pb-1">
+                  {GITHUB_WORK_VIEWS.map((option) => (
                     <button
-                      key={tab.value}
+                      key={option.value}
                       type="button"
-                      onClick={() => changeKind(tab.value)}
+                      onClick={() => changeView(option.value)}
                       className={cn(
-                        "relative flex-1 rounded-md px-2 py-1.5 text-[11px] transition-colors",
-                        kind === tab.value
-                          ? "bg-background text-foreground"
-                          : "text-muted-foreground hover:text-foreground",
+                        "shrink-0 rounded-full px-2 py-1 text-[11px]",
+                        view === option.value
+                          ? "bg-foreground text-background"
+                          : "bg-muted text-muted-foreground hover:text-foreground",
                       )}
                     >
-                      {tab.label}
-                      {tab.value === "inbox" && actionNeededCount > 0 ? (
-                        <span className="ml-1 rounded-full bg-foreground px-1.5 py-0.5 text-[11px] text-background">
-                          {actionNeededCount}
-                        </span>
-                      ) : null}
+                      {option.label}
                     </button>
                   ))}
                 </div>
-                {GITHUB_WORK_VIEWS[kind].length > 1 ? (
-                  <div className="mt-2 flex gap-1 overflow-x-auto pb-1">
-                    {GITHUB_WORK_VIEWS[kind].map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setView(option.value)}
-                        className={cn(
-                          "shrink-0 rounded-full px-2 py-1 text-[11px]",
-                          view === option.value
-                            ? "bg-foreground text-background"
-                            : "bg-muted text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
                 <div className="mt-2 flex items-center rounded-lg border border-border bg-background/60 px-2">
                   <SearchIcon className="size-3.5 text-muted-foreground" />
                   <Input
@@ -930,26 +874,33 @@ function GitHubWorkbenchRoute() {
                 </div>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
-                {visibleItems.length > 0 ? (
-                  visibleItems.map((item) => (
-                    <WorkListRow
-                      key={item.id}
-                      item={item}
-                      selected={item.id === selectedId}
-                      onSelect={() => {
-                        setSelectedId(item.id);
-                        setDetailTab("summary");
-                        setComposerMode(null);
-                      }}
-                    />
+                {repositoryGroups.length > 0 ? (
+                  repositoryGroups.map((group) => (
+                    <section key={group.repository.nameWithOwner} className="mb-2">
+                      <h2 className="sticky top-0 z-10 bg-[var(--color-background-elevated)] px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground">
+                        {group.repository.nameWithOwner}
+                      </h2>
+                      {group.items.map((item) => (
+                        <WorkListRow
+                          key={item.id}
+                          item={item}
+                          selected={item.id === selectedId}
+                          onSelect={() => {
+                            setSelectedId(item.id);
+                            setDetailTab("summary");
+                            setComposerMode(null);
+                          }}
+                        />
+                      ))}
+                    </section>
                   ))
                 ) : (
-                  <EmptyList kind={kind} loading={listQuery.isPending} error={listQuery.error} />
+                  <EmptyList loading={listLoading} error={listError} />
                 )}
               </div>
-              {listQuery.data ? (
+              {listSyncedAt ? (
                 <div className="border-t border-border/70 px-3 py-2 text-[11px] text-muted-foreground">
-                  {visibleItems.length} items · synced {formatRelativeTime(listQuery.data.syncedAt)}
+                  {visibleItems.length} items · synced {formatRelativeTime(listSyncedAt)}
                 </div>
               ) : null}
             </aside>
@@ -1031,35 +982,6 @@ function GitHubWorkbenchRoute() {
                         {detail.item.assignees.some((actor) => actor.login === connection?.account)
                           ? "Unassign me"
                           : "Assign me"}
-                      </Button>
-                    ) : null}
-                    {kind === "inbox" && selectedItem.notificationId ? (
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        onClick={() =>
-                          void runAction({
-                            action: "mark_notification",
-                            cwd: firstProjectCwd,
-                            notificationId: selectedItem.notificationId!,
-                            mode: "done",
-                          })
-                        }
-                      >
-                        <CheckCircle2Icon /> Done
-                      </Button>
-                    ) : null}
-                    {kind === "inbox" ? (
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        onClick={() => {
-                          const tomorrow = new Date();
-                          tomorrow.setDate(tomorrow.getDate() + 1);
-                          snooze(selectedItem.id, tomorrow.toISOString());
-                        }}
-                      >
-                        <ClockIcon /> Tomorrow
                       </Button>
                     ) : null}
                     <div className="ml-auto flex gap-1">
@@ -1203,10 +1125,7 @@ function GitHubWorkbenchRoute() {
             labels: [],
             assignees: [],
           }).then((result) => {
-            if (result) {
-              setCreateIssueOpen(false);
-              changeKind("issue");
-            }
+            if (result) setCreateIssueOpen(false);
           });
         }}
       />
