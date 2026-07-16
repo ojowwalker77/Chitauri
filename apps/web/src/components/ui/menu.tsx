@@ -13,6 +13,15 @@ import {
 } from "../chat/composerPickerStyles";
 import { SWITCH_THUMB_CLASS_NAME, SWITCH_TRACK_CLASS_NAME } from "./switch";
 
+/**
+ * Highlight feedback for pressable list rows (menu items, submenu triggers, select
+ * options). The shared option chrome only swaps `data-highlighted` colours, so the
+ * transition lives here — colour only, never `active:scale`: squashing a full-width
+ * list row reads wrong. Shared with select.tsx so every row settles identically.
+ */
+const MENU_ITEM_MOTION_CLASS_NAME =
+  "transition-colors duration-press ease-out motion-reduce:transition-none";
+
 const MenuCreateHandle = MenuPrimitive.createHandle;
 
 const Menu = MenuPrimitive.Root;
@@ -112,6 +121,7 @@ function MenuItem({
     <MenuPrimitive.Item
       className={cn(
         COMPOSER_PICKER_MENU_OPTION_CLASS_NAME,
+        MENU_ITEM_MOTION_CLASS_NAME,
         "data-inset:ps-8 data-[variant=destructive]:text-destructive-foreground",
         className,
       )}
@@ -138,6 +148,7 @@ function MenuCheckboxItem({
       className={cn(
         cn(
           COMPOSER_PICKER_MENU_OPTION_CLASS_NAME,
+          MENU_ITEM_MOTION_CLASS_NAME,
           "grid in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] py-1 ps-2",
         ),
         variant === "switch"
@@ -210,6 +221,7 @@ function MenuRadioItem({
       className={cn(
         cn(
           COMPOSER_PICKER_MENU_OPTION_CLASS_NAME,
+          MENU_ITEM_MOTION_CLASS_NAME,
           preserveChildLayout
             ? "grid in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] grid-cols-[minmax(0,1fr)_2.5rem] gap-x-1.5 gap-y-0 px-2"
             : "w-full min-w-0 px-2.5",
@@ -330,6 +342,7 @@ function MenuSubTrigger({
       className={cn(
         cn(
           COMPOSER_PICKER_MENU_OPTION_CLASS_NAME,
+          MENU_ITEM_MOTION_CLASS_NAME,
           "data-popup-open:bg-[var(--color-background-button-secondary-hover)] data-popup-open:text-[var(--color-text-foreground)] data-inset:ps-8",
         ),
         className,
@@ -377,6 +390,7 @@ function MenuSubPopup({
 }
 
 export {
+  MENU_ITEM_MOTION_CLASS_NAME,
   MenuCreateHandle,
   MenuCreateHandle as DropdownMenuCreateHandle,
   Menu,

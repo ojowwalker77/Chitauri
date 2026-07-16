@@ -57,7 +57,9 @@ export function TerminalScrollToBottom({ terminal }: TerminalScrollToBottomProps
   return (
     <div
       className={cn(
-        "absolute bottom-4 left-1/2 z-10 -translate-x-1/2 transition-all duration-200",
+        // `translate`, not `transform`: Tailwind v4's `translate-y-*` compiles to the
+        // standalone `translate:` property, which `transition-property: transform` misses.
+        "absolute bottom-4 left-1/2 z-10 -translate-x-1/2 transition-[opacity,translate] duration-menu ease-out motion-reduce:transition-none",
         isVisible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0",
       )}
     >

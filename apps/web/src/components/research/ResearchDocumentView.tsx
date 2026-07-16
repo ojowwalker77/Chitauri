@@ -85,7 +85,7 @@ function ReferenceRail({ references }: { references: readonly ResearchReference[
                 key={reference.id}
                 type="button"
                 onClick={() => void openReference(reference)}
-                className="group flex min-h-11 w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition-[background-color,box-shadow,transform] duration-150 ease-out hover:bg-[var(--color-background-elevated-secondary)] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border)_62%,transparent)] active:scale-[0.96] motion-reduce:transition-none"
+                className="group flex min-h-11 w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition-[background-color,box-shadow,scale] duration-press ease-out hover:bg-[var(--color-background-elevated-secondary)] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border)_62%,transparent)] active:scale-[0.96] motion-reduce:transition-none"
               >
                 <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--color-background-elevated-secondary)] text-muted-foreground">
                   <Icon className="size-3.5" />
@@ -155,7 +155,7 @@ export function ResearchDocumentView({
                 type="button"
                 onClick={onApply}
                 disabled={applying}
-                className="min-h-10 shrink-0 gap-2 pl-3.5 pr-3 transition-transform active:scale-[0.96]"
+                className="min-h-10 shrink-0 gap-2 pl-3.5 pr-3"
               >
                 <HammerIcon className="size-4" />
                 {applying ? "Starting…" : "Apply in new thread"}
