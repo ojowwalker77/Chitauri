@@ -32,11 +32,15 @@ import {
   recoverExistingAddProjectTarget,
   resolveSidebarThreadListPaging,
   resolveProjectEmptyState,
+  resolveProjectActivityRollup,
   resolveSettingsBackTarget,
   resolveProjectStatusIndicator,
+  resolveSidebarBranchLabel,
   resolveSidebarNewThreadEnvMode,
+  resolveSidebarStatusLabel,
   resolveThreadHoverCardMetadata,
   resolveThreadRowClassName,
+  resolveThreadRowTrailingReserveClass,
   resolveThreadStatusPill,
   shouldShowDebugFeatureFlagsMenu,
   shouldPrunePinnedThreads,
@@ -897,6 +901,19 @@ describe("resolveThreadRowClassName", () => {
   });
 });
 
+describe("resolveThreadRowTrailingReserveClass", () => {
+  it("reserves enough room for explicit Tree Map state labels", () => {
+    const className = resolveThreadRowTrailingReserveClass({
+      metaChipCount: 1,
+      hasTrailingGlyph: true,
+      hasStatusLabel: true,
+    });
+
+    expect(className).toContain("pr-[7.25rem]");
+    expect(className).toContain("group-hover/thread-row:pr-[4.75rem]");
+  });
+});
+
 describe("resolveProjectStatusIndicator", () => {
   it("returns null when no threads have a notable status", () => {
     expect(resolveProjectStatusIndicator([null, null])).toBeNull();
@@ -944,6 +961,46 @@ describe("resolveProjectStatusIndicator", () => {
         },
       ]),
     ).toMatchObject({ label: "Plan Ready", dotClass: "bg-violet-500" });
+  });
+});
+
+describe("Tree Map sidebar labels", () => {
+  const workingStatus = {
+    label: "Working",
+    colorClass: "text-sky-600",
+    dotClass: "bg-sky-500",
+    pulse: true,
+  } as const;
+  const approvalStatus = {
+    label: "Pending Approval",
+    colorClass: "text-amber-600",
+    dotClass: "bg-amber-500",
+    pulse: false,
+  } as const;
+
+  it("keeps feature branches useful without spending space on namespace prefixes", () => {
+    expect(resolveSidebarBranchLabel("agent/sidebar-tree-map")).toBe("sidebar-tree-map");
+    expect(resolveSidebarBranchLabel("agent/sidebar-tree-map/")).toBe("sidebar-tree-map");
+    expect(resolveSidebarBranchLabel("main")).toBeNull();
+    expect(resolveSidebarBranchLabel("  ")).toBeNull();
+  });
+
+  it("uses compact but explicit thread state copy", () => {
+    expect(resolveSidebarStatusLabel(workingStatus)).toBe("Working");
+    expect(resolveSidebarStatusLabel(approvalStatus)).toBe("Approval");
+  });
+
+  it("rolls the highest-priority project activity into an honest summary", () => {
+    expect(resolveProjectActivityRollup([workingStatus, workingStatus, null])).toMatchObject({
+      label: "2 live",
+      status: workingStatus,
+    });
+    expect(
+      resolveProjectActivityRollup([workingStatus, approvalStatus, approvalStatus]),
+    ).toMatchObject({
+      label: "2 need you",
+      status: approvalStatus,
+    });
   });
 });
 
@@ -1624,7 +1681,10 @@ describe("deriveSidebarProjectData", () => {
       resolveThreadStatus: () => null,
     });
 
-    expect(data.get(project.id)?.projectStatus).toBeNull();
+    expect(data.get(project.id)).toMatchObject({
+      projectStatus: null,
+      projectActivityRollup: null,
+    });
   });
 
   it("pages the thread preview five rows at a time and clamps stale paging", () => {
