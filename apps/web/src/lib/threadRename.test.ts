@@ -49,6 +49,7 @@ describe("dispatchThreadRename", () => {
         envMode: "local",
         branch: null,
         worktreePath: null,
+        orchestratorMode: true,
         createdAt: "2026-04-18T00:00:00.000Z",
       },
     });
@@ -60,6 +61,7 @@ describe("dispatchThreadRename", () => {
       threadId: "thread-draft",
       projectId: "project-chat",
       title: "Inbox cleanup",
+      orchestratorMode: true,
       createdAt: "2026-04-18T00:00:00.000Z",
     });
   });

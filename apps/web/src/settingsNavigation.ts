@@ -13,6 +13,7 @@ export const SETTINGS_SECTION_IDS = [
   "worktrees",
   "archived",
   "models",
+  "orchestrator",
   "providers",
   "skills",
   "usage",
@@ -127,6 +128,14 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     description: "Git writing defaults and custom model slugs.",
     icon: "brain",
     eyebrow: "AI configuration",
+  },
+  {
+    id: "orchestrator",
+    group: "chitauri",
+    label: "Orchestrator",
+    description: "Seat models and per-lane routing for delegated work.",
+    icon: "agent-network",
+    eyebrow: "Delegation",
   },
   {
     id: "providers",

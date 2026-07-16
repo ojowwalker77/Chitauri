@@ -48,6 +48,7 @@ async function mountMenu(props?: {
     activeProvider: provider,
     runtimeMode: null,
     interactionMode: null,
+    orchestratorMode: null,
   };
   useComposerDraftStore.setState({
     draftsByThreadId,

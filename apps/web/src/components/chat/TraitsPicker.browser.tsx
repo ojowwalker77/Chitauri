@@ -112,6 +112,7 @@ async function mountClaudePicker(props?: {
       activeProvider: "claudeAgent",
       runtimeMode: null,
       interactionMode: null,
+      orchestratorMode: null,
     },
   };
   useComposerDraftStore.setState({
@@ -343,6 +344,7 @@ async function mountCodexPicker(props: { model?: string; options?: CodexModelOpt
       activeProvider: "codex",
       runtimeMode: null,
       interactionMode: null,
+      orchestratorMode: null,
     },
   };
 
@@ -680,6 +682,7 @@ async function mountOpenCodePicker(props?: {
       activeProvider: "opencode",
       runtimeMode: null,
       interactionMode: null,
+      orchestratorMode: null,
     },
   };
 
