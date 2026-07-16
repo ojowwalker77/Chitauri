@@ -22,6 +22,7 @@ import { OrchestrationEngineService } from "./orchestration/Services/Orchestrati
 import { OrchestrationReactor } from "./orchestration/Services/OrchestrationReactor";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { ThreadDeletionReactor } from "./orchestration/Services/ThreadDeletionReactor";
+import { OrchestratorControlPlane } from "./orchestrator/Services/OrchestratorControlPlane";
 import { reconcileRestartStuckTurns } from "./orchestration/startupTurnReconciliation";
 import { ProviderSessionReaper } from "./provider/Services/ProviderSessionReaper";
 import { ServerLifecycleEvents } from "./serverLifecycleEvents";
@@ -50,6 +51,7 @@ export interface ServerShape {
     | ServerRuntimeStartup
     | ServerSettingsService
     | ThreadDeletionReactor
+    | OrchestratorControlPlane
   >;
   readonly stopSignal: Effect.Effect<void, never>;
 }

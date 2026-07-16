@@ -268,6 +268,7 @@ import {
   ChevronRightIcon,
   ComposerSendArrowIcon,
   LayoutSidebarIcon,
+  LockIcon,
   RefreshCwIcon,
   TemporaryThreadIcon,
   XIcon,
@@ -449,6 +450,7 @@ import { ComposerReferenceAttachments } from "./chat/ComposerReferenceAttachment
 import { TranscriptSelectionActionLayer } from "./chat/TranscriptSelectionActionLayer";
 import { ComposerActiveTaskListCard } from "./chat/ComposerActiveTaskListCard";
 import { ComposerBackgroundAgentsCard } from "./chat/ComposerBackgroundAgentsCard";
+import { OrchestratorDelegationPanel } from "./chat/OrchestratorDelegationPanel";
 import { ComposerColumnFrame } from "./chat/ComposerColumnFrame";
 import { useTranscriptAssistantSelectionAction } from "./chat/useTranscriptAssistantSelectionAction";
 import { resolveTranscriptMarkerRange } from "./chat/chatSelectionActions";
@@ -1274,6 +1276,7 @@ export default function ChatView({
   );
   const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
   const [isTraitsPickerOpen, setIsTraitsPickerOpen] = useState(false);
+  const [isCreatingOrchestratorSeat, setIsCreatingOrchestratorSeat] = useState(false);
   const legendListRef = useRef<LegendListRef | null>(null);
   const timelineControllerRef = useRef<MessagesTimelineController | null>(null);
   const isAtEndRef = useRef(true);
@@ -2351,6 +2354,17 @@ export default function ChatView({
       [activeThread?.id, hasWorkLogSubagents, rawWorkLogEntries],
     ),
   );
+  const orchestratorDelegations = useStore(
+    useMemo(
+      () =>
+        createRelevantWorkLogThreadsSelector({
+          workEntries: [],
+          parentThreadId: activeThread?.id ?? null,
+          enabled: Boolean(activeThread?.orchestratorMode),
+        }),
+      [activeThread?.id, activeThread?.orchestratorMode],
+    ),
+  ).filter((thread) => thread.parentThreadId === activeThread?.id);
   const workLogEntries = useMemo(
     () =>
       hasWorkLogSubagents
@@ -8378,7 +8392,76 @@ export default function ChatView({
     },
     [handleModelPickerOpenChange],
   );
-  const composerPickerControls = showComposerModelBootstrapSkeleton ? (
+  const createOrchestratorSeat = useCallback(async () => {
+    const api = readNativeApi();
+    const seatModel =
+      settings.orchestratorRoutingPolicy.seatModels.find(
+        (selection) => selection.provider === selectedProvider,
+      ) ?? settings.orchestratorRoutingPolicy.seatModels[0];
+    if (!api || !activeProject || !activeThread || !seatModel || isCreatingOrchestratorSeat) {
+      return;
+    }
+    setIsCreatingOrchestratorSeat(true);
+    const nextThreadId = newThreadId();
+    const createdAt = new Date().toISOString();
+    try {
+      await api.orchestration.dispatchCommand({
+        type: "thread.create",
+        commandId: newCommandId(),
+        threadId: nextThreadId,
+        projectId: activeProject.id,
+        title: "Orchestrator",
+        modelSelection: seatModel,
+        runtimeMode,
+        interactionMode: "default",
+        envMode: activeThread.envMode ?? (activeThread.worktreePath ? "worktree" : "local"),
+        branch: activeThread.branch,
+        worktreePath: activeThread.worktreePath,
+        associatedWorktreePath: activeThreadAssociatedWorktree.associatedWorktreePath,
+        associatedWorktreeBranch: activeThreadAssociatedWorktree.associatedWorktreeBranch,
+        associatedWorktreeRef: activeThreadAssociatedWorktree.associatedWorktreeRef,
+        createBranchFlowCompleted: activeThread.createBranchFlowCompleted ?? false,
+        lastKnownPr: activeThread.lastKnownPr ?? null,
+        orchestratorMode: true,
+        createdAt,
+      });
+      const snapshot = await api.orchestration.getShellSnapshot();
+      syncServerShellSnapshot(snapshot);
+      await navigate({ to: "/$threadId", params: { threadId: nextThreadId } });
+    } catch (error) {
+      toastManager.add({
+        type: "error",
+        title: "Could not create orchestrator seat",
+        description:
+          error instanceof Error ? error.message : "The orchestrator seat could not be created.",
+      });
+    } finally {
+      setIsCreatingOrchestratorSeat(false);
+    }
+  }, [
+    activeProject,
+    activeThread,
+    activeThreadAssociatedWorktree,
+    isCreatingOrchestratorSeat,
+    navigate,
+    runtimeMode,
+    selectedProvider,
+    settings.orchestratorRoutingPolicy.seatModels,
+    syncServerShellSnapshot,
+  ]);
+  const composerPickerControls = activeThread.orchestratorMode ? (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="h-7 max-w-52 gap-1.5 border border-amber-500/30 bg-amber-500/8 px-2 text-amber-700 hover:bg-amber-500/12 dark:text-amber-300"
+      disabled
+      title="Orchestrator seat model is locked for this thread"
+    >
+      <LockIcon className="size-3.5" aria-hidden />
+      <span className="truncate">{activeThread.modelSelection.model}</span>
+    </Button>
+  ) : showComposerModelBootstrapSkeleton ? (
     useSplitComposerPickerControls ? (
       <>
         {selectedProviderRuntimeModelDiscoveryPending ? (
@@ -10109,6 +10192,24 @@ export default function ChatView({
                         : renderComposerLeadingControls({ iconOnly: false })}
 
                       <>
+                        {!activeThread.orchestratorMode && !isEditorRail ? (
+                          <Button
+                            variant="ghost"
+                            className="shrink-0 px-2 text-[length:var(--app-font-size-ui-sm,11px)] font-normal text-[var(--color-text-foreground-secondary)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)]"
+                            size="sm"
+                            type="button"
+                            onClick={() => void createOrchestratorSeat()}
+                            disabled={isCreatingOrchestratorSeat || !activeProject}
+                            title="Create an orchestrator seat"
+                            aria-label="Create an orchestrator seat"
+                          >
+                            <LockIcon className="size-3.5" aria-hidden />
+                            <span className="sr-only sm:not-sr-only">
+                              {isCreatingOrchestratorSeat ? "Creating..." : "Orchestrator"}
+                            </span>
+                          </Button>
+                        ) : null}
+
                         {interactionMode === "plan" ? (
                           <Button
                             variant="ghost"
@@ -10556,6 +10657,12 @@ export default function ChatView({
             {shouldRenderChatPaneContent && !isCenteredEmptyLanding ? (
               <div className="flex min-h-0 flex-1 flex-col">
                 <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+                  {activeThread.orchestratorMode && transcriptContent === undefined ? (
+                    <OrchestratorDelegationPanel
+                      threads={orchestratorDelegations}
+                      onOpenThread={onNavigateToThread}
+                    />
+                  ) : null}
                   {transcriptContent ?? (
                     <ChatTranscriptPane
                       activeThreadId={activeThread.id}

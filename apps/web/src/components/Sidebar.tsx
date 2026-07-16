@@ -5157,6 +5157,11 @@ export default function Sidebar() {
                   thread.title
                 )}
               </span>
+              {thread.orchestratorMode ? (
+                <span className="shrink-0 rounded-sm border border-amber-500/30 bg-amber-500/8 px-1 py-0.5 text-[9px] font-medium text-amber-700 dark:text-amber-300">
+                  Seat
+                </span>
+              ) : null}
               {!isSubagentThread && threadStatus?.label === "Pending Approval" ? (
                 <span
                   aria-label="Pending approval"
@@ -5425,6 +5430,11 @@ export default function Sidebar() {
                   thread.title
                 )}
               </span>
+              {thread.orchestratorMode ? (
+                <span className="shrink-0 rounded-sm border border-amber-500/30 bg-amber-500/8 px-1 py-0.5 text-[9px] font-medium text-amber-700 dark:text-amber-300">
+                  Seat
+                </span>
+              ) : null}
               {!isSubagentThread && threadStatus?.label === "Pending Approval" ? (
                 <span
                   aria-label="Pending approval"

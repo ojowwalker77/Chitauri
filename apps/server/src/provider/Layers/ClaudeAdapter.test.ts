@@ -349,6 +349,39 @@ describe("ClaudeAdapterLive", () => {
     );
   });
 
+  it.effect("maps orchestrator MCP servers to Claude Agent SDK HTTP config", () => {
+    const harness = makeHarness();
+    return Effect.gen(function* () {
+      const adapter = yield* ClaudeAdapter;
+      yield* adapter.startSession({
+        threadId: THREAD_ID,
+        provider: "claudeAgent",
+        runtimeMode: "full-access",
+        mcpServers: [
+          {
+            name: "chitauri_orchestrator",
+            url: "http://127.0.0.1:5173/api/orchestrator/mcp",
+            headers: { Authorization: "Bearer seat-token" },
+            toolTimeoutMs: 3_600_000,
+          },
+        ],
+      });
+
+      assert.deepEqual(harness.getLastCreateQueryInput()?.options.mcpServers, {
+        chitauri_orchestrator: {
+          type: "http",
+          url: "http://127.0.0.1:5173/api/orchestrator/mcp",
+          headers: { Authorization: "Bearer seat-token" },
+          timeout: 3_600_000,
+          alwaysLoad: true,
+        },
+      });
+    }).pipe(
+      Effect.provideService(Random.Random, makeDeterministicRandomService()),
+      Effect.provide(harness.layer),
+    );
+  });
+
   it.effect("forwards claude effort levels into query options", () => {
     const harness = makeHarness();
     return Effect.gen(function* () {

@@ -3346,6 +3346,22 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             ? { maxThinkingTokens: providerOptions.maxThinkingTokens }
             : {}),
           ...(Object.keys(settings).length > 0 ? { settings } : {}),
+          ...(input.mcpServers && input.mcpServers.length > 0
+            ? {
+                mcpServers: Object.fromEntries(
+                  input.mcpServers.map((server) => [
+                    server.name,
+                    {
+                      type: "http" as const,
+                      url: server.url,
+                      ...(server.headers ? { headers: server.headers } : {}),
+                      ...(server.toolTimeoutMs ? { timeout: server.toolTimeoutMs } : {}),
+                      alwaysLoad: true,
+                    },
+                  ]),
+                ),
+              }
+            : {}),
           ...(existingResumeSessionId ? { resume: existingResumeSessionId } : {}),
           ...(newSessionId ? { sessionId: newSessionId } : {}),
           includePartialMessages: true,
