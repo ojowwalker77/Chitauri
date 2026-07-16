@@ -2280,6 +2280,16 @@ describe("composerDraftStore runtime and interaction settings", () => {
     );
   });
 
+  it("stores orchestrator mode overrides in the composer draft", () => {
+    const store = useComposerDraftStore.getState();
+
+    store.setOrchestratorMode(threadId, false);
+
+    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.orchestratorMode).toBe(
+      false,
+    );
+  });
+
   it("removes empty settings-only drafts when overrides are cleared", () => {
     const store = useComposerDraftStore.getState();
 
@@ -2287,6 +2297,15 @@ describe("composerDraftStore runtime and interaction settings", () => {
     store.setInteractionMode(threadId, "plan");
     store.setRuntimeMode(threadId, null);
     store.setInteractionMode(threadId, null);
+
+    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]).toBeUndefined();
+  });
+
+  it("removes an orchestrator-only draft when its override is cleared", () => {
+    const store = useComposerDraftStore.getState();
+
+    store.setOrchestratorMode(threadId, false);
+    store.setOrchestratorMode(threadId, null);
 
     expect(useComposerDraftStore.getState().draftsByThreadId[threadId]).toBeUndefined();
   });

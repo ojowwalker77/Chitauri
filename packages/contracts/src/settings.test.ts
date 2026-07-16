@@ -25,3 +25,22 @@ it("accepts an atomic orchestrator routing policy patch", () => {
   });
   assert.strictEqual(patch.orchestrator?.autoVerifyDiffs, true);
 });
+
+it("rejects orchestrator seats that cannot receive the control-plane MCP", () => {
+  assert.throws(() =>
+    Schema.decodeSync(ServerSettingsPatch)({
+      orchestrator: {
+        ...DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
+        seatModels: [{ provider: "cursor", model: "unsupported-seat" }],
+      },
+    }),
+  );
+  assert.throws(() =>
+    Schema.decodeSync(ServerSettingsPatch)({
+      orchestrator: {
+        ...DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
+        seatModels: [],
+      },
+    }),
+  );
+});

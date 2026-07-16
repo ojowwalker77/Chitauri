@@ -31,6 +31,7 @@ import {
   WorktreeIcon,
   XIcon,
 } from "~/lib/icons";
+import { CentralIcon } from "~/lib/central-icons";
 import { PinStatusIcon, pinActionLabel } from "~/lib/pin";
 import { ensureNativeApi } from "~/nativeApi";
 import { autoAnimate } from "@formkit/auto-animate";
@@ -5157,8 +5158,12 @@ export default function Sidebar() {
                 )}
               </span>
               {thread.orchestratorMode ? (
-                <span className="shrink-0 rounded-sm border border-amber-500/30 bg-amber-500/8 px-1 py-0.5 text-[9px] font-medium text-amber-700 dark:text-amber-300">
-                  Seat
+                <span
+                  className="inline-flex shrink-0 items-center gap-0.5 rounded-sm bg-indigo-500/9 px-1.5 py-0.5 text-[9px] font-medium text-indigo-700 dark:text-indigo-300"
+                  title="Orchestrator thread"
+                >
+                  <CentralIcon name="agent-network" className="size-2.5" />
+                  Orchestrator
                 </span>
               ) : null}
               {!isSubagentThread && threadStatus?.label === "Pending Approval" ? (
@@ -5430,8 +5435,12 @@ export default function Sidebar() {
                 )}
               </span>
               {thread.orchestratorMode ? (
-                <span className="shrink-0 rounded-sm border border-amber-500/30 bg-amber-500/8 px-1 py-0.5 text-[9px] font-medium text-amber-700 dark:text-amber-300">
-                  Seat
+                <span
+                  className="inline-flex shrink-0 items-center gap-0.5 rounded-sm bg-indigo-500/9 px-1.5 py-0.5 text-[9px] font-medium text-indigo-700 dark:text-indigo-300"
+                  title="Orchestrator thread"
+                >
+                  <CentralIcon name="agent-network" className="size-2.5" />
+                  Orchestrator
                 </span>
               ) : null}
               {!isSubagentThread && threadStatus?.label === "Pending Approval" ? (

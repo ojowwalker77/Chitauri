@@ -1,7 +1,13 @@
 import { Schema } from "effect";
 import { TrimmedString } from "./baseSchemas";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
-import { ModelSelection, ProviderKind, ThreadEnvironmentMode } from "./orchestration";
+import {
+  ClaudeModelSelection,
+  CodexModelSelection,
+  ModelSelection,
+  ProviderKind,
+  ThreadEnvironmentMode,
+} from "./orchestration";
 
 export const OrchestratorLane = Schema.Literals(["bulk", "ui", "explore", "verify"]);
 export type OrchestratorLane = typeof OrchestratorLane.Type;
@@ -12,8 +18,16 @@ export const OrchestratorLaneRoute = Schema.Struct({
 });
 export type OrchestratorLaneRoute = typeof OrchestratorLaneRoute.Type;
 
+export const OrchestratorSeatModelSelection = Schema.Union([
+  CodexModelSelection,
+  ClaudeModelSelection,
+]);
+export type OrchestratorSeatModelSelection = typeof OrchestratorSeatModelSelection.Type;
+
 export const OrchestratorRoutingPolicy = Schema.Struct({
-  seatModels: Schema.Array(ModelSelection),
+  // The control-plane MCP is injected through the official Codex and Claude
+  // harnesses. ACP-backed providers do not currently expose this capability.
+  seatModels: Schema.Array(OrchestratorSeatModelSelection).check(Schema.isMinLength(1)),
   lanes: Schema.Struct({
     bulk: OrchestratorLaneRoute,
     ui: OrchestratorLaneRoute,

@@ -127,6 +127,16 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
           new Error(`Thread '${seatThreadId}' is not an orchestrator seat.`),
         );
       }
+      if (
+        thread.modelSelection.provider !== "codex" &&
+        thread.modelSelection.provider !== "claudeAgent"
+      ) {
+        return yield* Effect.fail(
+          new Error(
+            `Provider '${thread.modelSelection.provider}' cannot hold an orchestrator seat because it does not support control-plane MCP injection. Use Codex or Claude Agent.`,
+          ),
+        );
+      }
       const settings = yield* serverSettings.getSettings;
       const allowed = settings.orchestrator.seatModels.some(
         (selection) =>

@@ -8,6 +8,7 @@ import {
   type GrokModelOptions,
   type ModelSelection,
   type OrchestratorLane,
+  type OrchestratorSeatModelSelection,
   type ProviderKind,
   type ServerProviderStatus,
   type ThreadId,
@@ -277,7 +278,12 @@ const ORCHESTRATOR_LANES = [
   "explore",
   "verify",
 ] as const satisfies readonly OrchestratorLane[];
+const ORCHESTRATOR_SEAT_PROVIDER_OPTIONS = ["codex", "claudeAgent"] as const;
 const ORCHESTRATOR_EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
+
+function isOrchestratorSeatProvider(value: string): value is "codex" | "claudeAgent" {
+  return value === "codex" || value === "claudeAgent";
+}
 
 function orchestratorEffort(selection: ModelSelection): string {
   const options = selection.options;
@@ -2404,9 +2410,126 @@ function SettingsRouteView() {
     });
   };
 
-  const renderBehaviorPanel = () => (
+  const updateOrchestratorSeatModels = (seatModels: OrchestratorSeatModelSelection[]) => {
+    if (seatModels.length === 0) return;
+    updateSettings({
+      orchestratorRoutingPolicy: {
+        ...settings.orchestratorRoutingPolicy,
+        seatModels,
+      },
+    });
+  };
+
+  const renderOrchestratorPanel = () => (
     <div className="space-y-6">
-      <SettingsSection title="Orchestrator routing">
+      <SettingsSection title="Orchestrator seat">
+        <SettingsRow
+          title="Seat models"
+          description="Models trusted to coordinate delegated work. The composer prefers a seat from the selected provider and uses the first row as its fallback."
+          resetAction={
+            JSON.stringify(settings.orchestratorRoutingPolicy.seatModels) !==
+            JSON.stringify(defaults.orchestratorRoutingPolicy.seatModels) ? (
+              <SettingResetButton
+                label="seat models"
+                onClick={() =>
+                  updateSettings({
+                    orchestratorRoutingPolicy: {
+                      ...settings.orchestratorRoutingPolicy,
+                      seatModels: defaults.orchestratorRoutingPolicy.seatModels,
+                    },
+                  })
+                }
+              />
+            ) : null
+          }
+        >
+          <div className="mt-4 space-y-2">
+            {settings.orchestratorRoutingPolicy.seatModels.map((seatModel, index) => (
+              <div
+                key={`${seatModel.provider}:${index}`}
+                className="grid grid-cols-[8.5rem_minmax(0,1fr)_2rem] items-center gap-2"
+              >
+                <SettingsSelectControl
+                  value={seatModel.provider}
+                  onValueChange={(value) => {
+                    if (!isOrchestratorSeatProvider(value)) return;
+                    const next = [...settings.orchestratorRoutingPolicy.seatModels];
+                    next[index] = {
+                      provider: value,
+                      model: getDefaultModel(value),
+                    } as OrchestratorSeatModelSelection;
+                    updateOrchestratorSeatModels(next);
+                  }}
+                  ariaLabel={`Seat ${index + 1} provider`}
+                  valueContent={PROVIDER_DISPLAY_NAMES[seatModel.provider]}
+                >
+                  {ORCHESTRATOR_SEAT_PROVIDER_OPTIONS.map((provider) => (
+                    <SelectItem hideIndicator key={provider} value={provider}>
+                      <ProviderOptionLabel
+                        provider={provider}
+                        label={PROVIDER_DISPLAY_NAMES[provider]}
+                      />
+                    </SelectItem>
+                  ))}
+                </SettingsSelectControl>
+                <DebouncedSettingTextInput
+                  size="sm"
+                  variant="soft"
+                  value={seatModel.model}
+                  onCommit={(model) => {
+                    const normalized = model.trim();
+                    if (!normalized) return;
+                    const next = [...settings.orchestratorRoutingPolicy.seatModels];
+                    next[index] = { ...seatModel, model: normalized };
+                    updateOrchestratorSeatModels(next);
+                  }}
+                  aria-label={`Seat ${index + 1} model`}
+                />
+                <Button
+                  type="button"
+                  size="icon-xs"
+                  variant="ghost"
+                  disabled={settings.orchestratorRoutingPolicy.seatModels.length === 1}
+                  onClick={() =>
+                    updateOrchestratorSeatModels(
+                      settings.orchestratorRoutingPolicy.seatModels.filter(
+                        (_, modelIndex) => modelIndex !== index,
+                      ),
+                    )
+                  }
+                  aria-label={`Remove ${seatModel.provider} seat model`}
+                  title={
+                    settings.orchestratorRoutingPolicy.seatModels.length === 1
+                      ? "At least one seat model is required"
+                      : "Remove seat model"
+                  }
+                >
+                  <XIcon className="size-3.5" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              onClick={() =>
+                updateOrchestratorSeatModels([
+                  ...settings.orchestratorRoutingPolicy.seatModels,
+                  {
+                    provider: "codex",
+                    model: getDefaultModel("codex"),
+                  },
+                ])
+              }
+            >
+              <PlusIcon className="size-3.5" />
+              Add seat model
+            </Button>
+          </div>
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection title="Lane routing">
         {ORCHESTRATOR_LANES.map((lane) => {
           const route = settings.orchestratorRoutingPolicy.lanes[lane];
           return (
@@ -2501,7 +2624,11 @@ function SettingsRouteView() {
           );
         })}
       </SettingsSection>
+    </div>
+  );
 
+  const renderBehaviorPanel = () => (
+    <div className="space-y-6">
       <SettingsSection title="Runtime behavior">
         {renderBooleanSettingRow({
           settingKey: "enableAssistantStreaming",
@@ -3709,6 +3836,8 @@ function SettingsRouteView() {
         return renderArchivedPanel();
       case "models":
         return renderModelsPanel();
+      case "orchestrator":
+        return renderOrchestratorPanel();
       case "providers":
         return renderProvidersPanel();
       case "profile":

@@ -335,6 +335,7 @@ const PersistedComposerThreadDraftState = Schema.Struct({
   activeProvider: Schema.optionalKey(Schema.NullOr(ProviderKind)),
   runtimeMode: Schema.optionalKey(RuntimeMode),
   interactionMode: Schema.optionalKey(ProviderInteractionMode),
+  orchestratorMode: Schema.optionalKey(Schema.Boolean),
 });
 type PersistedComposerThreadDraftState = typeof PersistedComposerThreadDraftState.Type;
 
@@ -432,6 +433,7 @@ export interface ComposerThreadDraftState {
   activeProvider: ProviderKind | null;
   runtimeMode: RuntimeMode | null;
   interactionMode: ProviderInteractionMode | null;
+  orchestratorMode: boolean | null;
 }
 
 export interface DraftThreadState {
@@ -557,6 +559,7 @@ export interface ComposerDraftStoreState {
     threadId: ThreadId,
     interactionMode: ProviderInteractionMode | null | undefined,
   ) => void;
+  setOrchestratorMode: (threadId: ThreadId, orchestratorMode: boolean | null | undefined) => void;
   enqueueQueuedTurn: (threadId: ThreadId, queuedTurn: QueuedComposerTurn) => void;
   insertQueuedTurn: (threadId: ThreadId, queuedTurn: QueuedComposerTurn, index: number) => void;
   removeQueuedTurn: (threadId: ThreadId, queuedTurnId: string) => void;
@@ -864,6 +867,7 @@ const EMPTY_THREAD_DRAFT = Object.freeze<ComposerThreadDraftState>({
   activeProvider: null,
   runtimeMode: null,
   interactionMode: null,
+  orchestratorMode: null,
 });
 
 function createEmptyThreadDraft(): ComposerThreadDraftState {
@@ -886,6 +890,7 @@ function createEmptyThreadDraft(): ComposerThreadDraftState {
     activeProvider: null,
     runtimeMode: null,
     interactionMode: null,
+    orchestratorMode: null,
   };
 }
 
@@ -1170,7 +1175,8 @@ function shouldRemoveDraft(draft: ComposerThreadDraftState): boolean {
     Object.keys(draft.modelSelectionByProvider).length === 0 &&
     draft.activeProvider === null &&
     draft.runtimeMode === null &&
-    draft.interactionMode === null
+    draft.interactionMode === null &&
+    draft.orchestratorMode === null
   );
 }
 
@@ -2338,6 +2344,10 @@ function normalizePersistedDraftsByThreadId(
       draftCandidate.interactionMode === "plan" || draftCandidate.interactionMode === "default"
         ? draftCandidate.interactionMode
         : null;
+    const orchestratorMode =
+      typeof draftCandidate.orchestratorMode === "boolean"
+        ? draftCandidate.orchestratorMode
+        : null;
     const prompt = ensureInlineTerminalContextPlaceholders(
       promptCandidate,
       terminalContexts.length,
@@ -2411,7 +2421,8 @@ function normalizePersistedDraftsByThreadId(
       restoredSourceProposedPlan === null &&
       !hasModelData &&
       !runtimeMode &&
-      !interactionMode
+      !interactionMode &&
+      orchestratorMode === null
     ) {
       continue;
     }
@@ -2430,6 +2441,7 @@ function normalizePersistedDraftsByThreadId(
       ...(hasModelData ? { modelSelectionByProvider, activeProvider } : {}),
       ...(runtimeMode ? { runtimeMode } : {}),
       ...(interactionMode ? { interactionMode } : {}),
+      ...(orchestratorMode !== null ? { orchestratorMode } : {}),
     };
   }
 
@@ -2562,7 +2574,8 @@ function partializeComposerDraftStoreState(
       draft.restoredSourceProposedPlan == null &&
       !hasModelData &&
       draft.runtimeMode === null &&
-      draft.interactionMode === null
+      draft.interactionMode === null &&
+      draft.orchestratorMode === null
     ) {
       continue;
     }
@@ -2685,6 +2698,9 @@ function partializeComposerDraftStoreState(
         : {}),
       ...(draft.runtimeMode ? { runtimeMode: draft.runtimeMode } : {}),
       ...(draft.interactionMode ? { interactionMode: draft.interactionMode } : {}),
+      ...(draft.orchestratorMode !== null
+        ? { orchestratorMode: draft.orchestratorMode }
+        : {}),
     };
     persistedDraftsByThreadId[threadId as ThreadId] = persistedDraft;
   }
@@ -3049,6 +3065,10 @@ function toHydratedThreadDraft(
     activeProvider,
     runtimeMode: persistedDraft.runtimeMode ?? null,
     interactionMode: persistedDraft.interactionMode ?? null,
+    orchestratorMode:
+      typeof persistedDraft.orchestratorMode === "boolean"
+        ? persistedDraft.orchestratorMode
+        : null,
   };
 }
 
@@ -3917,6 +3937,34 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
           const nextDraft: ComposerThreadDraftState = {
             ...base,
             interactionMode: nextInteractionMode,
+          };
+          const nextDraftsByThreadId = { ...state.draftsByThreadId };
+          if (shouldRemoveDraft(nextDraft)) {
+            delete nextDraftsByThreadId[threadId];
+          } else {
+            nextDraftsByThreadId[threadId] = nextDraft;
+          }
+          return { draftsByThreadId: nextDraftsByThreadId };
+        });
+      },
+      setOrchestratorMode: (threadId, orchestratorMode) => {
+        if (threadId.length === 0) {
+          return;
+        }
+        const nextOrchestratorMode =
+          typeof orchestratorMode === "boolean" ? orchestratorMode : null;
+        set((state) => {
+          const existing = state.draftsByThreadId[threadId];
+          if (!existing && nextOrchestratorMode === null) {
+            return state;
+          }
+          const base = existing ?? createEmptyThreadDraft();
+          if (base.orchestratorMode === nextOrchestratorMode) {
+            return state;
+          }
+          const nextDraft: ComposerThreadDraftState = {
+            ...base,
+            orchestratorMode: nextOrchestratorMode,
           };
           const nextDraftsByThreadId = { ...state.draftsByThreadId };
           if (shouldRemoveDraft(nextDraft)) {
