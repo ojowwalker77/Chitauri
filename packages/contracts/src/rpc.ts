@@ -890,14 +890,11 @@ export const WsComputerScriptsCatalogRpc = Rpc.make(WS_METHODS.computerScriptsCa
   error: WsRpcError,
 });
 
-export const WsComputerScriptsStartAnalysisRpc = Rpc.make(
-  WS_METHODS.computerScriptsStartAnalysis,
-  {
-    payload: ComputerScriptsStartAnalysisInput,
-    success: ComputerScriptsStartAnalysisResult,
-    error: WsRpcError,
-  },
-);
+export const WsComputerScriptsStartAnalysisRpc = Rpc.make(WS_METHODS.computerScriptsStartAnalysis, {
+  payload: ComputerScriptsStartAnalysisInput,
+  success: ComputerScriptsStartAnalysisResult,
+  error: WsRpcError,
+});
 
 export const WsComputerScriptsAnalysisRpc = Rpc.make(WS_METHODS.computerScriptsAnalysis, {
   payload: ComputerScriptsAnalysisInput,
@@ -932,14 +929,11 @@ export const WsComputerScriptsCancelRunRpc = Rpc.make(WS_METHODS.computerScripts
   error: WsRpcError,
 });
 
-export const WsComputerScriptsListHistoryRpc = Rpc.make(
-  WS_METHODS.computerScriptsListHistory,
-  {
-    payload: ComputerScriptsListHistoryInput,
-    success: ComputerScriptsListHistoryResult,
-    error: WsRpcError,
-  },
-);
+export const WsComputerScriptsListHistoryRpc = Rpc.make(WS_METHODS.computerScriptsListHistory, {
+  payload: ComputerScriptsListHistoryInput,
+  success: ComputerScriptsListHistoryResult,
+  error: WsRpcError,
+});
 
 export const WsSubscribeComputerScriptsEventsRpc = Rpc.make(
   WS_METHODS.subscribeComputerScriptsEvents,

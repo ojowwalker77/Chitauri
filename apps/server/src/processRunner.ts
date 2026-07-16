@@ -255,7 +255,7 @@ export async function runProcess(
         stdout,
         stderr,
         code,
-        signal: aborted ? signal ?? "SIGTERM" : signal,
+        signal: aborted ? (signal ?? "SIGTERM") : signal,
         timedOut,
         stdoutTruncated,
         stderrTruncated,

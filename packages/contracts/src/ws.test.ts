@@ -59,9 +59,7 @@ it.effect("trims websocket request id and nested orchestration ids", () =>
     });
     assert.strictEqual(parsed.id, "req-1");
     assert.strictEqual(parsed.body._tag, ORCHESTRATION_WS_METHODS.getTurnDiff);
-    if (parsed.body._tag === ORCHESTRATION_WS_METHODS.getTurnDiff) {
-      assert.strictEqual(parsed.body.threadId, "thread-1");
-    }
+    assert.strictEqual("threadId" in parsed.body ? parsed.body.threadId : undefined, "thread-1");
   }),
 );
 

@@ -745,8 +745,7 @@ export function createWsNativeApi(): NativeApi {
       catalog: () => transport.request(WS_METHODS.computerScriptsCatalog),
       startAnalysis: (input) => transport.request(WS_METHODS.computerScriptsStartAnalysis, input),
       analysis: (input) => transport.request(WS_METHODS.computerScriptsAnalysis, input),
-      cancelAnalysis: (input) =>
-        transport.request(WS_METHODS.computerScriptsCancelAnalysis, input),
+      cancelAnalysis: (input) => transport.request(WS_METHODS.computerScriptsCancelAnalysis, input),
       startRun: (input) =>
         transport.request(WS_METHODS.computerScriptsStartRun, input, { timeoutMs: null }),
       run: (input) => transport.request(WS_METHODS.computerScriptsRun, input),

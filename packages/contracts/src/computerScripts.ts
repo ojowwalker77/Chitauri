@@ -64,7 +64,10 @@ export const ComputerScriptDescriptor = Schema.Struct({
   title: TrimmedNonEmptyString,
   summary: BoundedText,
   category: ComputerScriptCategory,
-  platforms: Schema.Array(ComputerScriptPlatform).check(Schema.isMinLength(1), Schema.isMaxLength(3)),
+  platforms: Schema.Array(ComputerScriptPlatform).check(
+    Schema.isMinLength(1),
+    Schema.isMaxLength(3),
+  ),
   risk: ComputerScriptRisk,
   consequence: BoundedText,
   capabilities: Schema.Struct({

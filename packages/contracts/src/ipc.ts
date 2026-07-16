@@ -632,7 +632,9 @@ export interface NativeApi {
     startRun: (input: ComputerScriptsStartRunInput) => Promise<ComputerScriptsStartRunResult>;
     run: (input: ComputerScriptsRunInput) => Promise<ComputerScriptsRunSnapshot>;
     cancelRun: (input: ComputerScriptsCancelRunInput) => Promise<ComputerScriptsRunSnapshot>;
-    listHistory: (input: ComputerScriptsListHistoryInput) => Promise<ComputerScriptsListHistoryResult>;
+    listHistory: (
+      input: ComputerScriptsListHistoryInput,
+    ) => Promise<ComputerScriptsListHistoryResult>;
     onEvent: (callback: (event: ComputerScriptsStreamEvent) => void) => () => void;
   };
   browser: {
