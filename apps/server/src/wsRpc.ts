@@ -27,6 +27,7 @@ import { authErrorResponse, makeEffectAuthRequest } from "./auth/http";
 import { ServerAuth } from "./auth/Services/ServerAuth";
 import { SessionCredentialService } from "./auth/Services/SessionCredentialService";
 import { CheckpointDiffQuery } from "./checkpointing/Services/CheckpointDiffQuery";
+import { ComputerScripts } from "./computerScripts/Services/ComputerScripts";
 import { ServerConfig } from "./config";
 import { realpathNearestExisting } from "./realpathNearestExisting";
 import { DevServerManager, findProjectDevServerForLocalServer } from "./devServerManager";
@@ -336,6 +337,7 @@ export const makeWsRpcLayer = () =>
     Effect.gen(function* () {
       const checkpointDiffQuery = yield* CheckpointDiffQuery;
       const automationService = yield* AutomationService;
+      const computerScripts = yield* ComputerScripts;
       const config = yield* ServerConfig;
       const devServerManager = yield* DevServerManager;
       const fileSystem = yield* FileSystem.FileSystem;
@@ -1229,6 +1231,34 @@ export const makeWsRpcLayer = () =>
             ),
             automationService.streamEvents,
           ).pipe(Stream.mapError((cause) => toWsRpcError(cause, "Automation event stream failed"))),
+        [WS_METHODS.computerScriptsCatalog]: () =>
+          rpcEffect(computerScripts.catalog(), "Failed to load Computer Scripts catalog"),
+        [WS_METHODS.computerScriptsStartAnalysis]: (input) =>
+          rpcEffect(
+            computerScripts.startAnalysis(input),
+            "Failed to start Computer Scripts analysis",
+          ),
+        [WS_METHODS.computerScriptsAnalysis]: (input) =>
+          rpcEffect(computerScripts.analysis(input), "Failed to load Computer Scripts analysis"),
+        [WS_METHODS.computerScriptsCancelAnalysis]: (input) =>
+          rpcEffect(
+            computerScripts.cancelAnalysis(input),
+            "Failed to cancel Computer Scripts analysis",
+          ),
+        [WS_METHODS.computerScriptsStartRun]: (input) =>
+          rpcEffect(computerScripts.startRun(input), "Failed to start Computer Scripts run"),
+        [WS_METHODS.computerScriptsRun]: (input) =>
+          rpcEffect(computerScripts.run(input), "Failed to load Computer Scripts run"),
+        [WS_METHODS.computerScriptsCancelRun]: (input) =>
+          rpcEffect(computerScripts.cancelRun(input), "Failed to cancel Computer Scripts run"),
+        [WS_METHODS.computerScriptsListHistory]: (input) =>
+          rpcEffect(computerScripts.listHistory(input), "Failed to load Computer Scripts history"),
+        [WS_METHODS.subscribeComputerScriptsEvents]: () =>
+          computerScripts.streamEvents.pipe(
+            Stream.mapError((cause) =>
+              toWsRpcError(cause, "Computer Scripts event stream failed"),
+            ),
+          ),
       });
     }),
   );

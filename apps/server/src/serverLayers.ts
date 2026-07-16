@@ -34,6 +34,7 @@ import { ServerSettingsLive } from "./serverSettings";
 import { WorkspaceLayerLive } from "./workspace/runtimeLayer";
 import { ProjectFaviconResolverLive } from "./project/Layers/ProjectFaviconResolver";
 import { ServerEnvironmentLive } from "./environment/Layers/ServerEnvironment";
+import { ComputerScriptsLayerLive } from "./computerScripts/runtimeLayer";
 import { AutomationRepositoryLive } from "./persistence/Layers/AutomationRepository";
 import { ProjectionTurnRepositoryLive } from "./persistence/Layers/ProjectionTurns";
 
@@ -127,6 +128,7 @@ export function makeServerRuntimeServicesLayer() {
     devServerManagerLayer,
     GitLayerLive,
     GitHubWorkbenchLayerLive,
+    ComputerScriptsLayerLive,
     TextGenerationLayerLive,
     TerminalLayerLive,
     KeybindingsLive,

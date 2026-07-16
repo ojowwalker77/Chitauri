@@ -35,6 +35,7 @@ import {
   WS_METHODS,
   type WsWelcomePayload,
   type AutomationStreamEvent,
+  type ComputerScriptsStreamEvent,
 } from "@t3tools/contracts";
 
 import { showConfirmDialogFallback } from "./confirmDialogFallback";
@@ -71,6 +72,7 @@ function omitNullUserInputAnswers(
 const terminalEventListeners = new Set<(payload: TerminalEvent) => void>();
 const projectDevServerEventListeners = new Set<(payload: ProjectDevServerEvent) => void>();
 const automationEventListeners = new Set<(payload: AutomationStreamEvent) => void>();
+const computerScriptsEventListeners = new Set<(payload: ComputerScriptsStreamEvent) => void>();
 const orchestrationDomainEventListeners = new Set<(payload: OrchestrationEvent) => void>();
 const orchestrationShellEventListeners = new Set<(payload: OrchestrationShellStreamItem) => void>();
 const orchestrationThreadEventListeners = new Set<
@@ -413,6 +415,16 @@ export function createWsNativeApi(): NativeApi {
       }
     }
   });
+  transport.subscribe(WS_CHANNELS.computerScriptsEvent, (message) => {
+    const payload = message.data;
+    for (const listener of computerScriptsEventListeners) {
+      try {
+        listener(payload);
+      } catch {
+        // Swallow listener errors
+      }
+    }
+  });
   transport.subscribe(ORCHESTRATION_WS_CHANNELS.domainEvent, (message) => {
     const payload = message.data;
     for (const listener of orchestrationDomainEventListeners) {
@@ -726,6 +738,24 @@ export function createWsNativeApi(): NativeApi {
         automationEventListeners.add(callback);
         return () => {
           automationEventListeners.delete(callback);
+        };
+      },
+    },
+    computerScripts: {
+      catalog: () => transport.request(WS_METHODS.computerScriptsCatalog),
+      startAnalysis: (input) => transport.request(WS_METHODS.computerScriptsStartAnalysis, input),
+      analysis: (input) => transport.request(WS_METHODS.computerScriptsAnalysis, input),
+      cancelAnalysis: (input) =>
+        transport.request(WS_METHODS.computerScriptsCancelAnalysis, input),
+      startRun: (input) =>
+        transport.request(WS_METHODS.computerScriptsStartRun, input, { timeoutMs: null }),
+      run: (input) => transport.request(WS_METHODS.computerScriptsRun, input),
+      cancelRun: (input) => transport.request(WS_METHODS.computerScriptsCancelRun, input),
+      listHistory: (input) => transport.request(WS_METHODS.computerScriptsListHistory, input),
+      onEvent: (callback) => {
+        computerScriptsEventListeners.add(callback);
+        return () => {
+          computerScriptsEventListeners.delete(callback);
         };
       },
     },

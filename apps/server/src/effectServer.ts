@@ -8,6 +8,7 @@ import { HttpRouter } from "effect/unstable/http";
 import { AutomationRunReactor } from "./automation/Services/AutomationRunReactor";
 import { AutomationScheduler } from "./automation/Services/AutomationScheduler";
 import { AutomationService } from "./automation/Services/AutomationService";
+import { ComputerScripts } from "./computerScripts/Services/ComputerScripts";
 import {
   clearPersistedServerRuntimeState,
   makePersistedServerRuntimeState,
@@ -42,6 +43,7 @@ export interface ServerShape {
     | AutomationRunReactor
     | AutomationScheduler
     | AutomationService
+    | ComputerScripts
     | ServerLifecycleEvents
     | OrchestrationEngineService
     | OrchestrationReactor

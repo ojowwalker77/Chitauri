@@ -15,6 +15,7 @@ import { Route as ChatSettingsRouteImport } from './routes/_chat.settings'
 import { Route as ChatResearchRouteImport } from './routes/_chat.research'
 import { Route as ChatPluginsRouteImport } from './routes/_chat.plugins'
 import { Route as ChatGithubRouteImport } from './routes/_chat.github'
+import { Route as ChatComputerScriptsRouteImport } from './routes/_chat.computer-scripts'
 import { Route as ChatAutomationsRouteImport } from './routes/_chat.automations'
 import { Route as ChatThreadIdRouteImport } from './routes/_chat.$threadId'
 import { Route as ChatWorkspaceIndexRouteImport } from './routes/_chat.workspace.index'
@@ -51,6 +52,11 @@ const ChatPluginsRoute = ChatPluginsRouteImport.update({
 const ChatGithubRoute = ChatGithubRouteImport.update({
   id: '/github',
   path: '/github',
+  getParentRoute: () => ChatRoute,
+} as any)
+const ChatComputerScriptsRoute = ChatComputerScriptsRouteImport.update({
+  id: '/computer-scripts',
+  path: '/computer-scripts',
   getParentRoute: () => ChatRoute,
 } as any)
 const ChatAutomationsRoute = ChatAutomationsRouteImport.update({
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/$threadId': typeof ChatThreadIdRoute
   '/automations': typeof ChatAutomationsRouteWithChildren
   '/github': typeof ChatGithubRoute
+  '/computer-scripts': typeof ChatComputerScriptsRoute
   '/plugins': typeof ChatPluginsRoute
   '/research': typeof ChatResearchRouteWithChildren
   '/settings': typeof ChatSettingsRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/$threadId': typeof ChatThreadIdRoute
   '/github': typeof ChatGithubRoute
+  '/computer-scripts': typeof ChatComputerScriptsRoute
   '/plugins': typeof ChatPluginsRoute
   '/settings': typeof ChatSettingsRoute
   '/': typeof ChatIndexRoute
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   '/_chat/$threadId': typeof ChatThreadIdRoute
   '/_chat/automations': typeof ChatAutomationsRouteWithChildren
   '/_chat/github': typeof ChatGithubRoute
+  '/_chat/computer-scripts': typeof ChatComputerScriptsRoute
   '/_chat/plugins': typeof ChatPluginsRoute
   '/_chat/research': typeof ChatResearchRouteWithChildren
   '/_chat/settings': typeof ChatSettingsRoute
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/$threadId'
     | '/automations'
     | '/github'
+    | '/computer-scripts'
     | '/plugins'
     | '/research'
     | '/settings'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
   to:
     | '/$threadId'
     | '/github'
+    | '/computer-scripts'
     | '/plugins'
     | '/settings'
     | '/'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/_chat/$threadId'
     | '/_chat/automations'
     | '/_chat/github'
+    | '/_chat/computer-scripts'
     | '/_chat/plugins'
     | '/_chat/research'
     | '/_chat/settings'
@@ -235,6 +247,13 @@ declare module '@tanstack/react-router' {
       path: '/github'
       fullPath: '/github'
       preLoaderRoute: typeof ChatGithubRouteImport
+      parentRoute: typeof ChatRoute
+    }
+    '/_chat/computer-scripts': {
+      id: '/_chat/computer-scripts'
+      path: '/computer-scripts'
+      fullPath: '/computer-scripts'
+      preLoaderRoute: typeof ChatComputerScriptsRouteImport
       parentRoute: typeof ChatRoute
     }
     '/_chat/automations': {
@@ -328,6 +347,7 @@ interface ChatRouteChildren {
   ChatThreadIdRoute: typeof ChatThreadIdRoute
   ChatAutomationsRoute: typeof ChatAutomationsRouteWithChildren
   ChatGithubRoute: typeof ChatGithubRoute
+  ChatComputerScriptsRoute: typeof ChatComputerScriptsRoute
   ChatPluginsRoute: typeof ChatPluginsRoute
   ChatResearchRoute: typeof ChatResearchRouteWithChildren
   ChatSettingsRoute: typeof ChatSettingsRoute
@@ -340,6 +360,7 @@ const ChatRouteChildren: ChatRouteChildren = {
   ChatThreadIdRoute: ChatThreadIdRoute,
   ChatAutomationsRoute: ChatAutomationsRouteWithChildren,
   ChatGithubRoute: ChatGithubRoute,
+  ChatComputerScriptsRoute: ChatComputerScriptsRoute,
   ChatPluginsRoute: ChatPluginsRoute,
   ChatResearchRoute: ChatResearchRouteWithChildren,
   ChatSettingsRoute: ChatSettingsRoute,
