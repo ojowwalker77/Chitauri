@@ -80,19 +80,19 @@ export const BackgroundAgentsCard = memo(function BackgroundAgentsCard({
                 spawnCommand={agent.spawnCommand}
                 sessionProvider={provider}
                 className="size-3.5 shrink-0"
-                fallback={<span className="size-1.5 shrink-0 rounded-full bg-sky-400/80" />}
+                fallback={<span className="size-1.5 shrink-0 rounded-full bg-claude" />}
               />
               <span className="min-w-0 flex-1 truncate text-[13px] leading-5 text-foreground/85">
                 {agent.title ?? "Agent"}
               </span>
               <AgentElapsedTimer startedAt={agent.startedAt} />
               {agent.currentTool ? (
-                <span className="shrink-0 font-mono text-[10px] text-muted-foreground/50">
+                <span className="shrink-0 font-mono text-[11px] text-muted-foreground/50">
                   {agent.currentTool}
                 </span>
               ) : null}
               {agent.totalTokens != null ? (
-                <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/45">
+                <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground/45">
                   {formatContextWindowTokens(agent.totalTokens)}
                 </span>
               ) : null}

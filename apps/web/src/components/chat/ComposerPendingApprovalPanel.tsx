@@ -102,7 +102,10 @@ export const ComposerPendingApprovalPanel = memo(function ComposerPendingApprova
   return (
     <div
       onKeyDown={handleKeyDown}
-      className={cn(COMPOSER_INPUT_SURFACE_CLASS_NAME, "overflow-hidden px-3.5 py-3")}
+      className={cn(
+        COMPOSER_INPUT_SURFACE_CLASS_NAME,
+        "overflow-hidden !rounded-xl !border-panel-border !bg-panel px-3.5 py-3",
+      )}
     >
       <div className="flex items-start justify-between gap-3">
         <p className="min-w-0 text-[13px] font-medium leading-snug text-foreground/90">
@@ -114,7 +117,7 @@ export const ComposerPendingApprovalPanel = memo(function ComposerPendingApprova
           ) : null}
         </p>
         {pendingCount > 1 ? (
-          <span className="flex h-4 shrink-0 items-center rounded bg-[var(--color-background-elevated-secondary)] px-1 text-[9.5px] font-medium tabular-nums text-[var(--color-text-foreground-secondary)]">
+          <span className="flex h-4 shrink-0 items-center rounded bg-[var(--color-background-elevated-secondary)] px-1 text-[11px] font-medium tabular-nums text-[var(--color-text-foreground-secondary)]">
             1/{pendingCount}
           </span>
         ) : null}
@@ -149,7 +152,7 @@ function ApprovalDetail({ parsed }: { parsed: ParsedApproval }) {
         </p>
         {parsed.fileDir ? (
           <p
-            className="mt-0.5 truncate font-mono text-[10.5px] leading-tight text-muted-foreground/55"
+            className="mt-0.5 truncate font-mono text-[11px] leading-tight text-muted-foreground/55"
             title={parsed.fileDir}
           >
             {shortenPath(parsed.fileDir)}

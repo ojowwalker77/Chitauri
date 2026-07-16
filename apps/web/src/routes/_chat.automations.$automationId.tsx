@@ -124,11 +124,11 @@ function automationStatusDisplay(definition: AutomationDefinition): {
 } {
   switch (automationLifecycleState(definition)) {
     case "active":
-      return { label: "Active", dotClassName: "bg-emerald-500" };
+      return { label: "Active", dotClassName: "bg-success" };
     case "paused":
-      return { label: "Paused", dotClassName: "bg-amber-500" };
+      return { label: "Paused", dotClassName: "bg-gold" };
     case "scheduled":
-      return { label: "Scheduled", dotClassName: "bg-sky-500" };
+      return { label: "Scheduled", dotClassName: "bg-claude" };
     case "done":
       return { label: "Done", dotClassName: "bg-muted-foreground" };
   }
@@ -408,10 +408,8 @@ function AutomationDetailView() {
           </main>
         </div>
 
-        {/* Right column: action header + details panel. The header carries the shared bottom
-            hairline (horizontal), and the body below carries the vertical seam — so the vertical
-            line starts at the header's bottom edge instead of running up through it. Both use the
-            same --app-surface-divider token and meet cleanly at the corner. */}
+        {/* Right column: action header + details panel. The shared panel-border token
+            keeps the internal split legible without adding another elevated surface. */}
         <div className="flex min-h-0 w-80 shrink-0 flex-col overflow-hidden">
           <header
             className={cn(

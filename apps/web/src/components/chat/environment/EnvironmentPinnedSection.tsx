@@ -186,7 +186,7 @@ const PinnedMessageRow = memo(function PinnedMessageRow({
           onBlur={handleInputBlur}
           onKeyDown={handleInputKeyDown}
           placeholder={available ? "" : "Label"}
-          className="min-w-0 flex-1 rounded border border-input bg-background px-1 py-0.5 text-[length:var(--app-font-size-ui,12px)] text-foreground outline-none focus-visible:border-ring"
+          className="min-w-0 flex-1 rounded border border-input bg-background px-1 py-0.5 text-[length:var(--app-font-size-ui,14px)] text-foreground outline-none focus-visible:border-ring"
         />
       ) : (
         <button
@@ -206,7 +206,7 @@ const PinnedMessageRow = memo(function PinnedMessageRow({
               : "Click or press Enter to rename"
           }
           className={cn(
-            "min-w-0 flex-1 truncate text-left text-[length:var(--app-font-size-ui,12px)] outline-none transition-colors",
+            "min-w-0 flex-1 truncate text-left text-[length:var(--app-font-size-ui,14px)] outline-none transition-colors",
             pin.done
               ? "text-muted-foreground/55 line-through"
               : "text-[var(--color-text-foreground)] hover:text-foreground",

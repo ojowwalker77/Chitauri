@@ -5,6 +5,7 @@
 
 import {
   type MessageId,
+  type ProviderKind,
   type ProviderMentionReference,
   ThreadId,
   type ThreadMarker,
@@ -41,6 +42,7 @@ import {
 } from "../../types";
 import ChatMarkdown from "../ChatMarkdown";
 import { InlineLinkChip } from "../InlineLinkChip";
+import { ProviderIcon } from "../ProviderIcon";
 import {
   ArrowUpCircleIcon,
   BotIcon,
@@ -316,7 +318,7 @@ function WorktreeSetupStepGlyph({ status }: { status: WorktreeSetupStep["status"
 // status chip rather than a full-width block.
 function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> }) {
   return (
-    <div className="w-fit max-w-full rounded-xl border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-primary)] px-3.5 py-3 font-system-ui shadow-xs">
+    <div className="w-fit max-w-full rounded-xl border border-panel-border bg-panel px-3.5 py-3 font-system-ui">
       <div className="flex items-center gap-2">
         <WorktreeIcon className="size-3.5 shrink-0 text-[var(--color-text-foreground-tertiary)]" />
         <span className="shimmer text-[13px] font-medium text-[var(--color-text-foreground-secondary)]">
@@ -364,6 +366,7 @@ function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> 
 }
 
 interface MessagesTimelineProps {
+  assistantProvider?: ProviderKind;
   hasMessages: boolean;
   isWorking: boolean;
   activeTurnInProgress: boolean;
@@ -429,6 +432,7 @@ interface MessagesTimelineProps {
 }
 
 export const MessagesTimeline = memo(function MessagesTimeline({
+  assistantProvider,
   hasMessages,
   isWorking,
   activeTurnInProgress,
@@ -939,11 +943,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       className={cn(
         CHAT_COLUMN_FRAME_CLASS_NAME,
         "px-1 transition-colors duration-500",
-        row.kind === "work" ||
-          row.kind === "working-header" ||
-          (row.kind === "message" && row.message.role === "assistant")
-          ? "pb-2"
-          : "pb-4",
+        row.kind === "work" || row.kind === "working-header" ? "pb-2" : "pb-6",
         row.kind === "message" && row.message.role === "assistant" ? "group/assistant" : null,
         row.kind === "message" && row.message.id === highlightedMessageId
           ? "rounded-xl bg-[var(--color-background-elevated-secondary)]"
@@ -968,7 +968,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           const showOverflowToggle = hasOverflow;
 
           return (
-            <div>
+            <div className="border-l border-foreground/9 pl-3">
               <div className="space-y-0.5">
                 {visibleEntries.map((workEntry) => (
                   <SimpleWorkEntryRow
@@ -1078,7 +1078,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               <div
                 className={cn(
                   "group flex flex-col items-end gap-px",
-                  isEditingThisMessage ? "w-full max-w-full" : "max-w-[80%]",
+                  isEditingThisMessage ? "w-full max-w-full" : "max-w-[78%]",
                 )}
               >
                 {/* Keep user-message chrome outside the bubble so the message reads as one simple block. */}
@@ -1344,7 +1344,12 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           ) => (
             <>
               {!hasCollapsedWork && display.visibleRenderableToolEntries.length > 0 && (
-                <div className={placement === "leading" ? "mb-1.5" : "mt-1.5"}>
+                <div
+                  className={cn(
+                    "border-l border-foreground/9 pl-3",
+                    placement === "leading" ? "mb-2" : "mt-2",
+                  )}
+                >
                   <div className="space-y-px">
                     {display.visibleRenderableToolEntries.map((workEntry) => (
                       <SimpleWorkEntryRow
@@ -1383,7 +1388,12 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 </div>
               )}
               {!hasCollapsedWork && display.statusEntries.length > 0 && (
-                <div className={cn("space-y-0.5", placement === "leading" ? "mb-2" : "mt-2")}>
+                <div
+                  className={cn(
+                    "space-y-0.5 border-l border-foreground/9 pl-3",
+                    placement === "leading" ? "mb-2" : "mt-2",
+                  )}
+                >
                   {display.statusEntries.map((workEntry) => (
                     <SimpleWorkEntryRow
                       key={`${placement}-status-row:${row.message.id}:${workEntry.id}`}
@@ -1494,10 +1504,22 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       </div>
                     </CollapsiblePanel>
                   </Collapsible>
-                  <div className="h-px w-full bg-border" />
                 </div>
               )}
               <div className="group min-w-0 py-0.5">
+                <div
+                  className="mb-2.5 flex items-center gap-2 font-system-ui text-[11px] text-muted-foreground"
+                  data-assistant-provider={assistantProvider ?? "unknown"}
+                >
+                  <span aria-hidden="true" className="flex size-4 items-center justify-center">
+                    <ProviderIcon
+                      provider={assistantProvider}
+                      fallback={<BotIcon className="size-3.5 text-muted-foreground" />}
+                      className="size-3.5"
+                    />
+                  </span>
+                  <span>{row.message.streaming ? "Working" : "Agent"}</span>
+                </div>
                 {renderWorkDisplay(leadingWorkDisplay, "leading")}
                 <div data-assistant-message-id={row.message.id}>
                   <ChatMarkdown
@@ -2251,7 +2273,7 @@ const UserImageAttachmentThumbnail = memo(function UserImageAttachmentThumbnail(
   return (
     <button
       type="button"
-      className="flex size-15 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-background/82 text-left shadow-[0_1px_0_rgba(255,255,255,0.2)_inset] transition-colors hover:bg-background/94"
+      className="flex size-15 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-panel-border bg-background/82 text-left transition-colors hover:bg-background/94"
       aria-label={`Preview ${props.image.name}`}
       title={props.image.name}
       onClick={() => {

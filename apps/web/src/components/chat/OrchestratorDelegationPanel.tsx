@@ -141,7 +141,7 @@ export function OrchestratorDelegationPanel(props: {
                   aria-hidden
                 />
                 <span className="min-w-0 flex-1 truncate text-xs font-medium">{thread.title}</span>
-                <span className="hidden shrink-0 text-[10px] text-muted-foreground sm:inline">
+                <span className="hidden shrink-0 text-[11px] text-muted-foreground sm:inline">
                   {stateCopy.label}
                 </span>
                 <DisclosureChevron open={open} className="opacity-70" />

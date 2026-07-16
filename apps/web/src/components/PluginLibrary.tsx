@@ -222,10 +222,9 @@ function SkillGlyph({ skill }: { skill: ProviderSkillDescriptor }) {
   const hue = nameToHue(skill.interface?.displayName ?? skill.name);
   return (
     <span
-      className="inline-flex size-11 shrink-0 items-center justify-center rounded-[14px]"
+      className="inline-flex size-11 shrink-0 items-center justify-center rounded-[14px] border border-panel-border"
       style={{
         background: `linear-gradient(145deg, hsl(${hue} 55% 30%), hsl(${hue} 45% 18%))`,
-        boxShadow: `0 0 0 0.5px hsl(${hue} 40% 30% / 0.35)`,
       }}
     >
       <ListChecksIcon className="size-5 text-white/80" />
@@ -248,10 +247,10 @@ function TabButton({
     <button
       type="button"
       className={cn(
-        "inline-flex h-10 items-center border-b-2 px-1 text-[13px] font-medium transition-colors",
+        "inline-flex h-8 items-center rounded-[10px] border px-3 text-[13px] font-medium transition-colors",
         active
-          ? "border-foreground text-foreground"
-          : "border-transparent text-muted-foreground hover:text-foreground/80",
+          ? "border-panel-border bg-panel text-foreground"
+          : "border-transparent text-muted-foreground hover:bg-hover hover:text-foreground/80",
       )}
       aria-pressed={active}
       onClick={onClick}
@@ -281,8 +280,8 @@ function ProviderToggleButton({
       className={cn(
         "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[12px] font-medium transition-colors",
         active
-          ? "bg-[var(--color-text-foreground)] text-[var(--color-background-surface)] shadow-xs"
-          : "text-muted-foreground hover:bg-[var(--sidebar-accent)] hover:text-foreground",
+          ? "bg-selected text-foreground"
+          : "text-muted-foreground hover:bg-hover hover:text-foreground",
         disabled && "pointer-events-none opacity-35",
       )}
       onClick={onClick}
@@ -297,7 +296,7 @@ function ProviderToggleButton({
 
 function EmptyPanel({ title, description }: { title: string; description: string }) {
   return (
-    <div className="flex min-h-40 items-center justify-center rounded-xl border border-dashed border-border/60 bg-background/40 px-5 py-6 text-center">
+    <div className="flex min-h-40 items-center justify-center rounded-xl border border-dashed border-panel-border bg-panel px-5 py-6 text-center">
       <div className="max-w-sm space-y-1">
         <p className="text-sm font-medium text-foreground">{title}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
@@ -308,8 +307,8 @@ function EmptyPanel({ title, description }: { title: string; description: string
 
 function InlineWarning({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/6 px-3 py-2.5 text-xs text-muted-foreground">
-      <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0 text-amber-500" />
+    <div className="flex items-start gap-2 rounded-xl border border-gold/20 bg-gold/6 px-3 py-2.5 text-xs text-muted-foreground">
+      <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0 text-gold" />
       <div>{children}</div>
     </div>
   );
@@ -610,7 +609,7 @@ export function PluginLibrary() {
 
           {/* Search */}
           <div className="mx-auto max-w-2xl px-6 pb-6">
-            <InputGroup className="rounded-xl bg-background/70 shadow-xs">
+            <InputGroup className="rounded-xl bg-background/70 shadow-none">
               <InputGroupAddon>
                 <InputGroupText>
                   <SearchIcon className="size-4 text-muted-foreground/60" />

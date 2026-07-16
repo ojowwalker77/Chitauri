@@ -231,8 +231,7 @@ it("delegates through the normal thread path in an isolated worktree", async () 
     },
   } as unknown as OrchestrationEngineShape;
   const git = {
-    statusDetails: () =>
-      Effect.succeed({ isRepo: true, branch: "main", hasWorkingTreeChanges }),
+    statusDetails: () => Effect.succeed({ isRepo: true, branch: "main", hasWorkingTreeChanges }),
     createWorktree: () =>
       Effect.succeed({ worktree: { path: "/repo-worktrees/delegate", branch: "delegate" } }),
     execute: (input: { readonly operation: string }) =>

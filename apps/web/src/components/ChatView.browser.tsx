@@ -3929,7 +3929,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
             .find(
               (command) =>
                 command?.type === "thread.meta.update" &&
-                command.modelSelection?.provider === "claudeAgent",
+                typeof command.modelSelection === "object" &&
+                command.modelSelection !== null &&
+                "provider" in command.modelSelection &&
+                command.modelSelection.provider === "claudeAgent",
             );
           expect(providerSwitch).toBeUndefined();
         },

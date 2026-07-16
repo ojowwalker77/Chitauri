@@ -922,7 +922,7 @@ function ComposerModelLoadingControl(props: { widthClassName: string }) {
       )}
     >
       <RefreshCwIcon aria-hidden="true" className="size-3.5 animate-spin" />
-      <span className="truncate text-[length:var(--app-font-size-ui-xs,11px)]">Loading models</span>
+      <span className="truncate text-[length:var(--app-font-size-ui-xs,12px)]">Loading models</span>
     </div>
   );
 }
@@ -9861,7 +9861,7 @@ export default function ChatView({
     isCenteredEmptyLanding && isLocalDraftThread && activeProject?.kind === "project";
   const emptyLandingProjectChip =
     !isEmptyChatLanding && !showEmptyLandingProjectPicker && activeProjectDisplayName ? (
-      <span className="inline-flex min-w-0 max-w-56 shrink items-center gap-2 overflow-hidden rounded-md px-2 py-1 text-[length:var(--app-font-size-ui-sm,11px)] font-normal text-[var(--color-text-foreground-secondary)] sm:max-w-64">
+      <span className="inline-flex min-w-0 max-w-56 shrink items-center gap-2 overflow-hidden rounded-md px-2 py-1 text-[length:var(--app-font-size-ui-sm,13px)] font-normal text-[var(--color-text-foreground-secondary)] sm:max-w-64">
         <FolderClosed className="size-3.5 shrink-0" />
         <span className="min-w-0 truncate">{activeProjectDisplayName}</span>
       </span>
@@ -9881,7 +9881,7 @@ export default function ChatView({
         // bottom corners (z-0), so its tint fills those corner notches and its straight full-width
         // top edge stays covered by the composer's solid sides — no gap/poke at the sides. The
         // composer keeps its own rounded shape; the tray keeps its tint + rounded bottom.
-        "chat-composer-shell relative z-0 -mt-5 flex min-w-0 flex-nowrap items-center gap-x-1.5 overflow-hidden !rounded-t-none !rounded-b-[var(--composer-radius)] bg-[color-mix(in_srgb,var(--color-background-elevated-secondary)_76%,var(--color-background-surface)_24%)] px-2 pb-1.5 pt-6 transition-colors duration-150 ease-out motion-reduce:transition-none",
+        "chat-composer-shell relative z-0 -mt-5 flex min-w-0 flex-nowrap items-center gap-x-1.5 overflow-hidden !rounded-t-none !rounded-b-[var(--composer-radius)] bg-[var(--composer-surface)] px-2 pb-1.5 pt-6 transition-colors duration-press ease-out motion-reduce:transition-none",
         COMPOSER_COLUMN_FRAME_CLASS_NAME,
       )}
     >
@@ -9945,7 +9945,7 @@ export default function ChatView({
           }
           aria-label="Temporary chat"
           className={cn(
-            "ml-auto shrink-0 gap-1.5 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,11px)] font-normal transition-colors sm:px-2.5",
+            "ml-auto shrink-0 gap-1.5 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,13px)] font-normal transition-colors sm:px-2.5",
             isThreadTemporary
               ? "text-[var(--color-text-accent)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-accent)]"
               : "text-[var(--color-text-foreground-secondary)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)]",
@@ -10291,7 +10291,7 @@ export default function ChatView({
                         {interactionMode === "plan" ? (
                           <Button
                             variant="ghost"
-                            className="shrink-0 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-sm,11px)] font-normal text-[var(--color-text-foreground-secondary)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] sm:px-3"
+                            className="shrink-0 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,13px)] sm:text-[length:var(--app-font-size-ui-sm,13px)] font-normal text-[var(--color-text-foreground-secondary)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] sm:px-3"
                             size="sm"
                             type="button"
                             onClick={toggleInteractionMode}
@@ -10305,7 +10305,7 @@ export default function ChatView({
                         {activeTaskList || sidebarProposedPlan || planSidebarOpen ? (
                           <Button
                             variant="ghost"
-                            className="shrink-0 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-sm,11px)] font-normal sm:px-3"
+                            className="shrink-0 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,13px)] sm:text-[length:var(--app-font-size-ui-sm,13px)] font-normal sm:px-3"
                             size="sm"
                             type="button"
                             onClick={togglePlanSidebar}
@@ -10427,7 +10427,7 @@ export default function ChatView({
                             type="submit"
                             variant="prominent"
                             size="icon-xs"
-                            className="size-7 rounded-full sm:size-7"
+                            className="size-8 rounded-full sm:size-8"
                             disabled={
                               isSendBusy || isConnecting || !composerSendState.hasSendableContent
                             }
@@ -10760,6 +10760,9 @@ export default function ChatView({
                   {transcriptContent ?? (
                     <ChatTranscriptPane
                       activeThreadId={activeThread.id}
+                      assistantProvider={
+                        activeThread.session?.provider ?? activeThread.modelSelection.provider
+                      }
                       activeTurnId={activeThread.session?.activeTurnId ?? null}
                       agentActivityDetail={openAgentActivityDetail}
                       hasMessages={timelineEntries.length > 0}
@@ -11019,7 +11022,7 @@ export default function ChatView({
             <img
               src={expandedImageItem.src}
               alt={expandedImageItem.name}
-              className="max-h-[86vh] max-w-[92vw] select-none rounded-lg border border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] object-contain shadow-2xl"
+              className="max-h-[86vh] max-w-[92vw] select-none rounded-xl border border-panel-border bg-panel object-contain shadow-[0_16px_44px_rgba(0,0,0,0.5)]"
               draggable={false}
             />
             <p className="mt-2 max-w-[92vw] truncate text-center text-xs text-muted-foreground/80">

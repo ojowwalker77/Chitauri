@@ -142,10 +142,10 @@ function GitFileSection(props: {
     <section className="min-w-0">
       <header className="flex items-center gap-2 px-1.5 py-1">
         <span className="text-[11px] font-semibold text-muted-foreground">{props.title}</span>
-        <span className="rounded-full bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
+        <span className="rounded-full bg-muted px-1.5 text-[11px] font-medium text-muted-foreground">
           {props.files.length}
         </span>
-        <DiffStat additions={stat.additions} deletions={stat.deletions} className="text-[10px]" />
+        <DiffStat additions={stat.additions} deletions={stat.deletions} className="text-[11px]" />
         {props.files.length > 0 ? (
           <Button
             type="button"

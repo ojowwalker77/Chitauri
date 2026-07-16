@@ -58,7 +58,7 @@ const DIFF_PANEL_PICKER_ICON_CLASS_NAME = "size-3.5 shrink-0 text-[var(--color-t
 /** Tighter than EnvironmentRow — dock header has no 16px icon gutter column. */
 const DIFF_PANEL_PICKER_TRIGGER_CLASS_NAME = cn(
   "flex h-8 min-w-0 max-w-[min(38%,11rem)] cursor-pointer items-center gap-1.5 rounded-lg py-1 pl-1.5 pr-2 text-left",
-  "text-[length:var(--app-font-size-ui,12px)] font-normal text-[var(--color-text-foreground)]",
+  "text-[length:var(--app-font-size-ui,14px)] font-normal text-[var(--color-text-foreground)]",
   "outline-none transition-colors",
   "hover:bg-[var(--color-background-elevated-secondary)]",
   "focus-visible:bg-[var(--color-background-elevated-secondary)]",
@@ -116,7 +116,7 @@ function ScopeCountBadge(props: { count: number | undefined }) {
     return null;
   }
   return (
-    <span className="rounded-full bg-muted px-1.5 text-[10px] font-medium text-muted-foreground tabular-nums">
+    <span className="rounded-full bg-muted px-1.5 text-[11px] font-medium text-muted-foreground tabular-nums">
       {props.count}
     </span>
   );
@@ -470,7 +470,7 @@ export const DiffPanelToolbar = memo(function DiffPanelToolbar(props: DiffPanelT
                     <span className="min-w-0 flex-1 truncate">
                       Turn {resolveTurnNumber(summary, props.inferredCheckpointTurnCountByTurnId)}
                     </span>
-                    <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums">
+                    <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
                       {formatShortTimestamp(summary.completedAt, props.timestampFormat)}
                     </span>
                   </MenuRadioItem>

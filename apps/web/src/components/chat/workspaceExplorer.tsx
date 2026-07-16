@@ -598,7 +598,7 @@ function WorkspaceSearchResultsBody(props: {
         )}
       </div>
       {fileMatches.length > 0 && props.search.truncated ? (
-        <p className="shrink-0 border-t border-border/45 px-3 py-1.5 text-[10px] text-muted-foreground/70">
+        <p className="shrink-0 border-t border-border/45 px-3 py-1.5 text-[11px] text-muted-foreground/70">
           Showing the top matches. Refine the search to narrow them down.
         </p>
       ) : null}

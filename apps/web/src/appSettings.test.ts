@@ -278,7 +278,7 @@ describe("timestamp format defaults", () => {
 
 describe("chat font size defaults", () => {
   it("defaults chat font size to 12px", () => {
-    expect(DEFAULT_CHAT_FONT_SIZE_PX).toBe(12);
+    expect(DEFAULT_CHAT_FONT_SIZE_PX).toBe(14);
   });
 
   it("clamps chat font size updates into the supported range", () => {
@@ -294,7 +294,7 @@ describe("terminal font size defaults", () => {
   });
 
   it("clamps terminal font size updates into the supported range", () => {
-    expect(normalizeTerminalFontSizePx(8)).toBe(10);
+    expect(normalizeTerminalFontSizePx(8)).toBe(11);
     expect(normalizeTerminalFontSizePx(20.4)).toBe(20);
     expect(normalizeTerminalFontSizePx(99)).toBe(22);
     expect(normalizeTerminalFontSizePx(Number.NaN)).toBe(DEFAULT_TERMINAL_FONT_SIZE_PX);
@@ -362,7 +362,7 @@ describe("normalizeStoredAppSettings", () => {
     expect(normalizeStoredAppSettings(decodedSettings)).toMatchObject({
       sidebarProjectSortOrder: "updated_at",
       chatFontSizePx: 18,
-      terminalFontSizePx: 10,
+      terminalFontSizePx: 11,
       customCodexModels: ["custom/internal-model"],
     });
   });

@@ -66,7 +66,7 @@ async function openReference(reference: ResearchReference): Promise<void> {
 function ReferenceRail({ references }: { references: readonly ResearchReference[] }) {
   return (
     <aside className="min-w-0 xl:sticky xl:top-0 xl:h-fit" aria-label="Research references">
-      <div className="rounded-2xl bg-[var(--color-background-surface)] p-2 shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border)_72%,transparent),0_10px_30px_-22px_rgba(0,0,0,0.45)]">
+      <div className="rounded-xl border border-panel-border bg-panel p-2">
         <div className="px-2 pb-2 pt-1">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             References
@@ -85,7 +85,7 @@ function ReferenceRail({ references }: { references: readonly ResearchReference[
                 key={reference.id}
                 type="button"
                 onClick={() => void openReference(reference)}
-                className="group flex min-h-11 w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition-[background-color,box-shadow,scale] duration-press ease-out hover:bg-[var(--color-background-elevated-secondary)] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border)_62%,transparent)] active:scale-[0.96] motion-reduce:transition-none"
+                className="group flex min-h-11 w-full items-start gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-[background-color,scale] duration-press ease-out hover:bg-hover active:scale-[0.96] motion-reduce:transition-none"
               >
                 <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--color-background-elevated-secondary)] text-muted-foreground">
                   <Icon className="size-3.5" />
@@ -100,7 +100,7 @@ function ReferenceRail({ references }: { references: readonly ResearchReference[
                       {reference.description}
                     </span>
                   ) : null}
-                  <span className="mt-1 block truncate font-mono text-[10px] text-muted-foreground/70">
+                  <span className="mt-1 block truncate font-mono text-[11px] text-muted-foreground/70">
                     {reference.line ? `${reference.target}:${reference.line}` : reference.target}
                   </span>
                 </span>
@@ -124,14 +124,14 @@ export function ResearchDocumentView({
 }) {
   const markdownCwd = document.worktreePath ?? document.repositoryRoot ?? undefined;
   return (
-    <div className="research-document-scroll min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(circle_at_50%_-20%,color-mix(in_srgb,var(--color-accent)_9%,transparent),transparent_38%)]">
+    <div className="research-document-scroll min-h-0 flex-1 overflow-y-auto bg-background">
       <div className="mx-auto grid w-full max-w-[92rem] gap-6 px-4 pb-16 pt-5 sm:px-6 lg:px-8 xl:grid-cols-[minmax(0,1fr)_18rem]">
-        <article className="min-w-0 overflow-hidden rounded-[24px] bg-[var(--color-background-surface)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border)_70%,transparent),0_26px_80px_-54px_rgba(0,0,0,0.65)]">
+        <article className="min-w-0 overflow-hidden rounded-xl border border-panel-border bg-panel">
           <header className="flex flex-col gap-5 px-6 pb-6 pt-7 sm:px-9 sm:pt-9 lg:px-12">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                  <span className="rounded-full bg-[var(--color-background-elevated-secondary)] px-2.5 py-1 font-medium uppercase tracking-[0.12em]">
+                  <span className="rounded-full bg-selected px-2.5 py-1 font-medium">
                     {document.format === "html" ? "Interactive brief" : "Research plan"}
                   </span>
                   <span>{document.repositoryName}</span>

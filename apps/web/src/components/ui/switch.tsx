@@ -18,7 +18,7 @@ const SWITCH_TRACK_CLASS_NAME =
 // curve while every utility-driven `ease-out` in the app followed it. The staggered squash
 // (`scale .1s .1s`, `border-radius .15s`) is hand-tuned; those micro-durations are left alone.
 const SWITCH_THUMB_CLASS_NAME =
-  "pointer-events-none block aspect-square h-full origin-left translate-x-0 rounded-full bg-white shadow-sm ring-1 ring-black/5 will-change-transform [transition:translate_.2s_var(--ease-out),border-radius_.15s,scale_.1s_.1s,transform-origin_.15s]";
+  "pointer-events-none block aspect-square h-full origin-left translate-x-0 rounded-full border border-black/10 bg-white will-change-transform [transition:translate_.2s_var(--ease-out),border-radius_.15s,scale_.1s_.1s,transform-origin_.15s]";
 
 function Switch({ className, ...props }: SwitchPrimitive.Root.Props) {
   return (

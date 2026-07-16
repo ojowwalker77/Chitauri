@@ -569,7 +569,7 @@ function ProjectRunIndicatorDot({ className }: { className?: string }) {
       aria-hidden="true"
       title="Dev server running"
       className={cn(
-        "size-1.5 shrink-0 rounded-full bg-emerald-400 motion-safe:animate-pulse",
+        "size-1.5 shrink-0 rounded-full bg-success motion-safe:animate-pulse",
         className,
       )}
     />
@@ -595,10 +595,10 @@ function threadRowTimestampSlotClassName(
     "flex shrink-0 items-center justify-end leading-none tabular-nums",
     sidebarHoverRevealHideClassName("thread-row"),
     isSubagentThread
-      ? "w-[1.2rem] text-[10px]"
+      ? "w-[1.2rem] text-[11px]"
       : // Nudge the timestamp a hair above the meta scale while still tracking the user's
         // typography setting (the CSS var is always set; the 11px is just an SSR fallback).
-        "w-[1.625rem] text-[length:calc(var(--app-font-size-ui-meta,11px)+0.5px)]",
+        "w-[1.625rem] text-[length:calc(var(--app-font-size-ui-meta,12px)+0.5px)]",
     toneClassName ?? (isSubagentThread ? "text-muted-foreground/26" : "text-muted-foreground/38"),
   );
 }
@@ -676,13 +676,7 @@ function resolveThreadRowMetaChips(input: {
     chips.push({
       id: "fork",
       tooltip: "Forked thread",
-      icon: (
-        <SidebarGlyph
-          icon={GoRepoForked}
-          variant="meta"
-          className="text-emerald-600 dark:text-emerald-300/90"
-        />
-      ),
+      icon: <SidebarGlyph icon={GoRepoForked} variant="meta" className="text-success" />,
     });
   }
 
@@ -762,7 +756,7 @@ function ProviderAvatarWithTerminal({
                 {terminalCount > 1 ? (
                   <span
                     className={cn(
-                      "text-[8px] font-semibold leading-none tabular-nums",
+                      "text-[11px] font-semibold leading-none tabular-nums",
                       badgeColorClass,
                     )}
                   >
@@ -913,7 +907,7 @@ function terminalStatusFromThreadState(input: {
   if (terminalAttentionStates.includes("attention")) {
     return {
       label: "Terminal input needed",
-      colorClass: "text-amber-600 dark:text-amber-300/90",
+      colorClass: "text-gold",
       pulse: false,
     };
   }
@@ -927,7 +921,7 @@ function terminalStatusFromThreadState(input: {
   if (terminalAttentionStates.includes("review")) {
     return {
       label: "Terminal task completed",
-      colorClass: "text-emerald-600 dark:text-emerald-300/90",
+      colorClass: "text-success",
       pulse: false,
     };
   }
@@ -1006,7 +1000,7 @@ function ProjectSortMenu({
       <MenuPopup
         align="end"
         side="bottom"
-        className="min-w-44 rounded-lg border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] shadow-lg"
+        className="min-w-44 rounded-xl border-panel-border bg-panel shadow-[0_16px_44px_rgba(0,0,0,0.5)]"
       >
         <MenuGroup>
           <div className="px-2 py-1 sm:text-xs font-medium text-muted-foreground">
@@ -1085,7 +1079,7 @@ function ChatSortMenu({
       <MenuPopup
         align="end"
         side="bottom"
-        className="min-w-44 rounded-lg border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] shadow-lg"
+        className="min-w-44 rounded-xl border-panel-border bg-panel shadow-[0_16px_44px_rgba(0,0,0,0.5)]"
       >
         <MenuGroup>
           <div className="px-2 py-1 sm:text-xs font-medium text-muted-foreground">Sort chats</div>
@@ -1141,7 +1135,7 @@ function SidebarPrimaryAction({
         </SidebarLeadingIcon>
         <span className="truncate">{label}</span>
         {showBadge ? (
-          <span className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-md bg-muted px-1 text-[10px] font-medium text-muted-foreground">
+          <span className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-md bg-muted px-1 text-[11px] font-medium text-muted-foreground">
             {badgeCount}
           </span>
         ) : shortcutParts.length > 0 ? (
@@ -5141,7 +5135,7 @@ export default function Sidebar() {
             <div className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
               <span
                 className={cn(
-                  "min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,12px)] leading-5",
+                  "min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,14px)] leading-5",
                   isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
                 )}
                 data-testid={`thread-title-${thread.id}`}
@@ -5161,7 +5155,7 @@ export default function Sidebar() {
               </span>
               {thread.orchestratorMode ? (
                 <span
-                  className="inline-flex shrink-0 items-center gap-0.5 rounded-sm bg-indigo-500/9 px-1.5 py-0.5 text-[9px] font-medium text-indigo-700 dark:text-indigo-300"
+                  className="inline-flex shrink-0 items-center gap-0.5 rounded-sm border border-gold/30 bg-gold/8 px-1.5 py-0.5 text-[11px] font-medium text-gold"
                   title="Orchestrator thread"
                 >
                   <CentralIcon name="agent-network" className="size-2.5" />
@@ -5171,7 +5165,7 @@ export default function Sidebar() {
               {!isSubagentThread && threadStatus?.label === "Pending Approval" ? (
                 <span
                   aria-label="Pending approval"
-                  className={cn("shrink-0 text-[10px] font-medium", threadStatus.colorClass)}
+                  className={cn("shrink-0 text-[11px] font-medium", threadStatus.colorClass)}
                 >
                   Pending
                 </span>
@@ -5187,7 +5181,7 @@ export default function Sidebar() {
               // touching the worktree chip. It costs no space when the row is idle.
               <span
                 className={cn(
-                  "max-w-[40%] shrink-0 truncate text-right text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/38 transition-[margin] duration-150 ease-out",
+                  "max-w-[40%] shrink-0 truncate text-right text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/38 transition-[margin] duration-150 ease-out",
                   hasTrailingStatusGlyph && "mr-2",
                 )}
               >
@@ -5414,7 +5408,7 @@ export default function Sidebar() {
             >
               <span
                 className={cn(
-                  "min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,12px)]",
+                  "min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,14px)]",
                   // Inactive thread names share the resting label color with
                   // project/folder headers; the active row still pops via its
                   // background + full-foreground color from resolveThreadRowClassName.
@@ -5438,7 +5432,7 @@ export default function Sidebar() {
               </span>
               {thread.orchestratorMode ? (
                 <span
-                  className="inline-flex shrink-0 items-center gap-0.5 rounded-sm bg-indigo-500/9 px-1.5 py-0.5 text-[9px] font-medium text-indigo-700 dark:text-indigo-300"
+                  className="inline-flex shrink-0 items-center gap-0.5 rounded-sm border border-gold/30 bg-gold/8 px-1.5 py-0.5 text-[11px] font-medium text-gold"
                   title="Orchestrator thread"
                 >
                   <CentralIcon name="agent-network" className="size-2.5" />
@@ -5448,7 +5442,7 @@ export default function Sidebar() {
               {!isSubagentThread && threadStatus?.label === "Pending Approval" ? (
                 <span
                   aria-label="Pending approval"
-                  className={cn("shrink-0 text-[10px] font-medium", threadStatus.colorClass)}
+                  className={cn("shrink-0 text-[11px] font-medium", threadStatus.colorClass)}
                 >
                   Pending
                 </span>
@@ -5471,7 +5465,7 @@ export default function Sidebar() {
                     toggleSubagentParent(thread.id);
                   }}
                 >
-                  <span className="text-[9px] font-medium leading-none tabular-nums">
+                  <span className="text-[11px] font-medium leading-none tabular-nums">
                     {childCount}
                   </span>
                   {isExpanded ? (
@@ -5614,14 +5608,14 @@ export default function Sidebar() {
               >
                 <span
                   className={cn(
-                    "truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal",
+                    "truncate font-system-ui text-[length:var(--app-font-size-ui,14px)] font-normal",
                     SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
                   )}
                 >
                   {project.name}
                 </span>
                 {project.localName ? (
-                  <span className="shrink-0 truncate text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/40">
+                  <span className="shrink-0 truncate text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/40">
                     {project.folderName}
                   </span>
                 ) : null}
@@ -5748,7 +5742,7 @@ export default function Sidebar() {
                         render={<button type="button" />}
                         data-thread-selection-safe
                         size="sm"
-                        className="h-7 flex-1 translate-x-0 justify-start rounded-lg pr-2 pl-8 text-left text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]"
+                        className="h-7 flex-1 translate-x-0 justify-start rounded-lg pr-2 pl-8 text-left text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]"
                         onClick={() => {
                           showMoreThreadsForProject(project.cwd, threadListExtraPages);
                         }}
@@ -5762,7 +5756,7 @@ export default function Sidebar() {
                         data-thread-selection-safe
                         size="sm"
                         className={cn(
-                          "h-7 translate-x-0 justify-start rounded-lg text-left text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]",
+                          "h-7 translate-x-0 justify-start rounded-lg text-left text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]",
                           // Keep the left indent when "Show less" is the only affordance left.
                           canShowMoreThreads ? "w-auto flex-none px-2" : "flex-1 pr-2 pl-8",
                         )}
@@ -6124,7 +6118,7 @@ export default function Sidebar() {
     desktopUpdateButtonPresentation.secondaryLabel !== null;
   const desktopUpdateDownloadPercent = getDesktopUpdateDownloadPercent(desktopUpdateState);
   const desktopUpdateRowButtonClasses = cn(
-    "inline-flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[var(--info)] px-2.5 font-system-ui text-[length:var(--app-font-size-ui-xs,10px)] font-medium leading-none text-white transition-colors",
+    "inline-flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[var(--info)] px-2.5 font-system-ui text-[length:var(--app-font-size-ui-xs,12px)] font-medium leading-none text-white transition-colors",
     desktopUpdateButtonHasSecondaryLabel && "min-h-6 py-0.5",
     desktopUpdateButtonInteractivityClasses,
   );
@@ -6422,7 +6416,24 @@ export default function Sidebar() {
   // SidebarLeadingControls primitive with the closed-state host headers, so the
   // toggle + arrows look identical whether the sidebar is open or collapsed; only
   // the wrapper layout differs per host.
-  const titlebarControls = <SidebarLeadingControls className="hidden md:flex" />;
+  const titlebarControls = (
+    <div className="ml-auto hidden items-center gap-1 md:flex [-webkit-app-region:no-drag]">
+      <SidebarLeadingControls />
+      <button
+        type="button"
+        aria-label="Search"
+        title="Search"
+        className="inline-flex size-8 items-center justify-center rounded-[9px] text-muted-foreground transition-[background-color,color,scale] duration-press ease-out hover:bg-hover hover:text-foreground active:scale-[0.96]"
+        onClick={() => {
+          setSearchPaletteMode("search");
+          setSearchPaletteInitialQuery(null);
+          setSearchPaletteOpen(true);
+        }}
+      >
+        <SearchIcon className="size-4" />
+      </button>
+    </div>
+  );
 
   const headerControls = <SidebarLeadingControls className="ml-auto hidden md:flex" />;
 
@@ -6491,7 +6502,7 @@ export default function Sidebar() {
       <SidebarContent className="gap-0 font-system-ui">
         {showArm64IntelBuildWarning && arm64IntelBuildWarningDescription ? (
           <SidebarGroup className="px-2 pt-2 pb-0">
-            <Alert variant="warning" className="rounded-2xl border-warning/40 bg-warning/8">
+            <Alert variant="warning" className="rounded-xl border-warning/40 bg-warning/8">
               <TriangleAlertIcon />
               <AlertTitle>Intel build on Apple Silicon</AlertTitle>
               <AlertDescription>{arm64IntelBuildWarningDescription}</AlertDescription>
@@ -6646,7 +6657,7 @@ export default function Sidebar() {
                                         setRenamingWorkspaceTitle(workspace.title);
                                       }
                                     }}
-                                    className="h-7 w-full rounded-md border border-[color:var(--color-border)] bg-[var(--color-background-control-opaque)] px-2 text-[length:var(--app-font-size-ui,12px)] text-[var(--color-text-foreground)] outline-none focus:border-[color:var(--color-border-focus)]"
+                                    className="h-7 w-full rounded-md border border-[color:var(--color-border)] bg-[var(--color-background-control-opaque)] px-2 text-[length:var(--app-font-size-ui,14px)] text-[var(--color-text-foreground)] outline-none focus:border-[color:var(--color-border-focus)]"
                                   />
                                 </div>
                               ) : (
@@ -6654,7 +6665,7 @@ export default function Sidebar() {
                                   <SidebarMenuButton
                                     size="sm"
                                     isActive={isActive}
-                                    className="h-8 gap-2 rounded-lg pl-2 pr-8 font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal text-foreground/89 transition-colors hover:bg-[var(--sidebar-accent)] data-[active=true]:bg-[var(--sidebar-accent-active)] data-[active=true]:text-[var(--sidebar-accent-foreground)]"
+                                    className="h-8 gap-2 rounded-lg pl-2 pr-8 font-system-ui text-[length:var(--app-font-size-ui,14px)] font-normal text-foreground/89 transition-colors hover:bg-[var(--sidebar-accent)] data-[active=true]:bg-[var(--sidebar-accent-active)] data-[active=true]:text-[var(--sidebar-accent-foreground)]"
                                     onClick={() => {
                                       navigateToWorkspace(workspace.id);
                                     }}
@@ -6681,16 +6692,16 @@ export default function Sidebar() {
                                         className={cn(
                                           "inline-flex size-1.5 shrink-0 rounded-full",
                                           workspace.terminalStatus.label === "Terminal input needed"
-                                            ? "bg-amber-500 dark:bg-amber-300/90"
+                                            ? "bg-gold"
                                             : workspace.terminalStatus.label ===
                                                 "Terminal process running"
                                               ? "bg-teal-500 dark:bg-teal-300/90"
-                                              : "bg-emerald-500 dark:bg-emerald-300/90",
+                                              : "bg-success",
                                         )}
                                       />
                                     )}
                                     {workspace.terminalCount > 0 && (
-                                      <span className="shrink-0 text-[length:var(--app-font-size-ui-xs,10px)] tabular-nums text-muted-foreground/50">
+                                      <span className="shrink-0 text-[length:var(--app-font-size-ui-xs,12px)] tabular-nums text-muted-foreground/50">
                                         {workspace.terminalCount}
                                       </span>
                                     )}
@@ -6770,7 +6781,7 @@ export default function Sidebar() {
                       {isElectron && (
                         <button
                           type="button"
-                          className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-background-elevated-secondary)] px-2 text-[length:var(--app-font-size-ui,12px)] font-normal text-[var(--color-text-foreground-secondary)] transition-[background-color,color,scale] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] active:scale-[0.96] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
+                          className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-background-elevated-secondary)] px-2 text-[length:var(--app-font-size-ui,14px)] font-normal text-[var(--color-text-foreground-secondary)] transition-[background-color,color,scale] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] active:scale-[0.96] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
                           onClick={() => void handlePickFolder()}
                           disabled={isPickingFolder || isAddingProject}
                         >
@@ -6784,7 +6795,7 @@ export default function Sidebar() {
                       )}
                       <button
                         type="button"
-                        className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-background-elevated-secondary)] px-2 text-[length:var(--app-font-size-ui,12px)] font-normal text-[var(--color-text-foreground-secondary)] transition-[background-color,color,scale] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
+                        className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-background-elevated-secondary)] px-2 text-[length:var(--app-font-size-ui,14px)] font-normal text-[var(--color-text-foreground-secondary)] transition-[background-color,color,scale] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
                         onClick={() => {
                           setAddingProject(false);
                           setSearchPaletteMode("import");
@@ -6847,7 +6858,7 @@ export default function Sidebar() {
                     aria-live="polite"
                     aria-label="Loading projects"
                   >
-                    <div className="text-center text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/58">
+                    <div className="text-center text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/58">
                       Loading projects...
                     </div>
                     <div className="mx-auto grid w-full max-w-42 gap-1.5 opacity-70">
@@ -6859,7 +6870,7 @@ export default function Sidebar() {
                 )}
 
                 {projectEmptyState === "empty" && (
-                  <div className="px-2 pt-4 text-center text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/58">
+                  <div className="px-2 pt-4 text-center text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/58">
                     No projects yet
                   </div>
                 )}
@@ -6888,7 +6899,7 @@ export default function Sidebar() {
                   }}
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
-                    <span className="truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal text-muted-foreground/79">
+                    <span className="truncate font-system-ui text-[length:var(--app-font-size-ui,14px)] font-normal text-muted-foreground/79">
                       Chats
                     </span>
                     <DisclosureChevron
@@ -6928,7 +6939,7 @@ export default function Sidebar() {
                     {visibleChatThreadRows.length > 0 ? (
                       renderedChatEntries.map((entry) => renderChatItem(entry.row))
                     ) : (
-                      <div className="px-2 py-2 text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/48">
+                      <div className="px-2 py-2 text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/48">
                         No chats yet
                       </div>
                     )}
@@ -6938,7 +6949,7 @@ export default function Sidebar() {
                           {canShowMoreChatThreads ? (
                             <SidebarMenuButton
                               size="sm"
-                              className="h-7 flex-1 justify-start rounded-lg pr-2 pl-8 text-left text-[length:var(--app-font-size-ui,12px)] font-normal text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]"
+                              className="h-7 flex-1 justify-start rounded-lg pr-2 pl-8 text-left text-[length:var(--app-font-size-ui,14px)] font-normal text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]"
                               onClick={() =>
                                 setChatThreadListExtraPages(chatThreadListEffectiveExtraPages + 1)
                               }
@@ -6950,7 +6961,7 @@ export default function Sidebar() {
                             <SidebarMenuButton
                               size="sm"
                               className={cn(
-                                "h-7 justify-start rounded-lg text-left text-[length:var(--app-font-size-ui,12px)] font-normal text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]",
+                                "h-7 justify-start rounded-lg text-left text-[length:var(--app-font-size-ui,14px)] font-normal text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]",
                                 // Keep the left indent when "Show less" is the only affordance left.
                                 canShowMoreChatThreads
                                   ? "w-auto flex-none px-2"
@@ -7020,13 +7031,13 @@ export default function Sidebar() {
                               {desktopUpdateButtonPresentation.label}
                             </span>
                             {desktopUpdateButtonPresentation.secondaryLabel ? (
-                              <span className="min-w-0 truncate text-center text-[length:var(--app-font-size-ui-xs,10px)] text-white/80">
+                              <span className="min-w-0 truncate text-center text-[length:var(--app-font-size-ui-xs,12px)] text-white/80">
                                 {desktopUpdateButtonPresentation.secondaryLabel}
                               </span>
                             ) : null}
                           </span>
                           {desktopUpdateDownloadPercent !== null ? (
-                            <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] font-semibold tabular-nums text-white/95">
+                            <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white/95">
                               {desktopUpdateDownloadPercent}%
                             </span>
                           ) : null}
@@ -7204,7 +7215,7 @@ export default function Sidebar() {
         <DialogPopup surface="solid" className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
-              <PlayIcon className="size-4 text-emerald-500" />
+              <PlayIcon className="size-4 text-success" />
               Start dev
             </DialogTitle>
             <DialogDescription>
@@ -7214,7 +7225,7 @@ export default function Sidebar() {
           <DialogPanel className="space-y-2">
             <label
               htmlFor="project-run-command-input"
-              className="block text-[length:var(--app-font-size-ui-xs,10px)] font-medium text-[var(--color-text-foreground-secondary)]"
+              className="block text-[length:var(--app-font-size-ui-xs,12px)] font-medium text-[var(--color-text-foreground-secondary)]"
             >
               Command
             </label>
@@ -7238,7 +7249,7 @@ export default function Sidebar() {
               }}
             />
             {projectRunDialogCommandIsValid ? null : (
-              <p className="text-[length:var(--app-font-size-ui-sm,11px)] text-destructive">
+              <p className="text-[length:var(--app-font-size-ui-sm,13px)] text-destructive">
                 Enter a command to run.
               </p>
             )}

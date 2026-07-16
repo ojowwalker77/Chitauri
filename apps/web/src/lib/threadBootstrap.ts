@@ -256,9 +256,7 @@ export function buildDraftThreadContextPatch(
       : {}),
     ...(options?.envMode !== undefined ? { envMode: options.envMode } : {}),
     ...(options?.runtimeMode !== undefined ? { runtimeMode: options.runtimeMode } : {}),
-    ...(options?.interactionMode !== undefined
-      ? { interactionMode: options.interactionMode }
-      : {}),
+    ...(options?.interactionMode !== undefined ? { interactionMode: options.interactionMode } : {}),
     ...(options?.lastKnownPr !== undefined ? { lastKnownPr: options.lastKnownPr } : {}),
     entryPoint,
   };

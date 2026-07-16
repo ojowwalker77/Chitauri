@@ -58,7 +58,7 @@ export function TranscriptSelectionAction(props: TranscriptSelectionActionProps)
     >
       <div
         className={cn(
-          "pointer-events-auto inline-flex items-center gap-0.5 rounded-full border border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] p-0.5 shadow-xl backdrop-blur-xl",
+          "pointer-events-auto inline-flex items-center gap-0.5 rounded-full border border-panel-border bg-panel p-0.5 shadow-[0_16px_44px_rgba(0,0,0,0.5)]",
           props.placement === "top" ? "origin-bottom" : "origin-top",
         )}
       >
