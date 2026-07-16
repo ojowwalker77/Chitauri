@@ -176,9 +176,7 @@ export const AppSettingsSchema = Schema.Struct({
   confirmThreadArchive: Schema.Boolean.pipe(withDefaults(() => false)),
   confirmTerminalTabClose: Schema.Boolean.pipe(withDefaults(() => true)),
   diffWordWrap: Schema.Boolean.pipe(withDefaults(() => false)),
-  taskListDisplayMode: TaskListDisplayMode.pipe(
-    withDefaults(() => DEFAULT_TASK_LIST_DISPLAY_MODE),
-  ),
+  taskListDisplayMode: TaskListDisplayMode.pipe(withDefaults(() => DEFAULT_TASK_LIST_DISPLAY_MODE)),
   // Local-only UI preferences for hiding sidebar surfaces a user doesn't want.
   // `showChatsSection` controls the standalone "Chats" list in the sidebar footer
   // (rootless chats not tied to a project). `showWorkspaceSection` controls the optional tab

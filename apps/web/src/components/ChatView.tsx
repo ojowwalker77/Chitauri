@@ -7888,10 +7888,7 @@ export default function ChatView({
       // Optimistically use the preferred task-list surface when implementing (not refining).
       // "default" mode here means the agent is executing the plan, which produces
       // step-tracking activities that the sidebar will display when it is the default.
-      if (
-        nextInteractionMode === "default" &&
-        settings.taskListDisplayMode === "sidebar"
-      ) {
+      if (nextInteractionMode === "default" && settings.taskListDisplayMode === "sidebar") {
         planSidebarDismissedForTurnRef.current = null;
         setPlanSidebarOpen(true);
       }
