@@ -96,8 +96,76 @@ it("authenticates a seat and exposes only the control-plane tools", async () => 
   }
 });
 
+it("accepts a replacement MCP client after the provider runtime restarts", async () => {
+  const projections = {
+    getThreadShellById: () =>
+      Effect.succeed(
+        Option.some({
+          id: SEAT_THREAD_ID,
+          projectId: ProjectId.makeUnsafe("project-seat"),
+          title: "Orchestrator",
+          modelSelection: { provider: "codex", model: "gpt-5.6-sol" },
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          envMode: "local",
+          branch: "main",
+          worktreePath: "/tmp/project-seat",
+          orchestratorMode: true,
+        }),
+      ),
+  } as unknown as ProjectionSnapshotQueryShape;
+  const settings = {
+    start: Effect.void,
+    ready: Effect.void,
+    getSettings: Effect.succeed(DEFAULT_SERVER_SETTINGS),
+    updateSettings: () => Effect.succeed(DEFAULT_SERVER_SETTINGS),
+    streamChanges: Stream.empty,
+  } satisfies ServerSettingsShape;
+  const controlPlane = await Effect.runPromise(
+    makeOrchestratorControlPlane.pipe(
+      Effect.provideService(ServerConfig, { port: 3773, host: "::1" } as ServerConfigShape),
+      Effect.provideService(GitCore, {} as GitCoreShape),
+      Effect.provideService(OrchestrationEngineService, {} as OrchestrationEngineShape),
+      Effect.provideService(ProjectionSnapshotQuery, projections),
+      Effect.provideService(ServerSettingsService, settings),
+    ),
+  );
+  const mcp = await Effect.runPromise(controlPlane.getMcpServerForSeat(SEAT_THREAD_ID));
+  assert.strictEqual(mcp.url, "http://[::1]:3773/api/orchestrator/mcp");
+  const makeClient = () => {
+    const transport = new StreamableHTTPClientTransport(new URL(mcp.url), {
+      requestInit: { headers: mcp.headers },
+      fetch: ((input: Request | string, init?: RequestInit) => {
+        const request = input instanceof Request ? input : new Request(input, init);
+        return Effect.runPromise(controlPlane.handleHttpRequest(request));
+      }) as typeof fetch,
+    });
+    return {
+      client: new Client({ name: "chitauri-restart-test", version: "1.0.0" }),
+      transport,
+    };
+  };
+
+  const first = makeClient();
+  await first.client.connect(first.transport as Parameters<typeof first.client.connect>[0]);
+  const second = makeClient();
+  try {
+    await second.client.connect(second.transport as Parameters<typeof second.client.connect>[0]);
+    const tools = await second.client.listTools();
+    assert.deepStrictEqual(tools.tools.map((tool) => tool.name).sort(), [
+      "delegate",
+      "result",
+      "status",
+    ]);
+  } finally {
+    await first.client.close().catch(() => undefined);
+    await second.client.close().catch(() => undefined);
+  }
+});
+
 it("delegates through the normal thread path in an isolated worktree", async () => {
   const commands: OrchestrationCommand[] = [];
+  let hasWorkingTreeChanges = false;
   const childThreadIdRef: { current: ThreadId | null } = { current: null };
   const projections = {
     getThreadShellById: () =>
@@ -163,7 +231,8 @@ it("delegates through the normal thread path in an isolated worktree", async () 
     },
   } as unknown as OrchestrationEngineShape;
   const git = {
-    statusDetails: () => Effect.succeed({ isRepo: true, branch: "main" }),
+    statusDetails: () =>
+      Effect.succeed({ isRepo: true, branch: "main", hasWorkingTreeChanges }),
     createWorktree: () =>
       Effect.succeed({ worktree: { path: "/repo-worktrees/delegate", branch: "delegate" } }),
     execute: (input: { readonly operation: string }) =>
@@ -229,6 +298,28 @@ it("delegates through the normal thread path in an isolated worktree", async () 
       assert.strictEqual(commands[0].modelSelection.model, "gpt-5.6-terra");
     }
     assert.strictEqual(commands[1]?.type, "thread.turn.start");
+
+    hasWorkingTreeChanges = true;
+    const dirtyResponse = await client.callTool({
+      name: "delegate",
+      arguments: {
+        lane: "bulk",
+        brief: {
+          goal: "Use uncommitted seat work",
+          paths: ["src/example.ts"],
+          constraints: [],
+          dontTouch: [],
+          doneCriteria: ["The uncommitted change is included"],
+        },
+      },
+    });
+    const dirtyText = (dirtyResponse.content as Array<{ type: string; text: string }>)[0];
+    const dirtyResult = JSON.parse(
+      dirtyText && dirtyText.type === "text" ? dirtyText.text : "{}",
+    ) as { status: string; error: string };
+    assert.strictEqual(dirtyResult.status, "failed");
+    assert.match(dirtyResult.error, /Commit or stash/);
+    assert.strictEqual(commands.length, 2);
   } finally {
     await client.close();
   }

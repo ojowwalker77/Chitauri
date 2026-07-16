@@ -1608,8 +1608,9 @@ export default function ChatView({
     ? activeThread?.orchestratorMode === true
     : (composerDraft.orchestratorMode ?? true);
   const orchestratorSeatModelCandidate =
-    configuredOrchestratorSeatModel ??
-    (isServerThread && activeThread?.orchestratorMode ? activeThread.modelSelection : null);
+    isServerThread && activeThread?.orchestratorMode
+      ? activeThread.modelSelection
+      : configuredOrchestratorSeatModel;
   const isComposerOrchestratorMode =
     requestedOrchestratorMode && orchestratorSeatModelCandidate !== null;
   const orchestratorSeatModel: ModelSelection = orchestratorSeatModelCandidate ?? {
@@ -4698,7 +4699,7 @@ export default function ChatView({
         return;
       }
 
-      if (isLocalDraftThread) {
+      if (isLocalDraftThread && !draftThread?.promotedTo) {
         setComposerDraftOrchestratorMode(threadId, nextOrchestratorMode);
         scheduleComposerFocus();
         return;
@@ -4715,6 +4716,15 @@ export default function ChatView({
         const nextThreadId = await handleNewThread(activeProject.id, {
           entryPoint: "chat",
           fresh: true,
+          branch: activeThread?.branch ?? null,
+          worktreePath: activeThread?.worktreePath ?? null,
+          envMode: resolveThreadEnvironmentMode({
+            envMode: activeThread?.envMode,
+            worktreePath: activeThread?.worktreePath ?? null,
+          }),
+          runtimeMode,
+          interactionMode,
+          lastKnownPr: activeThread?.lastKnownPr ?? null,
           ...(nextProvider ? { provider: nextProvider } : {}),
         });
         copyTransferableComposerState(sourceThreadId, nextThreadId);
@@ -4736,10 +4746,14 @@ export default function ChatView({
     },
     [
       activeProject,
+      activeThread,
       configuredOrchestratorSeatModel,
       copyTransferableComposerState,
       handleNewThread,
+      draftThread?.promotedTo,
+      interactionMode,
       isLocalDraftThread,
+      runtimeMode,
       scheduleComposerFocus,
       selectedProvider,
       setComposerDraftOrchestratorMode,
@@ -9804,14 +9818,12 @@ export default function ChatView({
         onToggleFastMode={toggleFastMode}
         onSetPlanMode={setPlanMode}
       />
-      {!isEditorRail ? (
-        <ComposerThreadModePicker
-          value={composerThreadMode}
-          onValueChange={(mode) => void handleComposerThreadModeChange(mode)}
-          hideLabel={options.iconOnly}
-          orchestratorAvailable={configuredOrchestratorSeatModel !== null}
-        />
-      ) : null}
+      <ComposerThreadModePicker
+        value={composerThreadMode}
+        onValueChange={(mode) => void handleComposerThreadModeChange(mode)}
+        hideLabel={options.iconOnly || isEditorRail}
+        orchestratorAvailable={orchestratorSeatModelCandidate !== null}
+      />
       <RuntimeUsageControls
         {...runtimeUsageControlsProps}
         className="shrink-0"

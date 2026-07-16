@@ -3,6 +3,7 @@ import "../index.css";
 
 import {
   AutomationId,
+  DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
   type AutomationCreateInput,
   type AutomationDefinition,
   EventId,
@@ -3796,12 +3797,27 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it("changes an existing thread to Orchestrator without creating duplicate server threads", async () => {
+    const snapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-orchestrator-transition-test" as MessageId,
+      targetText: "orchestrator transition test",
+    });
+    const sourceThread = snapshot.threads[0]!;
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-orchestrator-transition-test" as MessageId,
-        targetText: "orchestrator transition test",
-      }),
+      snapshot: {
+        ...snapshot,
+        threads: [
+          {
+            ...sourceThread,
+            envMode: "worktree",
+            branch: "feature/orchestrator-source",
+            worktreePath: "/repo/.worktrees/orchestrator-source",
+            runtimeMode: "approval-required",
+            interactionMode: "plan",
+            lastKnownPr: null,
+          },
+        ],
+      },
     });
 
     try {
@@ -3822,9 +3838,103 @@ describe("ChatView timeline estimator parity (full app)", () => {
         prompt: "Keep this unsent draft",
         orchestratorMode: true,
       });
+      expect(useComposerDraftStore.getState().getDraftThread(nextThreadId)).toMatchObject({
+        envMode: "worktree",
+        branch: "feature/orchestrator-source",
+        worktreePath: "/repo/.worktrees/orchestrator-source",
+        runtimeMode: "approval-required",
+        interactionMode: "plan",
+        lastKnownPr: null,
+      });
       expect(
         wsRequests.some((request) => readDispatchedCommand(request)?.type === "thread.create"),
       ).toBe(false);
+
+      const sendButton = await waitForSendButton();
+      expect(sendButton.disabled).toBe(false);
+      await sendButton.click();
+      await vi.waitFor(
+        () => {
+          const createCommand = wsRequests
+            .map(readDispatchedCommand)
+            .find(
+              (command) => command?.type === "thread.create" && command.threadId === nextThreadId,
+            );
+          expect(createCommand).toMatchObject({
+            orchestratorMode: true,
+            envMode: "worktree",
+            branch: "feature/orchestrator-source",
+            worktreePath: "/repo/.worktrees/orchestrator-source",
+            runtimeMode: "approval-required",
+            interactionMode: "plan",
+            lastKnownPr: null,
+          });
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps an existing Orchestrator seat on its persisted provider and model", async () => {
+    localStorage.setItem(
+      "chitauri:app-settings:v1",
+      JSON.stringify({
+        orchestratorRoutingPolicy: {
+          ...DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
+          seatModels: [{ provider: "claudeAgent", model: "claude-fable-5" }],
+        },
+      }),
+    );
+    const snapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-orchestrator-persisted-seat-test" as MessageId,
+      targetText: "orchestrator persisted seat test",
+    });
+    const sourceThread = snapshot.threads[0]!;
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: {
+        ...snapshot,
+        threads: [
+          {
+            ...sourceThread,
+            orchestratorMode: true,
+            modelSelection: { provider: "codex", model: "gpt-5.6-sol" },
+          },
+        ],
+      },
+    });
+
+    try {
+      await expect
+        .element(page.getByTestId("composer-thread-mode-trigger"))
+        .toHaveTextContent("Orchestrator");
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, "Continue with the current seat");
+      const sendButton = await waitForSendButton();
+      expect(sendButton.disabled).toBe(false);
+      await sendButton.click();
+
+      await vi.waitFor(
+        () => {
+          const turnCommand = wsRequests
+            .map(readDispatchedCommand)
+            .find((command) => command?.type === "thread.turn.start");
+          expect(turnCommand).toMatchObject({
+            threadId: THREAD_ID,
+            modelSelection: { provider: "codex", model: "gpt-5.6-sol" },
+          });
+          const providerSwitch = wsRequests
+            .map(readDispatchedCommand)
+            .find(
+              (command) =>
+                command?.type === "thread.meta.update" &&
+                command.modelSelection?.provider === "claudeAgent",
+            );
+          expect(providerSwitch).toBeUndefined();
+        },
+        { timeout: 8_000, interval: 16 },
+      );
     } finally {
       await mounted.cleanup();
     }

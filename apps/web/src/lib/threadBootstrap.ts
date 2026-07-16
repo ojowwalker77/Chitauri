@@ -27,6 +27,9 @@ export interface NewThreadOptions {
   branch?: string | null;
   worktreePath?: string | null;
   envMode?: DraftThreadEnvMode;
+  runtimeMode?: RuntimeMode;
+  interactionMode?: ProviderInteractionMode;
+  lastKnownPr?: OrchestrationThreadPullRequest | null;
   entryPoint?: ThreadPrimarySurface;
   temporary?: boolean;
   provider?: ProviderKind;
@@ -202,13 +205,15 @@ export function createFreshDraftThreadSeed(input: {
   createdAt: string;
   entryPoint: ThreadPrimarySurface;
   options: NewThreadOptions | undefined;
-}): Omit<DraftThreadState, "projectId" | "interactionMode"> {
+}): Omit<DraftThreadState, "projectId"> {
   return {
     createdAt: input.createdAt,
     branch: input.options?.branch ?? null,
     worktreePath: input.options?.worktreePath ?? null,
     envMode: input.options?.envMode ?? "local",
-    runtimeMode: DEFAULT_RUNTIME_MODE,
+    runtimeMode: input.options?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
+    interactionMode: input.options?.interactionMode ?? DEFAULT_INTERACTION_MODE,
+    lastKnownPr: input.options?.lastKnownPr ?? null,
     entryPoint: input.entryPoint,
     ...(input.options?.temporary ? { isTemporary: true } : {}),
   };
@@ -219,7 +224,10 @@ export function hasDraftContextOverrides(options?: NewThreadOptions): boolean {
   return (
     options?.branch !== undefined ||
     options?.worktreePath !== undefined ||
-    options?.envMode !== undefined
+    options?.envMode !== undefined ||
+    options?.runtimeMode !== undefined ||
+    options?.interactionMode !== undefined ||
+    options?.lastKnownPr !== undefined
   );
 }
 
@@ -231,6 +239,9 @@ export function buildDraftThreadContextPatch(
   branch?: string | null;
   entryPoint: ThreadPrimarySurface;
   envMode?: DraftThreadEnvMode;
+  interactionMode?: ProviderInteractionMode;
+  lastKnownPr?: OrchestrationThreadPullRequest | null;
+  runtimeMode?: RuntimeMode;
   worktreePath?: string | null;
 } | null {
   if (!hasDraftContextOverrides(options)) {
@@ -244,6 +255,11 @@ export function buildDraftThreadContextPatch(
       ? { worktreePath: options?.worktreePath ?? null }
       : {}),
     ...(options?.envMode !== undefined ? { envMode: options.envMode } : {}),
+    ...(options?.runtimeMode !== undefined ? { runtimeMode: options.runtimeMode } : {}),
+    ...(options?.interactionMode !== undefined
+      ? { interactionMode: options.interactionMode }
+      : {}),
+    ...(options?.lastKnownPr !== undefined ? { lastKnownPr: options.lastKnownPr } : {}),
     entryPoint,
   };
 }
