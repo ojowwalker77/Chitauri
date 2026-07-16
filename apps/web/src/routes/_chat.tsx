@@ -461,10 +461,7 @@ function ChatRouteLayout() {
       collapsible="offcanvas"
       // Match the right dock's soft drawer slide (shared token) instead of the
       // shell's default `ease-linear`. Applied to the container + gap in lockstep.
-      className={cn(
-        "text-foreground",
-        SIDEBAR_OFFCANVAS_MOTION_CLASS,
-      )}
+      className={cn("text-foreground", SIDEBAR_OFFCANVAS_MOTION_CLASS)}
       gapClassName={cn(SIDEBAR_GAP_CLASS, SIDEBAR_OFFCANVAS_MOTION_CLASS)}
       innerClassName={SIDEBAR_INNER_CLASS}
       transparentSurface

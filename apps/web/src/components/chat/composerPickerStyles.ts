@@ -6,8 +6,7 @@
 export { COMPOSER_PICKER_SIZE, type ComposerPickerSize } from "./composerPickerSize";
 
 /** Overlay-only shadow for menus, tooltips, and dialogs. */
-export const COMPOSER_SURFACE_SHADOW_CLASS_NAME =
-  "shadow-[0_16px_44px_rgba(0,0,0,0.5)]";
+export const COMPOSER_SURFACE_SHADOW_CLASS_NAME = "shadow-[0_16px_44px_rgba(0,0,0,0.5)]";
 
 // Uses the UI-sm token so picker labels sit slightly below the editor text size.
 // The sm: override is required to beat the Button component's base responsive text classes.

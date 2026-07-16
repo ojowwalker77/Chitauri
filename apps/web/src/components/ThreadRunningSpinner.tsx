@@ -14,7 +14,8 @@ export function ThreadRunningSpinner({ className }: { className?: string }) {
         className,
       )}
       style={{
-        background: "conic-gradient(from 0deg, color-mix(in srgb, currentColor 25%, transparent) 0 75%, currentColor 75% 100%)",
+        background:
+          "conic-gradient(from 0deg, color-mix(in srgb, currentColor 25%, transparent) 0 75%, currentColor 75% 100%)",
         mask: "radial-gradient(farthest-side, transparent calc(100% - 1.5px), black calc(100% - 1.5px))",
         WebkitMask:
           "radial-gradient(farthest-side, transparent calc(100% - 1.5px), black calc(100% - 1.5px))",

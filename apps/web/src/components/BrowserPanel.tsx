@@ -488,10 +488,7 @@ function BrowserLocalServersHome({
                 >
                   <BrowserLocalServerThumbnail server={server} />
                   <LocalServerIdentity server={server} tone="browser" />
-                  <span
-                    className="mr-1 size-2 rounded-full bg-success"
-                    aria-hidden
-                  />
+                  <span className="mr-1 size-2 rounded-full bg-success" aria-hidden />
                 </button>
               );
             })}

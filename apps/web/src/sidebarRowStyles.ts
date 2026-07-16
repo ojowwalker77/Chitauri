@@ -39,8 +39,7 @@ export const SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME = "text-[#c2c0bc]";
 export const SIDEBAR_ROW_MUTED_TEXT_CLASS_NAME = "text-muted-foreground/79";
 
 /** Section label ("Threads"/"Pinned"/"Workspace" and settings "App"/"Chitauri"). */
-export const SIDEBAR_SECTION_LABEL_CLASS_NAME =
-  "text-[12.5px] font-normal text-muted-foreground";
+export const SIDEBAR_SECTION_LABEL_CLASS_NAME = "text-[12.5px] font-normal text-muted-foreground";
 
 /** Project/chat/settings header rows and settings sidebar nav items. */
 export const SIDEBAR_HEADER_ROW_CLASS_NAME = [

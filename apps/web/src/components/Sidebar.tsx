@@ -676,13 +676,7 @@ function resolveThreadRowMetaChips(input: {
     chips.push({
       id: "fork",
       tooltip: "Forked thread",
-      icon: (
-        <SidebarGlyph
-          icon={GoRepoForked}
-          variant="meta"
-          className="text-success"
-        />
-      ),
+      icon: <SidebarGlyph icon={GoRepoForked} variant="meta" className="text-success" />,
     });
   }
 

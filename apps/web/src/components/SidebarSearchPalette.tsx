@@ -354,10 +354,7 @@ function HighlightedText(props: { text: string; query: string; className?: strin
     <span className={props.className}>
       {segments.map((segment) =>
         segment.highlighted ? (
-          <mark
-            key={segment.key}
-            className="rounded-[3px] bg-gold/30 px-[1px] text-current"
-          >
+          <mark key={segment.key} className="rounded-[3px] bg-gold/30 px-[1px] text-current">
             {segment.text}
           </mark>
         ) : (

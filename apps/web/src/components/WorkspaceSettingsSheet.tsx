@@ -19,8 +19,7 @@ import {
 } from "../workspaceTerminalLayoutPresets";
 
 function WorkspaceLayoutPresetPreview(props: { presetId: WorkspaceLayoutPresetId }) {
-  const paneClassName =
-    "rounded-[6px] border border-panel-border bg-panel";
+  const paneClassName = "rounded-[6px] border border-panel-border bg-panel";
 
   if (props.presetId === "single") {
     return (

@@ -20,7 +20,9 @@ Bun.serve({
       const index = `<!doctype html><meta charset="utf-8"><title>Object Threads mockups</title>
 <body style="margin:0;display:grid;place-items:center;min-height:100vh;background:#0e0e0e;color:#eee;font:14px/1.6 system-ui">
 <div><h1 style="font-size:15px;font-weight:600">Object Threads mockups</h1><ol style="padding-left:18px">
-${Object.entries(map).map(([k, f]) => `<li><a style="color:#8faefc" href="/${k}">${f}</a></li>`).join("")}
+${Object.entries(map)
+  .map(([k, f]) => `<li><a style="color:#8faefc" href="/${k}">${f}</a></li>`)
+  .join("")}
 </ol></div>`;
       return new Response(index, { headers: { "content-type": "text/html" } });
     }

@@ -150,7 +150,6 @@
     box-shadow: none;
   }
 
-
   /* Settings shares the flat window canvas with chat. */
   .app-settings-surface {
     background: var(--app-settings-surface, var(--background));
@@ -952,7 +951,7 @@ label:has(> select#reasoning-effort) select {
   background: transparent !important;
   padding: 1rem;
   font-family: var(--font-chat-code-family);
-  font-size: var(--app-font-size-chat-code,13px);
+  font-size: var(--app-font-size-chat-code, 13px);
   line-height: 1.65;
   tab-size: 2;
 }

@@ -116,8 +116,7 @@ const buttonVariants = cva(
           "border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] text-[var(--color-text-foreground)] [:hover,[data-pressed]]:bg-secondary/12",
         subtle:
           "border-transparent bg-selected text-[var(--color-text-foreground)] focus-visible:ring-[color:var(--color-border-focus)]/60 [:hover,[data-pressed]]:bg-[color-mix(in_srgb,var(--foreground)_12%,transparent)]",
-        gold:
-          "border-transparent bg-[color-mix(in_srgb,var(--gold)_12%,transparent)] text-gold [:hover,[data-pressed]]:bg-[color-mix(in_srgb,var(--gold)_18%,transparent)]",
+        gold: "border-transparent bg-[color-mix(in_srgb,var(--gold)_12%,transparent)] text-gold [:hover,[data-pressed]]:bg-[color-mix(in_srgb,var(--gold)_18%,transparent)]",
       },
     },
     compoundVariants: [

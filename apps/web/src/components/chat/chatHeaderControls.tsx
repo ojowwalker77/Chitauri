@@ -198,11 +198,7 @@ export function SurfaceTabChip({
 }) {
   return (
     <div
-      className={cn(
-        "group/dock-tab",
-        DOCK_TAB_CHIP_CLASS_NAME,
-        className,
-      )}
+      className={cn("group/dock-tab", DOCK_TAB_CHIP_CLASS_NAME, className)}
       data-active={active ? "true" : "false"}
     >
       {onClose ? (

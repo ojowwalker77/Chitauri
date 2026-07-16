@@ -1,539 +1,1565 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chitauri — Object Threads · Claude Code</title>
-  <style>
-    :root {
-      color-scheme: dark;
-      --background: #0a0a0a;
-      --panel: #171717;
-      --panel-border: rgba(255,255,255,.07);
-      --hover: rgba(255,255,255,.05);
-      --selected: rgba(255,255,255,.08);
-      --foreground: #e6e4e1;
-      --muted: #9c9a96;
-      --faint: #6b6965;
-      --coral: #d97757;
-      --gold: #cf9d5e;
-      --green: #4cb782;
-      --ease-out: cubic-bezier(.23,1,.32,1);
-      --dur-press: 120ms;
-      --dur-hover: 140ms;
-      --dur-enter: 220ms;
-    }
-
-    * { box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; }
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: var(--background);
-      color: var(--foreground);
-      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
-    /* wallpaper sliver at the very top of the window, like the desktop app */
-    body::before {
-      content: ""; position: fixed; inset: 0 0 auto 0; height: 8px; z-index: 0;
-      background: linear-gradient(90deg,#22331f,#3a5232 30%,#2c4128 60%,#1d2b1b);
-    }
-    button, textarea { font: inherit; color: inherit; }
-    button { cursor: pointer; }
-    svg { display: block; }
-    :focus-visible { outline: 2px solid rgba(217,119,87,.55); outline-offset: 2px; border-radius: 10px; }
-    ::selection { background: rgba(217,119,87,.3); }
-    ::-webkit-scrollbar { width: 10px; height: 10px; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.09); border-radius: 8px; border: 3px solid transparent; background-clip: content-box; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    .icon { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-    .icon.small { width: 14px; height: 14px; }
-    .mono { font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; }
-    .nowrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    .app {
-      position: relative; z-index: 1;
-      width: 100%; height: 100%;
-      display: grid; grid-template-columns: 288px minmax(0,1fr);
-      gap: 12px; padding: 20px 12px 12px;
-    }
-
-    /* ————— Sidebar: floating rounded panel ————— */
-    .sidebar {
-      min-height: 0;
-      display: grid;
-      grid-template-rows: 56px auto minmax(0,1fr) 60px;
-      background: var(--panel);
-      border: 1px solid var(--panel-border);
-      border-radius: 14px;
-      color: #c9c7c3;
-    }
-    .window-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
-    .traffic { display: flex; gap: 8px; }
-    .traffic span { width: 12px; height: 12px; border-radius: 50%; }
-    .traffic span:nth-child(1) { background: #ff5f57; }
-    .traffic span:nth-child(2) { background: #febc2e; }
-    .traffic span:nth-child(3) { background: #28c840; }
-    .history { display: flex; align-items: center; gap: 2px; }
-    .icon-button {
-      width: 32px; height: 32px; border: 0; border-radius: 9px;
-      display: grid; place-items: center; color: #8a8884; background: transparent;
-      transition: background-color var(--dur-hover) ease, color var(--dur-hover) ease, transform var(--dur-press) var(--ease-out);
-    }
-    .icon-button:active, .nav-row:active, .side-row:active, .composer-chip:active,
-    .top-action:active, .send:active, .object-add:active, .decision-choice:active { transform: scale(.97); }
-
-    .sidebar-primary { padding: 6px 10px 12px; display: grid; gap: 1px; }
-    .nav-row {
-      width: 100%; height: 40px; border: 0; border-radius: 10px;
-      display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 10px;
-      padding: 0 10px; text-align: left; color: #c2c0bc; background: transparent; font-size: 14px;
-      transition: background-color var(--dur-hover) ease, transform var(--dur-press) var(--ease-out);
-    }
-    .nav-row .icon { color: #a3a19d; }
-    .shortcut { color: #5d5b58; font-size: 11.5px; font-variant-numeric: tabular-nums; }
-    .sidebar-scroll { min-height: 0; overflow: auto; padding: 2px 10px 20px; }
-    .section-head { height: 38px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; color: #7a7874; font-size: 12.5px; }
-    .section-head button { width: 28px; height: 28px; border: 0; border-radius: 8px; display: grid; place-items: center; color: #6b6965; background: transparent; transition: background-color var(--dur-hover) ease, color var(--dur-hover) ease; }
-    .side-row {
-      width: 100%; min-height: 38px; border: 0; border-radius: 10px;
-      display: grid; grid-template-columns: 26px minmax(0,1fr) auto; align-items: center; gap: 8px;
-      padding: 5px 10px; text-align: left; color: #bfbdb9; background: transparent; font-size: 13.5px;
-      transition: background-color var(--dur-hover) ease, color var(--dur-hover) ease, transform var(--dur-press) var(--ease-out);
-    }
-    .side-row.active { background: var(--selected); color: #f0eeec; }
-    .side-row.project-active { background: rgba(255,255,255,.035); }
-    .side-row .leading { display: grid; place-items: center; color: #a3a19d; }
-    .side-row .label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .side-row .meta { color: #605e5b; font-size: 11.5px; }
-    .nested { position: relative; margin-left: 16px; padding-left: 10px; }
-    .nested::before { content: ""; position: absolute; left: 0; top: 2px; bottom: 4px; width: 1px; background: rgba(255,255,255,.06); }
-    .nested .side-row { min-height: 36px; grid-template-columns: 24px minmax(0,1fr) auto; padding-left: 7px; font-size: 13px; }
-    .provider-mark { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; color: var(--coral); background: transparent; font-size: 13px; font-weight: 700; }
-    .working-ring { width: 14px; height: 14px; border: 2px solid rgba(217,119,87,.25); border-top-color: var(--coral); border-radius: 50%; animation: spin 800ms linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .sidebar-footer { display: flex; align-items: center; padding: 0 10px; border-top: 1px solid var(--panel-border); }
-    .sidebar-footer .nav-row { height: 42px; }
-
-    /* ————— Main: flat canvas, no card ————— */
-    .main {
-      min-width: 0; min-height: 0;
-      display: grid; grid-template-rows: 52px 40px 40px minmax(0,1fr);
-      overflow: hidden;
-    }
-    .project-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 10px; }
-    .project-identity { min-width: 0; display: flex; align-items: center; gap: 10px; }
-    .project-identity .folder { color: #a3a19d; }
-    .project-title { font-size: 14.5px; font-weight: 590; letter-spacing: -.005em; display: flex; align-items: center; gap: 8px; }
-    .project-detail { margin-top: 1px; color: #6b6965; font-size: 12px; }
-    .project-health {
-      display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px;
-      border-radius: 7px; background: rgba(255,255,255,.06); color: #a8a6a2; font-size: 12px; font-weight: 450;
-    }
-    .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
-    .dot.green { color: var(--green); }
-    .dot.amber { color: var(--gold); }
-    .header-actions { display: flex; align-items: center; gap: 4px; }
-    .top-action {
-      height: 32px; border: 0; border-radius: 9px; display: inline-flex; align-items: center; gap: 7px;
-      padding: 0 11px; color: #a8a6a2; background: transparent; font-size: 13px;
-      transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-hover) ease, color var(--dur-hover) ease;
-    }
-    .top-action.primary { color: #f0eeec; background: rgba(255,255,255,.08); font-weight: 500; }
-
-    /* ————— Capability row: quiet text, Claude style ————— */
-    .cap-tabs { display: flex; align-items: center; gap: 2px; padding: 0 8px; overflow-x: auto; }
-    .cap-tab {
-      position: relative; height: 32px; flex: 0 0 auto; border: 0; border-radius: 9px;
-      display: flex; align-items: center; gap: 7px; padding: 0 11px;
-      color: #7a7874; background: transparent; font-size: 13px;
-      transition: color var(--dur-hover) ease, background-color var(--dur-hover) ease;
-    }
-    .cap-tab.active { color: #ece9e6; background: rgba(255,255,255,.07); }
-    .count { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 6px; display: grid; place-items: center; color: #7a7874; background: rgba(255,255,255,.05); font-size: 10.5px; font-variant-numeric: tabular-nums; }
-    .cap-tab.active .count { color: #b5b3af; }
-
-    /* ————— Object tabs: session pills ————— */
-    .object-tabs { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 0 8px; overflow-x: auto; }
-    .object-tab {
-      position: relative; height: 32px; min-width: 150px; max-width: 225px; flex: 0 0 auto;
-      border: 1px solid transparent; border-radius: 10px;
-      display: grid; grid-template-columns: 17px minmax(0,1fr) 20px; align-items: center; gap: 7px;
-      padding: 0 6px 0 10px; text-align: left; color: #7a7874; background: transparent; font-size: 12.5px;
-      transition: color var(--dur-hover) ease, background-color var(--dur-hover) ease, border-color var(--dur-hover) ease;
-    }
-    .object-tab.active { color: #ece9e6; background: var(--panel); border-color: var(--panel-border); }
-    .object-type { color: #7a7874; transition: color var(--dur-hover) ease; }
-    .object-tab.active .object-type { color: var(--coral); }
-    .tab-close {
-      width: 20px; height: 20px; border: 0; border-radius: 6px; display: grid; place-items: center;
-      color: #5d5b58; background: transparent; opacity: 0;
-      transition: opacity var(--dur-hover) ease, background-color var(--dur-hover) ease, color var(--dur-hover) ease;
-    }
-    .object-tab.active .tab-close { opacity: 1; }
-    .object-add {
-      width: 32px; height: 32px; flex: 0 0 auto; border: 0; border-radius: 9px;
-      display: grid; place-items: center; color: #6b6965; background: transparent;
-      transition: transform var(--dur-press) var(--ease-out), color var(--dur-hover) ease, background-color var(--dur-hover) ease;
-    }
-
-    /* ————— Thread ————— */
-    .object-thread { min-width: 0; min-height: 0; display: grid; grid-template-columns: minmax(520px,1fr) 336px; gap: 12px; padding-top: 8px; }
-    .conversation { min-width: 0; min-height: 0; display: grid; grid-template-rows: 44px minmax(0,1fr) auto; }
-    .conversation-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 10px; }
-    .conversation-title { min-width: 0; }
-    .conversation-title h1 { margin: 0; font-size: 14px; font-weight: 590; letter-spacing: -.005em; }
-    .conversation-title p { margin: 2px 0 0; color: #6b6965; font-size: 12px; }
-    .conversation-status { display: flex; align-items: center; gap: 8px; color: #8a8884; font-size: 12px; }
-    .messages { min-height: 0; overflow: auto; padding: 28px max(24px,calc((100% - 680px)/2)) 20px; }
-    .message { width: min(680px,100%); margin: 0 auto 28px; }
-    .message.user { display: flex; justify-content: flex-end; }
-    .messages .message {
-      opacity: 1; transform: translateY(0);
-      transition: opacity var(--dur-enter) var(--ease-out), transform var(--dur-enter) var(--ease-out);
-      @starting-style { opacity: 0; transform: translateY(6px); }
-    }
-    .bubble { max-width: 78%; padding: 11px 16px; border-radius: 18px; color: #e6e4e1; background: #1f1f1f; font-size: 14px; line-height: 1.55; }
-    .assistant-head { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; color: #8a8884; font-size: 12px; }
-    .assistant-avatar { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; color: var(--coral); background: transparent; font-size: 16px; font-weight: 700; }
-    .assistant-copy { color: #e3e1de; font-size: 14.5px; line-height: 1.65; }
-    .assistant-copy p { margin: 0 0 12px; }
-    .tools { margin-top: 14px; padding-left: 14px; border-left: 1px solid rgba(255,255,255,.09); }
-    .tool {
-      min-height: 28px; display: flex; align-items: center; gap: 9px; color: #8a8884; font-size: 12.5px;
-      opacity: 1; transform: translateY(0);
-      transition: opacity var(--dur-enter) var(--ease-out), transform var(--dur-enter) var(--ease-out);
-      transition-delay: calc(var(--i, 0) * 40ms);
-      @starting-style { opacity: 0; transform: translateY(4px); }
-    }
-    .tool .icon { color: #6b6965; }
-
-    /* ————— Composer: Claude desktop style ————— */
-    .composer-wrap { padding: 10px 10px 6px; }
-    .composer {
-      width: min(720px,100%); min-height: 96px; margin: 0 auto; padding: 14px 14px 10px;
-      border-radius: 18px; background: #141414;
-      border: 1px solid rgba(255,255,255,.09);
-      transition: border-color var(--dur-hover) ease;
-    }
-    .composer:focus-within { border-color: rgba(255,255,255,.18); }
-    .composer textarea { width: 100%; height: 42px; resize: none; border: 0; outline: 0; padding: 0 2px; color: #e6e4e1; background: transparent; font-size: 14px; caret-color: var(--coral); }
-    .composer textarea::placeholder { color: #5d5b58; }
-    .composer-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .composer-left, .composer-right { display: flex; align-items: center; gap: 4px; }
-    .composer-chip {
-      height: 28px; border: 0; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;
-      padding: 0 8px; color: #8a8884; background: transparent; font-size: 12.5px;
-      transition: background-color var(--dur-hover) ease, color var(--dur-hover) ease, transform var(--dur-press) var(--ease-out);
-    }
-    .composer-chip.access { color: var(--gold); }
-    .composer-model { color: #6b6965; font-size: 12.5px; margin-right: 6px; }
-    .send {
-      width: 32px; height: 32px; border: 0; border-radius: 50%; display: grid; place-items: center;
-      color: #141414; background: #e9e7e4;
-      transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-hover) ease;
-    }
-
-    /* ————— Object pane: floating bordered card, like the Environment panel ————— */
-    .object-pane {
-      min-width: 0; min-height: 0; overflow: auto; align-self: start; max-height: 100%;
-      background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px;
-    }
-    .pane-inner {
-      opacity: 1; transform: translateY(0);
-      transition: opacity var(--dur-enter) var(--ease-out), transform var(--dur-enter) var(--ease-out);
-      transition-delay: 30ms;
-      @starting-style { opacity: 0; transform: translateY(8px); }
-    }
-    .object-head { padding: 16px; border-bottom: 1px solid var(--panel-border); }
-    .object-kind { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #7a7874; font-size: 11px; font-weight: 550; text-transform: uppercase; letter-spacing: .07em; }
-    .object-head h2 { margin: 10px 0 0; font-size: 15px; font-weight: 590; line-height: 1.3; letter-spacing: -.01em; }
-    .object-head p { margin: 6px 0 0; color: #8a8884; font-size: 12px; line-height: 1.55; }
-    .status-pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 8px; color: #a8a6a2; background: rgba(255,255,255,.05); font-size: 11px; text-transform: none; letter-spacing: normal; font-weight: 480; white-space: nowrap; }
-    .object-section { padding: 15px 16px; border-bottom: 1px solid var(--panel-border); }
-    .object-section:last-child { border-bottom: 0; }
-    .object-section h3 { margin: 0 0 10px; color: #7a7874; font-size: 11px; font-weight: 550; text-transform: uppercase; letter-spacing: .07em; }
-    .object-card { padding: 11px 12px; border-radius: 11px; background: rgba(255,255,255,.04); margin-top: 7px; }
-    .object-card b { display: block; font-size: 12.5px; font-weight: 560; }
-    .object-card p { margin: 5px 0 0; color: #8a8884; font-size: 12px; line-height: 1.55; }
-    .diff { border-radius: 11px; overflow: hidden; background: #101010; border: 1px solid var(--panel-border); }
-    .diff-file { height: 34px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; color: #8a8884; background: rgba(255,255,255,.03); font-size: 11px; font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; }
-    .code-line { min-height: 22px; display: grid; grid-template-columns: 32px 1fr; align-items: center; padding-right: 6px; color: #999; font: 11px/1.4 ui-monospace, "SFMono-Regular", Consolas, monospace; }
-    .code-line .ln { color: #504e4b; text-align: right; padding-right: 8px; user-select: none; font-variant-numeric: tabular-nums; }
-    .code-line.add { color: #a5d6b7; background: rgba(76,183,130,.08); }
-    .decision-choice {
-      width: 100%; min-height: 40px; border: 1px solid transparent; border-radius: 10px;
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      padding: 0 12px; text-align: left; color: #a8a6a2; background: rgba(255,255,255,.04); margin-top: 6px; font-size: 12.5px;
-      transition: background-color var(--dur-hover) ease, color var(--dur-hover) ease, border-color var(--dur-hover) ease, transform var(--dur-press) var(--ease-out);
-    }
-    .decision-choice.selected { color: #ece9e6; border-color: rgba(217,119,87,.4); background: rgba(217,119,87,.08); }
-    .ci-row { height: 38px; display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 8px; color: #a8a6a2; font-size: 12.5px; }
-    .ci-row + .ci-row { border-top: 1px solid var(--panel-border); }
-    .ci-row time { color: #605e5b; font-size: 11.5px; font-variant-numeric: tabular-nums; }
-
-    /* ————— Toast ————— */
-    .toast {
-      position: fixed; z-index: 40; top: 16px; left: 50%;
-      transform: translate(-50%,-130%); opacity: 0;
-      padding: 9px 14px; border-radius: 11px; color: #e6e4e1; background: #262626;
-      border: 1px solid rgba(255,255,255,.1);
-      box-shadow: 0 16px 44px rgba(0,0,0,.5); font-size: 12.5px; font-weight: 500;
-      transition: opacity 150ms var(--ease-out), transform 220ms var(--ease-out);
-      pointer-events: none;
-    }
-    .toast.show { opacity: 1; transform: translate(-50%,0); }
-
-    @media (hover: hover) and (pointer: fine) {
-      .icon-button:hover { color: #d5d3cf; background: var(--hover); }
-      .nav-row:hover { background: var(--hover); }
-      .section-head button:hover { color: #a8a6a2; background: var(--hover); }
-      .side-row:hover { background: var(--hover); }
-      .side-row.active:hover { background: rgba(255,255,255,.09); }
-      .top-action:hover { background: var(--hover); color: #d5d3cf; }
-      .top-action.primary:hover { background: rgba(255,255,255,.12); }
-      .cap-tab:hover { color: #b5b3af; background: rgba(255,255,255,.04); }
-      .cap-tab.active:hover { color: #ece9e6; background: rgba(255,255,255,.07); }
-      .object-tab:hover { color: #b5b3af; background: rgba(255,255,255,.03); }
-      .object-tab:hover .tab-close { opacity: 1; }
-      .object-tab.active:hover { color: #ece9e6; background: var(--panel); }
-      .tab-close:hover { color: #b5b3af; background: rgba(255,255,255,.08); }
-      .object-add:hover { color: #a8a6a2; background: var(--hover); }
-      .composer-chip:hover { background: var(--hover); color: #b5b3af; }
-      .composer-chip.access:hover { color: var(--gold); background: rgba(207,157,94,.1); }
-      .send:hover { background: #ffffff; }
-      .decision-choice:hover { background: rgba(255,255,255,.06); color: #d5d3cf; }
-      .decision-choice.selected:hover { background: rgba(217,119,87,.12); }
-    }
-
-    @media (max-width: 1180px) {
-      .app { grid-template-columns: 252px minmax(0,1fr); }
-      .object-thread { grid-template-columns: 1fr; }
-      .object-pane { display: none; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      * { transition-duration: 0ms !important; animation: none !important; }
-      .toast { transition: opacity 120ms ease; transform: translate(-50%,0); }
-      .working-ring { border-top-color: rgba(217,119,87,.25); opacity: .7; }
-      .messages .message, .tool, .pane-inner { transform: none; }
-    }
-  </style>
-</head>
-<body>
-  <svg aria-hidden="true" width="0" height="0" style="position:absolute">
-    <symbol id="i-compose" viewBox="0 0 24 24"><path d="M13 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-7M15 3h6v6M11 13 21 3"/></symbol>
-    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
-    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
-    <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3M7.5 15h9"/></symbol>
-    <symbol id="i-git" viewBox="0 0 24 24"><circle cx="6" cy="5" r="2"/><circle cx="18" cy="7" r="2"/><circle cx="6" cy="19" r="2"/><path d="M6 7v10M8 9c2 0 3 1 3 3s1 3 3 3h2M8 5h8"/></symbol>
-    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7.5h7l2 2h9v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 9.5V6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1.5"/></symbol>
-    <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="M3 8V6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v3"/><path d="M3 10h19l-3 10H5z"/></symbol>
-    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 7 5 5-5 5"/></symbol>
-    <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
-    <symbol id="i-forward" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
-    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.15.36.36.68.6 1 .29.36.72.57 1.18.6H21v4h-.09A1.7 1.7 0 0 0 19.4 15z"/></symbol>
-    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
-    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 15a3 3 0 0 1-3 3H9l-5 3v-6a3 3 0 0 1-1-2.2V7a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3z"/></symbol>
-    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
-    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7z"/></symbol>
-    <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 7h.01M7 17h.01M11 7h6M11 17h6"/></symbol>
-    <symbol id="i-x" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></symbol>
-    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none"/></symbol>
-    <symbol id="i-branch" viewBox="0 0 24 24"><circle cx="6" cy="5" r="2"/><circle cx="18" cy="7" r="2"/><circle cx="6" cy="19" r="2"/><path d="M6 7v10M8 5h4c3 0 4 2 4 4v5"/></symbol>
-    <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
-    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6"/></symbol>
-  </svg>
-
-  <div class="app">
-    <aside class="sidebar">
-      <div class="window-bar"><div class="traffic"><span></span><span></span><span></span></div><div class="history"><button class="icon-button" aria-label="Back"><svg class="icon"><use href="#i-back"/></svg></button><button class="icon-button" aria-label="Forward"><svg class="icon"><use href="#i-forward"/></svg></button><button class="icon-button" aria-label="Search"><svg class="icon"><use href="#i-search"/></svg></button></div></div>
-      <nav class="sidebar-primary">
-        <button class="nav-row"><svg class="icon"><use href="#i-compose"/></svg><span>New thread</span><span class="shortcut">⌘N</span></button>
-        <button class="nav-row"><svg class="icon"><use href="#i-search"/></svg><span>Search</span><span class="shortcut">⌘K</span></button>
-        <button class="nav-row"><svg class="icon"><use href="#i-clock"/></svg><span>Automations</span></button>
-        <button class="nav-row capability-link" data-capability="research"><svg class="icon"><use href="#i-flask"/></svg><span>Research</span></button>
-        <button class="nav-row capability-link" data-capability="github"><svg class="icon"><use href="#i-git"/></svg><span>GitHub</span></button>
-      </nav>
-
-      <div class="sidebar-scroll">
-        <div class="section-head"><span>Pinned</span></div>
-        <button class="side-row"><span class="leading"><svg class="icon small"><use href="#i-git"/></svg></span><span class="label">Fix PR #16 diff viewer</span><span class="meta">Chitauri</span></button>
-        <button class="side-row"><span class="leading"><span class="provider-mark">✳</span></span><span class="label">Inspect TypeScript error</span><span class="meta">gcp</span></button>
-
-        <div class="section-head"><span>Projects</span><button title="Collapse projects"><svg class="icon small"><use href="#i-chevron"/></svg></button></div>
-        <button class="side-row project-active"><span class="leading"><svg class="icon"><use href="#i-folder-open"/></svg></span><span class="label">Chitauri</span><span class="meta">main</span></button>
-        <div class="nested">
-          <button class="side-row active object-link" data-object="direction"><span class="leading"><span class="provider-mark">✳</span></span><span class="label">Project-first UI direction</span><span class="working-ring"></span></button>
-          <button class="side-row object-link" data-object="pr"><span class="leading"><svg class="icon small"><use href="#i-git"/></svg></span><span class="label">PR #16 · Diff audit</span><span class="meta">review</span></button>
-          <button class="side-row object-link" data-object="research"><span class="leading"><svg class="icon small"><use href="#i-flask"/></svg></span><span class="label">Settings simplification</span><span class="meta">ready</span></button>
-        </div>
-        <button class="side-row"><span class="leading"><svg class="icon"><use href="#i-folder"/></svg></span><span class="label">gcp-tracking-server</span></button>
-        <button class="side-row"><span class="leading"><svg class="icon"><use href="#i-folder"/></svg></span><span class="label">breno-agent</span></button>
-        <button class="side-row"><span class="leading"><svg class="icon"><use href="#i-folder"/></svg></span><span class="label">Synara</span></button>
-      </div>
-
-      <footer class="sidebar-footer"><button class="nav-row"><svg class="icon"><use href="#i-settings"/></svg><span>Settings</span></button></footer>
-    </aside>
-
-    <main class="main">
-      <header class="project-header">
-        <div class="project-identity"><svg class="icon folder"><use href="#i-folder-open"/></svg><div class="nowrap"><div class="project-title">Chitauri <span class="project-health"><span class="dot green"></span>Healthy</span></div><div class="project-detail mono">~/www/Chitauri · main</div></div></div>
-        <div class="header-actions"><button class="top-action">Project settings</button><button class="top-action primary"><svg class="icon small"><use href="#i-plus"/></svg>New thread</button><button class="icon-button" aria-label="More"><svg class="icon"><use href="#i-more"/></svg></button></div>
-      </header>
-
-      <nav class="cap-tabs" aria-label="Chitauri project sections">
-        <button class="cap-tab active" data-capability="threads"><svg class="icon small"><use href="#i-chat"/></svg>Threads <span class="count">12</span></button>
-        <button class="cap-tab" data-capability="research"><svg class="icon small"><use href="#i-flask"/></svg>Research <span class="count">8</span></button>
-        <button class="cap-tab" data-capability="github"><svg class="icon small"><use href="#i-git"/></svg>GitHub <span class="count">4</span></button>
-        <button class="cap-tab" data-capability="review"><svg class="icon small"><use href="#i-check"/></svg>Code review <span class="count">2</span></button>
-        <button class="cap-tab" data-capability="ci"><svg class="icon small"><use href="#i-bolt"/></svg>CI &amp; delivery</button>
-        <button class="cap-tab" data-capability="infra"><svg class="icon small"><use href="#i-server"/></svg>Infrastructure</button>
-      </nav>
-
-      <nav class="object-tabs" aria-label="Open object threads">
-        <button class="object-tab active" data-object="direction"><svg class="icon small object-type"><use href="#i-chat"/></svg><span class="nowrap">Project-first UI direction</span><span class="tab-close" role="button" aria-label="Close tab"><svg class="icon small"><use href="#i-x"/></svg></span></button>
-        <button class="object-tab" data-object="pr"><svg class="icon small object-type"><use href="#i-git"/></svg><span class="nowrap">PR #16 · Diff audit</span><span class="tab-close" role="button" aria-label="Close tab"><svg class="icon small"><use href="#i-x"/></svg></span></button>
-        <button class="object-tab" data-object="research"><svg class="icon small object-type"><use href="#i-flask"/></svg><span class="nowrap">Settings simplification</span><span class="tab-close" role="button" aria-label="Close tab"><svg class="icon small"><use href="#i-x"/></svg></span></button>
-        <button class="object-tab" data-object="ci"><svg class="icon small object-type"><use href="#i-bolt"/></svg><span class="nowrap">CI run #883</span><span class="tab-close" role="button" aria-label="Close tab"><svg class="icon small"><use href="#i-x"/></svg></span></button>
-        <button class="object-add" title="Open another project object"><svg class="icon"><use href="#i-plus"/></svg></button>
-      </nav>
-
-      <section class="object-thread">
-        <section class="conversation">
-          <header class="conversation-header"><div class="conversation-title"><h1 id="thread-title">Project-first UI direction</h1><p id="thread-meta">Project decision · Codex working in chitauri/project-home</p></div><div class="conversation-status"><span class="dot green"></span><span id="thread-status">Working</span><button class="icon-button" aria-label="Thread options"><svg class="icon"><use href="#i-more"/></svg></button></div></header>
-          <div class="messages" id="messages"></div>
-          <div class="composer-wrap"><div class="composer"><textarea id="composer-input" placeholder="Type / for commands"></textarea><div class="composer-foot"><div class="composer-left"><button class="composer-chip" aria-label="Attach"><svg class="icon small"><use href="#i-plus"/></svg></button><button class="composer-chip access">Full access</button><button class="composer-chip"><svg class="icon small"><use href="#i-branch"/></svg><span id="branch-chip">chitauri/project-home</span></button></div><div class="composer-right"><span class="composer-model">GPT-5.6 Sol · High</span><button class="send" id="send" aria-label="Send"><svg class="icon small"><use href="#i-send"/></svg></button></div></div></div></div>
-        </section>
-        <aside class="object-pane" id="object-pane"></aside>
-      </section>
-    </main>
-  </div>
-  <div class="toast" id="toast" role="status"></div>
-
-  <script>
-    const objectData = {
-      direction: {
-        title: 'Project-first UI direction',
-        meta: 'Project decision · Codex working in chitauri/project-home',
-        status: 'Working',
-        branch: 'chitauri/project-home',
-        prompt: 'Keep threads as the primary way we collaborate with agents. Make the project the durable scope around them, using familiar horizontal tabs.',
-        answer: 'This direction keeps Chitauri’s current shell and changes the working model, not the visual language. Each horizontal tab is an object thread: a normal agent conversation anchored to a project decision, PR, research artifact, CI run, or infrastructure service.',
-        tools: ['Matched the current Chitauri sidebar hierarchy','Kept threads as the default project section','Attached this conversation to a project decision'],
-        pane: `<div class="object-head"><div class="object-kind"><span>Project decision</span><span class="status-pill"><span class="dot amber"></span>Needs decision</span></div><h2>How should project work be organized?</h2><p>The thread remains the collaboration surface. The attached object carries durable state outside the transcript.</p></div><section class="object-section"><h3>Choose direction</h3><button class="decision-choice selected"><span>Object Threads</span><svg class="icon small"><use href="#i-check"/></svg></button><button class="decision-choice"><span>Traditional thread list</span></button><button class="decision-choice"><span>Project dashboard</span></button></section><section class="object-section"><h3>Design contract</h3><div class="object-card"><b>Project is the scope</b><p>Capabilities and object threads always belong to the selected project.</p></div><div class="object-card"><b>Thread is the collaboration</b><p>Every object opens with a full agent conversation, not a passive inspector.</p></div><div class="object-card"><b>Object is the memory</b><p>PR state, findings, decisions, and checks survive the transcript.</p></div></section>`
-      },
-      pr: {
-        title: 'PR #16 · Diff audit',
-        meta: 'Pull request thread · Review agent · 8 files changed',
-        status: 'Review ready',
-        branch: 'chitauri/audit-pierre-diffs',
-        prompt: 'Review PR #16 and verify whether the Pierre diff integration introduces regressions.',
-        answer: 'The review is complete. I verified two actionable issues and attached them directly to this pull request object. We can discuss or fix them here without losing the PR context.',
-        tools: ['Read the pull request diff','Ran focused viewer tests','Verified two findings against source'],
-        pane: `<div class="object-head"><div class="object-kind"><span>Pull request #16</span><span class="status-pill"><span class="dot green"></span>Ready for review</span></div><h2>Pierre diff integration audit</h2><p>8 files changed · +184 −61 · all focused checks passing</p></div><section class="object-section"><h3>Current diff</h3><div class="diff"><div class="diff-file"><span>DiffViewer.tsx</span><span>+12 −4</span></div><div class="code-line"><span class="ln">88</span><span>const viewer = createDiffViewer({</span></div><div class="code-line add"><span class="ln">89</span><span>+ renderGutter: true,</span></div><div class="code-line add"><span class="ln">90</span><span>+ collapseUnchanged: false,</span></div><div class="code-line"><span class="ln">91</span><span>  theme: resolvedTheme,</span></div><div class="code-line"><span class="ln">92</span><span>})</span></div></div></section><section class="object-section"><h3>Verified findings</h3><div class="object-card"><b>Viewer state resets on theme change</b><p>The adapter recreates the viewer and loses the current diff position.</p></div><div class="object-card"><b>Large diff threshold is not forwarded</b><p>The project virtualization guardrail is skipped by the new adapter.</p></div></section>`
-      },
-      research: {
-        title: 'Settings simplification',
-        meta: 'Research thread · Artifact ready · Updated 48m ago',
-        status: 'Ready to implement',
-        branch: 'main',
-        prompt: 'Research how to simplify Chitauri settings without hiding important operational surfaces.',
-        answer: 'The research is complete. The recommended structure reduces Settings to four categories and moves operational destinations into the project shell. The full plan stays attached here while we discuss implementation.',
-        tools: ['Mapped current settings routes','Traced search and navigation coupling','Produced 12 source-backed findings'],
-        pane: `<div class="object-head"><div class="object-kind"><span>Research artifact</span><span class="status-pill"><span class="dot green"></span>Complete</span></div><h2>Settings IA simplification</h2><p>12 findings · 7 decisions · implementation-ready</p></div><section class="object-section"><h3>Recommendation</h3><div class="object-card"><b>Four settings categories</b><p>General, Appearance, Agents, and Advanced.</p></div><div class="object-card"><b>Move operational surfaces out</b><p>Profile, Usage, Worktrees, Archived, and Shortcuts become first-class destinations.</p></div></section><section class="object-section"><h3>Next action</h3><button class="decision-choice selected"><span>Create implementation thread</span><svg class="icon small"><use href="#i-compose"/></svg></button></section>`
-      },
-      ci: {
-        title: 'CI run #883',
-        meta: 'Delivery thread · main · Triggered 6 minutes ago',
-        status: '18/18 passing',
-        branch: 'main',
-        prompt: 'Watch CI run #883 and tell me immediately if anything needs intervention.',
-        answer: 'All eighteen checks passed. The desktop bundle, focused transcript tests, and server contract suite are green. This thread can stay attached to the run for deployment follow-up.',
-        tools: ['Watched GitHub Actions','Collected job timings','Confirmed deployable state'],
-        pane: `<div class="object-head"><div class="object-kind"><span>CI run #883</span><span class="status-pill"><span class="dot green"></span>Passed</span></div><h2>Main is deployable</h2><p>18 checks passed · 2m 41s total · commit 92de34a</p></div><section class="object-section"><h3>Jobs</h3><div class="ci-row"><svg class="icon small" style="color:var(--green)"><use href="#i-check"/></svg><span>Focused web tests</span><time>41s</time></div><div class="ci-row"><svg class="icon small" style="color:var(--green)"><use href="#i-check"/></svg><span>Server contracts</span><time>36s</time></div><div class="ci-row"><svg class="icon small" style="color:var(--green)"><use href="#i-check"/></svg><span>Desktop bundle</span><time>1m 54s</time></div><div class="ci-row"><svg class="icon small" style="color:var(--green)"><use href="#i-check"/></svg><span>Secret scan</span><time>18s</time></div></section><section class="object-section"><h3>Next action</h3><button class="decision-choice"><span>Open deployment thread</span><svg class="icon small"><use href="#i-compose"/></svg></button></section>`
-      },
-      infra: {
-        title: 'Production infrastructure',
-        meta: 'Infrastructure thread · 6 services · Live project context',
-        status: 'Healthy',
-        branch: 'main',
-        prompt: 'Map the infrastructure for Chitauri and keep the thread attached to the live service inventory.',
-        answer: 'The initial map covers the web server, desktop runtime, WebSocket broker, provider sessions, state database, and CI delivery path. All six services are healthy.',
-        tools: ['Discovered service boundaries','Mapped owners and environments','Checked current service health'],
-        pane: `<div class="object-head"><div class="object-kind"><span>Infrastructure map</span><span class="status-pill"><span class="dot green"></span>Healthy</span></div><h2>Production infrastructure</h2><p>6 services · 2 environments · no active incidents</p></div><section class="object-section"><h3>Services</h3><div class="object-card"><b>Web + WebSocket server</b><p>Production · healthy · owner: Chitauri</p></div><div class="object-card"><b>Desktop runtime</b><p>macOS · healthy · local provider sessions</p></div><div class="object-card"><b>State database</b><p>SQLite projections · healthy · local-first</p></div></section>`
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chitauri — Object Threads · Claude Code</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --background: #0a0a0a;
+        --panel: #171717;
+        --panel-border: rgba(255, 255, 255, 0.07);
+        --hover: rgba(255, 255, 255, 0.05);
+        --selected: rgba(255, 255, 255, 0.08);
+        --foreground: #e6e4e1;
+        --muted: #9c9a96;
+        --faint: #6b6965;
+        --coral: #d97757;
+        --gold: #cf9d5e;
+        --green: #4cb782;
+        --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+        --dur-press: 120ms;
+        --dur-hover: 140ms;
+        --dur-enter: 220ms;
       }
-    };
 
-    const messages = document.querySelector('#messages');
-    const pane = document.querySelector('#object-pane');
-    const title = document.querySelector('#thread-title');
-    const meta = document.querySelector('#thread-meta');
-    const status = document.querySelector('#thread-status');
-    const branch = document.querySelector('#branch-chip');
-    let activeObject = 'direction';
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: var(--background);
+        color: var(--foreground);
+        font:
+          14px/1.5 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          system-ui,
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      /* wallpaper sliver at the very top of the window, like the desktop app */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0 0 auto 0;
+        height: 8px;
+        z-index: 0;
+        background: linear-gradient(90deg, #22331f, #3a5232 30%, #2c4128 60%, #1d2b1b);
+      }
+      button,
+      textarea {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      svg {
+        display: block;
+      }
+      :focus-visible {
+        outline: 2px solid rgba(217, 119, 87, 0.55);
+        outline-offset: 2px;
+        border-radius: 10px;
+      }
+      ::selection {
+        background: rgba(217, 119, 87, 0.3);
+      }
+      ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.09);
+        border-radius: 8px;
+        border: 3px solid transparent;
+        background-clip: content-box;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .icon {
+        width: 17px;
+        height: 17px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .icon.small {
+        width: 14px;
+        height: 14px;
+      }
+      .mono {
+        font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      }
+      .nowrap {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
 
-    function renderObject(id) {
-      const data = objectData[id];
-      if (!data) return;
-      activeObject = id;
-      title.textContent = data.title;
-      meta.textContent = data.meta;
-      status.textContent = data.status;
-      branch.textContent = data.branch;
-      messages.innerHTML = `<div class="message user"><div class="bubble"></div></div><div class="message assistant"><div class="assistant-head"><span class="assistant-avatar">✳</span><span>Codex · working in Chitauri</span></div><div class="assistant-copy"><p></p><div class="tools"></div></div></div>`;
-      messages.querySelector('.bubble').textContent = data.prompt;
-      messages.querySelector('.assistant-copy p').textContent = data.answer;
-      const tools = messages.querySelector('.tools');
-      data.tools.forEach((tool, i) => { const row = document.createElement('div'); row.className = 'tool'; row.style.setProperty('--i', i); row.innerHTML = `<svg class="icon small"><use href="#i-check"/></svg><span></span>`; row.querySelector('span').textContent = tool; tools.append(row); });
-      pane.innerHTML = `<div class="pane-inner">${data.pane}</div>`;
-      document.querySelectorAll('.object-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.object === id));
-      document.querySelectorAll('.object-link').forEach(link => link.classList.toggle('active', link.dataset.object === id));
-    }
+      .app {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-columns: 288px minmax(0, 1fr);
+        gap: 12px;
+        padding: 20px 12px 12px;
+      }
 
-    document.querySelectorAll('.object-tab').forEach(tab => tab.addEventListener('click', event => {
-      if (event.target.closest('.tab-close')) return;
-      renderObject(tab.dataset.object);
-    }));
-    document.querySelectorAll('.object-link').forEach(link => link.addEventListener('click', () => renderObject(link.dataset.object)));
-    document.querySelectorAll('.tab-close').forEach(close => close.addEventListener('click', event => {
-      event.stopPropagation();
-      const tab = close.closest('.object-tab');
-      const wasActive = tab.classList.contains('active');
-      tab.remove();
-      if (wasActive) renderObject(document.querySelector('.object-tab')?.dataset.object || 'direction');
-    }));
+      /* ————— Sidebar: floating rounded panel ————— */
+      .sidebar {
+        min-height: 0;
+        display: grid;
+        grid-template-rows: 56px auto minmax(0, 1fr) 60px;
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        color: #c9c7c3;
+      }
+      .window-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+      }
+      .traffic {
+        display: flex;
+        gap: 8px;
+      }
+      .traffic span {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .traffic span:nth-child(1) {
+        background: #ff5f57;
+      }
+      .traffic span:nth-child(2) {
+        background: #febc2e;
+      }
+      .traffic span:nth-child(3) {
+        background: #28c840;
+      }
+      .history {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+      }
+      .icon-button {
+        width: 32px;
+        height: 32px;
+        border: 0;
+        border-radius: 9px;
+        display: grid;
+        place-items: center;
+        color: #8a8884;
+        background: transparent;
+        transition:
+          background-color var(--dur-hover) ease,
+          color var(--dur-hover) ease,
+          transform var(--dur-press) var(--ease-out);
+      }
+      .icon-button:active,
+      .nav-row:active,
+      .side-row:active,
+      .composer-chip:active,
+      .top-action:active,
+      .send:active,
+      .object-add:active,
+      .decision-choice:active {
+        transform: scale(0.97);
+      }
 
-    const capabilityMap = { threads:'direction', research:'research', github:'pr', review:'pr', ci:'ci', infra:'infra' };
-    document.querySelectorAll('.cap-tab').forEach(tab => tab.addEventListener('click', () => {
-      document.querySelectorAll('.cap-tab').forEach(item => item.classList.remove('active'));
-      tab.classList.add('active');
-      renderObject(capabilityMap[tab.dataset.capability]);
-    }));
-    document.querySelectorAll('.capability-link').forEach(link => link.addEventListener('click', () => renderObject(capabilityMap[link.dataset.capability])));
+      .sidebar-primary {
+        padding: 6px 10px 12px;
+        display: grid;
+        gap: 1px;
+      }
+      .nav-row {
+        width: 100%;
+        height: 40px;
+        border: 0;
+        border-radius: 10px;
+        display: grid;
+        grid-template-columns: 26px 1fr auto;
+        align-items: center;
+        gap: 10px;
+        padding: 0 10px;
+        text-align: left;
+        color: #c2c0bc;
+        background: transparent;
+        font-size: 14px;
+        transition:
+          background-color var(--dur-hover) ease,
+          transform var(--dur-press) var(--ease-out);
+      }
+      .nav-row .icon {
+        color: #a3a19d;
+      }
+      .shortcut {
+        color: #5d5b58;
+        font-size: 11.5px;
+        font-variant-numeric: tabular-nums;
+      }
+      .sidebar-scroll {
+        min-height: 0;
+        overflow: auto;
+        padding: 2px 10px 20px;
+      }
+      .section-head {
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 8px;
+        color: #7a7874;
+        font-size: 12.5px;
+      }
+      .section-head button {
+        width: 28px;
+        height: 28px;
+        border: 0;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        color: #6b6965;
+        background: transparent;
+        transition:
+          background-color var(--dur-hover) ease,
+          color var(--dur-hover) ease;
+      }
+      .side-row {
+        width: 100%;
+        min-height: 38px;
+        border: 0;
+        border-radius: 10px;
+        display: grid;
+        grid-template-columns: 26px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 10px;
+        text-align: left;
+        color: #bfbdb9;
+        background: transparent;
+        font-size: 13.5px;
+        transition:
+          background-color var(--dur-hover) ease,
+          color var(--dur-hover) ease,
+          transform var(--dur-press) var(--ease-out);
+      }
+      .side-row.active {
+        background: var(--selected);
+        color: #f0eeec;
+      }
+      .side-row.project-active {
+        background: rgba(255, 255, 255, 0.035);
+      }
+      .side-row .leading {
+        display: grid;
+        place-items: center;
+        color: #a3a19d;
+      }
+      .side-row .label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .side-row .meta {
+        color: #605e5b;
+        font-size: 11.5px;
+      }
+      .nested {
+        position: relative;
+        margin-left: 16px;
+        padding-left: 10px;
+      }
+      .nested::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 2px;
+        bottom: 4px;
+        width: 1px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .nested .side-row {
+        min-height: 36px;
+        grid-template-columns: 24px minmax(0, 1fr) auto;
+        padding-left: 7px;
+        font-size: 13px;
+      }
+      .provider-mark {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: var(--coral);
+        background: transparent;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .working-ring {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(217, 119, 87, 0.25);
+        border-top-color: var(--coral);
+        border-radius: 50%;
+        animation: spin 800ms linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .sidebar-footer {
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+        border-top: 1px solid var(--panel-border);
+      }
+      .sidebar-footer .nav-row {
+        height: 42px;
+      }
 
-    const input = document.querySelector('#composer-input');
-    function sendMessage() {
-      const value = input.value.trim();
-      if (!value) { input.focus(); return; }
-      const message = document.createElement('div');
-      message.className = 'message user';
-      const bubble = document.createElement('div');
-      bubble.className = 'bubble';
-      bubble.textContent = value;
-      message.append(bubble);
-      messages.append(message);
-      messages.scrollTop = messages.scrollHeight;
-      input.value = '';
-      showToast(`Message sent in ${objectData[activeObject].title}`);
-    }
-    document.querySelector('#send').addEventListener('click', sendMessage);
-    input.addEventListener('keydown', event => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); sendMessage(); } });
-    document.querySelector('.object-add').addEventListener('click', () => showToast('Choose a Chitauri object to open as a thread'));
+      /* ————— Main: flat canvas, no card ————— */
+      .main {
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        grid-template-rows: 52px 40px 40px minmax(0, 1fr);
+        overflow: hidden;
+      }
+      .project-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 0 10px;
+      }
+      .project-identity {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .project-identity .folder {
+        color: #a3a19d;
+      }
+      .project-title {
+        font-size: 14.5px;
+        font-weight: 590;
+        letter-spacing: -0.005em;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .project-detail {
+        margin-top: 1px;
+        color: #6b6965;
+        font-size: 12px;
+      }
+      .project-health {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 22px;
+        padding: 0 9px;
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #a8a6a2;
+        font-size: 12px;
+        font-weight: 450;
+      }
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        flex: none;
+      }
+      .dot.green {
+        color: var(--green);
+      }
+      .dot.amber {
+        color: var(--gold);
+      }
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .top-action {
+        height: 32px;
+        border: 0;
+        border-radius: 9px;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 11px;
+        color: #a8a6a2;
+        background: transparent;
+        font-size: 13px;
+        transition:
+          transform var(--dur-press) var(--ease-out),
+          background-color var(--dur-hover) ease,
+          color var(--dur-hover) ease;
+      }
+      .top-action.primary {
+        color: #f0eeec;
+        background: rgba(255, 255, 255, 0.08);
+        font-weight: 500;
+      }
 
-    let toastTimer;
-    function showToast(text) { const toast = document.querySelector('#toast'); toast.textContent = text; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 1700); }
-    renderObject('direction');
-  </script>
-</body>
+      /* ————— Capability row: quiet text, Claude style ————— */
+      .cap-tabs {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 0 8px;
+        overflow-x: auto;
+      }
+      .cap-tab {
+        position: relative;
+        height: 32px;
+        flex: 0 0 auto;
+        border: 0;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 11px;
+        color: #7a7874;
+        background: transparent;
+        font-size: 13px;
+        transition:
+          color var(--dur-hover) ease,
+          background-color var(--dur-hover) ease;
+      }
+      .cap-tab.active {
+        color: #ece9e6;
+        background: rgba(255, 255, 255, 0.07);
+      }
+      .count {
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        color: #7a7874;
+        background: rgba(255, 255, 255, 0.05);
+        font-size: 10.5px;
+        font-variant-numeric: tabular-nums;
+      }
+      .cap-tab.active .count {
+        color: #b5b3af;
+      }
+
+      /* ————— Object tabs: session pills ————— */
+      .object-tabs {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        padding: 0 8px;
+        overflow-x: auto;
+      }
+      .object-tab {
+        position: relative;
+        height: 32px;
+        min-width: 150px;
+        max-width: 225px;
+        flex: 0 0 auto;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        display: grid;
+        grid-template-columns: 17px minmax(0, 1fr) 20px;
+        align-items: center;
+        gap: 7px;
+        padding: 0 6px 0 10px;
+        text-align: left;
+        color: #7a7874;
+        background: transparent;
+        font-size: 12.5px;
+        transition:
+          color var(--dur-hover) ease,
+          background-color var(--dur-hover) ease,
+          border-color var(--dur-hover) ease;
+      }
+      .object-tab.active {
+        color: #ece9e6;
+        background: var(--panel);
+        border-color: var(--panel-border);
+      }
+      .object-type {
+        color: #7a7874;
+        transition: color var(--dur-hover) ease;
+      }
+      .object-tab.active .object-type {
+        color: var(--coral);
+      }
+      .tab-close {
+        width: 20px;
+        height: 20px;
+        border: 0;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        color: #5d5b58;
+        background: transparent;
+        opacity: 0;
+        transition:
+          opacity var(--dur-hover) ease,
+          background-color var(--dur-hover) ease,
+          color var(--dur-hover) ease;
+      }
+      .object-tab.active .tab-close {
+        opacity: 1;
+      }
+      .object-add {
+        width: 32px;
+        height: 32px;
+        flex: 0 0 auto;
+        border: 0;
+        border-radius: 9px;
+        display: grid;
+        place-items: center;
+        color: #6b6965;
+        background: transparent;
+        transition:
+          transform var(--dur-press) var(--ease-out),
+          color var(--dur-hover) ease,
+          background-color var(--dur-hover) ease;
+      }
+
+      /* ————— Thread ————— */
+      .object-thread {
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(520px, 1fr) 336px;
+        gap: 12px;
+        padding-top: 8px;
+      }
+      .conversation {
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        grid-template-rows: 44px minmax(0, 1fr) auto;
+      }
+      .conversation-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 0 10px;
+      }
+      .conversation-title {
+        min-width: 0;
+      }
+      .conversation-title h1 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 590;
+        letter-spacing: -0.005em;
+      }
+      .conversation-title p {
+        margin: 2px 0 0;
+        color: #6b6965;
+        font-size: 12px;
+      }
+      .conversation-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #8a8884;
+        font-size: 12px;
+      }
+      .messages {
+        min-height: 0;
+        overflow: auto;
+        padding: 28px max(24px, calc((100% - 680px) / 2)) 20px;
+      }
+      .message {
+        width: min(680px, 100%);
+        margin: 0 auto 28px;
+      }
+      .message.user {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .messages .message {
+        opacity: 1;
+        transform: translateY(0);
+        transition:
+          opacity var(--dur-enter) var(--ease-out),
+          transform var(--dur-enter) var(--ease-out);
+        @starting-style {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+      }
+      .bubble {
+        max-width: 78%;
+        padding: 11px 16px;
+        border-radius: 18px;
+        color: #e6e4e1;
+        background: #1f1f1f;
+        font-size: 14px;
+        line-height: 1.55;
+      }
+      .assistant-head {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 10px;
+        color: #8a8884;
+        font-size: 12px;
+      }
+      .assistant-avatar {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: var(--coral);
+        background: transparent;
+        font-size: 16px;
+        font-weight: 700;
+      }
+      .assistant-copy {
+        color: #e3e1de;
+        font-size: 14.5px;
+        line-height: 1.65;
+      }
+      .assistant-copy p {
+        margin: 0 0 12px;
+      }
+      .tools {
+        margin-top: 14px;
+        padding-left: 14px;
+        border-left: 1px solid rgba(255, 255, 255, 0.09);
+      }
+      .tool {
+        min-height: 28px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: #8a8884;
+        font-size: 12.5px;
+        opacity: 1;
+        transform: translateY(0);
+        transition:
+          opacity var(--dur-enter) var(--ease-out),
+          transform var(--dur-enter) var(--ease-out);
+        transition-delay: calc(var(--i, 0) * 40ms);
+        @starting-style {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+      }
+      .tool .icon {
+        color: #6b6965;
+      }
+
+      /* ————— Composer: Claude desktop style ————— */
+      .composer-wrap {
+        padding: 10px 10px 6px;
+      }
+      .composer {
+        width: min(720px, 100%);
+        min-height: 96px;
+        margin: 0 auto;
+        padding: 14px 14px 10px;
+        border-radius: 18px;
+        background: #141414;
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        transition: border-color var(--dur-hover) ease;
+      }
+      .composer:focus-within {
+        border-color: rgba(255, 255, 255, 0.18);
+      }
+      .composer textarea {
+        width: 100%;
+        height: 42px;
+        resize: none;
+        border: 0;
+        outline: 0;
+        padding: 0 2px;
+        color: #e6e4e1;
+        background: transparent;
+        font-size: 14px;
+        caret-color: var(--coral);
+      }
+      .composer textarea::placeholder {
+        color: #5d5b58;
+      }
+      .composer-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .composer-left,
+      .composer-right {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .composer-chip {
+        height: 28px;
+        border: 0;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 8px;
+        color: #8a8884;
+        background: transparent;
+        font-size: 12.5px;
+        transition:
+          background-color var(--dur-hover) ease,
+          color var(--dur-hover) ease,
+          transform var(--dur-press) var(--ease-out);
+      }
+      .composer-chip.access {
+        color: var(--gold);
+      }
+      .composer-model {
+        color: #6b6965;
+        font-size: 12.5px;
+        margin-right: 6px;
+      }
+      .send {
+        width: 32px;
+        height: 32px;
+        border: 0;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: #141414;
+        background: #e9e7e4;
+        transition:
+          transform var(--dur-press) var(--ease-out),
+          background-color var(--dur-hover) ease;
+      }
+
+      /* ————— Object pane: floating bordered card, like the Environment panel ————— */
+      .object-pane {
+        min-width: 0;
+        min-height: 0;
+        overflow: auto;
+        align-self: start;
+        max-height: 100%;
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+      }
+      .pane-inner {
+        opacity: 1;
+        transform: translateY(0);
+        transition:
+          opacity var(--dur-enter) var(--ease-out),
+          transform var(--dur-enter) var(--ease-out);
+        transition-delay: 30ms;
+        @starting-style {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+      }
+      .object-head {
+        padding: 16px;
+        border-bottom: 1px solid var(--panel-border);
+      }
+      .object-kind {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        color: #7a7874;
+        font-size: 11px;
+        font-weight: 550;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+      }
+      .object-head h2 {
+        margin: 10px 0 0;
+        font-size: 15px;
+        font-weight: 590;
+        line-height: 1.3;
+        letter-spacing: -0.01em;
+      }
+      .object-head p {
+        margin: 6px 0 0;
+        color: #8a8884;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 24px;
+        padding: 0 9px;
+        border-radius: 8px;
+        color: #a8a6a2;
+        background: rgba(255, 255, 255, 0.05);
+        font-size: 11px;
+        text-transform: none;
+        letter-spacing: normal;
+        font-weight: 480;
+        white-space: nowrap;
+      }
+      .object-section {
+        padding: 15px 16px;
+        border-bottom: 1px solid var(--panel-border);
+      }
+      .object-section:last-child {
+        border-bottom: 0;
+      }
+      .object-section h3 {
+        margin: 0 0 10px;
+        color: #7a7874;
+        font-size: 11px;
+        font-weight: 550;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+      }
+      .object-card {
+        padding: 11px 12px;
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.04);
+        margin-top: 7px;
+      }
+      .object-card b {
+        display: block;
+        font-size: 12.5px;
+        font-weight: 560;
+      }
+      .object-card p {
+        margin: 5px 0 0;
+        color: #8a8884;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .diff {
+        border-radius: 11px;
+        overflow: hidden;
+        background: #101010;
+        border: 1px solid var(--panel-border);
+      }
+      .diff-file {
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 10px;
+        color: #8a8884;
+        background: rgba(255, 255, 255, 0.03);
+        font-size: 11px;
+        font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      }
+      .code-line {
+        min-height: 22px;
+        display: grid;
+        grid-template-columns: 32px 1fr;
+        align-items: center;
+        padding-right: 6px;
+        color: #999;
+        font:
+          11px/1.4 ui-monospace,
+          "SFMono-Regular",
+          Consolas,
+          monospace;
+      }
+      .code-line .ln {
+        color: #504e4b;
+        text-align: right;
+        padding-right: 8px;
+        user-select: none;
+        font-variant-numeric: tabular-nums;
+      }
+      .code-line.add {
+        color: #a5d6b7;
+        background: rgba(76, 183, 130, 0.08);
+      }
+      .decision-choice {
+        width: 100%;
+        min-height: 40px;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 0 12px;
+        text-align: left;
+        color: #a8a6a2;
+        background: rgba(255, 255, 255, 0.04);
+        margin-top: 6px;
+        font-size: 12.5px;
+        transition:
+          background-color var(--dur-hover) ease,
+          color var(--dur-hover) ease,
+          border-color var(--dur-hover) ease,
+          transform var(--dur-press) var(--ease-out);
+      }
+      .decision-choice.selected {
+        color: #ece9e6;
+        border-color: rgba(217, 119, 87, 0.4);
+        background: rgba(217, 119, 87, 0.08);
+      }
+      .ci-row {
+        height: 38px;
+        display: grid;
+        grid-template-columns: 18px 1fr auto;
+        align-items: center;
+        gap: 8px;
+        color: #a8a6a2;
+        font-size: 12.5px;
+      }
+      .ci-row + .ci-row {
+        border-top: 1px solid var(--panel-border);
+      }
+      .ci-row time {
+        color: #605e5b;
+        font-size: 11.5px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ————— Toast ————— */
+      .toast {
+        position: fixed;
+        z-index: 40;
+        top: 16px;
+        left: 50%;
+        transform: translate(-50%, -130%);
+        opacity: 0;
+        padding: 9px 14px;
+        border-radius: 11px;
+        color: #e6e4e1;
+        background: #262626;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 16px 44px rgba(0, 0, 0, 0.5);
+        font-size: 12.5px;
+        font-weight: 500;
+        transition:
+          opacity 150ms var(--ease-out),
+          transform 220ms var(--ease-out);
+        pointer-events: none;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .icon-button:hover {
+          color: #d5d3cf;
+          background: var(--hover);
+        }
+        .nav-row:hover {
+          background: var(--hover);
+        }
+        .section-head button:hover {
+          color: #a8a6a2;
+          background: var(--hover);
+        }
+        .side-row:hover {
+          background: var(--hover);
+        }
+        .side-row.active:hover {
+          background: rgba(255, 255, 255, 0.09);
+        }
+        .top-action:hover {
+          background: var(--hover);
+          color: #d5d3cf;
+        }
+        .top-action.primary:hover {
+          background: rgba(255, 255, 255, 0.12);
+        }
+        .cap-tab:hover {
+          color: #b5b3af;
+          background: rgba(255, 255, 255, 0.04);
+        }
+        .cap-tab.active:hover {
+          color: #ece9e6;
+          background: rgba(255, 255, 255, 0.07);
+        }
+        .object-tab:hover {
+          color: #b5b3af;
+          background: rgba(255, 255, 255, 0.03);
+        }
+        .object-tab:hover .tab-close {
+          opacity: 1;
+        }
+        .object-tab.active:hover {
+          color: #ece9e6;
+          background: var(--panel);
+        }
+        .tab-close:hover {
+          color: #b5b3af;
+          background: rgba(255, 255, 255, 0.08);
+        }
+        .object-add:hover {
+          color: #a8a6a2;
+          background: var(--hover);
+        }
+        .composer-chip:hover {
+          background: var(--hover);
+          color: #b5b3af;
+        }
+        .composer-chip.access:hover {
+          color: var(--gold);
+          background: rgba(207, 157, 94, 0.1);
+        }
+        .send:hover {
+          background: #ffffff;
+        }
+        .decision-choice:hover {
+          background: rgba(255, 255, 255, 0.06);
+          color: #d5d3cf;
+        }
+        .decision-choice.selected:hover {
+          background: rgba(217, 119, 87, 0.12);
+        }
+      }
+
+      @media (max-width: 1180px) {
+        .app {
+          grid-template-columns: 252px minmax(0, 1fr);
+        }
+        .object-thread {
+          grid-template-columns: 1fr;
+        }
+        .object-pane {
+          display: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition-duration: 0ms !important;
+          animation: none !important;
+        }
+        .toast {
+          transition: opacity 120ms ease;
+          transform: translate(-50%, 0);
+        }
+        .working-ring {
+          border-top-color: rgba(217, 119, 87, 0.25);
+          opacity: 0.7;
+        }
+        .messages .message,
+        .tool,
+        .pane-inner {
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <svg aria-hidden="true" width="0" height="0" style="position: absolute">
+      <symbol id="i-compose" viewBox="0 0 24 24">
+        <path d="M13 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-7M15 3h6v6M11 13 21 3" />
+      </symbol>
+      <symbol id="i-search" viewBox="0 0 24 24">
+        <circle cx="10.5" cy="10.5" r="6.5" />
+        <path d="m16 16 5 5" />
+      </symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </symbol>
+      <symbol id="i-flask" viewBox="0 0 24 24">
+        <path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3M7.5 15h9" />
+      </symbol>
+      <symbol id="i-git" viewBox="0 0 24 24">
+        <circle cx="6" cy="5" r="2" />
+        <circle cx="18" cy="7" r="2" />
+        <circle cx="6" cy="19" r="2" />
+        <path d="M6 7v10M8 9c2 0 3 1 3 3s1 3 3 3h2M8 5h8" />
+      </symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24">
+        <path d="M3 7.5h7l2 2h9v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <path d="M3 9.5V6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1.5" />
+      </symbol>
+      <symbol id="i-folder-open" viewBox="0 0 24 24">
+        <path d="M3 8V6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v3" />
+        <path d="M3 10h19l-3 10H5z" />
+      </symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 7 5 5-5 5" /></symbol>
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6" /></symbol>
+      <symbol id="i-forward" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" /></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3" />
+        <path
+          d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.15.36.36.68.6 1 .29.36.72.57 1.18.6H21v4h-.09A1.7 1.7 0 0 0 19.4 15z"
+        />
+      </symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24">
+        <path
+          d="M20 15a3 3 0 0 1-3 3H9l-5 3v-6a3 3 0 0 1-1-2.2V7a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3z"
+        />
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></symbol>
+      <symbol id="i-bolt" viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7z" /></symbol>
+      <symbol id="i-server" viewBox="0 0 24 24">
+        <rect x="3" y="4" width="18" height="6" rx="2" />
+        <rect x="3" y="14" width="18" height="6" rx="2" />
+        <path d="M7 7h.01M7 17h.01M11 7h6M11 17h6" />
+      </symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17" /></symbol>
+      <symbol id="i-more" viewBox="0 0 24 24">
+        <circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" />
+        <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+        <circle cx="19" cy="12" r="1" fill="currentColor" stroke="none" />
+      </symbol>
+      <symbol id="i-branch" viewBox="0 0 24 24">
+        <circle cx="6" cy="5" r="2" />
+        <circle cx="18" cy="7" r="2" />
+        <circle cx="6" cy="19" r="2" />
+        <path d="M6 7v10M8 5h4c3 0 4 2 4 4v5" />
+      </symbol>
+      <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" /></symbol>
+      <symbol id="i-doc" viewBox="0 0 24 24">
+        <path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6" />
+      </symbol>
+    </svg>
+
+    <div class="app">
+      <aside class="sidebar">
+        <div class="window-bar">
+          <div class="traffic"><span></span><span></span><span></span></div>
+          <div class="history">
+            <button class="icon-button" aria-label="Back">
+              <svg class="icon"><use href="#i-back" /></svg></button
+            ><button class="icon-button" aria-label="Forward">
+              <svg class="icon"><use href="#i-forward" /></svg></button
+            ><button class="icon-button" aria-label="Search">
+              <svg class="icon"><use href="#i-search" /></svg>
+            </button>
+          </div>
+        </div>
+        <nav class="sidebar-primary">
+          <button class="nav-row">
+            <svg class="icon"><use href="#i-compose" /></svg><span>New thread</span
+            ><span class="shortcut">⌘N</span>
+          </button>
+          <button class="nav-row">
+            <svg class="icon"><use href="#i-search" /></svg><span>Search</span
+            ><span class="shortcut">⌘K</span>
+          </button>
+          <button class="nav-row">
+            <svg class="icon"><use href="#i-clock" /></svg><span>Automations</span>
+          </button>
+          <button class="nav-row capability-link" data-capability="research">
+            <svg class="icon"><use href="#i-flask" /></svg><span>Research</span>
+          </button>
+          <button class="nav-row capability-link" data-capability="github">
+            <svg class="icon"><use href="#i-git" /></svg><span>GitHub</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-scroll">
+          <div class="section-head"><span>Pinned</span></div>
+          <button class="side-row">
+            <span class="leading"
+              ><svg class="icon small"><use href="#i-git" /></svg></span
+            ><span class="label">Fix PR #16 diff viewer</span><span class="meta">Chitauri</span>
+          </button>
+          <button class="side-row">
+            <span class="leading"><span class="provider-mark">✳</span></span
+            ><span class="label">Inspect TypeScript error</span><span class="meta">gcp</span>
+          </button>
+
+          <div class="section-head">
+            <span>Projects</span
+            ><button title="Collapse projects">
+              <svg class="icon small"><use href="#i-chevron" /></svg>
+            </button>
+          </div>
+          <button class="side-row project-active">
+            <span class="leading"
+              ><svg class="icon"><use href="#i-folder-open" /></svg></span
+            ><span class="label">Chitauri</span><span class="meta">main</span>
+          </button>
+          <div class="nested">
+            <button class="side-row active object-link" data-object="direction">
+              <span class="leading"><span class="provider-mark">✳</span></span
+              ><span class="label">Project-first UI direction</span
+              ><span class="working-ring"></span>
+            </button>
+            <button class="side-row object-link" data-object="pr">
+              <span class="leading"
+                ><svg class="icon small"><use href="#i-git" /></svg></span
+              ><span class="label">PR #16 · Diff audit</span><span class="meta">review</span>
+            </button>
+            <button class="side-row object-link" data-object="research">
+              <span class="leading"
+                ><svg class="icon small"><use href="#i-flask" /></svg></span
+              ><span class="label">Settings simplification</span><span class="meta">ready</span>
+            </button>
+          </div>
+          <button class="side-row">
+            <span class="leading"
+              ><svg class="icon"><use href="#i-folder" /></svg></span
+            ><span class="label">gcp-tracking-server</span>
+          </button>
+          <button class="side-row">
+            <span class="leading"
+              ><svg class="icon"><use href="#i-folder" /></svg></span
+            ><span class="label">breno-agent</span>
+          </button>
+          <button class="side-row">
+            <span class="leading"
+              ><svg class="icon"><use href="#i-folder" /></svg></span
+            ><span class="label">Synara</span>
+          </button>
+        </div>
+
+        <footer class="sidebar-footer">
+          <button class="nav-row">
+            <svg class="icon"><use href="#i-settings" /></svg><span>Settings</span>
+          </button>
+        </footer>
+      </aside>
+
+      <main class="main">
+        <header class="project-header">
+          <div class="project-identity">
+            <svg class="icon folder"><use href="#i-folder-open" /></svg>
+            <div class="nowrap">
+              <div class="project-title">
+                Chitauri <span class="project-health"><span class="dot green"></span>Healthy</span>
+              </div>
+              <div class="project-detail mono">~/www/Chitauri · main</div>
+            </div>
+          </div>
+          <div class="header-actions">
+            <button class="top-action">Project settings</button
+            ><button class="top-action primary">
+              <svg class="icon small"><use href="#i-plus" /></svg>New thread</button
+            ><button class="icon-button" aria-label="More">
+              <svg class="icon"><use href="#i-more" /></svg>
+            </button>
+          </div>
+        </header>
+
+        <nav class="cap-tabs" aria-label="Chitauri project sections">
+          <button class="cap-tab active" data-capability="threads">
+            <svg class="icon small"><use href="#i-chat" /></svg>Threads
+            <span class="count">12</span>
+          </button>
+          <button class="cap-tab" data-capability="research">
+            <svg class="icon small"><use href="#i-flask" /></svg>Research
+            <span class="count">8</span>
+          </button>
+          <button class="cap-tab" data-capability="github">
+            <svg class="icon small"><use href="#i-git" /></svg>GitHub <span class="count">4</span>
+          </button>
+          <button class="cap-tab" data-capability="review">
+            <svg class="icon small"><use href="#i-check" /></svg>Code review
+            <span class="count">2</span>
+          </button>
+          <button class="cap-tab" data-capability="ci">
+            <svg class="icon small"><use href="#i-bolt" /></svg>CI &amp; delivery
+          </button>
+          <button class="cap-tab" data-capability="infra">
+            <svg class="icon small"><use href="#i-server" /></svg>Infrastructure
+          </button>
+        </nav>
+
+        <nav class="object-tabs" aria-label="Open object threads">
+          <button class="object-tab active" data-object="direction">
+            <svg class="icon small object-type"><use href="#i-chat" /></svg
+            ><span class="nowrap">Project-first UI direction</span
+            ><span class="tab-close" role="button" aria-label="Close tab"
+              ><svg class="icon small"><use href="#i-x" /></svg
+            ></span>
+          </button>
+          <button class="object-tab" data-object="pr">
+            <svg class="icon small object-type"><use href="#i-git" /></svg
+            ><span class="nowrap">PR #16 · Diff audit</span
+            ><span class="tab-close" role="button" aria-label="Close tab"
+              ><svg class="icon small"><use href="#i-x" /></svg
+            ></span>
+          </button>
+          <button class="object-tab" data-object="research">
+            <svg class="icon small object-type"><use href="#i-flask" /></svg
+            ><span class="nowrap">Settings simplification</span
+            ><span class="tab-close" role="button" aria-label="Close tab"
+              ><svg class="icon small"><use href="#i-x" /></svg
+            ></span>
+          </button>
+          <button class="object-tab" data-object="ci">
+            <svg class="icon small object-type"><use href="#i-bolt" /></svg
+            ><span class="nowrap">CI run #883</span
+            ><span class="tab-close" role="button" aria-label="Close tab"
+              ><svg class="icon small"><use href="#i-x" /></svg
+            ></span>
+          </button>
+          <button class="object-add" title="Open another project object">
+            <svg class="icon"><use href="#i-plus" /></svg>
+          </button>
+        </nav>
+
+        <section class="object-thread">
+          <section class="conversation">
+            <header class="conversation-header">
+              <div class="conversation-title">
+                <h1 id="thread-title">Project-first UI direction</h1>
+                <p id="thread-meta">Project decision · Codex working in chitauri/project-home</p>
+              </div>
+              <div class="conversation-status">
+                <span class="dot green"></span><span id="thread-status">Working</span
+                ><button class="icon-button" aria-label="Thread options">
+                  <svg class="icon"><use href="#i-more" /></svg>
+                </button>
+              </div>
+            </header>
+            <div class="messages" id="messages"></div>
+            <div class="composer-wrap">
+              <div class="composer">
+                <textarea id="composer-input" placeholder="Type / for commands"></textarea>
+                <div class="composer-foot">
+                  <div class="composer-left">
+                    <button class="composer-chip" aria-label="Attach">
+                      <svg class="icon small"><use href="#i-plus" /></svg></button
+                    ><button class="composer-chip access">Full access</button
+                    ><button class="composer-chip">
+                      <svg class="icon small"><use href="#i-branch" /></svg
+                      ><span id="branch-chip">chitauri/project-home</span>
+                    </button>
+                  </div>
+                  <div class="composer-right">
+                    <span class="composer-model">GPT-5.6 Sol · High</span
+                    ><button class="send" id="send" aria-label="Send">
+                      <svg class="icon small"><use href="#i-send" /></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+          <aside class="object-pane" id="object-pane"></aside>
+        </section>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+
+    <script>
+      const objectData = {
+        direction: {
+          title: "Project-first UI direction",
+          meta: "Project decision · Codex working in chitauri/project-home",
+          status: "Working",
+          branch: "chitauri/project-home",
+          prompt:
+            "Keep threads as the primary way we collaborate with agents. Make the project the durable scope around them, using familiar horizontal tabs.",
+          answer:
+            "This direction keeps Chitauri’s current shell and changes the working model, not the visual language. Each horizontal tab is an object thread: a normal agent conversation anchored to a project decision, PR, research artifact, CI run, or infrastructure service.",
+          tools: [
+            "Matched the current Chitauri sidebar hierarchy",
+            "Kept threads as the default project section",
+            "Attached this conversation to a project decision",
+          ],
+          pane: `<div class="object-head"><div class="object-kind"><span>Project decision</span><span class="status-pill"><span class="dot amber"></span>Needs decision</span></div><h2>How should project work be organized?</h2><p>The thread remains the collaboration surface. The attached object carries durable state outside the transcript.</p></div><section class="object-section"><h3>Choose direction</h3><button class="decision-choice selected"><span>Object Threads</span><svg class="icon small"><use href="#i-check"/></svg></button><button class="decision-choice"><span>Traditional thread list</span></button><button class="decision-choice"><span>Project dashboard</span></button></section><section class="object-section"><h3>Design contract</h3><div class="object-card"><b>Project is the scope</b><p>Capabilities and object threads always belong to the selected project.</p></div><div class="object-card"><b>Thread is the collaboration</b><p>Every object opens with a full agent conversation, not a passive inspector.</p></div><div class="object-card"><b>Object is the memory</b><p>PR state, findings, decisions, and checks survive the transcript.</p></div></section>`,
+        },
+        pr: {
+          title: "PR #16 · Diff audit",
+          meta: "Pull request thread · Review agent · 8 files changed",
+          status: "Review ready",
+          branch: "chitauri/audit-pierre-diffs",
+          prompt:
+            "Review PR #16 and verify whether the Pierre diff integration introduces regressions.",
+          answer:
+            "The review is complete. I verified two actionable issues and attached them directly to this pull request object. We can discuss or fix them here without losing the PR context.",
+          tools: [
+            "Read the pull request diff",
+            "Ran focused viewer tests",
+            "Verified two findings against source",
+          ],
+          pane: `<div class="object-head"><div class="object-kind"><span>Pull request #16</span><span class="status-pill"><span class="dot green"></span>Ready for review</span></div><h2>Pierre diff integration audit</h2><p>8 files changed · +184 −61 · all focused checks passing</p></div><section class="object-section"><h3>Current diff</h3><div class="diff"><div class="diff-file"><span>DiffViewer.tsx</span><span>+12 −4</span></div><div class="code-line"><span class="ln">88</span><span>const viewer = createDiffViewer({</span></div><div class="code-line add"><span class="ln">89</span><span>+ renderGutter: true,</span></div><div class="code-line add"><span class="ln">90</span><span>+ collapseUnchanged: false,</span></div><div class="code-line"><span class="ln">91</span><span>  theme: resolvedTheme,</span></div><div class="code-line"><span class="ln">92</span><span>})</span></div></div></section><section class="object-section"><h3>Verified findings</h3><div class="object-card"><b>Viewer state resets on theme change</b><p>The adapter recreates the viewer and loses the current diff position.</p></div><div class="object-card"><b>Large diff threshold is not forwarded</b><p>The project virtualization guardrail is skipped by the new adapter.</p></div></section>`,
+        },
+        research: {
+          title: "Settings simplification",
+          meta: "Research thread · Artifact ready · Updated 48m ago",
+          status: "Ready to implement",
+          branch: "main",
+          prompt:
+            "Research how to simplify Chitauri settings without hiding important operational surfaces.",
+          answer:
+            "The research is complete. The recommended structure reduces Settings to four categories and moves operational destinations into the project shell. The full plan stays attached here while we discuss implementation.",
+          tools: [
+            "Mapped current settings routes",
+            "Traced search and navigation coupling",
+            "Produced 12 source-backed findings",
+          ],
+          pane: `<div class="object-head"><div class="object-kind"><span>Research artifact</span><span class="status-pill"><span class="dot green"></span>Complete</span></div><h2>Settings IA simplification</h2><p>12 findings · 7 decisions · implementation-ready</p></div><section class="object-section"><h3>Recommendation</h3><div class="object-card"><b>Four settings categories</b><p>General, Appearance, Agents, and Advanced.</p></div><div class="object-card"><b>Move operational surfaces out</b><p>Profile, Usage, Worktrees, Archived, and Shortcuts become first-class destinations.</p></div></section><section class="object-section"><h3>Next action</h3><button class="decision-choice selected"><span>Create implementation thread</span><svg class="icon small"><use href="#i-compose"/></svg></button></section>`,
+        },
+        ci: {
+          title: "CI run #883",
+          meta: "Delivery thread · main · Triggered 6 minutes ago",
+          status: "18/18 passing",
+          branch: "main",
+          prompt: "Watch CI run #883 and tell me immediately if anything needs intervention.",
+          answer:
+            "All eighteen checks passed. The desktop bundle, focused transcript tests, and server contract suite are green. This thread can stay attached to the run for deployment follow-up.",
+          tools: ["Watched GitHub Actions", "Collected job timings", "Confirmed deployable state"],
+          pane: `<div class="object-head"><div class="object-kind"><span>CI run #883</span><span class="status-pill"><span class="dot green"></span>Passed</span></div><h2>Main is deployable</h2><p>18 checks passed · 2m 41s total · commit 92de34a</p></div><section class="object-section"><h3>Jobs</h3><div class="ci-row"><svg class="icon small" style="color:var(--green)"><use href="#i-check"/></svg><span>Focused web tests</span><time>41s</time></div><div class="ci-row"><svg class="icon small" style="color:var(--green)"><use href="#i-check"/></svg><span>Server contracts</span><time>36s</time></div><div class="ci-row"><svg class="icon small" style="color:var(--green)"><use href="#i-check"/></svg><span>Desktop bundle</span><time>1m 54s</time></div><div class="ci-row"><svg class="icon small" style="color:var(--green)"><use href="#i-check"/></svg><span>Secret scan</span><time>18s</time></div></section><section class="object-section"><h3>Next action</h3><button class="decision-choice"><span>Open deployment thread</span><svg class="icon small"><use href="#i-compose"/></svg></button></section>`,
+        },
+        infra: {
+          title: "Production infrastructure",
+          meta: "Infrastructure thread · 6 services · Live project context",
+          status: "Healthy",
+          branch: "main",
+          prompt:
+            "Map the infrastructure for Chitauri and keep the thread attached to the live service inventory.",
+          answer:
+            "The initial map covers the web server, desktop runtime, WebSocket broker, provider sessions, state database, and CI delivery path. All six services are healthy.",
+          tools: [
+            "Discovered service boundaries",
+            "Mapped owners and environments",
+            "Checked current service health",
+          ],
+          pane: `<div class="object-head"><div class="object-kind"><span>Infrastructure map</span><span class="status-pill"><span class="dot green"></span>Healthy</span></div><h2>Production infrastructure</h2><p>6 services · 2 environments · no active incidents</p></div><section class="object-section"><h3>Services</h3><div class="object-card"><b>Web + WebSocket server</b><p>Production · healthy · owner: Chitauri</p></div><div class="object-card"><b>Desktop runtime</b><p>macOS · healthy · local provider sessions</p></div><div class="object-card"><b>State database</b><p>SQLite projections · healthy · local-first</p></div></section>`,
+        },
+      };
+
+      const messages = document.querySelector("#messages");
+      const pane = document.querySelector("#object-pane");
+      const title = document.querySelector("#thread-title");
+      const meta = document.querySelector("#thread-meta");
+      const status = document.querySelector("#thread-status");
+      const branch = document.querySelector("#branch-chip");
+      let activeObject = "direction";
+
+      function renderObject(id) {
+        const data = objectData[id];
+        if (!data) return;
+        activeObject = id;
+        title.textContent = data.title;
+        meta.textContent = data.meta;
+        status.textContent = data.status;
+        branch.textContent = data.branch;
+        messages.innerHTML = `<div class="message user"><div class="bubble"></div></div><div class="message assistant"><div class="assistant-head"><span class="assistant-avatar">✳</span><span>Codex · working in Chitauri</span></div><div class="assistant-copy"><p></p><div class="tools"></div></div></div>`;
+        messages.querySelector(".bubble").textContent = data.prompt;
+        messages.querySelector(".assistant-copy p").textContent = data.answer;
+        const tools = messages.querySelector(".tools");
+        data.tools.forEach((tool, i) => {
+          const row = document.createElement("div");
+          row.className = "tool";
+          row.style.setProperty("--i", i);
+          row.innerHTML = `<svg class="icon small"><use href="#i-check"/></svg><span></span>`;
+          row.querySelector("span").textContent = tool;
+          tools.append(row);
+        });
+        pane.innerHTML = `<div class="pane-inner">${data.pane}</div>`;
+        document
+          .querySelectorAll(".object-tab")
+          .forEach((tab) => tab.classList.toggle("active", tab.dataset.object === id));
+        document
+          .querySelectorAll(".object-link")
+          .forEach((link) => link.classList.toggle("active", link.dataset.object === id));
+      }
+
+      document.querySelectorAll(".object-tab").forEach((tab) =>
+        tab.addEventListener("click", (event) => {
+          if (event.target.closest(".tab-close")) return;
+          renderObject(tab.dataset.object);
+        }),
+      );
+      document
+        .querySelectorAll(".object-link")
+        .forEach((link) => link.addEventListener("click", () => renderObject(link.dataset.object)));
+      document.querySelectorAll(".tab-close").forEach((close) =>
+        close.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const tab = close.closest(".object-tab");
+          const wasActive = tab.classList.contains("active");
+          tab.remove();
+          if (wasActive)
+            renderObject(document.querySelector(".object-tab")?.dataset.object || "direction");
+        }),
+      );
+
+      const capabilityMap = {
+        threads: "direction",
+        research: "research",
+        github: "pr",
+        review: "pr",
+        ci: "ci",
+        infra: "infra",
+      };
+      document.querySelectorAll(".cap-tab").forEach((tab) =>
+        tab.addEventListener("click", () => {
+          document.querySelectorAll(".cap-tab").forEach((item) => item.classList.remove("active"));
+          tab.classList.add("active");
+          renderObject(capabilityMap[tab.dataset.capability]);
+        }),
+      );
+      document
+        .querySelectorAll(".capability-link")
+        .forEach((link) =>
+          link.addEventListener("click", () =>
+            renderObject(capabilityMap[link.dataset.capability]),
+          ),
+        );
+
+      const input = document.querySelector("#composer-input");
+      function sendMessage() {
+        const value = input.value.trim();
+        if (!value) {
+          input.focus();
+          return;
+        }
+        const message = document.createElement("div");
+        message.className = "message user";
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+        bubble.textContent = value;
+        message.append(bubble);
+        messages.append(message);
+        messages.scrollTop = messages.scrollHeight;
+        input.value = "";
+        showToast(`Message sent in ${objectData[activeObject].title}`);
+      }
+      document.querySelector("#send").addEventListener("click", sendMessage);
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+          event.preventDefault();
+          sendMessage();
+        }
+      });
+      document
+        .querySelector(".object-add")
+        .addEventListener("click", () => showToast("Choose a Chitauri object to open as a thread"));
+
+      let toastTimer;
+      function showToast(text) {
+        const toast = document.querySelector("#toast");
+        toast.textContent = text;
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 1700);
+      }
+      renderObject("direction");
+    </script>
+  </body>
 </html>

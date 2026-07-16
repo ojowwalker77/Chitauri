@@ -84,6 +84,7 @@ function TranscriptPerfHarness(props: { onTranscriptRender: () => void }) {
       <Profiler id="chat-transcript-pane" onRender={handleTranscriptRender}>
         <ChatTranscriptPane
           activeThreadId="thread-transcript-perf"
+          assistantProvider="codex"
           activeTurnInProgress={false}
           activeTurnStartedAt={null}
           chatFontSizePx={15}
@@ -167,6 +168,7 @@ describe("ChatTranscriptPane", () => {
     const screen = await render(
       <ChatTranscriptPane
         activeThreadId="thread-user-message-expand"
+        assistantProvider="codex"
         activeTurnInProgress={false}
         activeTurnStartedAt={null}
         chatFontSizePx={15}
@@ -245,6 +247,7 @@ describe("ChatTranscriptPane", () => {
     const screen = await render(
       <ChatTranscriptPane
         activeThreadId="thread-hidden-trail"
+        assistantProvider="codex"
         activeTurnInProgress={false}
         activeTurnStartedAt={null}
         chatFontSizePx={15}
