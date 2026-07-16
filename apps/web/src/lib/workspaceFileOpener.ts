@@ -43,21 +43,21 @@ export function useWorkspaceFileOpener(): WorkspaceFileOpener | null {
 // Trailing `:line` / `:line:col` suffix carried by resolved markdown file links.
 // The in-app viewer previews whole files, so the position is dropped.
 const FILE_POSITION_SUFFIX_PATTERN = /:\d+(?::\d+)?$/;
-const SYNARA_PUBLIC_ASSET_PATH_PREFIXES = [
+const CHITAURI_PUBLIC_ASSET_PATH_PREFIXES = [
   "/central-icons-reversed/",
   "/central-icons-fill/",
 ] as const;
-const SYNARA_WEB_PUBLIC_WORKSPACE_DIR = "apps/web/public";
+const CHITAURI_WEB_PUBLIC_WORKSPACE_DIR = "apps/web/public";
 
 function resolveChitauriPublicAssetOpenTarget(path: string, workspaceRoot: string | null) {
   if (!workspaceRoot) {
     return null;
   }
   const normalizedPath = path.replace(/\\/g, "/");
-  if (!SYNARA_PUBLIC_ASSET_PATH_PREFIXES.some((prefix) => normalizedPath.startsWith(prefix))) {
+  if (!CHITAURI_PUBLIC_ASSET_PATH_PREFIXES.some((prefix) => normalizedPath.startsWith(prefix))) {
     return null;
   }
-  const relativePath = `${SYNARA_WEB_PUBLIC_WORKSPACE_DIR}${normalizedPath}`;
+  const relativePath = `${CHITAURI_WEB_PUBLIC_WORKSPACE_DIR}${normalizedPath}`;
   return isWorkspaceRelativePathSafe(relativePath) ? relativePath : null;
 }
 

@@ -47,7 +47,7 @@ interface CliInput {
   readonly mode: Option.Option<RuntimeMode>;
   readonly port: Option.Option<number>;
   readonly host: Option.Option<string>;
-  readonly t3Home: Option.Option<string>;
+  readonly chitauriHome: Option.Option<string>;
   readonly devUrl: Option.Option<URL>;
   readonly noBrowser: Option.Option<boolean>;
   readonly authToken: Option.Option<string>;
@@ -100,7 +100,7 @@ export class CliConfig extends ServiceMap.Service<CliConfig, CliConfigShape>()(
 }
 
 const CliEnvConfig = Config.all({
-  mode: Config.string("T3CODE_MODE").pipe(
+  mode: Config.string("CHITAURI_MODE").pipe(
     Config.option,
     Config.map(
       Option.match<RuntimeMode, string>({
@@ -109,15 +109,12 @@ const CliEnvConfig = Config.all({
       }),
     ),
   ),
-  port: Config.port("T3CODE_PORT").pipe(Config.option, Config.map(Option.getOrUndefined)),
-  host: Config.string("T3CODE_HOST").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  port: Config.port("CHITAURI_PORT").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  host: Config.string("CHITAURI_HOST").pipe(Config.option, Config.map(Option.getOrUndefined)),
   chitauriHome: Config.string("CHITAURI_HOME").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  synaraHome: Config.string("SYNARA_HOME").pipe(Config.option, Config.map(Option.getOrUndefined)),
-  t3Home: Config.string("T3CODE_HOME").pipe(Config.option, Config.map(Option.getOrUndefined)),
-  dpcodeHome: Config.string("DPCODE_HOME").pipe(Config.option, Config.map(Option.getOrUndefined)),
   devUrl: Config.url("VITE_DEV_SERVER_URL").pipe(Config.option, Config.map(Option.getOrUndefined)),
   // Explicit state-dir namespace override. Lets a dev build share the production
   // `userdata` namespace (continue real threads) instead of the isolated `dev` one.
@@ -125,27 +122,23 @@ const CliEnvConfig = Config.all({
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  synaraStateNamespace: Config.string("SYNARA_STATE_NAMESPACE").pipe(
+  noBrowser: Config.boolean("CHITAURI_NO_BROWSER").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  noBrowser: Config.boolean("T3CODE_NO_BROWSER").pipe(
+  authToken: Config.string("CHITAURI_AUTH_TOKEN").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  authToken: Config.string("T3CODE_AUTH_TOKEN").pipe(
+  autoBootstrapProjectFromCwd: Config.boolean("CHITAURI_AUTO_BOOTSTRAP_PROJECT_FROM_CWD").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  autoBootstrapProjectFromCwd: Config.boolean("T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD").pipe(
+  logProviderEvents: Config.boolean("CHITAURI_LOG_PROVIDER_EVENTS").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  logProviderEvents: Config.boolean("T3CODE_LOG_PROVIDER_EVENTS").pipe(
-    Config.option,
-    Config.map(Option.getOrUndefined),
-  ),
-  logWebSocketEvents: Config.boolean("T3CODE_LOG_WS_EVENTS").pipe(
+  logWebSocketEvents: Config.boolean("CHITAURI_LOG_WS_EVENTS").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
@@ -183,13 +176,8 @@ const ServerConfigLive = (input: CliInput) =>
       });
 
       const devUrl = Option.getOrElse(input.devUrl, () => env.devUrl);
-      const stateDirNameOverride = env.chitauriStateNamespace ?? env.synaraStateNamespace;
-      const configuredHome =
-        Option.getOrUndefined(input.t3Home) ??
-        env.chitauriHome ??
-        env.synaraHome ??
-        env.t3Home ??
-        env.dpcodeHome;
+      const stateDirNameOverride = env.chitauriStateNamespace;
+      const configuredHome = Option.getOrUndefined(input.chitauriHome) ?? env.chitauriHome;
       const userHomeDir = OS.homedir();
       const baseDir = yield* resolveBaseDir(configuredHome);
       // Import legacy state before runtime paths are derived under ~/.chitauri.
@@ -336,7 +324,7 @@ const makeServerProgram = (input: CliInput) =>
     yield* Effect.forkChild(recordStartupHeartbeat);
     // Optional Claude OAuth keepalive. Disabled by default because it touches
     // Claude Code auth data in the background; users can opt in with
-    // T3CODE_CLAUDE_KEEPALIVE=1.
+    // CHITAURI_CLAUDE_KEEPALIVE=1.
     yield* Effect.forkChild(
       Effect.gen(function* () {
         const settings = yield* serverSettings.getSettings;
@@ -396,7 +384,7 @@ const hostFlag = Flag.string("host").pipe(
   Flag.withDescription("Host/interface to bind (for example 127.0.0.1, 0.0.0.0, or a Tailnet IP)."),
   Flag.optional,
 );
-const t3HomeFlag = Flag.string("home-dir").pipe(
+const chitauriHomeFlag = Flag.string("home-dir").pipe(
   Flag.withDescription("Base directory for all Chitauri data (equivalent to CHITAURI_HOME)."),
   Flag.optional,
 );
@@ -422,13 +410,13 @@ const autoBootstrapProjectFromCwdFlag = Flag.boolean("auto-bootstrap-project-fro
 );
 const logProviderEventsFlag = Flag.boolean("log-provider-events").pipe(
   Flag.withDescription(
-    "Emit native/canonical provider NDJSON logs for debugging (equivalent to T3CODE_LOG_PROVIDER_EVENTS).",
+    "Emit native/canonical provider NDJSON logs for debugging (equivalent to CHITAURI_LOG_PROVIDER_EVENTS).",
   ),
   Flag.optional,
 );
 const logWebSocketEventsFlag = Flag.boolean("log-websocket-events").pipe(
   Flag.withDescription(
-    "Emit server-side logs for outbound WebSocket push traffic (equivalent to T3CODE_LOG_WS_EVENTS).",
+    "Emit server-side logs for outbound WebSocket push traffic (equivalent to CHITAURI_LOG_WS_EVENTS).",
   ),
   Flag.withAlias("log-ws-events"),
   Flag.optional,
@@ -438,7 +426,7 @@ export const t3Cli = Command.make("t3", {
   mode: modeFlag,
   port: portFlag,
   host: hostFlag,
-  t3Home: t3HomeFlag,
+  chitauriHome: chitauriHomeFlag,
   devUrl: devUrlFlag,
   noBrowser: noBrowserFlag,
   authToken: authTokenFlag,

@@ -8,13 +8,13 @@ The Chitauri CLI accepts the following configuration options, available either a
 
 | CLI flag                | Env var               | Notes                              |
 | ----------------------- | --------------------- | ---------------------------------- |
-| `--mode <web\|desktop>` | `T3CODE_MODE`         | Runtime mode.                      |
-| `--port <number>`       | `T3CODE_PORT`         | HTTP/WebSocket port.               |
-| `--host <address>`      | `T3CODE_HOST`         | Bind interface/address.            |
+| `--mode <web\|desktop>` | `CHITAURI_MODE`       | Runtime mode.                      |
+| `--port <number>`       | `CHITAURI_PORT`       | HTTP/WebSocket port.               |
+| `--host <address>`      | `CHITAURI_HOST`       | Bind interface/address.            |
 | `--home-dir <path>`     | `CHITAURI_HOME`       | Base directory.                    |
 | `--dev-url <url>`       | `VITE_DEV_SERVER_URL` | Dev web URL redirect/proxy target. |
-| `--no-browser`          | `T3CODE_NO_BROWSER`   | Disable auto-open browser.         |
-| `--auth-token <token>`  | `T3CODE_AUTH_TOKEN`   | WebSocket auth token.              |
+| `--no-browser`          | `CHITAURI_NO_BROWSER` | Disable auto-open browser.         |
+| `--auth-token <token>`  | `CHITAURI_AUTH_TOKEN` | WebSocket auth token.              |
 
 > TIP: Use the `--help` flag to see all available options and their descriptions.
 

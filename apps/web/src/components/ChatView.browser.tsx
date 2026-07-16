@@ -2397,7 +2397,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             threadId: THREAD_ID,
             cwd: "/repo/project",
             env: {
-              T3CODE_PROJECT_ROOT: "/repo/project",
+              CHITAURI_PROJECT_ROOT: "/repo/project",
             },
           });
         },
@@ -2476,8 +2476,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
             threadId: THREAD_ID,
             cwd: "/repo/worktrees/feature-draft",
             env: {
-              T3CODE_PROJECT_ROOT: "/repo/project",
-              T3CODE_WORKTREE_PATH: "/repo/worktrees/feature-draft",
+              CHITAURI_PROJECT_ROOT: "/repo/project",
+              CHITAURI_WORKTREE_PATH: "/repo/worktrees/feature-draft",
             },
           });
         },
@@ -3891,8 +3891,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
             _tag: WS_METHODS.terminalOpen,
             cwd: worktreePath,
             env: {
-              T3CODE_PROJECT_ROOT: "/repo/project",
-              T3CODE_WORKTREE_PATH: worktreePath,
+              CHITAURI_PROJECT_ROOT: "/repo/project",
+              CHITAURI_WORKTREE_PATH: worktreePath,
             },
           });
 

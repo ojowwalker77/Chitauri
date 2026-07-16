@@ -1,6 +1,6 @@
 /**
  * FILE: homeMigration.test.ts
- * Purpose: Verifies first-run import and resume behavior into the ~/.synara home.
+ * Purpose: Verifies first-run import and resume behavior into the ~/.chitauri home.
  * Layer: Server startup tests
  * Depends on: deriveServerPaths, node:sqlite fixtures, and the migration marker contract
  */

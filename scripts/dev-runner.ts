@@ -14,7 +14,7 @@ const BASE_WEB_PORT = 5733;
 const MAX_HASH_OFFSET = 3000;
 const MAX_PORT = 65535;
 
-export const DEFAULT_T3_HOME = Effect.map(Effect.service(Path.Path), (path) =>
+export const DEFAULT_CHITAURI_HOME = Effect.map(Effect.service(Path.Path), (path) =>
   path.join(homedir(), ".chitauri"),
 );
 
@@ -70,20 +70,12 @@ const optionalUrlConfig = (name: string): Config.Config<URL | undefined> =>
   );
 
 const OffsetConfig = Config.all({
-  portOffset: optionalIntegerConfig("T3CODE_PORT_OFFSET"),
-  devInstance: optionalStringConfig("T3CODE_DEV_INSTANCE"),
+  portOffset: optionalIntegerConfig("CHITAURI_PORT_OFFSET"),
+  devInstance: optionalStringConfig("CHITAURI_DEV_INSTANCE"),
 });
 const HomeConfig = Config.all({
   chitauriHome: optionalStringConfig("CHITAURI_HOME"),
-  synaraHome: optionalStringConfig("SYNARA_HOME"),
-  t3Home: optionalStringConfig("T3CODE_HOME"),
-  dpcodeHome: optionalStringConfig("DPCODE_HOME"),
-}).pipe(
-  Config.map(
-    ({ chitauriHome, synaraHome, t3Home, dpcodeHome }) =>
-      chitauriHome ?? synaraHome ?? t3Home ?? dpcodeHome,
-  ),
-);
+}).pipe(Config.map(({ chitauriHome }) => chitauriHome));
 
 export function resolveOffset(config: {
   readonly portOffset: number | undefined;
@@ -91,11 +83,11 @@ export function resolveOffset(config: {
 }): { readonly offset: number; readonly source: string } {
   if (config.portOffset !== undefined) {
     if (config.portOffset < 0) {
-      throw new Error(`Invalid T3CODE_PORT_OFFSET: ${config.portOffset}`);
+      throw new Error(`Invalid CHITAURI_PORT_OFFSET: ${config.portOffset}`);
     }
     return {
       offset: config.portOffset,
-      source: `T3CODE_PORT_OFFSET=${config.portOffset}`,
+      source: `CHITAURI_PORT_OFFSET=${config.portOffset}`,
     };
   }
 
@@ -105,11 +97,11 @@ export function resolveOffset(config: {
   }
 
   if (/^\d+$/.test(seed)) {
-    return { offset: Number(seed), source: `numeric T3CODE_DEV_INSTANCE=${seed}` };
+    return { offset: Number(seed), source: `numeric CHITAURI_DEV_INSTANCE=${seed}` };
   }
 
   const offset = ((Hash.string(seed) >>> 0) % MAX_HASH_OFFSET) + 1;
-  return { offset, source: `hashed T3CODE_DEV_INSTANCE=${seed}` };
+  return { offset, source: `hashed CHITAURI_DEV_INSTANCE=${seed}` };
 }
 
 function resolveBaseDir(baseDir: string | undefined): Effect.Effect<string, never, Path.Path> {
@@ -121,7 +113,7 @@ function resolveBaseDir(baseDir: string | undefined): Effect.Effect<string, neve
       return path.resolve(configured);
     }
 
-    return yield* DEFAULT_T3_HOME;
+    return yield* DEFAULT_CHITAURI_HOME;
   });
 }
 
@@ -130,7 +122,7 @@ interface CreateDevRunnerEnvInput {
   readonly baseEnv: NodeJS.ProcessEnv;
   readonly serverOffset: number;
   readonly webOffset: number;
-  readonly t3Home: string | undefined;
+  readonly chitauriHome: string | undefined;
   readonly authToken: string | undefined;
   readonly noBrowser: boolean | undefined;
   readonly autoBootstrapProjectFromCwd: boolean | undefined;
@@ -146,7 +138,7 @@ export function createDevRunnerEnv({
   baseEnv,
   serverOffset,
   webOffset,
-  t3Home,
+  chitauriHome,
   authToken,
   noBrowser,
   autoBootstrapProjectFromCwd,
@@ -159,66 +151,61 @@ export function createDevRunnerEnv({
   return Effect.gen(function* () {
     const serverPort = port ?? BASE_SERVER_PORT + serverOffset;
     const webPort = BASE_WEB_PORT + webOffset;
-    const resolvedBaseDir = yield* resolveBaseDir(t3Home);
+    const resolvedBaseDir = yield* resolveBaseDir(chitauriHome);
 
     const output: NodeJS.ProcessEnv = {
       ...baseEnv,
-      T3CODE_PORT: String(serverPort),
+      CHITAURI_PORT: String(serverPort),
       PORT: String(webPort),
       ELECTRON_RENDERER_PORT: String(webPort),
       VITE_WS_URL: `ws://[::1]:${serverPort}`,
       VITE_DEV_SERVER_URL: devUrl?.toString() ?? `http://localhost:${webPort}`,
       CHITAURI_HOME: resolvedBaseDir,
-      SYNARA_HOME: resolvedBaseDir,
-      DPCODE_HOME: resolvedBaseDir,
-      T3CODE_HOME: resolvedBaseDir,
     };
 
     if (host !== undefined) {
-      output.T3CODE_HOST = host;
+      output.CHITAURI_HOST = host;
     }
 
     const trimmedStateNamespace = stateNamespace?.trim();
     if (trimmedStateNamespace) {
       output.CHITAURI_STATE_NAMESPACE = trimmedStateNamespace;
-      output.SYNARA_STATE_NAMESPACE = trimmedStateNamespace;
     } else {
       delete output.CHITAURI_STATE_NAMESPACE;
-      delete output.SYNARA_STATE_NAMESPACE;
     }
 
     if (authToken !== undefined) {
-      output.T3CODE_AUTH_TOKEN = authToken;
+      output.CHITAURI_AUTH_TOKEN = authToken;
     } else {
-      delete output.T3CODE_AUTH_TOKEN;
+      delete output.CHITAURI_AUTH_TOKEN;
     }
 
     if (noBrowser !== undefined) {
-      output.T3CODE_NO_BROWSER = noBrowser ? "1" : "0";
+      output.CHITAURI_NO_BROWSER = noBrowser ? "1" : "0";
     } else {
-      delete output.T3CODE_NO_BROWSER;
+      delete output.CHITAURI_NO_BROWSER;
     }
 
     if (autoBootstrapProjectFromCwd !== undefined) {
-      output.T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD = autoBootstrapProjectFromCwd ? "1" : "0";
+      output.CHITAURI_AUTO_BOOTSTRAP_PROJECT_FROM_CWD = autoBootstrapProjectFromCwd ? "1" : "0";
     } else {
-      delete output.T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD;
+      delete output.CHITAURI_AUTO_BOOTSTRAP_PROJECT_FROM_CWD;
     }
 
     if (logWebSocketEvents !== undefined) {
-      output.T3CODE_LOG_WS_EVENTS = logWebSocketEvents ? "1" : "0";
+      output.CHITAURI_LOG_WS_EVENTS = logWebSocketEvents ? "1" : "0";
     } else {
-      delete output.T3CODE_LOG_WS_EVENTS;
+      delete output.CHITAURI_LOG_WS_EVENTS;
     }
 
     if (mode === "dev") {
-      output.T3CODE_MODE = "web";
-      delete output.T3CODE_DESKTOP_WS_URL;
+      output.CHITAURI_MODE = "web";
+      delete output.CHITAURI_DESKTOP_WS_URL;
     }
 
     if (mode === "dev:server" || mode === "dev:web") {
-      output.T3CODE_MODE = "web";
-      delete output.T3CODE_DESKTOP_WS_URL;
+      output.CHITAURI_MODE = "web";
+      delete output.CHITAURI_DESKTOP_WS_URL;
     }
 
     return output;
@@ -359,7 +346,7 @@ export function resolveModePortOffsets<R = NetService>({
 
 interface DevRunnerCliInput {
   readonly mode: DevMode;
-  readonly t3Home: string | undefined;
+  readonly chitauriHome: string | undefined;
   readonly authToken: string | undefined;
   readonly noBrowser: boolean | undefined;
   readonly autoBootstrapProjectFromCwd: boolean | undefined;
@@ -407,7 +394,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       Effect.mapError(
         (cause) =>
           new DevRunnerError({
-            message: "Failed to read T3CODE_PORT_OFFSET/T3CODE_DEV_INSTANCE configuration.",
+            message: "Failed to read CHITAURI_PORT_OFFSET/CHITAURI_DEV_INSTANCE configuration.",
             cause,
           }),
       ),
@@ -423,9 +410,11 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
     });
 
     const envOverrides = {
-      noBrowser: readOptionalBooleanEnv("T3CODE_NO_BROWSER"),
-      autoBootstrapProjectFromCwd: readOptionalBooleanEnv("T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD"),
-      logWebSocketEvents: readOptionalBooleanEnv("T3CODE_LOG_WS_EVENTS"),
+      noBrowser: readOptionalBooleanEnv("CHITAURI_NO_BROWSER"),
+      autoBootstrapProjectFromCwd: readOptionalBooleanEnv(
+        "CHITAURI_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
+      ),
+      logWebSocketEvents: readOptionalBooleanEnv("CHITAURI_LOG_WS_EVENTS"),
     };
 
     const { serverOffset, webOffset } = yield* resolveModePortOffsets({
@@ -440,7 +429,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       baseEnv: process.env,
       serverOffset,
       webOffset,
-      t3Home: input.t3Home,
+      chitauriHome: input.chitauriHome,
       authToken: input.authToken,
       noBrowser: resolveOptionalBooleanOverride(input.noBrowser, envOverrides.noBrowser),
       autoBootstrapProjectFromCwd: resolveOptionalBooleanOverride(
@@ -463,7 +452,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
         : "";
 
     yield* Effect.logInfo(
-      `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.T3CODE_PORT)} webPort=${String(env.PORT)} baseDir=${String(env.CHITAURI_HOME)}`,
+      `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.CHITAURI_PORT)} webPort=${String(env.PORT)} baseDir=${String(env.CHITAURI_HOME)}`,
     );
 
     if (input.dryRun) {
@@ -511,38 +500,38 @@ const devRunnerCli = Command.make("dev-runner", {
   mode: Argument.choice("mode", DEV_RUNNER_MODES).pipe(
     Argument.withDescription("Development mode to run."),
   ),
-  t3Home: Flag.string("home-dir").pipe(
+  chitauriHome: Flag.string("home-dir").pipe(
     Flag.withDescription("Base directory for all Chitauri data (equivalent to CHITAURI_HOME)."),
     Flag.withFallbackConfig(HomeConfig),
   ),
   authToken: Flag.string("auth-token").pipe(
-    Flag.withDescription("Auth token (forwards to T3CODE_AUTH_TOKEN)."),
+    Flag.withDescription("Auth token (forwards to CHITAURI_AUTH_TOKEN)."),
     Flag.withAlias("token"),
-    Flag.withFallbackConfig(optionalStringConfig("T3CODE_AUTH_TOKEN")),
+    Flag.withFallbackConfig(optionalStringConfig("CHITAURI_AUTH_TOKEN")),
   ),
   noBrowser: Flag.boolean("no-browser").pipe(
-    Flag.withDescription("Browser auto-open toggle (equivalent to T3CODE_NO_BROWSER)."),
-    Flag.withFallbackConfig(optionalBooleanConfig("T3CODE_NO_BROWSER")),
+    Flag.withDescription("Browser auto-open toggle (equivalent to CHITAURI_NO_BROWSER)."),
+    Flag.withFallbackConfig(optionalBooleanConfig("CHITAURI_NO_BROWSER")),
   ),
   autoBootstrapProjectFromCwd: Flag.boolean("auto-bootstrap-project-from-cwd").pipe(
     Flag.withDescription(
-      "Auto-bootstrap toggle (equivalent to T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD).",
+      "Auto-bootstrap toggle (equivalent to CHITAURI_AUTO_BOOTSTRAP_PROJECT_FROM_CWD).",
     ),
-    Flag.withFallbackConfig(optionalBooleanConfig("T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD")),
+    Flag.withFallbackConfig(optionalBooleanConfig("CHITAURI_AUTO_BOOTSTRAP_PROJECT_FROM_CWD")),
   ),
   logWebSocketEvents: Flag.boolean("log-websocket-events").pipe(
-    Flag.withDescription("WebSocket event logging toggle (equivalent to T3CODE_LOG_WS_EVENTS)."),
+    Flag.withDescription("WebSocket event logging toggle (equivalent to CHITAURI_LOG_WS_EVENTS)."),
     Flag.withAlias("log-ws-events"),
-    Flag.withFallbackConfig(optionalBooleanConfig("T3CODE_LOG_WS_EVENTS")),
+    Flag.withFallbackConfig(optionalBooleanConfig("CHITAURI_LOG_WS_EVENTS")),
   ),
   host: Flag.string("host").pipe(
-    Flag.withDescription("Server host/interface override (forwards to T3CODE_HOST)."),
-    Flag.withFallbackConfig(optionalStringConfig("T3CODE_HOST")),
+    Flag.withDescription("Server host/interface override (forwards to CHITAURI_HOST)."),
+    Flag.withFallbackConfig(optionalStringConfig("CHITAURI_HOST")),
   ),
   port: Flag.integer("port").pipe(
     Flag.withSchema(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 }))),
-    Flag.withDescription("Server port override (forwards to T3CODE_PORT)."),
-    Flag.withFallbackConfig(optionalPortConfig("T3CODE_PORT")),
+    Flag.withDescription("Server port override (forwards to CHITAURI_PORT)."),
+    Flag.withFallbackConfig(optionalPortConfig("CHITAURI_PORT")),
   ),
   devUrl: Flag.string("dev-url").pipe(
     Flag.withSchema(Schema.URLFromString),

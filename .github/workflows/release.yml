@@ -15,14 +15,17 @@ on:
         type: string
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
+
+concurrency:
+  group: release-desktop
+  cancel-in-progress: false
 
 jobs:
   preflight:
     name: Preflight
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 2
     outputs:
       version: ${{ steps.release_meta.outputs.version }}
       tag: ${{ steps.release_meta.outputs.tag }}
@@ -76,9 +79,7 @@ jobs:
         run: |
           # macOS artifacts are only publishable when they can be signed AND
           # notarized; an unsigned mac build is rejected downstream rather than
-          # shipped. Until the Apple secrets exist, CI ships Linux/Windows and
-          # macOS is built locally from a Keychain identity. Set the repository
-          # variable RELEASE_MAC=1 to put macOS back in the release.
+          # shipped. Configure the five Apple secrets, then set RELEASE_MAC=1.
           linux_win='{"label":"Linux x64","runner":"ubuntu-24.04","platform":"linux","target":"AppImage","arch":"x64"},{"label":"Windows x64","runner":"windows-2022","platform":"win","target":"nsis","arch":"x64"}'
           mac='{"label":"macOS arm64","runner":"macos-14","platform":"mac","target":"dmg","arch":"arm64"},{"label":"macOS x64","runner":"macos-15-intel","platform":"mac","target":"dmg","arch":"x64"}'
 
@@ -88,7 +89,7 @@ jobs:
           else
             echo "release_mac=false" >> "$GITHUB_OUTPUT"
             echo "matrix={\"include\":[$linux_win]}" >> "$GITHUB_OUTPUT"
-            echo "::notice title=macOS excluded from this release::RELEASE_MAC is not set to 1, so this release ships Linux and Windows only. Build macOS locally."
+            echo "::notice title=macOS excluded from this release::RELEASE_MAC is not set to 1. Configure the Apple secrets and enable the repository variable before the next release."
           fi
 
           # Kept in sync with the matrix above: publishing asserts every pattern
@@ -106,6 +107,14 @@ jobs:
             echo "RELEASE_FILES_EOF"
           } >> "$GITHUB_OUTPUT"
 
+  quality:
+    name: Release quality gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -115,6 +124,19 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: package.json
+
+      - name: Cache Bun and Turbo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.bun/install/cache
+            .turbo
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}-${{ hashFiles('turbo.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}-
+
+      - name: Verify vendored Effect tarballs
+        run: sha256sum --check vendor/effect/SHA256SUMS
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -153,8 +175,36 @@ jobs:
         with:
           node-version-file: package.json
 
+      - name: Cache Bun and Turbo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.bun/install/cache
+            .turbo
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}-${{ hashFiles('turbo.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}-
+
+      # The staged `bun install --production` re-downloads the Electron binary
+      # and electron-builder re-fetches its helper tooling (NSIS, winCodeSign,
+      # DMG helpers) on every run without this. Paths cover all three runner
+      # OSes; actions/cache skips the ones that don't exist.
+      - name: Cache Electron and electron-builder downloads
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+            ~/AppData/Local/electron/Cache
+            ~/AppData/Local/electron-builder/Cache
+          key: ${{ runner.os }}-electron-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
       - name: Install dependencies
-        # Preflight already runs the full lifecycle-script install plus lint,
+        # The quality job runs the full lifecycle-script install plus lint,
         # typecheck, and tests. Artifact jobs only need dependencies available.
         run: bun install --frozen-lockfile --ignore-scripts
 
@@ -164,14 +214,11 @@ jobs:
       - name: Build desktop artifact
         shell: bash
         env:
-          CSC_LINK: ${{ secrets.CSC_LINK || secrets.MACOS_CERT_P12_BASE64 }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD || secrets.MACOS_CERT_PASSWORD }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD || secrets.APPLE_APP_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -199,22 +246,19 @@ jobs:
 
           if [[ "${{ matrix.platform }}" == "mac" ]]; then
             if ! has_all "$CSC_LINK" "$CSC_KEY_PASSWORD"; then
-              echo "::error title=macOS release signing is required::Missing the certificate or password. Configure CSC_LINK and CSC_KEY_PASSWORD, or the BonsAI-compatible aliases MACOS_CERT_P12_BASE64 and MACOS_CERT_PASSWORD."
+              echo "::error title=macOS release signing is required::Configure CSC_LINK and CSC_KEY_PASSWORD."
               exit 1
             fi
 
-            if has_all "$APPLE_API_KEY" "$APPLE_API_KEY_ID" "$APPLE_API_ISSUER"; then
-              key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
-              printf '%s' "$APPLE_API_KEY" > "$key_path"
-              export APPLE_API_KEY="$key_path"
-              echo "macOS signing and API-key notarization enabled."
-            elif has_all "$APPLE_ID" "$APPLE_APP_SPECIFIC_PASSWORD" "$APPLE_TEAM_ID"; then
-              echo "macOS signing and Apple-ID notarization enabled."
-            else
-              echo "::error title=macOS notarization is required::Configure either APPLE_API_KEY, APPLE_API_KEY_ID, and APPLE_API_ISSUER; or APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD (APPLE_APP_PASSWORD is accepted as an alias), and APPLE_TEAM_ID."
+            if ! has_all "$APPLE_API_KEY" "$APPLE_API_KEY_ID" "$APPLE_API_ISSUER"; then
+              echo "::error title=macOS notarization is required::Configure APPLE_API_KEY, APPLE_API_KEY_ID, and APPLE_API_ISSUER."
               exit 1
             fi
 
+            key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
+            printf '%s' "$APPLE_API_KEY" > "$key_path"
+            export APPLE_API_KEY="$key_path"
+            echo "macOS signing and API-key notarization enabled."
             args+=(--signed)
           elif [[ "${{ matrix.platform }}" == "win" ]]; then
             if has_all \
@@ -290,10 +334,13 @@ jobs:
 
   publish_cli:
     name: Publish CLI to npm
-    if: ${{ vars.DPCODE_PUBLISH_CLI == '1' }}
-    needs: [preflight, build]
+    if: ${{ vars.CHITAURI_PUBLISH_CLI == '1' }}
+    needs: [preflight, quality, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -312,7 +359,7 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
-        # Preflight already validates lifecycle scripts; the publish job only
+        # The quality job validates lifecycle scripts; the publish job only
         # needs dependencies available to build the package.
         run: bun install --frozen-lockfile --ignore-scripts
 
@@ -327,9 +374,11 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    needs: [preflight, build]
+    needs: [preflight, quality, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -370,10 +419,12 @@ jobs:
 
   finalize:
     name: Finalize release
-    if: ${{ vars.DPCODE_FINALIZE_RELEASE == '1' }}
+    if: ${{ vars.CHITAURI_FINALIZE_RELEASE == '1' }}
     needs: [preflight, release]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
       - id: app_token
         name: Mint release app token

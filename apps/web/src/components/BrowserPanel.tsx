@@ -89,7 +89,7 @@ const BROWSER_BOUNDS_SYNC_BURST_FRAMES = 30;
 const BROWSER_BOUNDS_SYNC_STABLE_FRAME_TARGET = 2;
 const BROWSER_WEBVIEW_PARTITION = "persist:chitauri-browser";
 const BROWSER_PERF_SAMPLE_INTERVAL_MS = 5_000;
-const SYNARA_BROWSER_LABEL = "Chitauri browser";
+const CHITAURI_BROWSER_LABEL = "Chitauri browser";
 // The address field and tab pills share one chrome-control surface so the whole row reads
 // as a single cohesive control: matching height, radius, border width, and type scale.
 const BROWSER_CHROME_CONTROL_CLASS_NAME = "h-8 rounded-lg border text-xs";
@@ -815,7 +815,7 @@ export function BrowserPanel({
     }
 
     const intervalId = window.setInterval(() => {
-      console.info(`[${SYNARA_BROWSER_LABEL} panel perf]`, {
+      console.info(`[${CHITAURI_BROWSER_LABEL} panel perf]`, {
         threadId,
         ...perfCountersRef.current,
       });

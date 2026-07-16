@@ -13,12 +13,12 @@ import {
 
 it.layer(NodeServices.layer)("dev-runner", (it) => {
   describe("resolveOffset", () => {
-    it.effect("uses explicit T3CODE_PORT_OFFSET when provided", () =>
+    it.effect("uses explicit CHITAURI_PORT_OFFSET when provided", () =>
       Effect.sync(() => {
         const result = resolveOffset({ portOffset: 12, devInstance: undefined });
         assert.deepStrictEqual(result, {
           offset: 12,
-          source: "T3CODE_PORT_OFFSET=12",
+          source: "CHITAURI_PORT_OFFSET=12",
         });
       }),
     );
@@ -40,7 +40,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           }),
         );
 
-        assert.ok(error.includes("Invalid T3CODE_PORT_OFFSET"));
+        assert.ok(error.includes("Invalid CHITAURI_PORT_OFFSET"));
       }),
     );
   });
@@ -53,7 +53,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           baseEnv: {},
           serverOffset: 0,
           webOffset: 0,
-          t3Home: undefined,
+          chitauriHome: undefined,
           authToken: undefined,
           noBrowser: undefined,
           autoBootstrapProjectFromCwd: undefined,
@@ -65,8 +65,6 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         });
 
         assert.equal(env.CHITAURI_HOME, resolve(homedir(), ".chitauri"));
-        assert.equal(env.SYNARA_HOME, resolve(homedir(), ".chitauri"));
-        assert.equal(env.T3CODE_HOME, resolve(homedir(), ".chitauri"));
       }),
     );
 
@@ -77,7 +75,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           baseEnv: {},
           serverOffset: 0,
           webOffset: 0,
-          t3Home: "/tmp/custom-t3",
+          chitauriHome: "/tmp/custom-t3",
           authToken: "secret",
           noBrowser: true,
           autoBootstrapProjectFromCwd: false,
@@ -88,15 +86,13 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           stateNamespace: undefined,
         });
 
-        assert.equal(env.T3CODE_HOME, resolve("/tmp/custom-t3"));
         assert.equal(env.CHITAURI_HOME, resolve("/tmp/custom-t3"));
-        assert.equal(env.SYNARA_HOME, resolve("/tmp/custom-t3"));
-        assert.equal(env.T3CODE_PORT, "4222");
+        assert.equal(env.CHITAURI_PORT, "4222");
         assert.equal(env.VITE_WS_URL, "ws://[::1]:4222");
-        assert.equal(env.T3CODE_NO_BROWSER, "1");
-        assert.equal(env.T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD, "0");
-        assert.equal(env.T3CODE_LOG_WS_EVENTS, "1");
-        assert.equal(env.T3CODE_HOST, "0.0.0.0");
+        assert.equal(env.CHITAURI_NO_BROWSER, "1");
+        assert.equal(env.CHITAURI_AUTO_BOOTSTRAP_PROJECT_FROM_CWD, "0");
+        assert.equal(env.CHITAURI_LOG_WS_EVENTS, "1");
+        assert.equal(env.CHITAURI_HOST, "0.0.0.0");
         assert.equal(env.VITE_DEV_SERVER_URL, "http://localhost:7331/");
       }),
     );
@@ -106,11 +102,11 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         const env = yield* createDevRunnerEnv({
           mode: "dev",
           baseEnv: {
-            T3CODE_LOG_WS_EVENTS: "keep-me-out",
+            CHITAURI_LOG_WS_EVENTS: "keep-me-out",
           },
           serverOffset: 0,
           webOffset: 0,
-          t3Home: undefined,
+          chitauriHome: undefined,
           authToken: undefined,
           noBrowser: undefined,
           autoBootstrapProjectFromCwd: undefined,
@@ -121,8 +117,8 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           stateNamespace: undefined,
         });
 
-        assert.equal(env.T3CODE_MODE, "web");
-        assert.equal(env.T3CODE_LOG_WS_EVENTS, undefined);
+        assert.equal(env.CHITAURI_MODE, "web");
+        assert.equal(env.CHITAURI_LOG_WS_EVENTS, undefined);
       }),
     );
 
@@ -133,7 +129,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           baseEnv: {},
           serverOffset: 0,
           webOffset: 0,
-          t3Home: undefined,
+          chitauriHome: undefined,
           authToken: undefined,
           noBrowser: undefined,
           autoBootstrapProjectFromCwd: undefined,
@@ -144,18 +140,18 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           stateNamespace: undefined,
         });
 
-        assert.equal(env.T3CODE_LOG_WS_EVENTS, "0");
+        assert.equal(env.CHITAURI_LOG_WS_EVENTS, "0");
       }),
     );
 
-    it.effect("uses custom t3Home when provided", () =>
+    it.effect("uses custom chitauriHome when provided", () =>
       Effect.gen(function* () {
         const env = yield* createDevRunnerEnv({
           mode: "dev",
           baseEnv: {},
           serverOffset: 0,
           webOffset: 0,
-          t3Home: "/tmp/my-t3",
+          chitauriHome: "/tmp/my-t3",
           authToken: undefined,
           noBrowser: undefined,
           autoBootstrapProjectFromCwd: undefined,
@@ -166,20 +162,18 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           stateNamespace: undefined,
         });
 
-        assert.equal(env.T3CODE_HOME, resolve("/tmp/my-t3"));
-        assert.equal(env.DPCODE_HOME, resolve("/tmp/my-t3"));
-        assert.equal(env.SYNARA_HOME, resolve("/tmp/my-t3"));
+        assert.equal(env.CHITAURI_HOME, resolve("/tmp/my-t3"));
       }),
     );
 
-    it.effect("forwards an explicit state namespace to SYNARA_STATE_NAMESPACE", () =>
+    it.effect("forwards an explicit state namespace to CHITAURI_STATE_NAMESPACE", () =>
       Effect.gen(function* () {
         const env = yield* createDevRunnerEnv({
           mode: "dev:desktop",
           baseEnv: {},
           serverOffset: 0,
           webOffset: 0,
-          t3Home: undefined,
+          chitauriHome: undefined,
           authToken: undefined,
           noBrowser: undefined,
           autoBootstrapProjectFromCwd: undefined,
@@ -190,7 +184,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           stateNamespace: "userdata",
         });
 
-        assert.equal(env.SYNARA_STATE_NAMESPACE, "userdata");
+        assert.equal(env.CHITAURI_STATE_NAMESPACE, "userdata");
       }),
     );
 
@@ -198,10 +192,10 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
       Effect.gen(function* () {
         const env = yield* createDevRunnerEnv({
           mode: "dev:desktop",
-          baseEnv: { SYNARA_STATE_NAMESPACE: "leak" },
+          baseEnv: { CHITAURI_STATE_NAMESPACE: "leak" },
           serverOffset: 0,
           webOffset: 0,
-          t3Home: undefined,
+          chitauriHome: undefined,
           authToken: undefined,
           noBrowser: undefined,
           autoBootstrapProjectFromCwd: undefined,
@@ -212,7 +206,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           stateNamespace: undefined,
         });
 
-        assert.equal(env.SYNARA_STATE_NAMESPACE, undefined);
+        assert.equal(env.CHITAURI_STATE_NAMESPACE, undefined);
       }),
     );
   });

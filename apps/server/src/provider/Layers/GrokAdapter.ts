@@ -95,9 +95,7 @@ const GROK_RESUME_VERSION = 1 as const;
 const GROK_MODEL_DISCOVERY_TIMEOUT_MS = 15_000;
 const GROK_ACP_TRANSPORT_DEBUG_MARKER = "grok-acp-meta-stripper-v2";
 const GROK_ACP_LOG_PAYLOAD_LIMIT = 4_000;
-const GROK_ACP_DEBUG_ENV = "SYNARA_GROK_ACP_DEBUG";
-const DPCODE_GROK_ACP_DEBUG_ENV = "DPCODE_GROK_ACP_DEBUG";
-const LEGACY_GROK_ACP_DEBUG_ENV = "DP_GROK_ACP_DEBUG";
+const GROK_ACP_DEBUG_ENV = "CHITAURI_GROK_ACP_DEBUG";
 const GROK_RESUME_REPLAY_QUIET_MS = 200;
 // Longest that startSession blocks waiting for the resume replay to settle.
 // Suppression stays active past this point; only the startup path is unblocked.
@@ -110,9 +108,9 @@ const GROK_COMPACT_PROMPT = "/compact";
 // Backstop for an alive-but-silent grok child: if a turn produces no ACP
 // activity for this long, force-fail it instead of showing "Working" forever.
 // Generous by design so legitimate long, quiet tool runs are not killed;
-// override with SYNARA_GROK_TURN_IDLE_TIMEOUT_MS when a workload needs longer.
+// override with CHITAURI_GROK_TURN_IDLE_TIMEOUT_MS when a workload needs longer.
 const GROK_TURN_IDLE_TIMEOUT_MS = resolveAcpTurnIdleTimeoutMs({
-  envVar: "SYNARA_GROK_TURN_IDLE_TIMEOUT_MS",
+  envVar: "CHITAURI_GROK_TURN_IDLE_TIMEOUT_MS",
   defaultMs: 600_000,
 });
 const GROK_TURN_WATCHDOG_INTERVAL_MS = 15_000;
@@ -186,11 +184,7 @@ function summarizeGrokAcpRequestPayload(method: string, payload: unknown): unkno
 }
 
 function isGrokAcpDebugEnabled(): boolean {
-  return (
-    process.env[GROK_ACP_DEBUG_ENV] === "1" ||
-    process.env[DPCODE_GROK_ACP_DEBUG_ENV] === "1" ||
-    process.env[LEGACY_GROK_ACP_DEBUG_ENV] === "1"
-  );
+  return process.env[GROK_ACP_DEBUG_ENV] === "1";
 }
 
 function mapGrokModelDiscoveryError(cause: unknown): ProviderAdapterRequestError {

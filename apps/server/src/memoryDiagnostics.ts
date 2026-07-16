@@ -11,11 +11,7 @@ const MB = 1024 * 1024;
 const DEFAULT_MEMORY_DIAGNOSTIC_INTERVAL_MS = 5 * 60 * 1000;
 const DEFAULT_WARNING_HEAP_USED_RATIO = 0.7;
 const DISABLE_MEMORY_DIAGNOSTICS_VALUES = new Set(["0", "false", "off"]);
-const MEMORY_DIAGNOSTICS_ENV_KEYS = [
-  "SYNARA_SERVER_MEMORY_DIAGNOSTICS",
-  "T3CODE_SERVER_MEMORY_DIAGNOSTICS",
-  "DPCODE_SERVER_MEMORY_DIAGNOSTICS",
-] as const;
+const MEMORY_DIAGNOSTICS_ENV_KEY = "CHITAURI_SERVER_MEMORY_DIAGNOSTICS";
 
 export interface ServerMemoryDiagnosticSnapshot {
   readonly rssMb: number;
@@ -79,10 +75,8 @@ export function shouldWarnServerMemory(
 }
 
 function isServerMemoryDiagnosticsDisabled(): boolean {
-  return MEMORY_DIAGNOSTICS_ENV_KEYS.some((key) => {
-    const value = process.env[key]?.trim().toLowerCase();
-    return value !== undefined && DISABLE_MEMORY_DIAGNOSTICS_VALUES.has(value);
-  });
+  const value = process.env[MEMORY_DIAGNOSTICS_ENV_KEY]?.trim().toLowerCase();
+  return value !== undefined && DISABLE_MEMORY_DIAGNOSTICS_VALUES.has(value);
 }
 
 // Starts low-volume heap/RSS logging for packaged desktop backend crash reports.

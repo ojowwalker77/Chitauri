@@ -9,11 +9,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   CHITAURI_BROWSER_USE_PIPE_ENV,
-  DPCODE_BROWSER_USE_PIPE_ENV,
   resolveConfiguredBrowserUsePipePath,
   resolveDefaultBrowserUsePipePath,
-  SYNARA_BROWSER_USE_PIPE_ENV,
-  T3CODE_BROWSER_USE_PIPE_ENV,
 } from "./browserUsePipeServer";
 
 describe("browser-use pipe path resolution", () => {
@@ -29,25 +26,20 @@ describe("browser-use pipe path resolution", () => {
       resolveConfiguredBrowserUsePipePath(
         {
           [CHITAURI_BROWSER_USE_PIPE_ENV]: "/tmp/codex-browser-use/chitauri.sock",
-          [SYNARA_BROWSER_USE_PIPE_ENV]: "/tmp/codex-browser-use/synara.sock",
-          [DPCODE_BROWSER_USE_PIPE_ENV]: "/tmp/codex-browser-use/custom.sock",
-          [T3CODE_BROWSER_USE_PIPE_ENV]: "/tmp/codex-browser-use/legacy.sock",
         },
         "darwin",
       ),
     ).toBe("/tmp/codex-browser-use/chitauri.sock");
   });
 
-  it("falls back to legacy desktop pipe environment names", () => {
+  it("falls back to the default pipe path when the env override is blank", () => {
     expect(
       resolveConfiguredBrowserUsePipePath(
         {
-          [SYNARA_BROWSER_USE_PIPE_ENV]: "/tmp/codex-browser-use/synara.sock",
-          [DPCODE_BROWSER_USE_PIPE_ENV]: "/tmp/codex-browser-use/custom.sock",
-          [T3CODE_BROWSER_USE_PIPE_ENV]: "/tmp/codex-browser-use/legacy.sock",
+          [CHITAURI_BROWSER_USE_PIPE_ENV]: "   ",
         },
         "darwin",
       ),
-    ).toBe("/tmp/codex-browser-use/synara.sock");
+    ).toBe(resolveDefaultBrowserUsePipePath("darwin"));
   });
 });

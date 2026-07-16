@@ -5,7 +5,7 @@
 
 export type WsTransportState = "connecting" | "open" | "closed" | "disposed";
 
-export const SYNARA_WS_TRANSPORT_STATE_EVENT = "chitauri:ws-transport-state";
+export const CHITAURI_WS_TRANSPORT_STATE_EVENT = "chitauri:ws-transport-state";
 
 export interface WsTransportStateEventDetail {
   state: WsTransportState;
@@ -22,7 +22,7 @@ export function emitWsTransportState(state: WsTransportState): void {
   }
 
   window.dispatchEvent(
-    new CustomEvent<WsTransportStateEventDetail>(SYNARA_WS_TRANSPORT_STATE_EVENT, {
+    new CustomEvent<WsTransportStateEventDetail>(CHITAURI_WS_TRANSPORT_STATE_EVENT, {
       detail: { state },
     }),
   );
@@ -42,8 +42,8 @@ export function addWsTransportStateListener(
     listener(detail.state);
   };
 
-  window.addEventListener(SYNARA_WS_TRANSPORT_STATE_EVENT, handleStateChange);
+  window.addEventListener(CHITAURI_WS_TRANSPORT_STATE_EVENT, handleStateChange);
   return () => {
-    window.removeEventListener(SYNARA_WS_TRANSPORT_STATE_EVENT, handleStateChange);
+    window.removeEventListener(CHITAURI_WS_TRANSPORT_STATE_EVENT, handleStateChange);
   };
 }

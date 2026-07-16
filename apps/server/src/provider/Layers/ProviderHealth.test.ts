@@ -6,7 +6,7 @@ import { Effect, FileSystem, Layer, Path, Sink, Stream } from "effect";
 import * as PlatformError from "effect/PlatformError";
 import { ChildProcessSpawner } from "effect/unstable/process";
 
-import { DPCODE_CODEX_HOME_OVERLAY_DIR } from "../../codexHomePaths";
+import { CHITAURI_CODEX_HOME_OVERLAY_DIR } from "../../codexHomePaths";
 import { ServerConfig } from "../../config";
 import { ServerSettingsService } from "../../serverSettings";
 import { ProviderHealth } from "../Services/ProviderHealth";
@@ -152,14 +152,11 @@ function withTempCodexHome(configContent?: string) {
 
     yield* Effect.acquireRelease(
       Effect.sync(() => {
-        // Override every runtime-home var the overlay resolver consults (SYNARA_HOME wins over
-        // DPCODE_HOME/T3CODE_HOME) plus CODEX_HOME, so an ambient SYNARA_HOME can't shadow the
-        // temp dir and skew the resolved CODEX_HOME during this test.
+        // Override CODEX_HOME and CHITAURI_HOME so ambient process state cannot
+        // redirect the overlay outside this test's temporary directories.
         const overrides: Record<string, string> = {
           CODEX_HOME: tmpDir,
-          SYNARA_HOME: runtimeDir,
-          DPCODE_HOME: runtimeDir,
-          T3CODE_HOME: runtimeDir,
+          CHITAURI_HOME: runtimeDir,
         };
         const restore: Record<string, string | undefined> = {};
         for (const [key, value] of Object.entries(overrides)) {
@@ -651,7 +648,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           path.join(configuredHome, "config.toml"),
           'model_provider = "openai"\n',
         );
-        expectedCodexHome = path.join(runtimeDir, DPCODE_CODEX_HOME_OVERLAY_DIR);
+        expectedCodexHome = path.join(runtimeDir, CHITAURI_CODEX_HOME_OVERLAY_DIR);
 
         const status = yield* makeCheckCodexProviderStatus("codex", configuredHome);
         assert.strictEqual(status.status, "ready");

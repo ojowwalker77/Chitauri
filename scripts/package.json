@@ -11,14 +11,14 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.77",
-    "@effect/platform-node": "catalog:",
+    "@effect/platform-node": "file:../vendor/effect/effect-platform-node-8881a9b.tgz",
     "@t3tools/contracts": "workspace:*",
     "@t3tools/shared": "workspace:*",
-    "effect": "catalog:"
+    "effect": "file:../vendor/effect/effect-8881a9b.tgz"
   },
   "devDependencies": {
     "@effect/language-service": "catalog:",
-    "@effect/vitest": "catalog:",
+    "@effect/vitest": "file:../vendor/effect/effect-vitest-8881a9b.tgz",
     "@types/bun": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

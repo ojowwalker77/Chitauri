@@ -8,8 +8,8 @@ import path from "node:path";
 import {
   defaultTerminalTitleForCliKind,
   managedTerminalCommandNameForCliKind,
-  T3CODE_TERMINAL_HOOK_OSC_PREFIX,
-  T3CODE_TERMINAL_CLI_KIND_ENV_KEY,
+  CHITAURI_TERMINAL_HOOK_OSC_PREFIX,
+  CHITAURI_TERMINAL_CLI_KIND_ENV_KEY,
   type TerminalAgentHookEventType,
   type TerminalCliKind,
 } from "@t3tools/shared/terminalThreads";
@@ -83,7 +83,7 @@ function resolveExecutableOnPath(commandName: string, env: NodeJS.ProcessEnv): s
 }
 
 function buildHookOscSequence(eventType: TerminalAgentHookEventType): string {
-  return `\\033]${T3CODE_TERMINAL_HOOK_OSC_PREFIX}${eventType}\\007`;
+  return `\\033]${CHITAURI_TERMINAL_HOOK_OSC_PREFIX}${eventType}\\007`;
 }
 
 function buildNotifyHookScript(): string {
@@ -244,13 +244,13 @@ function buildCodexWrapperScript(input: {
     "      esac",
     "    done",
     "  ) &",
-    "  T3CODE_CODEX_START_WATCHER_PID=$!",
+    "  CHITAURI_CODEX_START_WATCHER_PID=$!",
     "fi",
     `${shellQuote(targetPath)} --enable codex_hooks -c ${shellQuote(`notify=["bash",${JSON.stringify(notifyHookPath)}]`)} "$@"`,
     "_t3code_status=$?",
-    'if [ -n "${T3CODE_CODEX_START_WATCHER_PID:-}" ]; then',
-    '  kill "$T3CODE_CODEX_START_WATCHER_PID" >/dev/null 2>&1 || true',
-    '  wait "$T3CODE_CODEX_START_WATCHER_PID" 2>/dev/null || true',
+    'if [ -n "${CHITAURI_CODEX_START_WATCHER_PID:-}" ]; then',
+    '  kill "$CHITAURI_CODEX_START_WATCHER_PID" >/dev/null 2>&1 || true',
+    '  wait "$CHITAURI_CODEX_START_WATCHER_PID" 2>/dev/null || true',
     "fi",
     'exit "$_t3code_status"',
   ].join("\n");
@@ -274,7 +274,7 @@ function buildWrapperScript(input: {
     "#!/bin/sh",
     `# Managed ${commandName} wrapper injected by t3code terminal sessions.`,
     `printf '\\033]0;%s\\007' ${shellQuote(title)}`,
-    `export ${T3CODE_TERMINAL_CLI_KIND_ENV_KEY}=${shellQuote(cliKind)}`,
+    `export ${CHITAURI_TERMINAL_CLI_KIND_ENV_KEY}=${shellQuote(cliKind)}`,
     commandBody,
     "",
   ].join("\n");
@@ -294,27 +294,27 @@ function writeFileIfChanged(filePath: string, content: string, mode: number): vo
 
 function buildManagedZshRc(quotedZshDir: string): string {
   return `# Chitauri zsh rc wrapper
-_t3code_home="\${T3CODE_ORIGINAL_ZDOTDIR:-$HOME}"
+_t3code_home="\${CHITAURI_ORIGINAL_ZDOTDIR:-$HOME}"
 export ZDOTDIR="$_t3code_home"
 [[ -f "$_t3code_home/.zshrc" ]] && source "$_t3code_home/.zshrc"
 export ZDOTDIR=${quotedZshDir}
-if [ -n "\${T3CODE_MANAGED_BIN_DIR:-}" ] && [ -d "\${T3CODE_MANAGED_BIN_DIR}" ]; then
+if [ -n "\${CHITAURI_MANAGED_BIN_DIR:-}" ] && [ -d "\${CHITAURI_MANAGED_BIN_DIR}" ]; then
   case ":$PATH:" in
-    *:\${T3CODE_MANAGED_BIN_DIR}:*) ;;
-    *) export PATH="\${T3CODE_MANAGED_BIN_DIR}:$PATH" ;;
+    *:\${CHITAURI_MANAGED_BIN_DIR}:*) ;;
+    *) export PATH="\${CHITAURI_MANAGED_BIN_DIR}:$PATH" ;;
   esac
   unalias claude 2>/dev/null || true
   claude() {
-    if [ -x "\${T3CODE_MANAGED_BIN_DIR}/claude" ] && [ ! -d "\${T3CODE_MANAGED_BIN_DIR}/claude" ]; then
-      "\${T3CODE_MANAGED_BIN_DIR}/claude" "$@"
+    if [ -x "\${CHITAURI_MANAGED_BIN_DIR}/claude" ] && [ ! -d "\${CHITAURI_MANAGED_BIN_DIR}/claude" ]; then
+      "\${CHITAURI_MANAGED_BIN_DIR}/claude" "$@"
     else
       command claude "$@"
     fi
   }
   unalias codex 2>/dev/null || true
   codex() {
-    if [ -x "\${T3CODE_MANAGED_BIN_DIR}/codex" ] && [ ! -d "\${T3CODE_MANAGED_BIN_DIR}/codex" ]; then
-      "\${T3CODE_MANAGED_BIN_DIR}/codex" "$@"
+    if [ -x "\${CHITAURI_MANAGED_BIN_DIR}/codex" ] && [ ! -d "\${CHITAURI_MANAGED_BIN_DIR}/codex" ]; then
+      "\${CHITAURI_MANAGED_BIN_DIR}/codex" "$@"
     else
       command codex "$@"
     fi
@@ -322,8 +322,8 @@ if [ -n "\${T3CODE_MANAGED_BIN_DIR:-}" ] && [ -d "\${T3CODE_MANAGED_BIN_DIR}" ];
   typeset -ga precmd_functions 2>/dev/null || true
   _t3code_ensure_managed_bin() {
     case ":$PATH:" in
-      *:\${T3CODE_MANAGED_BIN_DIR}:*) ;;
-      *) PATH="\${T3CODE_MANAGED_BIN_DIR}:$PATH" ;;
+      *:\${CHITAURI_MANAGED_BIN_DIR}:*) ;;
+      *) PATH="\${CHITAURI_MANAGED_BIN_DIR}:$PATH" ;;
     esac
   }
   {
@@ -339,7 +339,7 @@ function ensureManagedZshWrappers(zshDir: string): void {
   writeFileIfChanged(
     path.join(zshDir, ".zshenv"),
     `# Chitauri zsh env wrapper
-_t3code_home="\${T3CODE_ORIGINAL_ZDOTDIR:-$HOME}"
+_t3code_home="\${CHITAURI_ORIGINAL_ZDOTDIR:-$HOME}"
 export ZDOTDIR="$_t3code_home"
 [[ -f "$_t3code_home/.zshenv" ]] && source "$_t3code_home/.zshenv"
 export ZDOTDIR=${quotedZshDir}
@@ -349,7 +349,7 @@ export ZDOTDIR=${quotedZshDir}
   writeFileIfChanged(
     path.join(zshDir, ".zprofile"),
     `# Chitauri zsh profile wrapper
-_t3code_home="\${T3CODE_ORIGINAL_ZDOTDIR:-$HOME}"
+_t3code_home="\${CHITAURI_ORIGINAL_ZDOTDIR:-$HOME}"
 export ZDOTDIR="$_t3code_home"
 [[ -f "$_t3code_home/.zprofile" ]] && source "$_t3code_home/.zprofile"
 export ZDOTDIR=${quotedZshDir}
@@ -460,8 +460,8 @@ function applyManagedTerminalWrapperEnvState(
 
   return {
     ...env,
-    T3CODE_MANAGED_BIN_DIR: wrapperState.binDir,
-    T3CODE_ORIGINAL_ZDOTDIR: env.ZDOTDIR ?? env.HOME ?? "",
+    CHITAURI_MANAGED_BIN_DIR: wrapperState.binDir,
+    CHITAURI_ORIGINAL_ZDOTDIR: env.ZDOTDIR ?? env.HOME ?? "",
     ...(wrapperState.zshDir ? { ZDOTDIR: wrapperState.zshDir } : {}),
     [envPathKey]: currentEntries.join(path.delimiter),
   };

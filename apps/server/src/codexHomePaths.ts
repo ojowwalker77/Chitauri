@@ -10,9 +10,8 @@
 import { homedir } from "node:os";
 import path from "node:path";
 
-export const DPCODE_CODEX_HOME_OVERLAY_DIR = "codex-home-overlay";
-export const DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN_ENV =
-  "DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN";
+export const CHITAURI_CODEX_HOME_OVERLAY_DIR = "codex-home-overlay";
+export const CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN_ENV = "CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN";
 
 export interface CodexHomePathsInput {
   readonly env?: NodeJS.ProcessEnv;
@@ -28,21 +27,17 @@ export function resolveBaseCodexHomePath(
 
 export function shouldDisableDpCodeBrowserPlugin(env: NodeJS.ProcessEnv): boolean {
   // The plugin is disabled by default; the only way to opt out is the explicit "0" sentinel.
-  return env[DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN_ENV] !== "0";
+  return env[CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN_ENV] !== "0";
 }
 
-export function resolveDpCodeCodexHomeOverlayPath(
+export function resolveChitauriCodexHomeOverlayPath(
   env: NodeJS.ProcessEnv,
   sourceHomePath: string,
 ): string {
-  const runtimeHome =
-    env.CHITAURI_HOME?.trim() ||
-    env.SYNARA_HOME?.trim() ||
-    env.DPCODE_HOME?.trim() ||
-    env.T3CODE_HOME?.trim();
+  const runtimeHome = env.CHITAURI_HOME?.trim();
   const overlayRoot =
     runtimeHome || path.join(path.dirname(sourceHomePath), ".chitauri", "runtime");
-  return path.join(overlayRoot, DPCODE_CODEX_HOME_OVERLAY_DIR);
+  return path.join(overlayRoot, CHITAURI_CODEX_HOME_OVERLAY_DIR);
 }
 
 /**
@@ -57,7 +52,7 @@ export function resolveActiveCodexHomeWritePath(input: CodexHomePathsInput = {})
   if (!shouldDisableDpCodeBrowserPlugin(env)) {
     return source;
   }
-  const overlay = resolveDpCodeCodexHomeOverlayPath(env, source);
+  const overlay = resolveChitauriCodexHomeOverlayPath(env, source);
   return path.resolve(source) === path.resolve(overlay) ? source : overlay;
 }
 
@@ -75,7 +70,7 @@ export function resolveCodexHomeAllowlistCandidates(
 ): readonly string[] {
   const env = input.env ?? process.env;
   const source = resolveBaseCodexHomePath(env, input.homePath);
-  const overlay = resolveDpCodeCodexHomeOverlayPath(env, source);
+  const overlay = resolveChitauriCodexHomeOverlayPath(env, source);
   const sourceResolved = path.resolve(source);
   const overlayResolved = path.resolve(overlay);
   return sourceResolved === overlayResolved ? [source] : [source, overlay];

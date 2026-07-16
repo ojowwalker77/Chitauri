@@ -1,0 +1,11 @@
+#!/bin/sh
+# Formatting gate. CI enforces `oxfmt --check`; this catches it before the
+# commit lands so red-formatting commits never reach a branch.
+# Bypass for emergencies: git commit --no-verify
+if [ -x node_modules/.bin/oxfmt ]; then
+  if ! node_modules/.bin/oxfmt --check >/dev/null 2>&1; then
+    echo "pre-commit: unformatted files detected. Run 'bun fmt' and re-stage." >&2
+    node_modules/.bin/oxfmt --check 2>&1 | head -20 >&2
+    exit 1
+  fi
+fi

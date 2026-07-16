@@ -27,7 +27,7 @@ import {
 
 import {
   resolveBaseCodexHomePath,
-  resolveDpCodeCodexHomeOverlayPath,
+  resolveChitauriCodexHomeOverlayPath,
   shouldDisableDpCodeBrowserPlugin,
 } from "./codexHomePaths.ts";
 
@@ -48,10 +48,7 @@ export function resolveCodexBrowserUsePipePath(
   } = {},
 ): string {
   const env = input.env ?? process.env;
-  const configured =
-    env.SYNARA_BROWSER_USE_PIPE_PATH?.trim() ||
-    env.DPCODE_BROWSER_USE_PIPE_PATH?.trim() ||
-    env.T3CODE_BROWSER_USE_PIPE_PATH?.trim();
+  const configured = env.CHITAURI_BROWSER_USE_PIPE_PATH?.trim();
   if (configured) {
     return configured;
   }
@@ -177,12 +174,12 @@ function ensureCodexOverlaySymlink(input: {
   linkOrCopyCodexOverlayEntry(input);
 }
 
-function prepareDpCodeCodexHomeOverlay(input: {
+function prepareChitauriCodexHomeOverlay(input: {
   readonly env: NodeJS.ProcessEnv;
   readonly homePath?: string;
 }): string | undefined {
   const sourceHomePath = resolveBaseCodexHomePath(input.env, input.homePath);
-  const overlayHomePath = resolveDpCodeCodexHomeOverlayPath(input.env, sourceHomePath);
+  const overlayHomePath = resolveChitauriCodexHomeOverlayPath(input.env, sourceHomePath);
   if (path.resolve(sourceHomePath) === path.resolve(overlayHomePath)) {
     return undefined;
   }
@@ -232,7 +229,7 @@ export function buildCodexProcessEnv(
 ): NodeJS.ProcessEnv {
   const baseEnv = { ...(input.env ?? process.env) };
   const overlayHomePath = shouldDisableDpCodeBrowserPlugin(baseEnv)
-    ? prepareDpCodeCodexHomeOverlay({
+    ? prepareChitauriCodexHomeOverlay({
         env: baseEnv,
         ...(input.homePath ? { homePath: input.homePath } : {}),
       })
