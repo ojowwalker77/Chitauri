@@ -1419,7 +1419,9 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("Tool 2");
     expect(markup).toContain("Tool 3");
     expect(markup).toContain("Tool 6");
-    expect(markup).toContain("+2 more tool calls");
+    expect(markup).toContain("2 earlier operations");
+    expect(markup).toContain('data-work-ledger="true"');
+    expect(markup).toContain('data-ledger-sequence="3"');
   });
 
   it("attaches trailing tool rows to the last assistant reply after completion", async () => {

@@ -806,6 +806,46 @@ describe("deriveMessagesTimelineRows", () => {
     expect(terminal!.collapsedTurnItems).toBeUndefined();
   });
 
+  it("moves the live elapsed header onto the latest assistant activity row", () => {
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      isWorking: true,
+      activeTurnInProgress: true,
+      activeTurnId: TurnId.makeUnsafe("t1"),
+      activeTurnStartedAt: "2026-01-01T00:00:00Z",
+      timelineEntries: [
+        userEntry("u1", "2026-01-01T00:00:00Z"),
+        workEntry("w1", "2026-01-01T00:00:01Z", "read files"),
+        assistantEntry("a1", "2026-01-01T00:00:02Z", {
+          turnId: "t1",
+          text: "Still working",
+          streaming: true,
+        }),
+      ],
+    });
+
+    const assistant = messageRow(rows, "a1");
+    expect(assistant?.activeTurnStartedAt).toBe("2026-01-01T00:00:00Z");
+    expect(rows.some((row) => row.kind === "working-header")).toBe(false);
+  });
+
+  it("moves the live elapsed header onto standalone work before narration arrives", () => {
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      isWorking: true,
+      activeTurnInProgress: true,
+      activeTurnStartedAt: "2026-01-01T00:00:00Z",
+      timelineEntries: [
+        userEntry("u1", "2026-01-01T00:00:00Z"),
+        workEntry("w1", "2026-01-01T00:00:01Z", "read files"),
+      ],
+    });
+
+    const work = rows.find((row) => row.kind === "work");
+    expect(work?.activeTurnStartedAt).toBe("2026-01-01T00:00:00Z");
+    expect(rows.some((row) => row.kind === "working-header")).toBe(false);
+  });
+
   it("keeps pre-existing tool work above the new live narration text", () => {
     const rows = deriveMessagesTimelineRows({
       ...baseInput,
