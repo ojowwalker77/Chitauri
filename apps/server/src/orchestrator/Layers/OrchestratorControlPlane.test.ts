@@ -19,10 +19,7 @@ import {
   ProjectionSnapshotQuery,
   type ProjectionSnapshotQueryShape,
 } from "../../orchestration/Services/ProjectionSnapshotQuery.ts";
-import {
-  ServerSettingsService,
-  type ServerSettingsShape,
-} from "../../serverSettings.ts";
+import { ServerSettingsService, type ServerSettingsShape } from "../../serverSettings.ts";
 import { makeOrchestratorControlPlane } from "./OrchestratorControlPlane.ts";
 
 const SEAT_THREAD_ID = ThreadId.makeUnsafe("thread-seat");
@@ -69,26 +66,31 @@ it("authenticates a seat and exposes only the control-plane tools", async () => 
 
   const unauthorized = await Effect.runPromise(
     controlPlane.handleHttpRequest(
-      new Request(mcp.url, { method: "POST", body: "{}", headers: { "content-type": "application/json" } }),
+      new Request(mcp.url, {
+        method: "POST",
+        body: "{}",
+        headers: { "content-type": "application/json" },
+      }),
     ),
   );
   assert.strictEqual(unauthorized.status, 401);
 
   const transport = new StreamableHTTPClientTransport(new URL(mcp.url), {
     requestInit: { headers: mcp.headers },
-    fetch: ((input: RequestInfo | URL, init?: RequestInit) => {
+    fetch: ((input: Request | string, init?: RequestInit) => {
       const request = input instanceof Request ? input : new Request(input, init);
       return Effect.runPromise(controlPlane.handleHttpRequest(request));
     }) as typeof fetch,
   });
   const client = new Client({ name: "chitauri-test", version: "1.0.0" });
-  await client.connect(transport);
+  await client.connect(transport as Parameters<typeof client.connect>[0]);
   try {
     const tools = await client.listTools();
-    assert.deepStrictEqual(
-      tools.tools.map((tool) => tool.name).sort(),
-      ["delegate", "result", "status"],
-    );
+    assert.deepStrictEqual(tools.tools.map((tool) => tool.name).sort(), [
+      "delegate",
+      "result",
+      "status",
+    ]);
   } finally {
     await client.close();
   }
@@ -188,13 +190,13 @@ it("delegates through the normal thread path in an isolated worktree", async () 
   const mcp = await Effect.runPromise(controlPlane.getMcpServerForSeat(SEAT_THREAD_ID));
   const transport = new StreamableHTTPClientTransport(new URL(mcp.url), {
     requestInit: { headers: mcp.headers },
-    fetch: ((input: RequestInfo | URL, init?: RequestInit) => {
+    fetch: ((input: Request | string, init?: RequestInit) => {
       const request = input instanceof Request ? input : new Request(input, init);
       return Effect.runPromise(controlPlane.handleHttpRequest(request));
     }) as typeof fetch,
   });
   const client = new Client({ name: "chitauri-test", version: "1.0.0" });
-  await client.connect(transport);
+  await client.connect(transport as Parameters<typeof client.connect>[0]);
   try {
     const response = await client.callTool({
       name: "delegate",
@@ -209,7 +211,7 @@ it("delegates through the normal thread path in an isolated worktree", async () 
         },
       },
     });
-    const text = response.content[0];
+    const text = (response.content as Array<{ type: string; text: string }>)[0];
     assert.strictEqual(text?.type, "text");
     const result = JSON.parse(text && text.type === "text" ? text.text : "{}") as {
       status: string;

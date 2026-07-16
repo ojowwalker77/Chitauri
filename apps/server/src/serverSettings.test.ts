@@ -1,8 +1,5 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import {
-  DEFAULT_MODEL_BY_PROVIDER,
-  DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
-} from "@t3tools/contracts";
+import { DEFAULT_MODEL_BY_PROVIDER, DEFAULT_ORCHESTRATOR_ROUTING_POLICY } from "@t3tools/contracts";
 import { Effect, FileSystem, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 import { ServerConfig } from "./config";

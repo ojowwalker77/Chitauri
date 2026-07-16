@@ -1564,7 +1564,7 @@ export const makeGitManager = Effect.gen(function* () {
           worktreePath: existingBranchBeforeFetch.worktreePath,
         };
       }
-      if (existingBranchBeforeFetchPath === rootWorktreePath) {
+      if (existingBranchBeforeFetch && existingBranchBeforeFetchPath === rootWorktreePath) {
         yield* ensureExistingWorktreeUpstream(input.cwd);
         return {
           pullRequest,
@@ -1594,7 +1594,7 @@ export const makeGitManager = Effect.gen(function* () {
           worktreePath: existingBranchAfterFetch.worktreePath,
         };
       }
-      if (existingBranchAfterFetchPath === rootWorktreePath) {
+      if (existingBranchAfterFetch && existingBranchAfterFetchPath === rootWorktreePath) {
         yield* ensureExistingWorktreeUpstream(input.cwd);
         return {
           pullRequest,

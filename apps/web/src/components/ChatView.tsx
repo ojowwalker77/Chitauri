@@ -8449,7 +8449,7 @@ export default function ChatView({
     settings.orchestratorRoutingPolicy.seatModels,
     syncServerShellSnapshot,
   ]);
-  const composerPickerControls = activeThread.orchestratorMode ? (
+  const composerPickerControls = activeThread?.orchestratorMode ? (
     <Button
       type="button"
       variant="ghost"
@@ -8459,7 +8459,7 @@ export default function ChatView({
       title="Orchestrator seat model is locked for this thread"
     >
       <LockIcon className="size-3.5" aria-hidden />
-      <span className="truncate">{activeThread.modelSelection.model}</span>
+      <span className="truncate">{activeThread?.modelSelection.model}</span>
     </Button>
   ) : showComposerModelBootstrapSkeleton ? (
     useSplitComposerPickerControls ? (

@@ -5,6 +5,7 @@
 
 import {
   PROVIDER_DISPLAY_NAMES,
+  type GrokModelOptions,
   type ModelSelection,
   type OrchestratorLane,
   type ProviderKind,
@@ -15,7 +16,7 @@ import {
 } from "@t3tools/contracts";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getModelOptions, normalizeModelSlug } from "@t3tools/shared/model";
+import { getDefaultModel, getModelOptions, normalizeModelSlug } from "@t3tools/shared/model";
 import { pluralize } from "@t3tools/shared/text";
 import {
   type ReactNode,
@@ -270,7 +271,12 @@ const PROVIDER_SELECT_OPTIONS = [
   "pi",
 ] as const satisfies readonly ProviderKind[];
 
-const ORCHESTRATOR_LANES = ["bulk", "ui", "explore", "verify"] as const satisfies readonly OrchestratorLane[];
+const ORCHESTRATOR_LANES = [
+  "bulk",
+  "ui",
+  "explore",
+  "verify",
+] as const satisfies readonly OrchestratorLane[];
 const ORCHESTRATOR_EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
 
 function orchestratorEffort(selection: ModelSelection): string {
@@ -284,12 +290,30 @@ function orchestratorEffort(selection: ModelSelection): string {
 
 function withOrchestratorEffort(selection: ModelSelection, effort: string): ModelSelection {
   if (selection.provider === "claudeAgent") {
-    return { ...selection, options: { effort: effort as "low" | "medium" | "high" | "xhigh" | "max" } };
+    return {
+      ...selection,
+      options: { effort: effort as "low" | "medium" | "high" | "xhigh" | "max" },
+    };
   }
   if (selection.provider === "pi") {
-    return { ...selection, options: { thinkingLevel: effort === "max" ? "xhigh" : effort as "low" | "medium" | "high" | "xhigh" } };
+    return {
+      ...selection,
+      options: {
+        thinkingLevel: effort === "max" ? "xhigh" : (effort as "low" | "medium" | "high" | "xhigh"),
+      },
+    };
   }
-  return { ...selection, options: { reasoningEffort: effort } };
+  if (selection.provider === "codex" || selection.provider === "cursor") {
+    return { ...selection, options: { reasoningEffort: effort } };
+  }
+  if (selection.provider === "grok") {
+    return {
+      ...selection,
+      options: { reasoningEffort: effort as NonNullable<GrokModelOptions["reasoningEffort"]> },
+    };
+  }
+  // opencode and kilo have no representable effort-style option.
+  return selection;
 }
 
 function formatEscalation(selection: ModelSelection): string {
@@ -2396,10 +2420,7 @@ function SettingsRouteView() {
                   <SettingResetButton
                     label={`${lane} lane`}
                     onClick={() =>
-                      updateOrchestratorLane(
-                        lane,
-                        defaults.orchestratorRoutingPolicy.lanes[lane],
-                      )
+                      updateOrchestratorLane(lane, defaults.orchestratorRoutingPolicy.lanes[lane])
                     }
                   />
                 ) : null
@@ -2413,7 +2434,7 @@ function SettingsRouteView() {
                     updateOrchestratorLane(lane, {
                       ...route,
                       modelSelection: withOrchestratorEffort(
-                        { ...route.modelSelection, provider: value },
+                        { provider: value, model: getDefaultModel(value) } as ModelSelection,
                         orchestratorEffort(route.modelSelection),
                       ),
                     });

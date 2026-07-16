@@ -123,7 +123,9 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
         ),
       );
       if (!thread.orchestratorMode) {
-        return yield* Effect.fail(new Error(`Thread '${seatThreadId}' is not an orchestrator seat.`));
+        return yield* Effect.fail(
+          new Error(`Thread '${seatThreadId}' is not an orchestrator seat.`),
+        );
       }
       const settings = yield* serverSettings.getSettings;
       const allowed = settings.orchestrator.seatModels.some(
@@ -141,7 +143,10 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
       return thread;
     });
 
-  const requireTask = (seatThreadId: ThreadId, taskId: string) => {
+  const requireTask = (
+    seatThreadId: ThreadId,
+    taskId: string,
+  ): Effect.Effect<TaskRecord, Error> => {
     const task = tasks.get(taskId);
     if (!task || task.seatThreadId !== seatThreadId) {
       return Effect.fail(new Error(`Delegation task '${taskId}' was not found.`));
@@ -188,13 +193,15 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
         .split("\n")
         .filter((line) => line.startsWith("?? "))
         .join("\n");
-      return [
-        committed.stdout.trim(),
-        working.stdout.trim(),
-        untracked ? `Untracked files:\n${untracked}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n") || "No diff";
+      return (
+        [
+          committed.stdout.trim(),
+          working.stdout.trim(),
+          untracked ? `Untracked files:\n${untracked}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n") || "No diff"
+      );
     });
 
   const waitForResult = (childThreadId: ThreadId) =>

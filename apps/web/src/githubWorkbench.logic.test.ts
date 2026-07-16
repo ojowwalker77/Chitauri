@@ -79,10 +79,18 @@ describe("GitHub workbench logic", () => {
 
   it("hides only active snoozes", () => {
     expect(
-      isGithubItemSnoozed(item.id, { [item.id]: "2026-07-16T00:00:00Z" }, Date.parse("2026-07-15T00:00:00Z")),
+      isGithubItemSnoozed(
+        item.id,
+        { [item.id]: "2026-07-16T00:00:00Z" },
+        Date.parse("2026-07-15T00:00:00Z"),
+      ),
     ).toBe(true);
     expect(
-      isGithubItemSnoozed(item.id, { [item.id]: "2026-07-14T00:00:00Z" }, Date.parse("2026-07-15T00:00:00Z")),
+      isGithubItemSnoozed(
+        item.id,
+        { [item.id]: "2026-07-14T00:00:00Z" },
+        Date.parse("2026-07-15T00:00:00Z"),
+      ),
     ).toBe(false);
   });
 });

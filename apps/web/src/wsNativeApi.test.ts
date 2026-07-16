@@ -9,6 +9,7 @@ import {
   AutomationRunId,
   CommandId,
   type ContextMenuItem,
+  DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
   EventId,
   ORCHESTRATION_WS_CHANNELS,
   ORCHESTRATION_WS_METHODS,
@@ -314,6 +315,7 @@ describe("wsNativeApi", () => {
           pi: { enabled: true, binaryPath: "pi", agentDir: "", customModels: [] },
         },
         skills: { disabled: [] },
+        orchestrator: DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
       },
     } as const;
     emitPush(WS_CHANNELS.serverSettingsUpdated, payload);

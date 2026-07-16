@@ -116,7 +116,7 @@ describe("ProviderDiscoveryService.listSkills", () => {
 
     const result = await runListSkills({ adapter: {}, provider: "grok" });
 
-    expect(result.skills.map((skill) => skill.name)).toEqual(["portable"]);
+    expect(result.skills.map((skill) => skill.name)).toEqual(["portable", "research"]);
   });
 
   it("prefers provider-native entries and appends catalog-only skills", async () => {
@@ -152,7 +152,7 @@ describe("ProviderDiscoveryService.listSkills", () => {
       provider: "opencode",
     });
 
-    expect(result.skills.map((skill) => skill.name)).toEqual(["portable"]);
+    expect(result.skills.map((skill) => skill.name)).toEqual(["portable", "research"]);
   });
 
   it("falls back to the catalog when native discovery fails", async () => {
@@ -172,7 +172,7 @@ describe("ProviderDiscoveryService.listSkills", () => {
       provider: "codex",
     });
 
-    expect(result.skills.map((skill) => skill.name)).toEqual(["portable"]);
+    expect(result.skills.map((skill) => skill.name)).toEqual(["portable", "research"]);
   });
 });
 

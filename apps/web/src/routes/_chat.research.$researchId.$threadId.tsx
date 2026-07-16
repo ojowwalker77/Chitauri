@@ -66,18 +66,13 @@ function ResearchDetailRoute() {
   const modelSelection = useMemo<ModelSelection>(() => {
     return (
       serverThread?.modelSelection ??
-      composerDraft?.modelSelection ??
-      project?.defaultModelSelection ?? {
+      project?.defaultModelSelection ??
+      ({
         provider: settings.defaultProvider,
         model: getDefaultModel(settings.defaultProvider),
-      }
+      } as ModelSelection)
     );
-  }, [
-    composerDraft?.modelSelection,
-    project?.defaultModelSelection,
-    serverThread?.modelSelection,
-    settings.defaultProvider,
-  ]);
+  }, [project?.defaultModelSelection, serverThread?.modelSelection, settings.defaultProvider]);
 
   const applyInNewThread = async () => {
     if (!document || !projectId || applying) return;
@@ -169,9 +164,12 @@ function ResearchDetailRoute() {
         threadId={threadId}
         transcriptContent={transcriptContent}
         surfaceTitle={document?.title ?? "Research"}
-        transformOutgoingPrompt={
-          document ? (prompt) => buildResearchRevisionPrompt(document, prompt) : undefined
-        }
+        {...(document
+          ? {
+              transformOutgoingPrompt: (prompt: string) =>
+                buildResearchRevisionPrompt(document, prompt),
+            }
+          : {})}
       />
     </RouteInsetSurface>
   );

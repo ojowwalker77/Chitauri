@@ -1054,25 +1054,17 @@ describe("chat/editor shortcuts", () => {
 
   it("resolves rightPanel.toggle outside terminal focus", () => {
     assert.strictEqual(
-      resolveShortcutCommand(
-        event({ key: "b", metaKey: true, altKey: true }),
-        DEFAULT_BINDINGS,
-        {
-          platform: "MacIntel",
-          context: { terminalFocus: false },
-        },
-      ),
+      resolveShortcutCommand(event({ key: "b", metaKey: true, altKey: true }), DEFAULT_BINDINGS, {
+        platform: "MacIntel",
+        context: { terminalFocus: false },
+      }),
       "rightPanel.toggle",
     );
     assert.isNull(
-      resolveShortcutCommand(
-        event({ key: "b", metaKey: true, altKey: true }),
-        DEFAULT_BINDINGS,
-        {
-          platform: "MacIntel",
-          context: { terminalFocus: true },
-        },
-      ),
+      resolveShortcutCommand(event({ key: "b", metaKey: true, altKey: true }), DEFAULT_BINDINGS, {
+        platform: "MacIntel",
+        context: { terminalFocus: true },
+      }),
     );
   });
 

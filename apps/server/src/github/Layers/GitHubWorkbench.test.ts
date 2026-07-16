@@ -40,9 +40,7 @@ it.layer(
     if (input.args[0] === "auth") {
       return JSON.stringify({
         hosts: {
-          "github.com": [
-            { state: "success", active: true, host: "github.com", login: "octocat" },
-          ],
+          "github.com": [{ state: "success", active: true, host: "github.com", login: "octocat" }],
         },
       });
     }
@@ -185,8 +183,23 @@ it.layer(
         baseRefName: "main",
         headRefOid: "abcdef1234567890",
         author: { login: "octocat" },
-        comments: [{ id: "c1", author: { login: "reviewer" }, body: "Looks good", createdAt: "2026-07-15T11:00:00Z", url: "https://example.test/c1" }],
-        statusCheckRollup: [{ name: "test", status: "COMPLETED", conclusion: "SUCCESS", detailsUrl: "https://github.com/acme/widgets/actions/runs/123" }],
+        comments: [
+          {
+            id: "c1",
+            author: { login: "reviewer" },
+            body: "Looks good",
+            createdAt: "2026-07-15T11:00:00Z",
+            url: "https://example.test/c1",
+          },
+        ],
+        statusCheckRollup: [
+          {
+            name: "test",
+            status: "COMPLETED",
+            conclusion: "SUCCESS",
+            detailsUrl: "https://github.com/acme/widgets/actions/runs/123",
+          },
+        ],
       });
     }
     return "{}";
@@ -195,7 +208,12 @@ it.layer(
   it.effect("normalizes checks and timeline entries", () =>
     Effect.gen(function* () {
       const workbench = yield* GitHubWorkbench;
-      const result = yield* workbench.workItemDetail({ cwd: "/repo", kind: "pull_request", repository: "acme/widgets", number: 9 });
+      const result = yield* workbench.workItemDetail({
+        cwd: "/repo",
+        kind: "pull_request",
+        repository: "acme/widgets",
+        number: 9,
+      });
       assert.equal(result.detail.item.checkStatus, "success");
       assert.equal(result.detail.checks[0]?.runId, 123);
       assert.equal(result.detail.timeline[0]?.type, "comment");

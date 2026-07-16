@@ -5,11 +5,7 @@ import type { Thread } from "~/types";
 import { cn } from "~/lib/utils";
 import { ChevronDownIcon } from "~/lib/icons";
 import { Button } from "~/components/ui/button";
-import {
-  Collapsible,
-  CollapsiblePanel,
-  CollapsibleTrigger,
-} from "~/components/ui/collapsible";
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "~/components/ui/collapsible";
 
 function delegationState(thread: Thread): "running" | "needs_review" | "failed" {
   if (thread.error || thread.latestTurn?.state === "error") return "failed";
@@ -21,9 +17,8 @@ function delegationState(thread: Thread): "running" | "needs_review" | "failed" 
 
 function finalAssistantMessage(thread: Thread): string | null {
   return (
-    thread.messages
-      .filter((message) => message.role === "assistant" && !message.streaming)
-      .at(-1)?.text ?? null
+    thread.messages.filter((message) => message.role === "assistant" && !message.streaming).at(-1)
+      ?.text ?? null
   );
 }
 
@@ -82,8 +77,8 @@ export function OrchestratorDelegationPanel(props: {
                     {state === "running"
                       ? "Delegated work is running in its isolated worktree."
                       : state === "failed"
-                        ? thread.error ?? "The delegated turn failed."
-                        : finalMessage ?? "Delegated work finished and is ready for diff review."}
+                        ? (thread.error ?? "The delegated turn failed.")
+                        : (finalMessage ?? "Delegated work finished and is ready for diff review.")}
                   </p>
                   <div className="mt-3 flex items-center gap-2">
                     <Button

@@ -446,10 +446,7 @@ function reviewersFrom(raw: JsonRecord): GitHubWorkItemDetail["reviewers"] {
   return [...byLogin.values()];
 }
 
-function linkedPullRequestsFrom(
-  raw: JsonRecord,
-  repository: string,
-): GitHubWorkItemSummary[] {
+function linkedPullRequestsFrom(raw: JsonRecord, repository: string): GitHubWorkItemSummary[] {
   return arrayValue(raw.closedByPullRequestsReferences).flatMap((value) => {
     const record = asRecord(value);
     const number = positiveNumber(record.number);
@@ -525,9 +522,7 @@ function actionCommand(input: GitHubWorkItemActionInput): {
           noun,
           "close",
           ...target,
-          ...(input.kind === "issue" && input.closeReason
-            ? ["--reason", input.closeReason]
-            : []),
+          ...(input.kind === "issue" && input.closeReason ? ["--reason", input.closeReason] : []),
         ],
         message: "Item closed.",
       };
@@ -608,74 +603,72 @@ export const GitHubWorkbenchLive = Layer.effect(
     const cwdFor = (cwd: string | null): string => cwd ?? process.cwd();
 
     const connection: GitHubWorkbenchShape["connection"] = (input) =>
-      cli
-        .execute({ cwd: cwdFor(input.cwd), args: ["--version"] })
-        .pipe(
-          Effect.flatMap((versionResult) =>
-            cli
-              .execute({
-                cwd: cwdFor(input.cwd),
-                args: ["auth", "status", "--active", "--json", "hosts"],
-              })
-              .pipe(
-                Effect.flatMap((authResult) =>
-                  parseJson(authResult.stdout, "connection.auth").pipe(
-                    Effect.flatMap((authValue) => {
-                      const hosts = asRecord(asRecord(authValue).hosts);
-                      const active = Object.values(hosts)
-                        .flatMap(arrayValue)
-                        .map(asRecord)
-                        .find((entry) => entry.active === true && entry.state === "success");
-                      const account = stringValue(active?.login);
-                      const host = stringValue(active?.host);
-                      return input.cwd
-                        ? cli
-                            .execute({
-                              cwd: input.cwd,
-                              args: ["repo", "view", "--json", "name,nameWithOwner,url"],
-                            })
-                            .pipe(
-                              Effect.flatMap((repoResult) =>
-                                parseJson(repoResult.stdout, "connection.repository"),
-                              ),
-                              Effect.map((repoValue) => repositoryFrom(repoValue)),
-                              Effect.catch(() => Effect.succeed(null)),
-                              Effect.map((repository) => ({
-                                available: true,
-                                authenticated: account !== null,
-                                account,
-                                host,
-                                version: versionResult.stdout.split("\n")[0]?.trim() || null,
-                                repository,
-                                error: account ? null : "GitHub CLI is not authenticated.",
-                              })),
-                            )
-                        : Effect.succeed({
-                            available: true,
-                            authenticated: account !== null,
-                            account,
-                            host,
-                            version: versionResult.stdout.split("\n")[0]?.trim() || null,
-                            repository: null,
-                            error: account ? null : "GitHub CLI is not authenticated.",
-                          });
-                    }),
-                  ),
+      cli.execute({ cwd: cwdFor(input.cwd), args: ["--version"] }).pipe(
+        Effect.flatMap((versionResult) =>
+          cli
+            .execute({
+              cwd: cwdFor(input.cwd),
+              args: ["auth", "status", "--active", "--json", "hosts"],
+            })
+            .pipe(
+              Effect.flatMap((authResult) =>
+                parseJson(authResult.stdout, "connection.auth").pipe(
+                  Effect.flatMap((authValue) => {
+                    const hosts = asRecord(asRecord(authValue).hosts);
+                    const active = Object.values(hosts)
+                      .flatMap(arrayValue)
+                      .map(asRecord)
+                      .find((entry) => entry.active === true && entry.state === "success");
+                    const account = stringValue(active?.login);
+                    const host = stringValue(active?.host);
+                    return input.cwd
+                      ? cli
+                          .execute({
+                            cwd: input.cwd,
+                            args: ["repo", "view", "--json", "name,nameWithOwner,url"],
+                          })
+                          .pipe(
+                            Effect.flatMap((repoResult) =>
+                              parseJson(repoResult.stdout, "connection.repository"),
+                            ),
+                            Effect.map((repoValue) => repositoryFrom(repoValue)),
+                            Effect.catch(() => Effect.succeed(null)),
+                            Effect.map((repository) => ({
+                              available: true,
+                              authenticated: account !== null,
+                              account,
+                              host,
+                              version: versionResult.stdout.split("\n")[0]?.trim() || null,
+                              repository,
+                              error: account ? null : "GitHub CLI is not authenticated.",
+                            })),
+                          )
+                      : Effect.succeed({
+                          available: true,
+                          authenticated: account !== null,
+                          account,
+                          host,
+                          version: versionResult.stdout.split("\n")[0]?.trim() || null,
+                          repository: null,
+                          error: account ? null : "GitHub CLI is not authenticated.",
+                        });
+                  }),
                 ),
               ),
-          ),
-          Effect.catch((error) =>
-            Effect.succeed({
-              available: !error.detail.includes("not available on PATH"),
-              authenticated: false,
-              account: null,
-              host: null,
-              version: null,
-              repository: null,
-              error: error.detail,
-            }),
-          ),
-        );
+            ),
+        ),
+        Effect.catch((error) =>
+          Effect.succeed({
+            available: !error.detail.includes("not available on PATH"),
+            authenticated: false,
+            account: null,
+            host: null,
+            version: null,
+            repository: null,
+            error: error.detail,
+          }),
+        ),
+      );
 
     const listWork: GitHubWorkbenchShape["listWork"] = (input) => {
       const args =
@@ -702,10 +695,17 @@ export const GitHubWorkbenchLive = Layer.effect(
                   : summaryFromSearch(entry, input.kind);
               return item ? [item] : [];
             })
-            .filter((item) => !input.repository || item.repository.nameWithOwner === input.repository)
+            .filter(
+              (item) => !input.repository || item.repository.nameWithOwner === input.repository,
+            )
             .filter((item) => {
               const query = input.query?.trim().toLowerCase();
-              return !query || `${item.repository.nameWithOwner} ${item.title} #${item.number}`.toLowerCase().includes(query);
+              return (
+                !query ||
+                `${item.repository.nameWithOwner} ${item.title} #${item.number}`
+                  .toLowerCase()
+                  .includes(query)
+              );
             });
           return { items, totalCount: items.length, syncedAt: new Date().toISOString() };
         }),
