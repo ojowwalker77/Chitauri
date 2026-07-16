@@ -9738,7 +9738,7 @@ export default function ChatView({
       <div
         aria-hidden={showEmptyLandingBranchToolbar ? undefined : true}
         className={cn(
-          "flex min-w-0 flex-1 items-center transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none",
+          "flex min-w-0 flex-1 items-center transition-[opacity,translate] duration-press ease-out motion-reduce:transition-none",
           showEmptyLandingBranchToolbar
             ? "translate-y-0 opacity-100"
             : "pointer-events-none opacity-0",
@@ -10680,7 +10680,7 @@ export default function ChatView({
             <div
               aria-hidden={!terminalWorkspaceTerminalTabActive}
               className={cn(
-                "absolute inset-0 min-h-0 min-w-0 transition-all duration-200 ease-out",
+                "absolute inset-0 min-h-0 min-w-0 transition-[opacity,translate] duration-menu ease-out motion-reduce:transition-none",
                 terminalWorkspaceTerminalTabActive
                   ? "translate-y-0 opacity-100"
                   : "pointer-events-none translate-y-1 opacity-0",

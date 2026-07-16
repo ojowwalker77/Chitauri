@@ -35,7 +35,7 @@ const SIDEBAR_RESIZE_DEFAULT_MIN_WIDTH = 16 * 16;
  * (Sidebar `className`) and the layout `gapClassName` so they animate in lockstep.
  * Shared by the thread sidebar (left) and the right dock so the two slides match.
  */
-const SIDEBAR_OFFCANVAS_MOTION_CLASS = "duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]";
+const SIDEBAR_OFFCANVAS_MOTION_CLASS = "duration-sheet ease-drawer";
 
 /**
  * Suppresses the slide entirely — for first mount or a reposition/remount where
@@ -685,7 +685,7 @@ function SidebarRail({
             ]
           : [
               /* Legacy: rail anchored to the sidebar shell (right dock, etc.). */
-              "-translate-x-1/2 group-data-[side=left]:-right-4 absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] after:-translate-x-1/2 after:bg-transparent after:transition-colors hover:after:bg-sidebar-border group-data-[side=right]:left-0 sm:flex [[data-collapsible=offcanvas][data-state=collapsed]_&]:pointer-events-none",
+              "-translate-x-1/2 group-data-[side=left]:-right-4 absolute inset-y-0 z-20 hidden w-4 transition-[translate] ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] after:-translate-x-1/2 after:bg-transparent after:transition-colors hover:after:bg-sidebar-border group-data-[side=right]:left-0 sm:flex [[data-collapsible=offcanvas][data-state=collapsed]_&]:pointer-events-none",
               "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
               "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
               "group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full",

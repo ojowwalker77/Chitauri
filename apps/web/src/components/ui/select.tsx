@@ -17,6 +17,7 @@ import {
   COMPOSER_PICKER_SELECT_OPTION_CLASS_NAME,
   COMPOSER_SURFACE_SHADOW_CLASS_NAME,
 } from "../chat/composerPickerStyles";
+import { MENU_ITEM_MOTION_CLASS_NAME } from "./menu";
 
 const Select = SelectPrimitive.Root;
 
@@ -255,6 +256,7 @@ function SelectItem({
     <SelectPrimitive.Item
       className={cn(
         optionBaseClassName,
+        MENU_ITEM_MOTION_CLASS_NAME,
         hideIndicator ? "grid-cols-[1fr] ps-3 pe-3" : "grid-cols-[1fr_auto] gap-3 px-2.5",
         className,
       )}

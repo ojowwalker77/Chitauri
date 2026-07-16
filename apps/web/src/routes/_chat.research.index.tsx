@@ -101,7 +101,7 @@ function ResearchIndexRoute() {
                   variant="outline"
                   size="sm"
                   onClick={() => void ensureNativeApi().shell.showInFolder(query.data.plansRoot)}
-                  className="shrink-0 gap-2 transition-transform active:scale-[0.96]"
+                  className="shrink-0 gap-2"
                 >
                   <FileIcon className="size-3.5" />
                   Open plans folder
@@ -124,7 +124,7 @@ function ResearchIndexRoute() {
                   variant="outline"
                   size="sm"
                   onClick={() => void query.refetch()}
-                  className="mt-4 transition-transform active:scale-[0.96]"
+                  className="mt-4"
                 >
                   Try again
                 </Button>
@@ -147,7 +147,7 @@ function ResearchIndexRoute() {
                     key={document.id}
                     type="button"
                     onClick={() => void openResearch(document)}
-                    className="group flex min-h-48 flex-col rounded-[20px] bg-[var(--color-background-surface)] p-5 text-left shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border)_70%,transparent),0_12px_36px_-32px_rgba(0,0,0,0.8)] transition-[box-shadow,transform,background-color] duration-200 ease-out hover:bg-[var(--color-background-elevated-secondary)] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border)_95%,transparent),0_22px_52px_-36px_rgba(0,0,0,0.8)] active:scale-[0.96] motion-reduce:transition-none"
+                    className="group flex min-h-48 flex-col rounded-[20px] bg-[var(--color-background-surface)] p-5 text-left shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border)_70%,transparent),0_12px_36px_-32px_rgba(0,0,0,0.8)] transition-[box-shadow,scale,background-color] duration-press ease-out hover:bg-[var(--color-background-elevated-secondary)] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border)_95%,transparent),0_22px_52px_-36px_rgba(0,0,0,0.8)] active:scale-[0.96] motion-reduce:transition-none"
                   >
                     <div className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
                       <span className="rounded-full bg-muted/70 px-2.5 py-1 font-medium uppercase tracking-[0.1em]">

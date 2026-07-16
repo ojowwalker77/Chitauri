@@ -1215,7 +1215,7 @@ function SidebarSegmentedPicker({
         <div
           aria-hidden
           className={cn(
-            "sidebar-segmented-thumb pointer-events-none absolute inset-y-0.5 left-0.5 z-0 rounded-md transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+            "sidebar-segmented-thumb pointer-events-none absolute inset-y-0.5 left-0.5 z-0 rounded-md transition-transform duration-sheet ease-drawer",
             activeIndex < 0 && "opacity-0",
           )}
           style={{
@@ -1368,14 +1368,13 @@ export default function Sidebar() {
       limit: 75,
     }),
   );
-  const githubSnoozedUntilByItemId = useGitHubInboxStore(
-    (state) => state.snoozedUntilByItemId,
-  );
+  const githubSnoozedUntilByItemId = useGitHubInboxStore((state) => state.snoozedUntilByItemId);
   const githubAttentionBadgeCount = useMemo(
     () =>
-      (githubInboxQuery.data?.items ?? []).filter((item) =>
-        isActionableGitHubReason(item.reason) &&
-        !isGithubItemSnoozed(item.id, githubSnoozedUntilByItemId),
+      (githubInboxQuery.data?.items ?? []).filter(
+        (item) =>
+          isActionableGitHubReason(item.reason) &&
+          !isGithubItemSnoozed(item.id, githubSnoozedUntilByItemId),
       ).length,
     [githubInboxQuery.data?.items, githubSnoozedUntilByItemId],
   );
