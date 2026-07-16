@@ -30,6 +30,7 @@ jobs:
         with:
           path: |
             ~/.bun/install/cache
+            ~/.cache/electron
             .turbo
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}-${{ hashFiles('turbo.json') }}
           restore-keys: |

@@ -6,6 +6,9 @@ This document covers how to run signed, notarized desktop releases from one tag.
 
 - Trigger: push a SemVer tag, either `vX.Y.Z` (the canonical form) or legacy
   `X.Y.Z`. The published GitHub Release keeps the exact pushed tag name.
+  The workflow can also be started manually (`workflow_dispatch` with a
+  `version` input) — `gh workflow run "Release Desktop" -f version=X.Y.Z` —
+  which releases from the current `main` head and tags it `vX.Y.Z`.
 - Runs quality gates first: lint, typecheck, test.
 - Builds artifacts in parallel:
   - Linux `x64` AppImage
