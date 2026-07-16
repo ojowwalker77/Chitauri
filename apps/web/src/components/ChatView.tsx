@@ -4704,14 +4704,15 @@ export default function ChatView({
       if (threadModeTransitionInFlightRef.current) return;
 
       const sourceThreadId = threadId;
+      const nextProvider = nextOrchestratorMode
+        ? configuredOrchestratorSeatModel?.provider
+        : selectedProvider;
       threadModeTransitionInFlightRef.current = true;
       try {
         const nextThreadId = await handleNewThread(activeProject.id, {
           entryPoint: "chat",
           fresh: true,
-          provider: nextOrchestratorMode
-            ? configuredOrchestratorSeatModel?.provider
-            : selectedProvider,
+          ...(nextProvider ? { provider: nextProvider } : {}),
         });
         copyTransferableComposerState(sourceThreadId, nextThreadId);
         setComposerDraftOrchestratorMode(nextThreadId, nextOrchestratorMode);

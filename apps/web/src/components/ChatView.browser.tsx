@@ -4394,6 +4394,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           activeProvider: "claudeAgent",
           runtimeMode: null,
           interactionMode: null,
+          orchestratorMode: null,
         },
       },
       draftThreadsByThreadId: {
