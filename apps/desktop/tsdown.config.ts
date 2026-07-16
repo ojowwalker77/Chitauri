@@ -5,7 +5,7 @@
 
 import { defineConfig } from "tsdown";
 
-const sourcemapEnv = process.env.SYNARA_DESKTOP_SOURCEMAP?.trim().toLowerCase();
+const sourcemapEnv = process.env.CHITAURI_DESKTOP_SOURCEMAP?.trim().toLowerCase();
 const buildSourcemap = sourcemapEnv === "1" || sourcemapEnv === "true";
 
 const shared = {

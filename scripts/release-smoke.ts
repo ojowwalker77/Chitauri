@@ -33,6 +33,12 @@ function copyWorkspaceManifestFixture(targetRoot: string): void {
     mkdirSync(dirname(destinationPath), { recursive: true });
     cpSync(sourcePath, destinationPath);
   }
+
+  const vendoredEffectTarget = resolve(targetRoot, "vendor/effect");
+  mkdirSync(dirname(vendoredEffectTarget), { recursive: true });
+  cpSync(resolve(repoRoot, "vendor/effect"), vendoredEffectTarget, {
+    recursive: true,
+  });
 }
 
 function writeMacManifestFixtures(targetRoot: string): { arm64Path: string; x64Path: string } {

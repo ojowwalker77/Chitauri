@@ -8,11 +8,11 @@
       "scripts"
     ],
     "catalog": {
-      "effect": "https://pkg.pr.new/Effect-TS/effect-smol/effect@8881a9b",
-      "@effect/platform-node": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/platform-node@8881a9b",
-      "@effect/openapi-generator": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/openapi-generator@8881a9b",
-      "@effect/sql-sqlite-bun": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/sql-sqlite-bun@8881a9b",
-      "@effect/vitest": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/vitest@8881a9b",
+      "effect": "file:../../vendor/effect/effect-8881a9b.tgz",
+      "@effect/platform-node": "file:../../vendor/effect/effect-platform-node-8881a9b.tgz",
+      "@effect/openapi-generator": "file:../../vendor/effect/effect-openapi-generator-8881a9b.tgz",
+      "@effect/sql-sqlite-bun": "file:../../vendor/effect/effect-sql-sqlite-bun-8881a9b.tgz",
+      "@effect/vitest": "file:../../vendor/effect/effect-vitest-8881a9b.tgz",
       "@effect/language-service": "0.75.1",
       "@types/bun": "^1.3.9",
       "@types/node": "^24.10.13",
@@ -62,6 +62,7 @@
     "vitest": "catalog:"
   },
   "overrides": {
+    "@effect/platform-node-shared": "file:./vendor/effect/effect-platform-node-shared-8881a9b.tgz",
     "vite": "^8.0.0"
   },
   "engines": {

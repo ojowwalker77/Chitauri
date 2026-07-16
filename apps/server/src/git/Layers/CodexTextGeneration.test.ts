@@ -166,12 +166,12 @@ function withFakeCodexEnv<A, E, R>(
         process.env.T3_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_CONTAIN;
       const previousCodexHomeConfigMustNotContain =
         process.env.T3_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_NOT_CONTAIN;
-      const previousDisableBrowserPlugin = process.env.DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN;
+      const previousDisableBrowserPlugin = process.env.CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN;
 
       yield* Effect.sync(() => {
         process.env.PATH = `${binDir}:${previousPath ?? ""}`;
         process.env.T3_FAKE_CODEX_OUTPUT_B64 = Buffer.from(input.output, "utf8").toString("base64");
-        process.env.DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN = "0";
+        process.env.CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN = "0";
 
         if (input.exitCode !== undefined) {
           process.env.T3_FAKE_CODEX_EXIT_CODE = String(input.exitCode);
@@ -341,10 +341,9 @@ function withFakeCodexEnv<A, E, R>(
         }
 
         if (previous.previousDisableBrowserPlugin === undefined) {
-          delete process.env.DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN;
+          delete process.env.CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN;
         } else {
-          process.env.DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN =
-            previous.previousDisableBrowserPlugin;
+          process.env.CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN = previous.previousDisableBrowserPlugin;
         }
 
         previous.releaseLock();

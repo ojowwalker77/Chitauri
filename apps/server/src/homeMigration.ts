@@ -40,9 +40,9 @@ interface LegacyHomeMigrationInput {
   readonly baseDir: string;
   readonly homeDir: string;
   readonly devUrl: URL | undefined;
-  // Explicit state-dir namespace override (CHITAURI_STATE_NAMESPACE or legacy
-  // SYNARA_STATE_NAMESPACE). When set, the migration targets the same namespace the running server uses so a shared-state
-  // dev build imports into the dir it actually reads from.
+  // Explicit CHITAURI_STATE_NAMESPACE override. When set, the migration targets
+  // the same namespace the running server uses so a shared-state dev build imports
+  // into the directory it actually reads from.
   readonly stateDirNameOverride?: string | undefined;
 }
 

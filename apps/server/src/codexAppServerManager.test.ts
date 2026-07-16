@@ -387,7 +387,7 @@ describe("buildCodexProcessEnv", () => {
         env: {
           SHELL: "/bin/zsh",
           PATH: "/usr/bin",
-          DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN: "0",
+          CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN: "0",
         },
         homePath: tempDir,
         platform: "darwin",
@@ -416,7 +416,7 @@ describe("buildCodexProcessEnv", () => {
         PATH: "/usr/bin",
         CODEX_HOME: "/tmp/.codex",
         AZURE_OPENAI_API_KEY: "existing-secret",
-        DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN: "0",
+        CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN: "0",
       },
       platform: "darwin",
       readEnvironment,
@@ -429,9 +429,9 @@ describe("buildCodexProcessEnv", () => {
   it("allows the configured desktop browser-use socket in the Codex sandbox", () => {
     const env = buildCodexProcessEnv({
       env: {
-        SYNARA_BROWSER_USE_PIPE_PATH: "/tmp/codex-browser-use/synara.sock",
+        CHITAURI_BROWSER_USE_PIPE_PATH: "/tmp/codex-browser-use/synara.sock",
         NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS: "/tmp/existing.sock",
-        DPCODE_DISABLE_CODEX_DPCODE_BROWSER_PLUGIN: "0",
+        CHITAURI_DISABLE_CODEX_BROWSER_PLUGIN: "0",
       },
       platform: "darwin",
     });
@@ -444,7 +444,7 @@ describe("buildCodexProcessEnv", () => {
   it("resolves the browser-use pipe path from desktop env aliases", () => {
     expect(
       resolveCodexBrowserUsePipePath({
-        env: { T3CODE_BROWSER_USE_PIPE_PATH: "/tmp/codex-browser-use/t3.sock" },
+        env: { CHITAURI_BROWSER_USE_PIPE_PATH: "/tmp/codex-browser-use/t3.sock" },
         platform: "darwin",
       }),
     ).toBe("/tmp/codex-browser-use/t3.sock");
@@ -467,7 +467,7 @@ describe("buildCodexProcessEnv", () => {
       );
 
       const env = buildCodexProcessEnv({
-        env: { SYNARA_HOME: runtimeHome },
+        env: { CHITAURI_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -500,7 +500,7 @@ describe("buildCodexProcessEnv", () => {
       writeFileSync(overlayMemoryPath, "stale-overlay-db", "utf8");
 
       const env = buildCodexProcessEnv({
-        env: { SYNARA_HOME: runtimeHome },
+        env: { CHITAURI_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -528,7 +528,7 @@ describe("buildCodexProcessEnv", () => {
       writeFileSync(overlayAuthPath, '{"tokens":{"access_token":"stale"}}', "utf8");
 
       const env = buildCodexProcessEnv({
-        env: { SYNARA_HOME: runtimeHome },
+        env: { CHITAURI_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -559,7 +559,7 @@ describe("buildCodexProcessEnv", () => {
       writeFileSync(overlayImagePath, "overlay-image", "utf8");
 
       const env = buildCodexProcessEnv({
-        env: { SYNARA_HOME: runtimeHome },
+        env: { CHITAURI_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });

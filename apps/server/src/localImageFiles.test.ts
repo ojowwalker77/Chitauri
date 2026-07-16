@@ -61,10 +61,10 @@ describe("resolveAllowedLocalPreviewFile", () => {
     }
   });
 
-  it("allows images written to the SYNARA_HOME codex-home-overlay generated_images root", async () => {
+  it("allows images written to the CHITAURI_HOME codex-home-overlay generated_images root", async () => {
     // Codex app-server is launched with CODEX_HOME pointing at a Chitauri overlay
-    // directory (see resolveDpCodeCodexHomeOverlayPath). Generated images therefore
-    // live under <SYNARA_HOME>/codex-home-overlay/generated_images/<thread>/<call>.png,
+    // directory (see resolveChitauriCodexHomeOverlayPath). Generated images therefore
+    // live under <CHITAURI_HOME>/codex-home-overlay/generated_images/<thread>/<call>.png,
     // which sits outside both the user's `~/.codex` source home and any workspace
     // root. The allowlist must still serve them.
     //
@@ -84,8 +84,8 @@ describe("resolveAllowedLocalPreviewFile", () => {
     mkdirSync(overlayImageDir, { recursive: true });
     writeFileSync(imagePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
 
-    const previousChitauriHome = process.env.SYNARA_HOME;
-    process.env.SYNARA_HOME = synaraHome;
+    const previousChitauriHome = process.env.CHITAURI_HOME;
+    process.env.CHITAURI_HOME = synaraHome;
     try {
       const result = await resolveAllowedLocalPreviewFile({
         requestedPath: imagePath,
@@ -96,9 +96,9 @@ describe("resolveAllowedLocalPreviewFile", () => {
       assert.equal(result?.path, realpathSync(imagePath));
     } finally {
       if (previousChitauriHome === undefined) {
-        delete process.env.SYNARA_HOME;
+        delete process.env.CHITAURI_HOME;
       } else {
-        process.env.SYNARA_HOME = previousChitauriHome;
+        process.env.CHITAURI_HOME = previousChitauriHome;
       }
       rmSync(fakeRoot, { recursive: true, force: true });
     }
