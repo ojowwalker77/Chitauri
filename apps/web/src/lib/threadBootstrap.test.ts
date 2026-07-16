@@ -241,6 +241,8 @@ describe("threadBootstrap", () => {
           branch: "feature/new-terminal",
           worktreePath: "/repo/.worktrees/new-terminal",
           envMode: "worktree",
+          runtimeMode: "approval-required",
+          interactionMode: "plan",
         },
       }),
     ).toEqual({
@@ -248,7 +250,9 @@ describe("threadBootstrap", () => {
       branch: "feature/new-terminal",
       worktreePath: "/repo/.worktrees/new-terminal",
       envMode: "worktree",
-      runtimeMode: "full-access",
+      runtimeMode: "approval-required",
+      interactionMode: "plan",
+      lastKnownPr: null,
       entryPoint: "terminal",
     });
   });
@@ -268,6 +272,8 @@ describe("threadBootstrap", () => {
       worktreePath: null,
       envMode: "local",
       runtimeMode: "full-access",
+      interactionMode: "default",
+      lastKnownPr: null,
       entryPoint: "chat",
       isTemporary: true,
     });
