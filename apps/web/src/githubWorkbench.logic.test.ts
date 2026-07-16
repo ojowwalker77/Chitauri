@@ -72,8 +72,9 @@ describe("GitHub workbench logic", () => {
 
   it("builds a safe agent handoff prompt", () => {
     const prompt = buildGitHubAgentPrompt(item, "review");
+    expect(prompt.startsWith("$Splus PR Review")).toBe(true);
     expect(prompt).toContain("ojowwalker77/Chitauri#9");
-    expect(prompt).toContain("do not post anything to GitHub without my explicit approval");
+    expect(prompt).toContain("post the verified review to GitHub");
   });
 
   it("hides only active snoozes", () => {
