@@ -31,7 +31,9 @@ export interface ComputerScriptsShape {
   readonly startRun: (
     input: ComputerScriptsStartRunInput,
   ) => Effect.Effect<ComputerScriptsStartRunResult, Error>;
-  readonly run: (input: ComputerScriptsRunInput) => Effect.Effect<ComputerScriptsRunSnapshot, Error>;
+  readonly run: (
+    input: ComputerScriptsRunInput,
+  ) => Effect.Effect<ComputerScriptsRunSnapshot, Error>;
   readonly cancelRun: (
     input: ComputerScriptsCancelRunInput,
   ) => Effect.Effect<ComputerScriptsRunSnapshot, Error>;
@@ -41,7 +43,6 @@ export interface ComputerScriptsShape {
   readonly streamEvents: Stream.Stream<ComputerScriptsStreamEvent, never, never>;
 }
 
-export class ComputerScripts extends ServiceMap.Service<
-  ComputerScripts,
-  ComputerScriptsShape
->()("t3/computerScripts/Services/ComputerScripts") {}
+export class ComputerScripts extends ServiceMap.Service<ComputerScripts, ComputerScriptsShape>()(
+  "t3/computerScripts/Services/ComputerScripts",
+) {}

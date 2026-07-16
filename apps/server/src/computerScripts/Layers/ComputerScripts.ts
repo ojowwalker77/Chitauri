@@ -2,30 +2,32 @@ import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as nodePath from "node:path";
 
-import type {
-  ComputerScriptCandidate,
-  ComputerScriptCandidateId,
-  ComputerScriptDescriptor,
-  ComputerScriptId,
-  ComputerScriptLogEntry,
-  ComputerScriptAnalysisId,
-  ComputerScriptRunId,
-  ComputerScriptsAnalysisSnapshot,
-  ComputerScriptsOptions,
-  ComputerScriptsRunItemResult,
-  ComputerScriptsRunSnapshot,
-  ComputerScriptsStreamEvent,
-} from "@t3tools/contracts";
 import {
   ComputerScriptAnalysisId,
   ComputerScriptCandidateId,
   ComputerScriptRunId,
+  type ComputerScriptCandidate,
+  type ComputerScriptDescriptor,
+  type ComputerScriptId,
+  type ComputerScriptLogEntry,
+  type ComputerScriptsAnalysisSnapshot,
+  type ComputerScriptsOptions,
+  type ComputerScriptsRunItemResult,
+  type ComputerScriptsRunSnapshot,
+  type ComputerScriptsStreamEvent,
 } from "@t3tools/contracts";
+import type { ProjectDevServer } from "@t3tools/contracts";
 import { Effect, Layer, PubSub, Stream } from "effect";
 
 import { ServerConfig } from "../../config";
+import { DevServerManager } from "../../devServerManager";
 import { runProcess } from "../../processRunner";
 import { COMPUTER_SCRIPT_CATALOG, COMPUTER_SCRIPT_IDS, isKnownComputerScriptId } from "../catalog";
+import {
+  loadAndReconcileRunHistory,
+  upsertRunHistory,
+  writeRunHistoryAtomically,
+} from "../receipts";
 import {
   defaultProtectedRoots,
   encodeFingerprint,
@@ -38,8 +40,16 @@ import {
 import { ComputerScripts, type ComputerScriptsShape } from "../Services/ComputerScripts";
 
 type CandidateTarget =
-  | { readonly kind: "directory"; readonly path: string; readonly allowlist: "node_modules" | "artifact" }
-  | { readonly kind: "tool"; readonly tool: "pnpm" | "npm" | "bun" | "yarn"; readonly path: string | null };
+  | {
+      readonly kind: "directory";
+      readonly path: string;
+      readonly allowlist: "node_modules" | "artifact";
+    }
+  | {
+      readonly kind: "tool";
+      readonly tool: "pnpm" | "npm" | "bun" | "yarn";
+      readonly path: string | null;
+    };
 
 interface AnalysisRecord {
   readonly roots: readonly string[];
@@ -56,6 +66,7 @@ interface RunRecord {
 const MAX_SCAN_DEPTH = 8;
 const MAX_CANDIDATES = 500;
 const MAX_LOGS = 200;
+const MAX_RECENT_ANALYSES = 20;
 const PACKAGE_MANAGER_TIMEOUT_MS = 120_000;
 
 function isoNow(): string {
@@ -78,7 +89,10 @@ function candidateId(): ComputerScriptCandidateId {
   return ComputerScriptCandidateId.makeUnsafe(`computer-candidate:${randomUUID()}`);
 }
 
-function appendLog(logs: readonly ComputerScriptLogEntry[], entry: Omit<ComputerScriptLogEntry, "at">) {
+function appendLog(
+  logs: readonly ComputerScriptLogEntry[],
+  entry: Omit<ComputerScriptLogEntry, "at">,
+) {
   return [...logs, { ...entry, at: isoNow() }].slice(-MAX_LOGS);
 }
 
@@ -93,34 +107,6 @@ async function exists(path: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-async function directoryBytes(path: string, signal: AbortSignal): Promise<number> {
-  let total = 0;
-  async function walk(dir: string): Promise<void> {
-    if (signal.aborted) throw new Error("cancelled");
-    let entries: import("node:fs").Dirent[];
-    try {
-      entries = await fs.readdir(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      if (signal.aborted) throw new Error("cancelled");
-      const child = nodePath.join(dir, entry.name);
-      let stat: Awaited<ReturnType<typeof fs.lstat>>;
-      try {
-        stat = await fs.lstat(child);
-      } catch {
-        continue;
-      }
-      if (stat.isSymbolicLink()) continue;
-      total += stat.size;
-      if (stat.isDirectory()) await walk(child);
-    }
-  }
-  await walk(path);
-  return total;
 }
 
 async function lastRelevantMtime(path: string): Promise<number> {
@@ -163,11 +149,58 @@ function allowlistedArtifact(path: string): boolean {
   );
 }
 
+function pathsOverlap(left: string, right: string): boolean {
+  const resolvedLeft = nodePath.resolve(left);
+  const resolvedRight = nodePath.resolve(right);
+  return (
+    resolvedLeft === resolvedRight ||
+    isStrictlyInside(resolvedLeft, resolvedRight) ||
+    isStrictlyInside(resolvedRight, resolvedLeft)
+  );
+}
+
+async function hasProjectMarker(path: string): Promise<boolean> {
+  try {
+    const stat = await fs.lstat(nodePath.join(path, "package.json"));
+    return stat.isFile() && !stat.isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+async function owningProjectRootForArtifact(path: string): Promise<string | null> {
+  const normalized = path.split(nodePath.sep).join("/");
+  let projectRoot: string | null = null;
+  if (normalized.endsWith("/node_modules/.vite")) {
+    projectRoot = nodePath.dirname(nodePath.dirname(path));
+  } else if (normalized.endsWith("/.next/cache")) {
+    projectRoot = nodePath.dirname(nodePath.dirname(path));
+  } else if (
+    normalized.endsWith("/dist") ||
+    normalized.endsWith("/build") ||
+    normalized.endsWith("/.turbo") ||
+    normalized.endsWith("/.vite")
+  ) {
+    projectRoot = nodePath.dirname(path);
+  }
+  return projectRoot && (await hasProjectMarker(projectRoot)) ? projectRoot : null;
+}
+
+function activeProjectReason(
+  projectRoot: string,
+  activeDevServers: readonly ProjectDevServer[],
+): string | null {
+  return activeDevServers.some((server) => pathsOverlap(projectRoot, server.cwd))
+    ? "A Chitauri-managed dev server is active for this project."
+    : null;
+}
+
 async function discoverDirectories(input: {
   readonly roots: readonly string[];
   readonly signal: AbortSignal;
   readonly match: (dir: string, entryName: string, depth: number) => boolean;
   readonly stopAtMatch: boolean;
+  readonly shouldTraverse?: (dir: string, entryName: string, depth: number) => boolean;
 }): Promise<string[]> {
   const found: string[] = [];
   async function walk(dir: string, depth: number): Promise<void> {
@@ -187,6 +220,7 @@ async function discoverDirectories(input: {
         found.push(child);
         if (input.stopAtMatch) continue;
       }
+      if (input.shouldTraverse && !input.shouldTraverse(child, entry.name, depth)) continue;
       await walk(child, depth + 1);
     }
   }
@@ -196,25 +230,24 @@ async function discoverDirectories(input: {
 
 async function makeDirectoryCandidate(input: {
   readonly path: string;
-  readonly roots: readonly string[];
-  readonly bytes: number;
+  readonly projectPath: string;
   readonly selectedByDefault: boolean;
   readonly protectedReason: string | null;
   readonly metadata: Readonly<Record<string, string>>;
+  readonly signal: AbortSignal;
 }): Promise<ComputerScriptCandidate | null> {
-  const fingerprint = await fingerprintDirectory(input.path);
+  const fingerprint = await fingerprintDirectory(input.path, input.signal);
   if (!fingerprint) return null;
-  const projectPath = nodePath.dirname(input.path);
   return {
     id: candidateId(),
     label: nodePath.basename(input.path),
     path: input.path,
-    bytes: input.bytes,
+    bytes: fingerprint.bytes,
     selectedByDefault: input.selectedByDefault,
     protectedReason: input.protectedReason,
-    fingerprint: encodeFingerprint(fingerprint, input.bytes),
+    fingerprint: encodeFingerprint(fingerprint),
     metadata: {
-      project: projectPath,
+      project: input.projectPath,
       ...input.metadata,
     },
   };
@@ -224,8 +257,12 @@ async function analyzeNodeModules(input: {
   readonly roots: readonly string[];
   readonly options: ComputerScriptsOptions;
   readonly cwd: string;
+  readonly activeDevServers: readonly ProjectDevServer[];
   readonly signal: AbortSignal;
-}): Promise<{ candidates: ComputerScriptCandidate[]; targets: Map<ComputerScriptCandidateId, CandidateTarget> }> {
+}): Promise<{
+  candidates: ComputerScriptCandidate[];
+  targets: Map<ComputerScriptCandidateId, CandidateTarget>;
+}> {
   const targets = new Map<ComputerScriptCandidateId, CandidateTarget>();
   const candidates: ComputerScriptCandidate[] = [];
   const minAgeMs = input.options.minAgeDays * 24 * 60 * 60 * 1_000;
@@ -237,28 +274,32 @@ async function analyzeNodeModules(input: {
     stopAtMatch: true,
   });
   for (const dir of dirs) {
-    const bytes = await directoryBytes(dir, input.signal);
-    if (bytes < input.options.minBytes) continue;
+    const projectRoot = nodePath.dirname(dir);
+    const activeReason = activeProjectReason(projectRoot, input.activeDevServers);
+    if (activeReason) continue;
     const relevantMtime = await lastRelevantMtime(dir);
     const ageDays = Math.max(0, Math.floor((now - relevantMtime) / (24 * 60 * 60 * 1_000)));
     const resolvedDir = nodePath.resolve(dir);
     const resolvedCwd = nodePath.resolve(input.cwd);
-    const isCurrentProject = resolvedDir === resolvedCwd || isStrictlyInside(resolvedCwd, resolvedDir);
+    const isCurrentProject =
+      resolvedDir === resolvedCwd || isStrictlyInside(resolvedCwd, resolvedDir);
     const protectedReason = isCurrentProject ? "Current Chitauri project is protected." : null;
     const selectedByDefault = !protectedReason && now - relevantMtime >= minAgeMs;
     const candidate = await makeDirectoryCandidate({
       path: dir,
-      roots: input.roots,
-      bytes,
-      selectedByDefault: input.options.includeProtected ? selectedByDefault || Boolean(protectedReason) : selectedByDefault,
+      projectPath: projectRoot,
+      selectedByDefault: input.options.includeProtected
+        ? selectedByDefault || Boolean(protectedReason)
+        : selectedByDefault,
       protectedReason,
       metadata: {
         age: `${ageDays} days`,
         packageManager: packageManagerHint(nodePath.dirname(dir)),
         consequence: "Reinstall dependencies from the owning project.",
       },
+      signal: input.signal,
     });
-    if (!candidate) continue;
+    if (!candidate || (candidate.bytes ?? 0) < input.options.minBytes) continue;
     candidates.push(candidate);
     targets.set(candidate.id, { kind: "directory", path: dir, allowlist: "node_modules" });
   }
@@ -281,7 +322,11 @@ async function toolVersion(command: string, signal: AbortSignal): Promise<string
   return result.stdout.trim().split(/\s+/)[0] ?? null;
 }
 
-async function commandOutput(command: string, args: readonly string[], signal: AbortSignal): Promise<string | null> {
+async function commandOutput(
+  command: string,
+  args: readonly string[],
+  signal: AbortSignal,
+): Promise<string | null> {
   const result = await runTool(command, args, signal).catch(() => null);
   if (!result || result.code !== 0) return null;
   return result.stdout.trim();
@@ -298,13 +343,15 @@ async function analyzePackageCaches(signal: AbortSignal): Promise<{
       tool: "pnpm" as const,
       title: "pnpm store prune",
       pathArgs: ["store", "path"] as const,
-      consequence: "Official prune removes unreferenced packages; future installs may download again.",
+      consequence:
+        "Official prune removes unreferenced packages; future installs may download again.",
     },
     {
       tool: "npm" as const,
       title: "npm cache verify",
       pathArgs: ["config", "get", "cache"] as const,
-      consequence: "Verification garbage-collects and validates cache content without a full forced clear.",
+      consequence:
+        "Verification garbage-collects and validates cache content without a full forced clear.",
     },
     {
       tool: "bun" as const,
@@ -323,7 +370,11 @@ async function analyzePackageCaches(signal: AbortSignal): Promise<{
     const version = await toolVersion(spec.tool, signal);
     if (!version) continue;
     const cachePath = await commandOutput(spec.tool, spec.pathArgs, signal);
-    const bytes = cachePath && (await exists(cachePath)) ? await directoryBytes(cachePath, signal).catch(() => 0) : 0;
+    const cacheFingerprint =
+      cachePath && (await exists(cachePath))
+        ? await fingerprintDirectory(cachePath, signal).catch(() => null)
+        : null;
+    const bytes = cacheFingerprint?.bytes ?? 0;
     const id = candidateId();
     candidates.push({
       id,
@@ -344,12 +395,16 @@ async function analyzePackageCaches(signal: AbortSignal): Promise<{
   return { candidates, targets };
 }
 
-async function analyzeProjectArtifacts(input: {
+export async function analyzeProjectArtifacts(input: {
   readonly roots: readonly string[];
   readonly options: ComputerScriptsOptions;
   readonly cwd: string;
+  readonly activeDevServers: readonly ProjectDevServer[];
   readonly signal: AbortSignal;
-}): Promise<{ candidates: ComputerScriptCandidate[]; targets: Map<ComputerScriptCandidateId, CandidateTarget> }> {
+}): Promise<{
+  candidates: ComputerScriptCandidate[];
+  targets: Map<ComputerScriptCandidateId, CandidateTarget>;
+}> {
   const targets = new Map<ComputerScriptCandidateId, CandidateTarget>();
   const candidates: ComputerScriptCandidate[] = [];
   const dirs = await discoverDirectories({
@@ -358,32 +413,34 @@ async function analyzeProjectArtifacts(input: {
     match: (dir, name) =>
       name === ".turbo" ||
       name === ".vite" ||
-      (name === "dist" && true) ||
-      (name === "build" && true) ||
+      name === "dist" ||
+      name === "build" ||
       dir.split(nodePath.sep).slice(-2).join("/") === ".next/cache" ||
       dir.split(nodePath.sep).slice(-2).join("/") === "node_modules/.vite",
     stopAtMatch: true,
+    shouldTraverse: (dir) => nodePath.basename(nodePath.dirname(dir)) !== "node_modules",
   });
   for (const dir of dirs.filter(allowlistedArtifact)) {
-    const bytes = await directoryBytes(dir, input.signal);
-    if (bytes < input.options.minBytes) continue;
+    const projectRoot = await owningProjectRootForArtifact(dir);
+    if (!projectRoot || activeProjectReason(projectRoot, input.activeDevServers)) continue;
     const resolvedDir = nodePath.resolve(dir);
     const resolvedCwd = nodePath.resolve(input.cwd);
-    const protectedReason = (resolvedDir === resolvedCwd || isStrictlyInside(resolvedCwd, resolvedDir))
-      ? "Current Chitauri project is protected."
-      : null;
+    const protectedReason =
+      resolvedDir === resolvedCwd || isStrictlyInside(resolvedCwd, resolvedDir)
+        ? "Current Chitauri project is protected."
+        : null;
     const candidate = await makeDirectoryCandidate({
       path: dir,
-      roots: input.roots,
-      bytes,
+      projectPath: projectRoot,
       selectedByDefault: input.options.includeProtected ? true : !protectedReason,
       protectedReason,
       metadata: {
         artifact: dir.split(nodePath.sep).slice(-2).join("/"),
         consequence: "Recreated by the project build tool.",
       },
+      signal: input.signal,
     });
-    if (!candidate) continue;
+    if (!candidate || (candidate.bytes ?? 0) < input.options.minBytes) continue;
     candidates.push(candidate);
     targets.set(candidate.id, { kind: "directory", path: dir, allowlist: "artifact" });
   }
@@ -411,7 +468,8 @@ async function removeDirectory(input: {
     target: input.target.path,
     roots: input.roots,
     protectedRoots: input.protectedRoots,
-    allowlist: input.target.allowlist === "node_modules" ? allowlistedNodeModules : allowlistedArtifact,
+    allowlist:
+      input.target.allowlist === "node_modules" ? allowlistedNodeModules : allowlistedArtifact,
   });
   if (!validation.ok) {
     return {
@@ -424,7 +482,8 @@ async function removeDirectory(input: {
       bytes: 0,
     };
   }
-  if (!fingerprintMatches(validation.fingerprint, input.candidate.fingerprint, input.candidate.bytes)) {
+  const currentFingerprint = await fingerprintDirectory(validation.realPath);
+  if (!currentFingerprint || !fingerprintMatches(currentFingerprint, input.candidate.fingerprint)) {
     return {
       candidateId: input.candidate.id,
       label: input.candidate.label,
@@ -471,12 +530,21 @@ async function runPackageTool(
     bun: ["pm", "cache", "rm"],
     yarn: ["cache", "clean"],
   } as const;
-  const before = target.path && (await exists(target.path)) ? await directoryBytes(target.path, signal).catch(() => 0) : 0;
+  const before =
+    target.path && (await exists(target.path))
+      ? ((await fingerprintDirectory(target.path, signal).catch(() => null))?.bytes ?? 0)
+      : 0;
   const result = await runTool(target.tool, commandByTool[target.tool], signal).catch((error) => {
     throw error instanceof Error ? error : new Error(String(error));
   });
-  const after = target.path && (await exists(target.path)) ? await directoryBytes(target.path, signal).catch(() => 0) : 0;
-  const message = [result.stderr.trim(), result.stdout.trim()].filter(Boolean).join("\n").slice(0, 1000);
+  const after =
+    target.path && (await exists(target.path))
+      ? ((await fingerprintDirectory(target.path, signal).catch(() => null))?.bytes ?? 0)
+      : 0;
+  const message = [result.stderr.trim(), result.stdout.trim()]
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 1000);
   if (result.code !== 0) {
     return {
       candidateId: candidate.id,
@@ -499,24 +567,21 @@ async function runPackageTool(
   };
 }
 
-async function readHistory(path: string) {
-  try {
-    const parsed = JSON.parse(await fs.readFile(path, "utf8")) as unknown;
-    return Array.isArray(parsed) ? (parsed as ComputerScriptsRunSnapshot[]) : [];
-  } catch {
-    return [];
-  }
-}
-
 export const ComputerScriptsLive = Layer.effect(
   ComputerScripts,
   Effect.gen(function* () {
     const config = yield* ServerConfig;
+    const devServerManager = yield* DevServerManager;
     const events = yield* PubSub.unbounded<ComputerScriptsStreamEvent>();
     const analyses = new Map<ComputerScriptAnalysisId, AnalysisRecord>();
     const runs = new Map<ComputerScriptRunId, RunRecord>();
     let activeRun: ComputerScriptRunId | null = null;
     const historyPath = nodePath.join(config.stateDir, "computer-scripts-runs.json");
+    let history = yield* Effect.promise(() => loadAndReconcileRunHistory(historyPath, isoNow()));
+    let latestRun = history[0] ?? null;
+    for (const snapshot of history) {
+      runs.set(snapshot.id, { snapshot, controller: new AbortController() });
+    }
     const protectedRoots = defaultProtectedRoots({
       homeDir: config.homeDir,
       stateDir: config.stateDir,
@@ -527,10 +592,10 @@ export const ComputerScriptsLive = Layer.effect(
       void Effect.runPromise(PubSub.publish(events, event));
     };
     const persistRun = async (snapshot: ComputerScriptsRunSnapshot) => {
-      await fs.mkdir(nodePath.dirname(historyPath), { recursive: true });
-      const history = await readHistory(historyPath);
-      const next = [snapshot, ...history.filter((run) => run.id !== snapshot.id)].slice(0, 50);
-      await fs.writeFile(historyPath, JSON.stringify(next, null, 2));
+      const next = upsertRunHistory(history, snapshot);
+      await writeRunHistoryAtomically(historyPath, next);
+      history = next;
+      latestRun = snapshot;
     };
     const descriptor = (id: ComputerScriptId): ComputerScriptDescriptor | null =>
       COMPUTER_SCRIPT_CATALOG.find((item) => item.id === id) ?? null;
@@ -538,23 +603,28 @@ export const ComputerScriptsLive = Layer.effect(
     async function startAnalysisWork(record: AnalysisRecord) {
       try {
         const utility = record.snapshot.utilityId;
-        let result:
-          | { candidates: ComputerScriptCandidate[]; targets: Map<ComputerScriptCandidateId, CandidateTarget> }
-          | null = null;
+        let result: {
+          candidates: ComputerScriptCandidate[];
+          targets: Map<ComputerScriptCandidateId, CandidateTarget>;
+        } | null = null;
         if (utility === COMPUTER_SCRIPT_IDS.nodeModules) {
+          const { servers: activeDevServers } = await Effect.runPromise(devServerManager.list);
           result = await analyzeNodeModules({
             roots: record.roots,
             options: record.snapshot.options,
             cwd: config.cwd,
+            activeDevServers,
             signal: record.controller.signal,
           });
         } else if (utility === COMPUTER_SCRIPT_IDS.packageCaches) {
           result = await analyzePackageCaches(record.controller.signal);
         } else if (utility === COMPUTER_SCRIPT_IDS.projectArtifacts) {
+          const { servers: activeDevServers } = await Effect.runPromise(devServerManager.list);
           result = await analyzeProjectArtifacts({
             roots: record.roots,
             options: record.snapshot.options,
             cwd: config.cwd,
+            activeDevServers,
             signal: record.controller.signal,
           });
         }
@@ -587,10 +657,18 @@ export const ComputerScriptsLive = Layer.effect(
           ...record.snapshot,
           state: cancelled ? "cancelled" : "failed",
           completedAt: isoNow(),
-          error: cancelled ? "Analysis cancelled." : error instanceof Error ? error.message : "Analysis failed.",
+          error: cancelled
+            ? "Analysis cancelled."
+            : error instanceof Error
+              ? error.message
+              : "Analysis failed.",
           logs: appendLog(record.snapshot.logs, {
             level: cancelled ? "warning" : "error",
-            message: cancelled ? "Analysis cancelled." : error instanceof Error ? error.message : "Analysis failed.",
+            message: cancelled
+              ? "Analysis cancelled."
+              : error instanceof Error
+                ? error.message
+                : "Analysis failed.",
             target: null,
           }),
         };
@@ -621,12 +699,27 @@ export const ComputerScriptsLive = Layer.effect(
           } else if (item.target.kind === "tool") {
             result = await runPackageTool(item.target, item.candidate, record.controller.signal);
           } else {
-            result = await removeDirectory({
-              target: item.target,
-              candidate: item.candidate,
-              roots: analysis.roots,
-              protectedRoots,
-            });
+            const { servers: activeDevServers } = await Effect.runPromise(devServerManager.list);
+            const projectRoot = item.candidate.metadata.project;
+            const activeReason = projectRoot
+              ? activeProjectReason(projectRoot, activeDevServers)
+              : null;
+            result = activeReason
+              ? {
+                  candidateId: item.candidate.id,
+                  label: item.candidate.label,
+                  path: item.candidate.path,
+                  status: "skipped",
+                  reason: "active_target",
+                  message: activeReason,
+                  bytes: 0,
+                }
+              : await removeDirectory({
+                  target: item.target,
+                  candidate: item.candidate,
+                  roots: analysis.roots,
+                  protectedRoots,
+                });
           }
           const results = [...record.snapshot.results, result];
           const reclaimedBytes = results.reduce((sum, entry) => sum + entry.bytes, 0);
@@ -644,11 +737,17 @@ export const ComputerScriptsLive = Layer.effect(
               bytes: reclaimedBytes,
             },
             logs: appendLog(record.snapshot.logs, {
-              level: result.status === "failed" ? "error" : result.status === "skipped" ? "warning" : "info",
+              level:
+                result.status === "failed"
+                  ? "error"
+                  : result.status === "skipped"
+                    ? "warning"
+                    : "info",
               message: result.message,
               target: result.path,
             }),
           };
+          await persistRun(record.snapshot);
           publish({ type: "run", snapshot: record.snapshot });
         }
         const cancelled = record.controller.signal.aborted;
@@ -673,8 +772,8 @@ export const ComputerScriptsLive = Layer.effect(
         };
       } finally {
         activeRun = null;
-        publish({ type: "run", snapshot: record.snapshot });
         await persistRun(record.snapshot).catch(() => undefined);
+        publish({ type: "run", snapshot: record.snapshot });
       }
     }
 
@@ -724,6 +823,13 @@ export const ComputerScriptsLive = Layer.effect(
           };
           const record: AnalysisRecord = { roots, targets: new Map(), snapshot, controller };
           analyses.set(id, record);
+          while (analyses.size > MAX_RECENT_ANALYSES) {
+            const oldestId = analyses.keys().next().value;
+            if (!oldestId) break;
+            const oldest = analyses.get(oldestId);
+            if (oldest?.snapshot.state === "analyzing") break;
+            analyses.delete(oldestId);
+          }
           publish({ type: "analysis", snapshot });
           void startAnalysisWork(record);
           return { snapshot };
@@ -790,6 +896,13 @@ export const ComputerScriptsLive = Layer.effect(
           const record: RunRecord = { snapshot, controller: new AbortController() };
           runs.set(id, record);
           activeRun = id;
+          try {
+            await persistRun(snapshot);
+          } catch (error) {
+            runs.delete(id);
+            activeRun = null;
+            throw error;
+          }
           publish({ type: "run", snapshot });
           void startRunWork(record, analysis);
           return { snapshot };
@@ -819,26 +932,40 @@ export const ComputerScriptsLive = Layer.effect(
       });
 
     const listHistory: ComputerScriptsShape["listHistory"] = (input) =>
-      Effect.tryPromise({
-        try: async () => {
-          const history = await readHistory(historyPath);
-          return {
-            runs: history.slice(0, input.limit).map((run) => ({
-              id: run.id,
-              utilityId: run.utilityId,
-              state: run.state,
-              startedAt: run.startedAt,
-              completedAt: run.completedAt,
-              estimatedBytes: run.estimatedBytes,
-              reclaimedBytes: run.reclaimedBytes,
-              removedCount: run.removedCount,
-              skippedCount: run.skippedCount,
-              failedCount: run.failedCount,
-            })),
-          };
-        },
-        catch: toError,
+      Effect.succeed({
+        runs: history.slice(0, input.limit).map((run) => ({
+          id: run.id,
+          utilityId: run.utilityId,
+          state: run.state,
+          startedAt: run.startedAt,
+          completedAt: run.completedAt,
+          estimatedBytes: run.estimatedBytes,
+          reclaimedBytes: run.reclaimedBytes,
+          removedCount: run.removedCount,
+          skippedCount: run.skippedCount,
+          failedCount: run.failedCount,
+        })),
       });
+
+    const currentSnapshotEvents = (): ComputerScriptsStreamEvent[] => {
+      const analysisEvents = [...analyses.values()]
+        .map((record) => record.snapshot)
+        .toSorted((left, right) => left.startedAt.localeCompare(right.startedAt))
+        .map((snapshot): ComputerScriptsStreamEvent => ({ type: "analysis", snapshot }));
+      return latestRun
+        ? [...analysisEvents, { type: "run" as const, snapshot: latestRun }]
+        : analysisEvents;
+    };
+
+    const streamEvents: ComputerScriptsShape["streamEvents"] = Stream.unwrap(
+      Effect.gen(function* () {
+        const subscription = yield* PubSub.subscribe(events);
+        return Stream.concat(
+          Stream.fromIterable(currentSnapshotEvents()),
+          Stream.fromSubscription(subscription),
+        );
+      }),
+    );
 
     return ComputerScripts.of({
       catalog,
@@ -849,7 +976,7 @@ export const ComputerScriptsLive = Layer.effect(
       run,
       cancelRun,
       listHistory,
-      streamEvents: Stream.fromPubSub(events),
+      streamEvents,
     });
   }),
 );

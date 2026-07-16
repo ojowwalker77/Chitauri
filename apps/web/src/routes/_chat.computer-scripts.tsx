@@ -20,7 +20,21 @@ import {
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
-import { CheckCircle2Icon, HammerIcon, PlayIcon, RefreshCwIcon, StopIcon, Trash2, TriangleAlertIcon } from "~/lib/icons";
+import {
+  analysisForUtility,
+  applyComputerScriptsEvent,
+  emptyComputerScriptsViewState,
+  runForUtility,
+} from "~/computerScriptsState";
+import {
+  CheckCircle2Icon,
+  HammerIcon,
+  PlayIcon,
+  RefreshCwIcon,
+  StopIcon,
+  Trash2,
+  TriangleAlertIcon,
+} from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
 
@@ -34,6 +48,8 @@ const DEFAULT_OPTIONS = {
   minBytes: 100 * 1024 * 1024,
   includeProtected: false,
 };
+const EMPTY_UTILITIES: readonly ComputerScriptDescriptor[] = [];
+const EMPTY_CANDIDATES: ReadonlySet<ComputerScriptCandidateId> = new Set();
 
 function formatBytes(bytes: number | null): string {
   if (bytes == null) return "Unknown";
@@ -53,7 +69,9 @@ function utilityTone(utility: ComputerScriptDescriptor): string {
   return "Disruptive";
 }
 
-function terminalState(snapshot: ComputerScriptsAnalysisSnapshot | ComputerScriptsRunSnapshot | null) {
+function terminalState(
+  snapshot: ComputerScriptsAnalysisSnapshot | ComputerScriptsRunSnapshot | null,
+) {
   if (!snapshot) return false;
   return ["completed", "partial", "failed", "cancelled", "interrupted", "review"].includes(
     snapshot.state,
@@ -91,7 +109,9 @@ function CandidateRow({
           </span>
         </span>
         {candidate.path ? (
-          <span className="mt-1 block truncate text-xs text-muted-foreground">{candidate.path}</span>
+          <span className="mt-1 block truncate text-xs text-muted-foreground">
+            {candidate.path}
+          </span>
         ) : null}
         {candidate.protectedReason ? (
           <span className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
@@ -100,14 +120,16 @@ function CandidateRow({
           </span>
         ) : null}
         <span className="mt-2 flex flex-wrap gap-1.5">
-          {Object.entries(candidate.metadata).slice(0, 4).map(([key, value]) => (
-            <span
-              key={key}
-              className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 text-[11px] text-muted-foreground"
-            >
-              {key}: {value}
-            </span>
-          ))}
+          {Object.entries(candidate.metadata)
+            .slice(0, 4)
+            .map(([key, value]) => (
+              <span
+                key={key}
+                className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 text-[11px] text-muted-foreground"
+              >
+                {key}: {value}
+              </span>
+            ))}
         </span>
       </span>
     </label>
@@ -117,11 +139,10 @@ function CandidateRow({
 function ComputerScriptsRoute() {
   const queryClient = useQueryClient();
   const [selectedUtilityId, setSelectedUtilityId] = useState<ComputerScriptId | null>(null);
-  const [analysis, setAnalysis] = useState<ComputerScriptsAnalysisSnapshot | null>(null);
-  const [run, setRun] = useState<ComputerScriptsRunSnapshot | null>(null);
-  const [selectedCandidates, setSelectedCandidates] = useState<Set<ComputerScriptCandidateId>>(
-    new Set<ComputerScriptCandidateId>(),
-  );
+  const [viewState, setViewState] = useState(emptyComputerScriptsViewState);
+  const [selectedCandidatesByAnalysis, setSelectedCandidatesByAnalysis] = useState<
+    ReadonlyMap<ComputerScriptsAnalysisSnapshot["id"], ReadonlySet<ComputerScriptCandidateId>>
+  >(new Map());
   const [rootInput, setRootInput] = useState("");
 
   const catalogQuery = useQuery({
@@ -133,8 +154,14 @@ function ComputerScriptsRoute() {
     queryFn: () => ensureNativeApi().computerScripts.listHistory({ limit: 10 }),
   });
 
-  const utilities = catalogQuery.data?.utilities ?? [];
-  const selectedUtility = utilities.find((utility) => utility.id === selectedUtilityId) ?? utilities[0] ?? null;
+  const utilities = catalogQuery.data?.utilities ?? EMPTY_UTILITIES;
+  const selectedUtility =
+    utilities.find((utility) => utility.id === selectedUtilityId) ?? utilities[0] ?? null;
+  const analysis = analysisForUtility(viewState, selectedUtility?.id);
+  const run = runForUtility(viewState, selectedUtility?.id);
+  const selectedCandidates = analysis
+    ? (selectedCandidatesByAnalysis.get(analysis.id) ?? EMPTY_CANDIDATES)
+    : EMPTY_CANDIDATES;
 
   useEffect(() => {
     if (!selectedUtilityId && utilities[0]) setSelectedUtilityId(utilities[0].id);
@@ -143,19 +170,24 @@ function ComputerScriptsRoute() {
   useEffect(() => {
     const api = ensureNativeApi();
     return api.computerScripts.onEvent((event) => {
+      setViewState((current) => applyComputerScriptsEvent(current, event));
       if (event.type === "analysis") {
-        setAnalysis(event.snapshot);
         if (event.snapshot.state === "review") {
-          setSelectedCandidates(
-            new Set<ComputerScriptCandidateId>(
-              event.snapshot.candidates
-                .filter((candidate) => candidate.selectedByDefault && !candidate.protectedReason)
-                .map((candidate) => candidate.id),
-            ),
-          );
+          setSelectedCandidatesByAnalysis((current) => {
+            if (current.has(event.snapshot.id)) return current;
+            const next = new Map(current);
+            next.set(
+              event.snapshot.id,
+              new Set<ComputerScriptCandidateId>(
+                event.snapshot.candidates
+                  .filter((candidate) => candidate.selectedByDefault && !candidate.protectedReason)
+                  .map((candidate) => candidate.id),
+              ),
+            );
+            return next;
+          });
         }
       } else {
-        setRun(event.snapshot);
         if (terminalState(event.snapshot)) {
           void queryClient.invalidateQueries({ queryKey: ["computerScripts", "history"] });
         }
@@ -166,7 +198,6 @@ function ComputerScriptsRoute() {
   const startAnalysis = useMutation({
     mutationFn: async () => {
       if (!selectedUtility) throw new Error("Select a utility first.");
-      setRun(null);
       const roots = rootInput
         .split("\n")
         .map((root) => root.trim())
@@ -177,8 +208,15 @@ function ComputerScriptsRoute() {
       });
     },
     onSuccess: (result) => {
-      setAnalysis(result.snapshot);
-      setSelectedCandidates(new Set<ComputerScriptCandidateId>());
+      setViewState((current) =>
+        applyComputerScriptsEvent(current, { type: "analysis", snapshot: result.snapshot }),
+      );
+      setSelectedCandidatesByAnalysis((current) => {
+        if (current.has(result.snapshot.id)) return current;
+        const next = new Map(current);
+        next.set(result.snapshot.id, new Set<ComputerScriptCandidateId>());
+        return next;
+      });
     },
   });
 
@@ -191,7 +229,10 @@ function ComputerScriptsRoute() {
         candidateIds: [...selectedCandidates],
       });
     },
-    onSuccess: (result) => setRun(result.snapshot),
+    onSuccess: (result) =>
+      setViewState((current) =>
+        applyComputerScriptsEvent(current, { type: "run", snapshot: result.snapshot }),
+      ),
   });
 
   const selectedBytes = useMemo(
@@ -231,9 +272,15 @@ function ComputerScriptsRoute() {
             className="ml-auto"
             size="sm"
             onClick={() => startAnalysis.mutate()}
-            disabled={!selectedUtility || startAnalysis.isPending || analysis?.state === "analyzing"}
+            disabled={
+              !selectedUtility || startAnalysis.isPending || analysis?.state === "analyzing"
+            }
           >
-            {analysis?.state === "analyzing" ? <Spinner className="size-3.5" /> : <RefreshCwIcon className="size-3.5" />}
+            {analysis?.state === "analyzing" ? (
+              <Spinner className="size-3.5" />
+            ) : (
+              <RefreshCwIcon className="size-3.5" />
+            )}
             Analyze computer
           </Button>
         </header>
@@ -248,12 +295,7 @@ function ComputerScriptsRoute() {
                   <button
                     key={utility.id}
                     type="button"
-                    onClick={() => {
-                      setSelectedUtilityId(utility.id);
-                      setAnalysis(null);
-                      setRun(null);
-                      setSelectedCandidates(new Set<ComputerScriptCandidateId>());
-                    }}
+                    onClick={() => setSelectedUtilityId(utility.id)}
                     className={cn(
                       "w-full rounded-lg border p-3 text-left transition-colors",
                       selected
@@ -267,7 +309,9 @@ function ComputerScriptsRoute() {
                         {utilityTone(utility)}
                       </span>
                     </span>
-                    <span className="mt-1 block text-xs text-muted-foreground">{utility.summary}</span>
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      {utility.summary}
+                    </span>
                     {lastRun ? (
                       <span className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                         <CheckCircle2Icon className="size-3.5" />
@@ -290,7 +334,9 @@ function ComputerScriptsRoute() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <h2 className="text-base font-semibold">{selectedUtility.title}</h2>
-                      <p className="mt-1 text-sm text-muted-foreground">{selectedUtility.consequence}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {selectedUtility.consequence}
+                      </p>
                       <div className="mt-3 grid gap-2 md:grid-cols-[1fr_auto]">
                         <Input
                           value={rootInput}
@@ -338,10 +384,13 @@ function ComputerScriptsRoute() {
                           candidate={candidate}
                           checked={selectedCandidates.has(candidate.id)}
                           onToggle={() => {
-                            setSelectedCandidates((current) => {
-                              const next = new Set(current);
-                              if (next.has(candidate.id)) next.delete(candidate.id);
-                              else next.add(candidate.id);
+                            setSelectedCandidatesByAnalysis((current) => {
+                              const nextCandidates = new Set(current.get(analysis.id) ?? []);
+                              if (nextCandidates.has(candidate.id))
+                                nextCandidates.delete(candidate.id);
+                              else nextCandidates.add(candidate.id);
+                              const next = new Map(current);
+                              next.set(analysis.id, nextCandidates);
                               return next;
                             });
                           }}
@@ -352,15 +401,22 @@ function ComputerScriptsRoute() {
                       <div className="mt-4 flex items-center gap-2">
                         <Button
                           onClick={() => startRun.mutate()}
-                          disabled={selectedCandidates.size === 0 || startRun.isPending || run?.state === "running"}
+                          disabled={
+                            selectedCandidates.size === 0 ||
+                            startRun.isPending ||
+                            run?.state === "running"
+                          }
                         >
                           <PlayIcon className="size-3.5" />
-                          Remove {selectedCandidates.size} targets · reclaim about {formatBytes(selectedBytes)}
+                          Remove {selectedCandidates.size} targets · reclaim about{" "}
+                          {formatBytes(selectedBytes)}
                         </Button>
                         {run?.state === "running" ? (
                           <Button
                             variant="outline"
-                            onClick={() => void ensureNativeApi().computerScripts.cancelRun({ runId: run.id })}
+                            onClick={() =>
+                              void ensureNativeApi().computerScripts.cancelRun({ runId: run.id })
+                            }
                           >
                             <StopIcon className="size-3.5" />
                             Cancel
@@ -375,7 +431,9 @@ function ComputerScriptsRoute() {
                   <div className="rounded-lg border border-border/70 bg-background/60 p-4">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-semibold">Run receipt</h3>
-                      <span className="ml-auto text-xs capitalize text-muted-foreground">{run.state}</span>
+                      <span className="ml-auto text-xs capitalize text-muted-foreground">
+                        {run.state}
+                      </span>
                     </div>
                     <div className="mt-3 grid gap-2 text-sm md:grid-cols-4">
                       <div>Reclaimed: {formatBytes(run.reclaimedBytes)}</div>
@@ -385,10 +443,15 @@ function ComputerScriptsRoute() {
                     </div>
                     <div className="mt-4 space-y-2">
                       {run.results.map((result) => (
-                        <div key={result.candidateId} className="rounded-lg border border-border/70 p-3 text-sm">
+                        <div
+                          key={result.candidateId}
+                          className="rounded-lg border border-border/70 p-3 text-sm"
+                        >
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{result.label}</span>
-                            <span className="ml-auto text-xs capitalize text-muted-foreground">{result.status}</span>
+                            <span className="ml-auto text-xs capitalize text-muted-foreground">
+                              {result.status}
+                            </span>
                           </div>
                           <p className="mt-1 text-xs text-muted-foreground">{result.message}</p>
                         </div>

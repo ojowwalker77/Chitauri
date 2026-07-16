@@ -278,9 +278,12 @@ export const WS_CHANNELS = {
 
 // -- Tagged Union of all request body schemas ─────────────────────────
 
-const tagRequestBody = <const Tag extends string, const Fields extends Schema.Struct.Fields>(
+const tagRequestBody = <
+  const Tag extends string,
+  const StructSchema extends Schema.Struct<Schema.Struct.Fields>,
+>(
   tag: Tag,
-  schema: Schema.Struct<Fields>,
+  schema: StructSchema,
 ) =>
   schema.mapFields(
     Struct.assign({ _tag: Schema.tag(tag) }),

@@ -1,10 +1,10 @@
-import type { ComputerScriptDescriptor, ComputerScriptId } from "@t3tools/contracts";
+import { ComputerScriptId, type ComputerScriptDescriptor } from "@t3tools/contracts";
 
 export const COMPUTER_SCRIPT_IDS = {
-  nodeModules: "computer-script:old-node-modules",
-  packageCaches: "computer-script:package-caches",
-  projectArtifacts: "computer-script:project-artifacts",
-} as const satisfies Record<string, ComputerScriptId>;
+  nodeModules: ComputerScriptId.makeUnsafe("computer-script:old-node-modules"),
+  packageCaches: ComputerScriptId.makeUnsafe("computer-script:package-caches"),
+  projectArtifacts: ComputerScriptId.makeUnsafe("computer-script:project-artifacts"),
+} as const;
 
 export const COMPUTER_SCRIPT_CATALOG: ReadonlyArray<ComputerScriptDescriptor> = [
   {
@@ -14,7 +14,8 @@ export const COMPUTER_SCRIPT_CATALOG: ReadonlyArray<ComputerScriptDescriptor> = 
     category: "developer-cleanup",
     platforms: ["darwin", "linux", "win32"],
     risk: "redownload",
-    consequence: "Removed folders are permanently deleted and must be recreated by installing dependencies again.",
+    consequence:
+      "Removed folders are permanently deleted and must be recreated by installing dependencies again.",
     capabilities: { analyze: true, cancel: true },
   },
   {
@@ -30,7 +31,8 @@ export const COMPUTER_SCRIPT_CATALOG: ReadonlyArray<ComputerScriptDescriptor> = 
   {
     id: COMPUTER_SCRIPT_IDS.projectArtifacts,
     title: "Project build artifacts",
-    summary: "Clean conservative project-local build outputs like .next/cache, .turbo, dist, and Vite caches.",
+    summary:
+      "Clean conservative project-local build outputs like .next/cache, .turbo, dist, and Vite caches.",
     category: "project-artifact",
     platforms: ["darwin", "linux", "win32"],
     risk: "low",

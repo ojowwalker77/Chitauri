@@ -1,8 +1,7 @@
 // FILE: _chat.research.$researchId.$threadId.tsx
 // Purpose: Research reader backed by a real Chitauri thread and composer.
 
-import { ThreadId, type ModelSelection, type ProjectId } from "@t3tools/contracts";
-import { getDefaultModel } from "@t3tools/shared/model";
+import { ThreadId, type ProjectId } from "@t3tools/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
@@ -17,7 +16,10 @@ import { RouteInsetSurface } from "~/components/RouteInsetSurface";
 import { ResearchDocumentView } from "~/components/research/ResearchDocumentView";
 import { Button } from "~/components/ui/button";
 import { toastManager } from "~/components/ui/toast";
-import { useComposerDraftStore } from "~/composerDraftStore";
+import {
+  resolvePreferredComposerModelSelection,
+  useComposerDraftStore,
+} from "~/composerDraftStore";
 import { newCommandId, newMessageId, newThreadId } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
@@ -63,21 +65,21 @@ function ResearchDetailRoute() {
   );
   const document = query.data?.document ?? null;
 
-  const modelSelection = useMemo<ModelSelection>(() => {
-    return (
-      serverThread?.modelSelection ??
-      composerDraft?.modelSelection ??
-      project?.defaultModelSelection ?? {
-        provider: settings.defaultProvider,
-        model: getDefaultModel(settings.defaultProvider),
-      }
-    );
-  }, [
-    composerDraft?.modelSelection,
-    project?.defaultModelSelection,
-    serverThread?.modelSelection,
-    settings.defaultProvider,
-  ]);
+  const modelSelection = useMemo(
+    () =>
+      resolvePreferredComposerModelSelection({
+        draft: composerDraft,
+        threadModelSelection: serverThread?.modelSelection,
+        projectModelSelection: project?.defaultModelSelection,
+        defaultProvider: settings.defaultProvider,
+      }),
+    [
+      composerDraft,
+      project?.defaultModelSelection,
+      serverThread?.modelSelection,
+      settings.defaultProvider,
+    ],
+  );
 
   const applyInNewThread = async () => {
     if (!document || !projectId || applying) return;
@@ -169,9 +171,12 @@ function ResearchDetailRoute() {
         threadId={threadId}
         transcriptContent={transcriptContent}
         surfaceTitle={document?.title ?? "Research"}
-        transformOutgoingPrompt={
-          document ? (prompt) => buildResearchRevisionPrompt(document, prompt) : undefined
-        }
+        {...(document
+          ? {
+              transformOutgoingPrompt: (prompt: string) =>
+                buildResearchRevisionPrompt(document, prompt),
+            }
+          : {})}
       />
     </RouteInsetSurface>
   );

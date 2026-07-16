@@ -1254,10 +1254,11 @@ export const makeWsRpcLayer = () =>
         [WS_METHODS.computerScriptsListHistory]: (input) =>
           rpcEffect(computerScripts.listHistory(input), "Failed to load Computer Scripts history"),
         [WS_METHODS.subscribeComputerScriptsEvents]: () =>
-          computerScripts.streamEvents.pipe(
-            Stream.mapError((cause) =>
-              toWsRpcError(cause, "Computer Scripts event stream failed"),
-            ),
+          bufferLiveUiStream(computerScripts.streamEvents, {
+            label: "computer-scripts.events",
+            onDroppedEvents: failLiveUiStreamForSnapshotResync,
+          }).pipe(
+            Stream.mapError((cause) => toWsRpcError(cause, "Computer Scripts event stream failed")),
           ),
       });
     }),
