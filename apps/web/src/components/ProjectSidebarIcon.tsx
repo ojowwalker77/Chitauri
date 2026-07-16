@@ -73,7 +73,7 @@ export function ProjectSidebarIcon({
           src={faviconSrc}
           alt=""
           aria-hidden="true"
-          className="absolute -right-1 -bottom-1 size-3 rounded-[4px] object-contain shadow-sm"
+          className="absolute -right-1 -bottom-1 size-3 rounded-[4px] object-contain"
           onError={() => {
             projectFaviconPresence.set(faviconSrc, false);
             setHasFavicon(false);

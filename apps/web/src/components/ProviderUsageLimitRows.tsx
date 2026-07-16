@@ -91,7 +91,7 @@ function SettingsUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
 
 function PopoverUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
   return (
-    <div className="space-y-1 text-[length:var(--app-font-size-chat-meta,10px)] leading-tight">
+    <div className="space-y-1 text-[length:var(--app-font-size-chat-meta,11px)] leading-tight">
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-x-3">
         <div className="flex min-w-0 items-baseline gap-1.5">
           <span className="shrink-0 text-[11px] font-medium text-foreground">{row.label}</span>

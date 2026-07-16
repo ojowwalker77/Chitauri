@@ -84,7 +84,7 @@ function ResearchIndexRoute() {
           <div className="mx-auto flex w-full max-w-5xl flex-col px-6 pb-16 pt-9 sm:px-10">
             <div className="mb-9 flex items-end justify-between gap-5">
               <div>
-                <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--color-accent)_16%,var(--color-background-elevated-secondary))] text-foreground shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border)_70%,transparent),0_10px_30px_-20px_rgba(0,0,0,0.6)]">
+                <div className="mb-3 flex size-10 items-center justify-center rounded-xl border border-panel-border bg-panel text-claude">
                   <BrainIcon className="size-5" />
                 </div>
                 <h1 className="text-balance font-heading text-3xl font-semibold tracking-[-0.025em] text-foreground">
@@ -114,7 +114,7 @@ function ResearchIndexRoute() {
                 Loading research…
               </div>
             ) : query.isError ? (
-              <div className="flex flex-col items-center rounded-[24px] bg-[var(--color-background-surface)] px-8 py-20 text-center shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-destructive)_28%,var(--color-border))]">
+              <div className="flex flex-col items-center rounded-xl border border-destructive/28 bg-panel px-8 py-20 text-center">
                 <p className="text-sm font-medium text-foreground">Research could not be loaded</p>
                 <p className="mt-1 max-w-md text-pretty text-xs leading-5 text-muted-foreground">
                   {loadError ?? "The research service did not return a usable response."}
@@ -130,7 +130,7 @@ function ResearchIndexRoute() {
                 </Button>
               </div>
             ) : documents.length === 0 ? (
-              <div className="flex flex-col items-center rounded-[24px] bg-[var(--color-background-surface)] px-8 py-20 text-center shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border)_70%,transparent)]">
+              <div className="flex flex-col items-center rounded-xl border border-panel-border bg-panel px-8 py-20 text-center">
                 <BrainIcon className="mb-4 size-8 text-muted-foreground/60" />
                 <p className="text-sm font-medium text-foreground">
                   Your research library is ready
@@ -147,10 +147,10 @@ function ResearchIndexRoute() {
                     key={document.id}
                     type="button"
                     onClick={() => void openResearch(document)}
-                    className="group flex min-h-48 flex-col rounded-[20px] bg-[var(--color-background-surface)] p-5 text-left shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border)_70%,transparent),0_12px_36px_-32px_rgba(0,0,0,0.8)] transition-[box-shadow,scale,background-color] duration-press ease-out hover:bg-[var(--color-background-elevated-secondary)] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border)_95%,transparent),0_22px_52px_-36px_rgba(0,0,0,0.8)] active:scale-[0.96] motion-reduce:transition-none"
+                    className="group flex min-h-48 flex-col rounded-xl border border-panel-border bg-panel p-5 text-left transition-[scale,background-color] duration-press ease-out hover:bg-[color-mix(in_srgb,var(--panel)_95%,white_5%)] active:scale-[0.96] motion-reduce:transition-none"
                   >
                     <div className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
-                      <span className="rounded-full bg-muted/70 px-2.5 py-1 font-medium uppercase tracking-[0.1em]">
+                      <span className="rounded-full bg-selected px-2.5 py-1 font-medium">
                         {document.format === "html" ? "Visual brief" : "Plan"}
                       </span>
                       <span className="tabular-nums">{shortDate(document.updatedAt)}</span>

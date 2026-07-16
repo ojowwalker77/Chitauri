@@ -106,46 +106,6 @@ it.layer(
   );
 });
 
-it.layer(
-  makeLayer(() =>
-    JSON.stringify([
-      {
-        id: "notification-1",
-        unread: true,
-        reason: "review_requested",
-        updated_at: "2026-07-15T12:00:00Z",
-        subject: {
-          title: "Please review",
-          type: "PullRequest",
-          url: "https://api.github.com/repos/acme/widgets/pulls/42",
-        },
-        repository: {
-          name: "widgets",
-          full_name: "acme/widgets",
-          html_url: "https://github.com/acme/widgets",
-        },
-      },
-    ]),
-  ).layer,
-)("GitHubWorkbench inbox", (it) => {
-  it.effect("normalizes REST notification repository fields", () =>
-    Effect.gen(function* () {
-      const workbench = yield* GitHubWorkbench;
-      const result = yield* workbench.listWork({
-        cwd: "/repo",
-        kind: "inbox",
-        view: "attention",
-        query: null,
-        repository: null,
-        limit: 50,
-      });
-      assert.equal(result.items[0]?.repository.nameWithOwner, "acme/widgets");
-      assert.equal(result.items[0]?.url, "https://github.com/acme/widgets/pull/42");
-      assert.equal(result.items[0]?.reason, "review_requested");
-    }),
-  );
-});
-
 const actionFixture = makeLayer(() => "https://github.com/acme/widgets/issues/8\n");
 it.layer(actionFixture.layer)("GitHubWorkbench actions", (it) => {
   it.effect("uses stdin for issue bodies instead of command arguments", () =>

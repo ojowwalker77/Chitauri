@@ -167,7 +167,7 @@ function RootRouteView() {
   // swallows the click as a window drag (the buttons render but do nothing). Rendering
   // it last in document order guarantees that subtraction wins. (z above dialogs/toasts
   // so it also stays clickable while a modal is open.)
-  const desktopWindowControls = <DesktopWindowControls className="fixed top-0 right-0 z-[250]" />;
+  const desktopWindowControls = <DesktopWindowControls className="fixed top-5 right-3 z-[250]" />;
 
   if (!readNativeApi()) {
     return (
@@ -592,7 +592,7 @@ function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
         <div className="absolute inset-0 bg-[linear-gradient(145deg,color-mix(in_srgb,var(--background)_90%,var(--color-black))_0%,var(--background)_55%)]" />
       </div>
 
-      <section className="relative w-full max-w-xl rounded-2xl border border-border/80 bg-card/90 p-6 shadow-2xl shadow-black/20 backdrop-blur-md sm:p-8">
+      <section className="relative w-full max-w-xl rounded-xl border border-panel-border bg-panel p-6 shadow-[0_16px_44px_rgba(0,0,0,0.5)] sm:p-8">
         <p className="text-[11px] font-semibold text-muted-foreground">{APP_DISPLAY_NAME}</p>
         <h1 className="mt-3 text-2xl font-semibold sm:text-3xl">Something went wrong.</h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{message}</p>

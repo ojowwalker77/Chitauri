@@ -22,4 +22,3 @@ export * from "./project";
 export * from "./filesystem";
 export * from "./rpc";
 export * from "./research";
-export * from "./computerScripts";

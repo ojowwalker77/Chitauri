@@ -655,7 +655,7 @@ function ChatMountSkeleton() {
         </div>
       </div>
       <div className="shrink-0 border-t border-[color:var(--color-border-light)] p-3">
-        <div className="rounded-2xl border border-[color:var(--color-border-light)] bg-background p-3 shadow-xs">
+        <div className="rounded-2xl border border-panel-border bg-[var(--composer-surface)] p-3">
           <div className="h-3 w-40 max-w-[50%] rounded-full bg-muted" />
           <div className="mt-8 flex items-center justify-between">
             <div className="h-2.5 w-24 rounded-full bg-muted/65" />
@@ -863,7 +863,7 @@ function SplitPaneSurface(props: {
       {props.isFocused ? (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-[0.9px] z-20 border border-[color-mix(in_srgb,var(--info)_45%,transparent)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--info)_12%,transparent)] transition-opacity duration-150"
+          className="pointer-events-none absolute inset-px z-20 border-2 border-[color-mix(in_srgb,var(--claude)_45%,transparent)] transition-opacity duration-150"
         />
       ) : null}
       {!props.isFocused ? (

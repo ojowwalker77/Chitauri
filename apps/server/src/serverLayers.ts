@@ -35,7 +35,6 @@ import { WorkspaceLayerLive } from "./workspace/runtimeLayer";
 import { ProjectFaviconResolverLive } from "./project/Layers/ProjectFaviconResolver";
 import { OrchestratorControlPlaneLive } from "./orchestrator/Layers/OrchestratorControlPlane";
 import { ServerEnvironmentLive } from "./environment/Layers/ServerEnvironment";
-import { ComputerScriptsLayerLive } from "./computerScripts/runtimeLayer";
 import { AutomationRepositoryLive } from "./persistence/Layers/AutomationRepository";
 import { ProjectionTurnRepositoryLive } from "./persistence/Layers/ProjectionTurns";
 
@@ -88,9 +87,6 @@ export function makeServerRuntimeServicesLayer() {
   );
   // Shares the single memoized TerminalManager with the top-level TerminalLayerLive.
   const devServerManagerLayer = DevServerManagerLive.pipe(Layer.provide(TerminalLayerLive));
-  const computerScriptsLayer = ComputerScriptsLayerLive.pipe(
-    Layer.provideMerge(devServerManagerLayer),
-  );
   const sessionCredentialLayer = SessionCredentialServiceLive.pipe(
     Layer.provide(ServerSecretStoreLive),
   );
@@ -139,7 +135,6 @@ export function makeServerRuntimeServicesLayer() {
     devServerManagerLayer,
     GitLayerLive,
     GitHubWorkbenchLayerLive,
-    computerScriptsLayer,
     TextGenerationLayerLive,
     TerminalLayerLive,
     KeybindingsLive,

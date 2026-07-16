@@ -10,7 +10,7 @@ import { cn } from "~/lib/utils";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { formatCompact, formatShortDate } from "./profileFormatting";
 
-// Single-hue ramp built from the theme accent (`--info`, defaults to blue-500) for the
+// Single-hue ramp built from the theme identity accent (`--info`, defaults to coral) for the
 // in-app page (level 0 → 4). Mixes toward transparent so it sits well on light/dark.
 export const APP_HEATMAP_INTENSITY_CLASSES: readonly string[] = [
   "bg-muted/70 dark:bg-white/[0.06]",
@@ -191,7 +191,7 @@ export function ActivityHeatmap({
         <div
           key={column.key}
           className={cn(
-            "overflow-visible whitespace-nowrap text-[10px] font-medium leading-none text-muted-foreground",
+            "overflow-visible whitespace-nowrap text-[11px] font-medium leading-none text-muted-foreground",
             monthLabelClass,
             monthLabelClassName,
           )}

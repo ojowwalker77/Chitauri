@@ -21,7 +21,7 @@ const ATTACHMENT_REMOVE_BUTTON_SIZE_STYLES: Record<
 };
 
 const ATTACHMENT_REMOVE_BUTTON_TONE_STYLES: Record<AttachmentRemoveButtonTone, string> = {
-  solid: "bg-foreground/80 text-background shadow-sm transition-colors hover:bg-foreground",
+  solid: "bg-foreground/80 text-background transition-colors hover:bg-foreground",
   ghost:
     "text-[var(--color-text-foreground-tertiary)] transition-colors duration-press ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)]",
 };

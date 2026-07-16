@@ -32,9 +32,9 @@ export function DiffPanelShell(props: {
   return (
     <div
       className={cn(
-        "flex h-full min-w-0 flex-col bg-[var(--color-background-surface)]",
+        "flex h-full min-w-0 flex-col bg-panel",
         props.mode === "inline"
-          ? "w-[42vw] min-w-[360px] max-w-[560px] shrink-0 border-l border-border"
+          ? "m-3 ml-0 w-[42vw] min-w-[360px] max-w-[560px] shrink-0 overflow-hidden rounded-xl border border-panel-border"
           : "w-full",
       )}
     >
@@ -71,7 +71,7 @@ export function DiffPanelLoadingState(props: { label: string }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col p-2">
       <div
-        className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border/60 bg-card/25"
+        className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[11px] border border-panel-border bg-[#101010]"
         role="status"
         aria-live="polite"
         aria-label={props.label}

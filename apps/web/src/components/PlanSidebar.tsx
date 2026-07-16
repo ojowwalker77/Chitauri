@@ -28,7 +28,7 @@ function stepStatusIcon(status: string): React.ReactNode {
   }
   if (status === "inProgress") {
     return (
-      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-accent-blue)_15%,transparent)] text-[var(--color-accent-blue)]">
+      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--claude)_15%,transparent)] text-claude">
         <LoaderIcon className="size-3 animate-spin" />
       </span>
     );
@@ -63,13 +63,13 @@ const PlanSidebar = memo(function PlanSidebar({
   const planTitle = planMarkdown ? proposedPlanTitle(planMarkdown) : null;
 
   return (
-    <div className="flex h-full w-[340px] shrink-0 flex-col border-l border-border/70 bg-card/50">
+    <div className="m-3 ml-0 flex h-[calc(100%_-_1.5rem)] w-[340px] shrink-0 flex-col overflow-hidden rounded-xl border border-panel-border bg-panel">
       {/* Header */}
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/60 px-3">
         <div className="flex items-center gap-2">
           <Badge
             variant="secondary"
-            className="rounded-md bg-[color-mix(in_srgb,var(--color-accent-blue)_10%,transparent)] px-1.5 py-0 text-[10px] font-semibold text-[var(--color-accent-blue)]"
+            className="rounded-md bg-[color-mix(in_srgb,var(--claude)_10%,transparent)] px-1.5 py-0 text-[11px] font-semibold text-claude"
           >
             Plan
           </Badge>
@@ -113,14 +113,14 @@ const PlanSidebar = memo(function PlanSidebar({
           {/* Tasks */}
           {activeTaskList && activeTaskList.tasks.length > 0 ? (
             <div className="space-y-1">
-              <p className="mb-2 text-[10px] font-semibold text-muted-foreground/40">Steps</p>
+              <p className="mb-2 text-[11px] font-semibold text-muted-foreground/40">Steps</p>
               {activeTaskList.tasks.map((task) => (
                 <div
                   key={`${task.status}:${task.task}`}
                   className={cn(
                     "flex items-start gap-2.5 rounded-lg px-2.5 py-2 transition-colors duration-200",
                     task.status === "inProgress" &&
-                      "bg-[color-mix(in_srgb,var(--color-accent-blue)_5%,transparent)]",
+                      "bg-[color-mix(in_srgb,var(--claude)_5%,transparent)]",
                     task.status === "completed" &&
                       "bg-[color-mix(in_srgb,var(--success)_5%,transparent)]",
                   )}
@@ -156,12 +156,12 @@ const PlanSidebar = memo(function PlanSidebar({
                 ) : (
                   <ChevronRightIcon className="size-3 shrink-0 text-muted-foreground/40 transition-transform" />
                 )}
-                <span className="text-[10px] font-semibold text-muted-foreground/40 group-hover:text-muted-foreground/60">
+                <span className="text-[11px] font-semibold text-muted-foreground/40 group-hover:text-muted-foreground/60">
                   {planTitle ?? "Full Plan"}
                 </span>
               </button>
               {proposedPlanExpanded ? (
-                <div className="rounded-lg border border-border/50 bg-background/50 p-3">
+                <div className="rounded-[11px] border border-panel-border bg-hover p-3">
                   <ChatMarkdown
                     text={displayedPlanMarkdown ?? ""}
                     cwd={markdownCwd}

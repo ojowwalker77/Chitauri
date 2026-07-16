@@ -542,7 +542,7 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
           ) : null}
         </div>
         {trailingMeta ? (
-          <span className="shrink-0 pl-2 text-right text-[10.5px] text-muted-foreground/42">
+          <span className="shrink-0 pl-2 text-right text-[11px] text-muted-foreground/42">
             {trailingMeta}
           </span>
         ) : null}

@@ -19,14 +19,13 @@ import {
 } from "../workspaceTerminalLayoutPresets";
 
 function WorkspaceLayoutPresetPreview(props: { presetId: WorkspaceLayoutPresetId }) {
-  const paneClassName =
-    "rounded-[6px] border border-border/70 bg-background/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]";
+  const paneClassName = "rounded-[6px] border border-panel-border bg-panel";
 
   if (props.presetId === "single") {
     return (
       <div
         className={cn(
-          "h-full min-h-0 rounded-[10px] border border-border/80 bg-card/90 p-1.5",
+          "h-full min-h-0 rounded-[10px] border border-panel-border bg-hover p-1.5",
           paneClassName,
         )}
       />
@@ -35,7 +34,7 @@ function WorkspaceLayoutPresetPreview(props: { presetId: WorkspaceLayoutPresetId
 
   if (props.presetId === "two-columns") {
     return (
-      <div className="grid h-full min-h-0 grid-cols-2 gap-1.5 rounded-[10px] border border-border/80 bg-card/90 p-1.5">
+      <div className="grid h-full min-h-0 grid-cols-2 gap-1.5 rounded-[10px] border border-panel-border bg-hover p-1.5">
         <div className={paneClassName} />
         <div className={paneClassName} />
       </div>
@@ -44,7 +43,7 @@ function WorkspaceLayoutPresetPreview(props: { presetId: WorkspaceLayoutPresetId
 
   if (props.presetId === "two-rows") {
     return (
-      <div className="grid h-full min-h-0 grid-rows-2 gap-1.5 rounded-[10px] border border-border/80 bg-card/90 p-1.5">
+      <div className="grid h-full min-h-0 grid-rows-2 gap-1.5 rounded-[10px] border border-panel-border bg-hover p-1.5">
         <div className={paneClassName} />
         <div className={paneClassName} />
       </div>
@@ -53,7 +52,7 @@ function WorkspaceLayoutPresetPreview(props: { presetId: WorkspaceLayoutPresetId
 
   if (props.presetId === "top-main") {
     return (
-      <div className="grid h-full min-h-0 grid-rows-[1.3fr_1fr] gap-1.5 rounded-[10px] border border-border/80 bg-card/90 p-1.5">
+      <div className="grid h-full min-h-0 grid-rows-[1.3fr_1fr] gap-1.5 rounded-[10px] border border-panel-border bg-hover p-1.5">
         <div className={paneClassName} />
         <div className="grid min-h-0 grid-cols-2 gap-1.5">
           <div className={paneClassName} />
@@ -65,7 +64,7 @@ function WorkspaceLayoutPresetPreview(props: { presetId: WorkspaceLayoutPresetId
 
   if (props.presetId === "left-main") {
     return (
-      <div className="grid h-full min-h-0 grid-cols-[1.2fr_1fr] gap-1.5 rounded-[10px] border border-border/80 bg-card/90 p-1.5">
+      <div className="grid h-full min-h-0 grid-cols-[1.2fr_1fr] gap-1.5 rounded-[10px] border border-panel-border bg-hover p-1.5">
         <div className={paneClassName} />
         <div className="grid min-h-0 grid-rows-2 gap-1.5">
           <div className={paneClassName} />
@@ -76,7 +75,7 @@ function WorkspaceLayoutPresetPreview(props: { presetId: WorkspaceLayoutPresetId
   }
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-1.5 rounded-[10px] border border-border/80 bg-card/90 p-1.5">
+    <div className="grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-1.5 rounded-[10px] border border-panel-border bg-hover p-1.5">
       <div className={paneClassName} />
       <div className={paneClassName} />
       <div className={paneClassName} />
@@ -119,18 +118,18 @@ export default function WorkspaceSettingsSheet(props: {
                     key={preset.id}
                     type="button"
                     className={cn(
-                      "group rounded-2xl border p-3 text-left transition-colors",
+                      "group rounded-xl border p-3 text-left transition-colors",
                       isSelected
-                        ? "border-[color:var(--color-border)] bg-[var(--sidebar-accent-active)] shadow-sm"
-                        : "border-[color:var(--color-border-light)] bg-card/50 hover:border-[color:var(--color-border)] hover:bg-[var(--sidebar-accent)]",
+                        ? "border-panel-border bg-selected"
+                        : "border-panel-border bg-panel hover:bg-hover",
                     )}
                     aria-pressed={isSelected}
                     onClick={() => props.onSelectPreset(preset.id)}
                   >
-                    <div className="relative h-24 overflow-hidden rounded-xl bg-gradient-to-b from-muted/65 to-muted/35 p-0.5">
+                    <div className="relative h-24 overflow-hidden rounded-[11px] bg-hover p-0.5">
                       <WorkspaceLayoutPresetPreview presetId={preset.id} />
                       {isSelected ? (
-                        <div className="absolute right-2 top-2 inline-flex size-6 items-center justify-center rounded-full bg-[var(--color-text-foreground)] text-[var(--color-background-surface)] shadow-sm">
+                        <div className="absolute right-2 top-2 inline-flex size-6 items-center justify-center rounded-full bg-foreground text-[#141414]">
                           <CheckIcon className="size-3.5" />
                         </div>
                       ) : null}

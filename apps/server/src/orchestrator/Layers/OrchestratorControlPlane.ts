@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import {
   CommandId,
   MessageId,
@@ -31,7 +32,9 @@ const MCP_ROUTE_PATH = "/api/orchestrator/mcp";
 const MCP_SERVER_NAME = "chitauri_orchestrator";
 const MCP_TOOL_TIMEOUT_MS = 60 * 60 * 1_000;
 const DELEGATION_TIMEOUT_MS = 55 * 60 * 1_000;
-const MAX_TASKS = 200;
+const MAX_RETAINED_TASKS = 200;
+const MAX_ACTIVE_TASKS = 8;
+const MAX_ACTIVE_TASKS_PER_SEAT = 4;
 
 type TaskRecord = {
   readonly taskId: string;
@@ -46,6 +49,10 @@ type TaskRecord = {
 type SeatSession = {
   readonly seatThreadId: ThreadId;
   readonly token: string;
+};
+
+type McpTransportSession = {
+  readonly seatThreadId: ThreadId;
   readonly server: McpServer;
   readonly transport: WebStandardStreamableHTTPServerTransport;
 };
@@ -101,6 +108,17 @@ function taskStatus(record: TaskRecord): OrchestratorTaskStatus {
   };
 }
 
+function mcpHost(host: string | undefined): string {
+  const normalized = host?.trim();
+  if (!normalized || normalized === "0.0.0.0" || normalized === "::") {
+    return "127.0.0.1";
+  }
+  if (normalized.startsWith("[") && normalized.endsWith("]")) {
+    return normalized;
+  }
+  return normalized.includes(":") ? `[${normalized}]` : normalized;
+}
+
 export const makeOrchestratorControlPlane = Effect.gen(function* () {
   const config = yield* ServerConfig;
   const gitCore = yield* GitCore;
@@ -109,6 +127,7 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
   const serverSettings = yield* ServerSettingsService;
   const seatsByThreadId = new Map<ThreadId, SeatSession>();
   const seatsByToken = new Map<string, SeatSession>();
+  const mcpSessionsById = new Map<string, McpTransportSession>();
   const tasks = new Map<string, TaskRecord>();
 
   const requireSeat = (seatThreadId: ThreadId) =>
@@ -165,13 +184,27 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
   };
 
   const retainTask = (task: TaskRecord) => {
+    const activeTasks = [...tasks.values()].filter((retained) => retained.status === "running");
+    if (activeTasks.length >= MAX_ACTIVE_TASKS) {
+      throw new Error(
+        `The orchestrator already has ${MAX_ACTIVE_TASKS} active delegations. Wait for one to finish before delegating again.`,
+      );
+    }
+    const activeSeatTasks = activeTasks.filter(
+      (retained) => retained.seatThreadId === task.seatThreadId,
+    );
+    if (activeSeatTasks.length >= MAX_ACTIVE_TASKS_PER_SEAT) {
+      throw new Error(
+        `This orchestrator seat already has ${MAX_ACTIVE_TASKS_PER_SEAT} active delegations. Wait for one to finish before delegating again.`,
+      );
+    }
     for (const [taskId, retained] of tasks) {
-      if (tasks.size < MAX_TASKS) break;
+      if (tasks.size < MAX_RETAINED_TASKS) break;
       if (retained.status !== "running") tasks.delete(taskId);
     }
-    if (tasks.size >= MAX_TASKS) {
+    if (tasks.size >= MAX_RETAINED_TASKS) {
       throw new Error(
-        `The orchestrator already has ${MAX_TASKS} active delegations. Wait for one to finish before delegating again.`,
+        `The orchestrator already retains ${MAX_RETAINED_TASKS} delegations. Clear completed work before delegating again.`,
       );
     }
     tasks.set(task.taskId, task);
@@ -260,6 +293,13 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
           new Error("Delegation requires the orchestrator seat to be inside a Git branch."),
         );
       }
+      if (parentStatus.hasWorkingTreeChanges) {
+        return yield* Effect.fail(
+          new Error(
+            "Delegation cannot safely include uncommitted seat changes in an isolated worktree. Commit or stash them before delegating.",
+          ),
+        );
+      }
 
       const childThreadId = ThreadId.makeUnsafe(`orchestrator:${randomUUID()}`);
       const branch = `chitauri/delegate-${input.lane}-${randomUUID().slice(0, 8)}`;
@@ -300,7 +340,13 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
           Effect.catch((error) =>
             gitCore
               .removeWorktree({ cwd: parentCwd, path: worktree.worktree.path, force: true })
-              .pipe(Effect.ignore, Effect.andThen(Effect.fail(error))),
+              .pipe(
+                Effect.ignore,
+                Effect.andThen(
+                  gitCore.deleteBranch({ cwd: parentCwd, branch, force: true }).pipe(Effect.ignore),
+                ),
+                Effect.andThen(Effect.fail(error)),
+              ),
           ),
         );
       const task = tasks.get(input.taskId)!;
@@ -381,17 +427,21 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
       }),
     );
 
-  const createSeatSession = (seatThreadId: ThreadId) =>
+  const createMcpTransportSession = (seatThreadId: ThreadId) =>
     Effect.gen(function* () {
-      yield* requireSeat(seatThreadId);
-      const existing = seatsByThreadId.get(seatThreadId);
-      if (existing) return existing;
-
-      const token = randomUUID();
       const settings = yield* serverSettings.getSettings;
+      let session!: McpTransportSession;
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         enableJsonResponse: true,
+        onsessioninitialized: (sessionId) => {
+          mcpSessionsById.set(sessionId, session);
+        },
+        onsessionclosed: (sessionId) => {
+          if (mcpSessionsById.get(sessionId) === session) {
+            mcpSessionsById.delete(sessionId);
+          }
+        },
       });
       const server = new McpServer(
         { name: MCP_SERVER_NAME, version: "0.1.0" },
@@ -477,9 +527,27 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
       );
 
       yield* Effect.promise(() => server.connect(transport));
-      const session = { seatThreadId, token, server, transport } satisfies SeatSession;
+      session = { seatThreadId, server, transport } satisfies McpTransportSession;
+      const protocolOnClose = transport.onclose;
+      transport.onclose = () => {
+        const sessionId = transport.sessionId;
+        if (sessionId && mcpSessionsById.get(sessionId) === session) {
+          mcpSessionsById.delete(sessionId);
+        }
+        protocolOnClose?.();
+      };
+      return session;
+    });
+
+  const createSeatSession = (seatThreadId: ThreadId) =>
+    Effect.gen(function* () {
+      yield* requireSeat(seatThreadId);
+      const existing = seatsByThreadId.get(seatThreadId);
+      if (existing) return existing;
+
+      const session = { seatThreadId, token: randomUUID() } satisfies SeatSession;
       seatsByThreadId.set(seatThreadId, session);
-      seatsByToken.set(token, session);
+      seatsByToken.set(session.token, session);
       return session;
     });
 
@@ -488,7 +556,7 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
       createSeatSession(seatThreadId).pipe(
         Effect.map((session) => ({
           name: MCP_SERVER_NAME,
-          url: `http://127.0.0.1:${config.port}${MCP_ROUTE_PATH}`,
+          url: `http://${mcpHost(config.host)}:${config.port}${MCP_ROUTE_PATH}`,
           headers: { Authorization: `Bearer ${session.token}` },
           toolTimeoutMs: MCP_TOOL_TIMEOUT_MS,
         })),
@@ -502,7 +570,45 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
         const session = token ? seatsByToken.get(token) : undefined;
         if (!session) return new Response("Unauthorized", { status: 401 });
         yield* requireSeat(session.seatThreadId);
-        return yield* Effect.promise(() => session.transport.handleRequest(request));
+        const mcpSessionId = request.headers.get("mcp-session-id");
+        if (mcpSessionId) {
+          const mcpSession = mcpSessionsById.get(mcpSessionId);
+          if (!mcpSession || mcpSession.seatThreadId !== session.seatThreadId) {
+            return new Response("MCP session not found", { status: 404 });
+          }
+          return yield* Effect.promise(() => mcpSession.transport.handleRequest(request));
+        }
+
+        if (request.method !== "POST") {
+          return new Response("MCP session id is required", { status: 400 });
+        }
+        const parsedBody = yield* Effect.tryPromise({
+          try: () => request.clone().json(),
+          catch: () => new Error("Invalid MCP JSON payload."),
+        }).pipe(Effect.catch(() => Effect.succeed(null)));
+        if (!isInitializeRequest(parsedBody)) {
+          return new Response("A valid MCP initialize request is required", { status: 400 });
+        }
+
+        // A provider runtime owns at most one MCP session for a seat. Close any
+        // stale runtime session before accepting a replacement initialization.
+        const staleSessions = [...mcpSessionsById.entries()].filter(
+          ([, candidate]) => candidate.seatThreadId === session.seatThreadId,
+        );
+        yield* Effect.forEach(
+          staleSessions,
+          ([sessionId, candidate]) =>
+            Effect.promise(() => candidate.server.close()).pipe(
+              Effect.catch(() => Effect.void),
+              Effect.tap(() => Effect.sync(() => mcpSessionsById.delete(sessionId))),
+            ),
+          { discard: true },
+        );
+
+        const mcpSession = yield* createMcpTransportSession(session.seatThreadId);
+        return yield* Effect.promise(() =>
+          mcpSession.transport.handleRequest(request, { parsedBody }),
+        );
       }),
     getTaskStatus: (seatThreadId, taskId) =>
       requireTask(seatThreadId, taskId).pipe(

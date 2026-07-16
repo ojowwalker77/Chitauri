@@ -423,8 +423,8 @@ export function resolveThreadStatusPill(input: {
     }
     return {
       label: "Pending Approval",
-      colorClass: "text-amber-600 dark:text-amber-300/90",
-      dotClass: "bg-amber-500 dark:bg-amber-300/90",
+      colorClass: "text-gold",
+      dotClass: "bg-gold",
       pulse: false,
       dismissible: true,
       dismissalKey,
@@ -438,8 +438,8 @@ export function resolveThreadStatusPill(input: {
     }
     return {
       label: "Awaiting Input",
-      colorClass: "text-indigo-600 dark:text-indigo-300/90",
-      dotClass: "bg-indigo-500 dark:bg-indigo-300/90",
+      colorClass: "text-gold",
+      dotClass: "bg-gold",
       pulse: false,
       dismissible: true,
       dismissalKey,
@@ -449,8 +449,8 @@ export function resolveThreadStatusPill(input: {
   if (thread.hasLiveTailWork) {
     return {
       label: "Working",
-      colorClass: "text-sky-600 dark:text-sky-300/80",
-      dotClass: "bg-sky-500 dark:bg-sky-300/80",
+      colorClass: "text-claude",
+      dotClass: "bg-claude",
       pulse: true,
       dismissible: false,
     };
@@ -462,8 +462,8 @@ export function resolveThreadStatusPill(input: {
   ) {
     return {
       label: "Working",
-      colorClass: "text-sky-600 dark:text-sky-300/80",
-      dotClass: "bg-sky-500 dark:bg-sky-300/80",
+      colorClass: "text-claude",
+      dotClass: "bg-claude",
       pulse: true,
       dismissible: false,
     };
@@ -472,8 +472,8 @@ export function resolveThreadStatusPill(input: {
   if (thread.session?.status === "connecting") {
     return {
       label: "Connecting",
-      colorClass: "text-sky-600 dark:text-sky-300/80",
-      dotClass: "bg-sky-500 dark:bg-sky-300/80",
+      colorClass: "text-claude",
+      dotClass: "bg-claude",
       pulse: true,
       dismissible: false,
     };
@@ -495,8 +495,8 @@ export function resolveThreadStatusPill(input: {
     }
     return {
       label: "Plan Ready",
-      colorClass: "text-violet-600 dark:text-violet-300/90",
-      dotClass: "bg-violet-500 dark:bg-violet-300/90",
+      colorClass: "text-claude",
+      dotClass: "bg-claude",
       pulse: false,
       dismissible: true,
       dismissalKey,
@@ -510,8 +510,8 @@ export function resolveThreadStatusPill(input: {
     }
     return {
       label: "Completed",
-      colorClass: "text-emerald-600 dark:text-emerald-300/90",
-      dotClass: "bg-emerald-500 dark:bg-emerald-300/90",
+      colorClass: "text-success",
+      dotClass: "bg-success",
       pulse: false,
       dismissible: true,
       ...(dismissalKey ? { dismissalKey } : {}),
@@ -1501,7 +1501,7 @@ export function resolvePrStatePresentation(pr: {
     if (pr.mergeability === "conflicting") {
       return {
         label: "PR has conflicts",
-        colorClass: "text-amber-600 dark:text-amber-300/90",
+        colorClass: "text-gold",
         iconKind: "pull-request",
       };
     }
@@ -1509,7 +1509,7 @@ export function resolvePrStatePresentation(pr: {
       return {
         label: "PR draft",
         // GitHub renders drafts gray; reuse the closed treatment so draft reads as "not live yet".
-        colorClass: "text-zinc-500 dark:text-zinc-400/80",
+        colorClass: "text-muted-foreground",
         iconKind: "pull-request",
       };
     }
@@ -1523,13 +1523,13 @@ export function resolvePrStatePresentation(pr: {
   if (pr.state === "closed") {
     return {
       label: "PR closed",
-      colorClass: "text-zinc-500 dark:text-zinc-400/80",
+      colorClass: "text-muted-foreground",
       iconKind: "pull-request",
     };
   }
   return {
     label: "PR merged",
-    colorClass: "text-indigo-500 dark:text-indigo-400",
+    colorClass: "text-success",
     iconKind: "merged-simple",
   };
 }
