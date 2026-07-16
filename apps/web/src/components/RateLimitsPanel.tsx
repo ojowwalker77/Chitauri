@@ -24,7 +24,7 @@ export default function RateLimitsPanel({
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <div className="mx-auto w-full max-w-3xl px-3">
-        <div className="rounded-lg border border-border/60 bg-card/50">
+        <div className="rounded-[11px] border border-panel-border bg-panel">
           <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground">
             <span className="flex items-center gap-1.5">
               <svg

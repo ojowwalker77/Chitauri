@@ -19,16 +19,12 @@ export function showContextMenuFallback<T extends string>(
 
     const menu = document.createElement("div");
     menu.className =
-      "fixed z-[10000] min-w-[180px] rounded-xl border border-white/[0.08] shadow-xl animate-in fade-in zoom-in-95";
+      "fixed z-[10000] min-w-[180px] rounded-[14px] border border-panel-border bg-panel shadow-[0_16px_44px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95";
 
     const x = position?.x ?? 0;
     const y = position?.y ?? 0;
     menu.style.top = `${y}px`;
     menu.style.left = `${x}px`;
-    menu.style.backgroundColor = `color-mix(in srgb, var(--popover) 90%, transparent)`;
-    menu.style.backdropFilter = "blur(24px)";
-    (menu.style as any).webkitBackdropFilter = "blur(24px)";
-
     const inner = document.createElement("div");
     inner.className = "p-1";
     menu.appendChild(inner);
@@ -86,8 +82,8 @@ export function showContextMenuFallback<T extends string>(
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = isDestructive
-        ? "flex w-full min-h-7 cursor-default select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[length:var(--app-font-size-ui,12px)] text-foreground/86 transition-colors"
-        : "flex w-full min-h-7 cursor-default select-none items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[length:var(--app-font-size-ui,12px)] text-foreground/86 transition-colors";
+        ? "flex w-full min-h-7 cursor-default select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[length:var(--app-font-size-ui,14px)] text-foreground/86 transition-colors"
+        : "flex w-full min-h-7 cursor-default select-none items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[length:var(--app-font-size-ui,14px)] text-foreground/86 transition-colors";
 
       if (item.icon) {
         const iconWrapper = document.createElement("span");

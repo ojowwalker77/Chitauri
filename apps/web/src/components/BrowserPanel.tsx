@@ -350,7 +350,7 @@ function BrowserRuntimePreview(props: { title: string; detail: string }) {
       role="status"
       aria-live="polite"
     >
-      <div className="w-full max-w-sm rounded-xl border border-border/60 bg-card/70 p-4 shadow-sm">
+      <div className="w-full max-w-sm rounded-xl border border-panel-border bg-panel p-4">
         <div className="mb-4 flex items-center gap-3">
           <Skeleton className="size-9 rounded-lg" />
           <div className="min-w-0 flex-1 space-y-2">
@@ -399,7 +399,7 @@ function BrowserLocalServerThumbnail({ server }: { server: ServerLocalServerProc
   return (
     <span
       aria-hidden="true"
-      className="flex h-12 w-[4.5rem] shrink-0 flex-col gap-1 overflow-hidden rounded-md border border-white/12 bg-[#f7f7f2] p-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.28)]"
+      className="flex h-12 w-[4.5rem] shrink-0 flex-col gap-1 overflow-hidden rounded-md border border-white/12 bg-[#f7f7f2] p-1.5"
     >
       <span className="flex gap-[3px]">
         <span className="size-[3px] rounded-full bg-[#ff6b65]" />
@@ -407,9 +407,9 @@ function BrowserLocalServerThumbnail({ server }: { server: ServerLocalServerProc
         <span className="size-[3px] rounded-full bg-[#45cf77]" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
-        <span className="truncate text-[7px] font-bold leading-none text-[#2a2a2a]">{label}</span>
+        <span className="truncate text-[11px] font-bold leading-none text-[#2a2a2a]">{label}</span>
         {port ? (
-          <span className="truncate text-[6px] font-medium leading-none text-[#9a9a9a]">
+          <span className="truncate text-[11px] font-medium leading-none text-[#9a9a9a]">
             localhost:{port}
           </span>
         ) : null}
@@ -489,7 +489,7 @@ function BrowserLocalServersHome({
                   <BrowserLocalServerThumbnail server={server} />
                   <LocalServerIdentity server={server} tone="browser" />
                   <span
-                    className="mr-1 size-2 rounded-full bg-[#36d07b] shadow-[0_0_0_2.5px_rgba(54,208,123,0.16)]"
+                    className="mr-1 size-2 rounded-full bg-success"
                     aria-hidden
                   />
                 </button>
@@ -1397,7 +1397,7 @@ export function BrowserPanel({
           />
         </form>
         {showBrowserAddressSuggestions ? (
-          <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-lg border border-border bg-popover shadow-lg [-webkit-app-region:no-drag]">
+          <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-xl border border-panel-border bg-panel shadow-[0_16px_44px_rgba(0,0,0,0.5)] [-webkit-app-region:no-drag]">
             <div className="max-h-64 overflow-auto p-1">
               {browserAddressSuggestions.map((suggestion) => (
                 <button

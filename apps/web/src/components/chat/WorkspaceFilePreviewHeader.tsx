@@ -131,7 +131,7 @@ export const WorkspaceFilePreviewHeader = memo(function WorkspaceFilePreviewHead
       </nav>
 
       {props.truncated ? (
-        <span className="hidden shrink-0 text-[10px] text-muted-foreground/70 @sm/header-actions:inline">
+        <span className="hidden shrink-0 text-[11px] text-muted-foreground/70 @sm/header-actions:inline">
           Shown partially
         </span>
       ) : null}

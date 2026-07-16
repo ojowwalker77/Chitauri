@@ -210,7 +210,7 @@ function EditorChatHistoryMenu(props: {
               {thread.id === props.activeThreadId ? (
                 <CheckIcon className="size-3.5 shrink-0 text-muted-foreground" />
               ) : (
-                <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums">
+                <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
                   {formatRelativeTime(thread.updatedAt ?? thread.createdAt)}
                 </span>
               )}
@@ -456,7 +456,7 @@ function EditorRailTabs(props: {
               icon={<TerminalIcon className="size-3 shrink-0 text-[var(--color-text-accent)]" />}
               trailing={
                 props.terminalHasRunningActivity ? (
-                  <span className="size-1.5 shrink-0 rounded-full bg-emerald-500/80" />
+                  <span className="size-1.5 shrink-0 rounded-full bg-success/80" />
                 ) : null
               }
               onSelect={openTerminalTab}
@@ -707,10 +707,10 @@ export const ChatHeader = memo(function ChatHeader({
                 >
                   {showDiffTotals ? (
                     <span className="inline-flex items-center gap-1">
-                      <span className="font-system-ui text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-xs,10px)] font-normal tracking-normal tabular-nums text-success">
+                      <span className="font-system-ui text-[length:var(--app-font-size-ui-sm,13px)] sm:text-[length:var(--app-font-size-ui-xs,12px)] font-normal tracking-normal tabular-nums text-success">
                         +{diffAdditions}
                       </span>
-                      <span className="font-system-ui text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-xs,10px)] font-normal tracking-normal tabular-nums text-destructive">
+                      <span className="font-system-ui text-[length:var(--app-font-size-ui-sm,13px)] sm:text-[length:var(--app-font-size-ui-xs,12px)] font-normal tracking-normal tabular-nums text-destructive">
                         -{diffDeletions}
                       </span>
                     </span>
@@ -796,7 +796,7 @@ export const ChatHeader = memo(function ChatHeader({
                   </span>
                 )}
                 <h2
-                  className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal text-foreground"
+                  className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-[length:var(--app-font-size-ui,14px)] font-[590] tracking-[-0.005em] text-foreground"
                   title={activeThreadTitle}
                   onDoubleClick={() => onRenameThread()}
                 >
@@ -842,7 +842,7 @@ export const ChatHeader = memo(function ChatHeader({
                     render={
                       <Badge
                         variant="outline"
-                        className="hidden !h-6 shrink-0 items-center justify-center gap-1 rounded-md px-1.5 text-[10px] sm:inline-flex"
+                        className="hidden !h-6 shrink-0 items-center justify-center gap-1 rounded-md px-1.5 text-[11px] sm:inline-flex"
                       >
                         <span className="inline-flex size-4 shrink-0 items-center justify-center">
                           {renderProviderIcon(handoffBadgeSourceProvider, "size-3")}

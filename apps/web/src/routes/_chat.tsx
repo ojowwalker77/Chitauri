@@ -50,7 +50,7 @@ const THREAD_SIDEBAR_MIN_WIDTH = 13 * 16;
 const THREAD_MAIN_CONTENT_MIN_WIDTH = 40 * 16;
 
 // Single source of truth for the thread sidebar resize behavior. Shared by <Sidebar>
-// and the detached content-seam <SidebarRail> (via SidebarInstanceProvider) so the
+// and the detached resize <SidebarRail> (via SidebarInstanceProvider) so the
 // drag handle keeps working even though the rail lives outside <Sidebar> (above the card).
 const THREAD_SIDEBAR_RESIZABLE: SidebarResizableOptions = {
   minWidth: THREAD_SIDEBAR_MIN_WIDTH,
@@ -441,13 +441,9 @@ function ChatRouteGlobalShortcuts() {
   );
 }
 
-/** Subtle top-corner sheen on the sidebar gap. The sidebar always sits on the left, so
- *  the radial highlight is anchored to the top-left corner. */
-const SIDEBAR_GAP_CLASS =
-  "overflow-hidden before:absolute before:inset-0 before:bg-[radial-gradient(90%_75%_at_0%_0%,rgba(255,255,255,0.06),transparent_58%),linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0.008))] dark:before:bg-[radial-gradient(90%_75%_at_0%_0%,rgba(255,255,255,0.04),transparent_58%),linear-gradient(180deg,rgba(255,255,255,0.018),rgba(255,255,255,0.006))]";
+const SIDEBAR_GAP_CLASS = "bg-transparent";
 
-/** No inline-start/end border: the chat content card provides the edge (rounded + overlap).
- *  A sidebar border here draws a full-height vertical line through the titlebar seam. */
+/** The inner element owns the one persistent panel treatment. */
 const SIDEBAR_INNER_CLASS = "app-sidebar-surface";
 
 function ChatRouteLayout() {
@@ -461,10 +457,14 @@ function ChatRouteLayout() {
   const sidebarElement = (
     <Sidebar
       side="left"
+      variant="floating"
       collapsible="offcanvas"
       // Match the right dock's soft drawer slide (shared token) instead of the
       // shell's default `ease-linear`. Applied to the container + gap in lockstep.
-      className={cn("text-foreground", SIDEBAR_OFFCANVAS_MOTION_CLASS)}
+      className={cn(
+        "text-foreground",
+        SIDEBAR_OFFCANVAS_MOTION_CLASS,
+      )}
       gapClassName={cn(SIDEBAR_GAP_CLASS, SIDEBAR_OFFCANVAS_MOTION_CLASS)}
       innerClassName={SIDEBAR_INNER_CLASS}
       transparentSurface
@@ -474,14 +474,10 @@ function ChatRouteLayout() {
     </Sidebar>
   );
 
-  // Chat column shell. The content-seam rail is the resize hit-area for the seam —
-  // the visible divider + depth shadow live on the chat card's inner edge (see
-  // `.chat-content-card` in index.css). It sits OUTSIDE <Sidebar> so it stacks above
-  // the card, so SidebarInstanceProvider re-supplies the same resize config/side it
-  // would have gotten inside <Sidebar> (otherwise dragging to resize stops working).
-  // `data-sidebar-side` on the provider selects the seam geometry.
+  // The resize rail remains in the gap between the floating sidebar panel and the
+  // flat main canvas. It is interaction-only and paints no divider.
   const mainContentShell = (
-    <div className="chat-content-card-backing relative flex h-svh min-h-0 min-w-0 flex-1">
+    <div className="claude-main-shell relative flex h-svh min-h-0 min-w-0 flex-1">
       {isEditorView ? null : (
         <SidebarInstanceProvider side="left" resizable={THREAD_SIDEBAR_RESIZABLE}>
           <SidebarRail placement="content-seam" />
@@ -496,9 +492,10 @@ function ChatRouteLayout() {
       defaultOpen
       open={resolvedSidebarOpen}
       onOpenChange={setSidebarOpen}
-      className="bg-[var(--app-shell-background)]"
+      className="isolate overflow-hidden bg-[var(--app-shell-background)]"
       data-sidebar-side="left"
     >
+      {isElectron ? <div aria-hidden="true" className="desktop-window-drag-strip" /> : null}
       <ThreadRetentionMaintenanceToast />
       <ChatRouteGlobalShortcuts />
       {sidebarElement}

@@ -276,7 +276,7 @@ function CodeThemeBadge(props: { accent: string; background: string; foreground:
   return (
     <span
       aria-hidden="true"
-      className="inline-flex size-6 shrink-0 items-center justify-center rounded-full border font-medium text-[10px] leading-none tracking-[-0.01em]"
+      className="inline-flex size-6 shrink-0 items-center justify-center rounded-full border font-medium text-[11px] leading-none tracking-[-0.01em]"
       style={{
         backgroundColor: props.background,
         borderColor: `${props.foreground}26`,
@@ -356,7 +356,7 @@ function HighlightedText(props: { text: string; query: string; className?: strin
         segment.highlighted ? (
           <mark
             key={segment.key}
-            className="rounded-[3px] bg-amber-200/80 px-[1px] text-current dark:bg-amber-300/25"
+            className="rounded-[3px] bg-gold/30 px-[1px] text-current"
           >
             {segment.text}
           </mark>
@@ -1131,17 +1131,17 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                             )}
                             <div className="min-w-0 flex-1">
                               <div className="flex items-baseline gap-3">
-                                <div className="min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,12px)] text-foreground">
+                                <div className="min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,14px)] text-foreground">
                                   <HighlightedText
                                     text={thread.title || "Untitled thread"}
                                     query={query}
                                   />
                                 </div>
-                                <span className="w-24 shrink-0 truncate text-right text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/79">
+                                <span className="w-24 shrink-0 truncate text-right text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/79">
                                   {thread.projectName}
                                 </span>
                                 {thread.updatedAt || thread.createdAt ? (
-                                  <span className="w-10 shrink-0 text-right text-[length:var(--app-font-size-ui-timestamp,10px)] text-muted-foreground/79">
+                                  <span className="w-10 shrink-0 text-right text-[length:var(--app-font-size-ui-timestamp,11px)] text-muted-foreground/79">
                                     {formatRelativeTime(thread.updatedAt ?? thread.createdAt)}
                                   </span>
                                 ) : (
@@ -1150,19 +1150,19 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                               </div>
                               {snippet ? (
                                 <div className="mt-0.5 flex items-start gap-3">
-                                  <div className="min-w-0 flex-1 line-clamp-1 text-[length:var(--app-font-size-ui-meta,10px)] leading-5 text-muted-foreground/78">
+                                  <div className="min-w-0 flex-1 line-clamp-1 text-[length:var(--app-font-size-ui-meta,12px)] leading-5 text-muted-foreground/78">
                                     <HighlightedText text={snippet} query={query} />
                                   </div>
                                   <div className="flex w-[8.5rem] shrink-0 justify-end">
                                     {threadMatchLabel({ matchKind, messageMatchCount }) ? (
-                                      <span className="truncate text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/58">
+                                      <span className="truncate text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/58">
                                         {threadMatchLabel({ matchKind, messageMatchCount })}
                                       </span>
                                     ) : null}
                                   </div>
                                 </div>
                               ) : threadMatchLabel({ matchKind, messageMatchCount }) ? (
-                                <div className="mt-0.5 text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/58">
+                                <div className="mt-0.5 text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/58">
                                   {threadMatchLabel({ matchKind, messageMatchCount })}
                                 </div>
                               ) : null}
@@ -1197,10 +1197,10 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                         >
                           <PaletteIcon icon={HiOutlineFolderOpen} />
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-[length:var(--app-font-size-ui,12px)] text-foreground">
+                            <div className="truncate text-[length:var(--app-font-size-ui,14px)] text-foreground">
                               {project.name || "Untitled project"}
                             </div>
-                            <div className="truncate text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/79">
+                            <div className="truncate text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/79">
                               {project.localName
                                 ? `${project.folderName} · ${project.cwd}`
                                 : project.cwd}
@@ -1233,7 +1233,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                               }}
                             >
                               <PaletteIcon icon={THEME_MODE_ICONS[themeCommandItem.mode]} />
-                              <span className="min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,12px)] text-foreground">
+                              <span className="min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,14px)] text-foreground">
                                 {themeCommandItem.label}
                               </span>
                               <span
@@ -1279,10 +1279,10 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                                     foreground={seed.ink}
                                   />
                                 ) : null}
-                                <span className="min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,12px)] text-foreground">
+                                <span className="min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,14px)] text-foreground">
                                   {themeItem.label}
                                 </span>
-                                <span className="shrink-0 text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/79">
+                                <span className="shrink-0 text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/79">
                                   {resolvedTheme === "dark"
                                     ? "Dark color theme"
                                     : "Light color theme"}

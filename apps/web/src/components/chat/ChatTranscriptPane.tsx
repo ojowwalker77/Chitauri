@@ -3,7 +3,13 @@
 // Layer: Chat transcript shell
 // Depends on: MessagesTimeline and ChatView's list-owned scroll contract.
 
-import { type MessageId, type ThreadId, type ThreadMarker, type TurnId } from "@t3tools/contracts";
+import {
+  type MessageId,
+  type ProviderKind,
+  type ThreadId,
+  type ThreadMarker,
+  type TurnId,
+} from "@t3tools/contracts";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
   memo,
@@ -35,6 +41,7 @@ import type { AgentActivityDetail } from "./agentActivity.logic";
 
 interface ChatTranscriptPaneProps {
   activeThreadId: string;
+  assistantProvider: ProviderKind;
   activeTurnId?: TurnId | null;
   activeTurnInProgress: boolean;
   activeTurnStartedAt: string | null;
@@ -91,6 +98,7 @@ interface ChatTranscriptPaneProps {
 
 export const ChatTranscriptPane = memo(function ChatTranscriptPane({
   activeThreadId,
+  assistantProvider,
   activeTurnId,
   activeTurnInProgress,
   activeTurnStartedAt,
@@ -194,6 +202,7 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
         ) : (
           <MessagesTimeline
             key={activeThreadId}
+            assistantProvider={assistantProvider}
             hasMessages={hasMessages}
             isWorking={isWorking}
             worktreeSetup={worktreeSetup}
@@ -273,7 +282,7 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
               aria-hidden={!scrollButtonVisible}
               tabIndex={scrollButtonVisible ? 0 : -1}
               className={cn(
-                "flex size-8 items-center justify-center rounded-full border border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] text-[var(--color-text-foreground)] backdrop-blur-md transition-colors hover:cursor-pointer hover:bg-[var(--color-background-elevated-secondary)]",
+                "flex size-8 items-center justify-center rounded-full border border-panel-border bg-panel text-foreground transition-colors hover:cursor-pointer hover:bg-hover",
                 scrollButtonVisible ? "pointer-events-auto" : "pointer-events-none",
               )}
             >

@@ -34,7 +34,7 @@ function CaptionGlyph({ glyph }: { glyph: string }) {
   return (
     <span
       aria-hidden="true"
-      className="text-[10px] leading-none"
+      className="text-[11px] leading-none"
       style={{ fontFamily: '"Segoe Fluent Icons", "Segoe MDL2 Assets"' }}
     >
       {glyph}
@@ -70,7 +70,7 @@ export function DesktopWindowControls({ className }: { className?: string }) {
   const { isMaximized } = windowState;
 
   return (
-    <div className={cn("flex h-[46px] items-stretch [-webkit-app-region:no-drag]", className)}>
+    <div className={cn("flex h-[52px] items-stretch [-webkit-app-region:no-drag]", className)}>
       <button
         type="button"
         aria-label="Minimize"

@@ -24,7 +24,7 @@ function DialogBackdrop({ className, ...props }: DialogPrimitive.Backdrop.Props)
   return (
     <DialogPrimitive.Backdrop
       className={cn(
-        "fixed inset-0 z-50 bg-black/60 transition-opacity duration-menu ease-out data-ending-style:opacity-0 data-starting-style:opacity-0",
+        "fixed inset-0 z-50 bg-black/50 transition-opacity duration-menu ease-out data-ending-style:opacity-0 data-starting-style:opacity-0",
         className,
       )}
       data-slot="dialog-backdrop"
@@ -47,7 +47,7 @@ function DialogViewport({ className, ...props }: DialogPrimitive.Viewport.Props)
 }
 
 const dialogPopupClassName =
-  "-translate-y-[calc(1.25rem*var(--nested-dialogs))] relative row-start-2 flex max-h-full min-h-0 w-full min-w-0 max-w-lg scale-[calc(1-0.1*var(--nested-dialogs))] flex-col rounded-xl border border-[color:var(--color-border-light)] bg-[var(--composer-surface)] text-[var(--color-text-foreground)] opacity-[calc(1-0.1*var(--nested-dialogs))] transition-[scale,opacity,translate] duration-menu ease-in-out will-change-transform data-nested:data-ending-style:translate-y-8 data-nested:data-starting-style:translate-y-8 data-nested-dialog-open:origin-top data-ending-style:scale-98 data-starting-style:scale-98 data-ending-style:opacity-0 data-starting-style:opacity-0";
+  "-translate-y-[calc(1.25rem*var(--nested-dialogs))] relative row-start-2 flex max-h-full min-h-0 w-full min-w-0 max-w-lg scale-[calc(1-0.1*var(--nested-dialogs))] flex-col rounded-xl border border-panel-border bg-panel text-foreground opacity-[calc(1-0.1*var(--nested-dialogs))] shadow-[0_16px_44px_rgba(0,0,0,0.5)] transition-[scale,opacity,translate] duration-menu ease-out will-change-transform data-nested:data-ending-style:translate-y-8 data-nested:data-starting-style:translate-y-8 data-nested-dialog-open:origin-top data-ending-style:scale-98 data-starting-style:scale-98 data-ending-style:opacity-0 data-starting-style:opacity-0";
 
 /**
  * Opt-in clean surface: a fully opaque popover fill, a generously rounded shell,
@@ -57,7 +57,7 @@ const dialogPopupClassName =
  * muddy/dark. Content-heavy dialogs opt into this
  * to match the clean, deeply rounded sheet look. */
 const dialogPopupSolidSurfaceClassName =
-  "rounded-3xl border-[color:var(--color-border-light)] bg-popover shadow-[0_16px_50px_-12px_rgba(0,0,0,0.34)] dark:shadow-[0_16px_50px_-12px_rgba(0,0,0,0.7)]";
+  "rounded-xl border-panel-border bg-panel shadow-[0_16px_44px_rgba(0,0,0,0.5)]";
 
 const dialogFooterButtonSlotSelector =
   "[&_[data-slot=button]:not([class*='size-9']):not([class*='size-8']):not([class*='size-7'])]";

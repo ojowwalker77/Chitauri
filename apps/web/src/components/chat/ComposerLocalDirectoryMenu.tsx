@@ -418,7 +418,7 @@ export const ComposerLocalDirectoryMenu = memo(function ComposerLocalDirectoryMe
               type="button"
               onMouseDown={(event) => event.preventDefault()}
               onClick={handleSelectCurrentDirectory}
-              className="shrink-0 rounded-md px-1.5 py-0.5 text-[10.5px] text-muted-foreground/70 transition-colors hover:bg-[var(--color-background-elevated-secondary)] hover:text-foreground"
+              className="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground/70 transition-colors hover:bg-[var(--color-background-elevated-secondary)] hover:text-foreground"
             >
               Use this folder
             </button>
@@ -487,7 +487,7 @@ export const ComposerLocalDirectoryMenu = memo(function ComposerLocalDirectoryMe
                   <CommandSeparator className="my-0.5" />
                 ) : null}
                 <CommandGroup>
-                  <CommandGroupLabel className="px-2 pt-1.5 pb-1 text-[10px] font-semibold text-muted-foreground/55">
+                  <CommandGroupLabel className="px-2 pt-1.5 pb-1 text-[11px] font-semibold text-muted-foreground/55">
                     Matches deeper
                   </CommandGroupLabel>
                   {searchRows.map((entry, searchIndex) => {
@@ -526,7 +526,7 @@ export const ComposerLocalDirectoryMenu = memo(function ComposerLocalDirectoryMe
             {filter.trim().length > 0 ? "No matches." : "No files or folders here."}
           </p>
         ) : searchQuery.data?.truncated ? (
-          <p className="px-2 py-1 text-muted-foreground/40 text-[10.5px]">
+          <p className="px-2 py-1 text-muted-foreground/40 text-[11px]">
             Showing top matches. Keep typing to narrow.
           </p>
         ) : null}
@@ -624,7 +624,7 @@ const LocalSearchRow = memo(function LocalSearchRow(props: {
           {entry.name}
         </span>
         {subtitle ? (
-          <span className="shrink-0 max-w-[60%] truncate pl-2 text-right text-[10.5px] text-muted-foreground/42">
+          <span className="shrink-0 max-w-[60%] truncate pl-2 text-right text-[11px] text-muted-foreground/42">
             {subtitle}
           </span>
         ) : null}

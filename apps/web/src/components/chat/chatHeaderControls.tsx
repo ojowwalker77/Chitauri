@@ -36,7 +36,7 @@ import { Button } from "../ui/button";
  * TYPE is derived from the shared number, so the build fails if the two ever drift.
  */
 export const CHAT_SURFACE_HEADER_HEIGHT_CLASS: `h-[${typeof CHAT_SURFACE_HEADER_HEIGHT_PX}px]` =
-  "h-[46px]";
+  "h-[52px]";
 
 /**
  * Standard horizontal inset for a chat-surface top bar (chat / workspace / settings
@@ -46,16 +46,10 @@ export const CHAT_SURFACE_HEADER_HEIGHT_CLASS: `h-[${typeof CHAT_SURFACE_HEADER_
 export const CHAT_SURFACE_HEADER_PADDING_X_CLASS = "px-3 sm:px-5";
 
 /**
- * Bottom hairline shared by every chat-surface chrome bar (chat header, workspace
- * header, dock pane + tab strip headers, diff panel header).
- * Implemented as the `.chat-surface-divider` component class (a 1px background gradient,
- * see index.css) rather than a CSS border: it reads from the SAME `--app-surface-divider`
- * token as the vertical sidebar↔chat seam, and — because it's a gradient — the seam corner
- * retracts it 1px so the horizontal hairline butts against the vertical seam instead of
- * crossing it (overlapping 1px lines double their alpha into a brighter dot). Apply
- * alongside {@link CHAT_SURFACE_HEADER_HEIGHT_CLASS} so heights and dividers line up.
+ * Shared class hook for the flat, borderless top chrome row. It intentionally
+ * paints no rule; internal panel section dividers remain real 1px borders.
  */
-export const CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME = "chat-surface-divider";
+export const CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME = "chat-surface-header";
 
 /**
  * Standard chat-surface chrome-bar row: the shared flex baseline + fixed height + bottom
@@ -91,11 +85,11 @@ export const CHAT_SURFACE_CONTROL_IDLE_TEXT_CLASS_NAME =
 
 /** Active/pressed flat background shared by header toggles and dock tabs. */
 export const CHAT_SURFACE_CONTROL_ACTIVE_CLASS_NAME =
-  "bg-[var(--color-background-button-secondary)] text-[var(--color-text-foreground)]";
+  "bg-selected text-[var(--color-text-foreground)]";
 
 /** Hover treatment for idle flat surface controls. */
 export const CHAT_SURFACE_CONTROL_HOVER_CLASS_NAME =
-  "hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)]";
+  "hover:bg-hover hover:text-[var(--color-text-foreground)]";
 
 /**
  * Shared flat "chip" skin for the header diff toggle and the right-dock tabs so
@@ -107,7 +101,7 @@ export const CHAT_SURFACE_CONTROL_HOVER_CLASS_NAME =
  */
 export const CHAT_SURFACE_CHIP_CLASS_NAME = cn(
   CHAT_HEADER_CONTROL_CLASS_NAME,
-  "gap-1.5 border-0 px-1.5 text-[length:var(--app-font-size-ui-sm,11px)] font-normal transition-colors duration-200 ease-out",
+  "!h-8 gap-1.5 rounded-[9px] border-0 px-2.5 text-[length:var(--app-font-size-ui-sm,13px)] font-normal transition-colors duration-menu ease-out",
   CHAT_SURFACE_CONTROL_IDLE_TEXT_CLASS_NAME,
   CHAT_SURFACE_CONTROL_HOVER_CLASS_NAME,
 );
@@ -142,7 +136,7 @@ export const CHAT_HEADER_TOGGLE_CLASS_NAME = cn(
  *  touch more breathing room than the symmetric chip base. */
 export const DOCK_TAB_CHIP_CLASS_NAME = cn(
   CHAT_SURFACE_CHIP_CLASS_NAME,
-  "inline-flex min-w-0 items-center pr-2.5",
+  "inline-flex min-w-0 items-center rounded-[10px] border border-transparent pr-2.5 data-[active=true]:border-panel-border data-[active=true]:bg-panel data-[active=true]:text-foreground",
 );
 
 /** Icon slot for dock tabs — bare larger icon at rest; on hover a circular disc + X appears.
@@ -207,9 +201,9 @@ export function SurfaceTabChip({
       className={cn(
         "group/dock-tab",
         DOCK_TAB_CHIP_CLASS_NAME,
-        active && CHAT_SURFACE_CONTROL_ACTIVE_CLASS_NAME,
         className,
       )}
+      data-active={active ? "true" : "false"}
     >
       {onClose ? (
         <button
@@ -223,14 +217,19 @@ export function SurfaceTabChip({
           }}
         >
           <span
-            className={cn("flex items-center justify-center", DOCK_TAB_ICON_HOVER_HIDE_CLASS_NAME)}
+            className={cn(
+              "flex items-center justify-center group-data-[active=true]/dock-tab:text-claude",
+              DOCK_TAB_ICON_HOVER_HIDE_CLASS_NAME,
+            )}
           >
             {icon}
           </span>
           <CentralIcon name="cross-small" className={DOCK_TAB_CLOSE_GLYPH_CLASS_NAME} />
         </button>
       ) : (
-        <span className="flex size-4 shrink-0 items-center justify-center">{icon}</span>
+        <span className="flex size-4 shrink-0 items-center justify-center group-data-[active=true]/dock-tab:text-claude">
+          {icon}
+        </span>
       )}
       <button
         type="button"

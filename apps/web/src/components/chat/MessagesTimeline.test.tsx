@@ -79,6 +79,7 @@ describe("MessagesTimeline", () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const markup = renderToStaticMarkup(
       <MessagesTimeline
+        assistantProvider="codex"
         hasMessages
         isWorking={false}
         activeTurnInProgress={false}
@@ -116,6 +117,8 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain('data-index="0"');
     expect(markup).not.toContain('class="relative" style="height:');
     expect(markup).toContain('data-timeline-row-kind="message"');
+    expect(markup).toContain('data-assistant-provider="codex"');
+    expect(markup).not.toContain("✳");
   }, 10_000);
 
   it("renders assistant math through the shared markdown renderer", async () => {
@@ -199,12 +202,13 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain("flex w-full justify-end");
-    expect(markup).toContain("group flex flex-col items-end gap-px max-w-[80%]");
+    expect(markup).toContain("group flex flex-col items-end gap-px max-w-[78%]");
     expect(markup).toContain(
       "w-max max-w-full min-w-0 self-end bg-[var(--app-user-message-background)]",
     );
     expect(markup).toContain("rounded-[var(--radius-user-message)]");
-    expect(markup).toContain("py-1.5");
+    expect(markup).toContain("py-2.5");
+    expect(markup).toContain("px-4");
     expect(markup).toContain("group-hover:opacity-100");
   });
 

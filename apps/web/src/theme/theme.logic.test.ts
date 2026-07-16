@@ -1,5 +1,5 @@
 // FILE: theme.logic.test.ts
-// Purpose: Locks down Codex-style theme parsing, normalization, and CSS token derivation.
+// Purpose: Locks down theme parsing, default migration, normalization, and CSS token derivation.
 // Layer: Web appearance domain tests
 // Exports: Vitest coverage for theme.logic.
 
@@ -78,6 +78,58 @@ describe("parseStoredThemeState", () => {
     expect(migrated.mode).toBe("dark");
     expect(migrated.codeThemeIds.dark).toBe("linear");
     expect(migrated.chromeThemes.dark.accent).toBe("#606acc");
+  });
+
+  it("restores profiles that persisted the short-lived Claude pivot default", () => {
+    const restored = normalizeThemeState({
+      mode: "dark",
+      codeThemeIds: { dark: "codex", light: "codex" },
+      chromeThemes: {
+        dark: {
+          accent: "#d97757",
+          contrast: 60,
+          fonts: { code: null, ui: null },
+          ink: "#e6e4e1",
+          opaqueWindows: true,
+          semanticColors: {
+            diffAdded: "#4cb782",
+            diffRemoved: "#d7655f",
+            skill: "#ad7bf9",
+          },
+          surface: "#171717",
+        },
+        light: {
+          accent: "#d97757",
+          contrast: 45,
+          fonts: { code: null, ui: null },
+          ink: "#292724",
+          opaqueWindows: true,
+          semanticColors: {
+            diffAdded: "#3f9d70",
+            diffRemoved: "#b9524d",
+            skill: "#924ff7",
+          },
+          surface: "#f7f5f2",
+        },
+      },
+    });
+
+    expect(restored.chromeThemes).toEqual(DEFAULT_THEME_STATE.chromeThemes);
+    expect(restored.codeThemeIds).toEqual({ dark: "codex", light: "codex" });
+  });
+
+  it("preserves customized chrome instead of treating it as the pivot default", () => {
+    const customDark = { ...getCodeThemeSeed("codex", "dark"), accent: "#ff00aa" };
+    const normalized = normalizeThemeState({
+      codeThemeIds: { dark: "codex", light: "codex" },
+      chromeThemes: {
+        dark: customDark,
+        light: getCodeThemeSeed("codex", "light"),
+      },
+    });
+
+    expect(normalized.chromeThemes.dark).toEqual(customDark);
+    expect(normalized.chromeThemes.light).toEqual(getCodeThemeSeed("codex", "light"));
   });
 });
 
@@ -292,12 +344,12 @@ describe("buildThemeCssVariables", () => {
 
     expect(cssVariables.material).toBe("opaque");
     expect(cssVariables.variables["--codex-base-accent"]).toBe("#606acc");
-    expect(cssVariables.variables["--background"]).toBe("#0d0d0f");
-    expect(cssVariables.variables["--card"]).toBe("#151517");
-    expect(cssVariables.variables["--composer-surface"]).toBe("rgb(27, 27, 29)");
+    expect(cssVariables.variables["--background"]).toBe("#070708");
+    expect(cssVariables.variables["--card"]).toBe("#0f0f11");
+    expect(cssVariables.variables["--composer-surface"]).toBe("#0d0d0f");
     expect(cssVariables.variables["--composer-surface"]).not.toBe(cssVariables.variables["--card"]);
-    expect(cssVariables.variables["--sidebar-accent"]).toBe("rgba(227, 228, 230, 0.044)");
-    expect(cssVariables.variables["--sidebar-accent-active"]).toBe("rgba(227, 228, 230, 0.088)");
+    expect(cssVariables.variables["--sidebar-accent"]).toBe("rgba(227, 228, 230, 0.05)");
+    expect(cssVariables.variables["--sidebar-accent-active"]).toBe("rgba(227, 228, 230, 0.08)");
     expect(cssVariables.variables["--theme-font-ui-family"]).toBe("Inter");
     expect(cssVariables.variables["--theme-font-code-family"]).toBe(
       `"Jetbrains Mono", ${DEFAULT_MONOSPACE_FONT_FAMILY_STACK}`,
@@ -323,11 +375,11 @@ describe("buildThemeCssVariables", () => {
       importedTheme.variant,
     );
 
-    expect(tokens.computed.surfaceUnder).toBe("#0d0d0f");
-    expect(tokens.computed.panel).toBe("#151517");
-    expect(tokens.derived.textForegroundSecondary).toBe("rgba(227, 228, 230, 0.645)");
-    expect(tokens.derived.buttonSecondaryBackground).toBe("rgba(227, 228, 230, 0.039)");
-    expect(tokens.derived.iconAccent).toBe("rgb(143, 150, 219)");
+    expect(tokens.computed.surfaceUnder).toBe("#070708");
+    expect(tokens.computed.panel).toBe("#0f0f11");
+    expect(tokens.derived.textForegroundSecondary).toBe("rgba(227, 228, 230, 0.66)");
+    expect(tokens.derived.buttonSecondaryBackground).toBe("rgba(227, 228, 230, 0.04)");
+    expect(tokens.derived.iconAccent).toBe("#606acc");
     // Dark primary button label is the surface color (dark) on the white (ink) button.
     expect(tokens.derived.textButtonPrimary).toBe("#0f0f11");
     expect(tokens.derived.buttonPrimaryBackground).toBe("#e3e4e6");
@@ -350,7 +402,7 @@ describe("buildThemeCssVariables", () => {
     expect(tokens.aliases["--color-token-terminal-ansi-bright-black"]).toBe(
       tokens.derived.textForegroundSecondary,
     );
-    expect(tokens.aliases["--color-token-terminal-ansi-yellow"]).toBe("#f5b44a");
+    expect(tokens.aliases["--color-token-terminal-ansi-yellow"]).toBe("#cf9d5e");
   });
 
   it("matches Codex's default dark chrome composer/dropdown control color", () => {
@@ -421,12 +473,8 @@ describe("buildThemeCssVariables", () => {
         surface: "#f8f8f6",
       },
     };
-    const tokens = buildResolvedThemeTokens(pack, "light");
     const cssVariables = buildThemeCssVariables(pack, "light");
 
-    expect(cssVariables.variables["--app-user-message-background"]).toBe(
-      tokens.derived.buttonSecondaryBackground,
-    );
     expect(cssVariables.variables["--app-chat-code-surface"]).toBe(
       cssVariables.variables["--app-user-message-background"],
     );

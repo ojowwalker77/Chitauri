@@ -7,16 +7,17 @@
 export const SIDEBAR_ROW_HEIGHT_CLASS_NAME =
   "min-h-[var(--app-density-row-height,1.75rem)] h-[var(--app-density-row-height,1.75rem)]";
 
-export const SIDEBAR_ROW_RADIUS_CLASS_NAME = "rounded-md";
+export const SIDEBAR_ROW_RADIUS_CLASS_NAME = "rounded-[10px]";
 
-export const SIDEBAR_ROW_PADDING_CLASS_NAME = "px-2 py-[var(--app-density-row-padding-y,0.125rem)]";
+export const SIDEBAR_ROW_PADDING_CLASS_NAME =
+  "px-2.5 py-[var(--app-density-row-padding-y,0.125rem)]";
 
 export const SIDEBAR_ROW_GAP_CLASS_NAME = "gap-[var(--app-density-row-gap,0.5rem)]";
 
-export const SIDEBAR_ROW_TEXT_CLASS_NAME = "text-[length:var(--app-font-size-ui,12px)] font-normal";
+export const SIDEBAR_ROW_TEXT_CLASS_NAME = "text-[length:var(--app-font-size-ui,14px)] font-normal";
 
 export const SIDEBAR_ROW_FOCUS_CLASS_NAME =
-  "outline-hidden transition-colors duration-200 ease-out focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring";
+  "outline-hidden transition-colors duration-menu ease-out focus-visible:ring-2 focus-visible:ring-ring";
 
 export const SIDEBAR_ROW_HOVER_CLASS_NAME =
   "hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)]";
@@ -24,7 +25,7 @@ export const SIDEBAR_ROW_HOVER_CLASS_NAME =
 export const SIDEBAR_ROW_ACTIVE_CLASS_NAME =
   "bg-[var(--sidebar-accent-active)] text-[var(--sidebar-accent-foreground)] hover:bg-[var(--sidebar-accent-active)] hover:text-[var(--sidebar-accent-foreground)]";
 
-export const SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME = "text-foreground/89";
+export const SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME = "text-[#c2c0bc]";
 
 /**
  * Resting foreground for primary sidebar item labels and their accompanying
@@ -32,14 +33,14 @@ export const SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME = "text-foreground/89";
  * glyphs). Sits just below the full-foreground active row so resting items read
  * clearly without competing with the selected thread.
  */
-export const SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME = "text-foreground/95";
+export const SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME = "text-[#c2c0bc]";
 
 /** Dimmer idle label color shared by project header rows, thread rows, and settings nav rows. */
 export const SIDEBAR_ROW_MUTED_TEXT_CLASS_NAME = "text-muted-foreground/79";
 
 /** Section label ("Threads"/"Pinned"/"Workspace" and settings "App"/"Chitauri"). */
 export const SIDEBAR_SECTION_LABEL_CLASS_NAME =
-  "text-[length:var(--app-font-size-ui,12px)] font-normal text-muted-foreground/58";
+  "text-[12.5px] font-normal text-muted-foreground";
 
 /** Project/chat/settings header rows and settings sidebar nav items. */
 export const SIDEBAR_HEADER_ROW_CLASS_NAME = [
@@ -65,7 +66,7 @@ export const SIDEBAR_THREAD_ROW_BASE_CLASS_NAME = [
   "w-full translate-x-0 cursor-pointer justify-start text-left select-none",
   SIDEBAR_ROW_HEIGHT_CLASS_NAME,
   SIDEBAR_ROW_RADIUS_CLASS_NAME,
-  "pl-4 text-[13px]",
+  "pl-4 text-[13.5px]",
   SIDEBAR_ROW_FOCUS_CLASS_NAME,
 ].join(" ");
 

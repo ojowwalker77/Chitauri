@@ -37,8 +37,8 @@ export interface ProviderUsagePaceDetails {
 }
 
 export const PROVIDER_USAGE_TONE_CLASS_NAME: Record<ProviderUsageTone, string> = {
-  healthy: "bg-emerald-500",
-  warning: "bg-amber-500",
+  healthy: "bg-success",
+  warning: "bg-gold",
   danger: "bg-red-500",
 };
 

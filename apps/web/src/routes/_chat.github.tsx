@@ -104,10 +104,10 @@ function StatusDot({ status }: { status: GitHubCheckStatus | null }) {
       aria-label={status ? `Checks ${status}` : "No check status"}
       className={cn(
         "size-2 shrink-0 rounded-full border",
-        status === "success" && "border-emerald-500/60 bg-emerald-500",
+        status === "success" && "border-success/60 bg-success",
         status === "failure" && "border-red-500/60 bg-red-500",
-        status === "pending" && "border-amber-500/60 bg-amber-500",
-        status === "cancelled" && "border-zinc-500/60 bg-zinc-500",
+        status === "pending" && "border-gold/60 bg-gold",
+        status === "cancelled" && "border-faint/60 bg-faint",
         (status === "neutral" || status === "skipped" || status === null) &&
           "border-muted-foreground/40 bg-muted-foreground/25",
       )}
@@ -122,7 +122,7 @@ function ItemGlyph({ item }: { item: GitHubWorkItemSummary }) {
       className={cn(
         "mt-0.5 size-4 shrink-0",
         item.state === "open"
-          ? "text-emerald-500"
+          ? "text-success"
           : item.state === "merged"
             ? "text-violet-500"
             : "text-muted-foreground",
@@ -158,14 +158,14 @@ function WorkListRow({
           <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
             {item.title}
           </span>
-          {item.unread ? <span className="size-1.5 shrink-0 rounded-full bg-blue-500" /> : null}
+          {item.unread ? <span className="size-1.5 shrink-0 rounded-full bg-claude" /> : null}
         </span>
         <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
           <span className="truncate">{item.repository.nameWithOwner}</span>
           <span>#{item.number}</span>
           {item.isDraft ? <span>Draft</span> : null}
         </span>
-        <span className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground/85">
+        <span className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground/85">
           {reason ? <span className="truncate">{reason}</span> : null}
           {reason ? <span>·</span> : null}
           <span className="shrink-0">{formatRelativeTime(item.updatedAt)}</span>
@@ -203,7 +203,7 @@ function EmptyList({
   }
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center text-xs text-muted-foreground">
-      <CheckCircle2Icon className="size-5 text-emerald-500/80" />
+      <CheckCircle2Icon className="size-5 text-success/80" />
       <p>{kind === "inbox" ? "Nothing needs your attention." : "No matching GitHub work."}</p>
     </div>
   );
@@ -260,10 +260,10 @@ function DetailHeader({
             type="button"
             onClick={() => onTabChange(entry.value)}
             className={cn(
-              "border-b-2 px-2 py-2 text-xs transition-colors",
+              "h-8 rounded-[10px] border px-3 text-xs transition-colors",
               tab === entry.value
-                ? "border-foreground text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground",
+                ? "border-panel-border bg-panel text-foreground"
+                : "border-transparent text-muted-foreground hover:bg-hover hover:text-foreground",
             )}
           >
             {entry.label}
@@ -289,7 +289,7 @@ function Stat({
       <span
         className={cn(
           "min-w-0 truncate text-right text-foreground",
-          tone === "success" && "text-emerald-500",
+          tone === "success" && "text-success",
           tone === "danger" && "text-red-500",
         )}
       >
@@ -417,7 +417,7 @@ function SummaryView({
           {item.labels.map((label) => (
             <span
               key={label.name}
-              className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground"
+              className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground"
             >
               {label.name}
             </span>
@@ -581,7 +581,7 @@ function ActionComposer({
             ))}
           </div>
           {!canSubmitDecision ? (
-            <p className="mt-1.5 text-[10px] text-muted-foreground">
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
               GitHub only allows a comment review on your own pull request.
             </p>
           ) : null}
@@ -891,7 +891,7 @@ function GitHubWorkbenchRoute() {
                     >
                       {tab.label}
                       {tab.value === "inbox" && actionNeededCount > 0 ? (
-                        <span className="ml-1 rounded-full bg-foreground px-1.5 py-0.5 text-[9px] text-background">
+                        <span className="ml-1 rounded-full bg-foreground px-1.5 py-0.5 text-[11px] text-background">
                           {actionNeededCount}
                         </span>
                       ) : null}
@@ -906,7 +906,7 @@ function GitHubWorkbenchRoute() {
                         type="button"
                         onClick={() => setView(option.value)}
                         className={cn(
-                          "shrink-0 rounded-full px-2 py-1 text-[10px]",
+                          "shrink-0 rounded-full px-2 py-1 text-[11px]",
                           view === option.value
                             ? "bg-foreground text-background"
                             : "bg-muted text-muted-foreground hover:text-foreground",
@@ -948,7 +948,7 @@ function GitHubWorkbenchRoute() {
                 )}
               </div>
               {listQuery.data ? (
-                <div className="border-t border-border/70 px-3 py-2 text-[10px] text-muted-foreground">
+                <div className="border-t border-border/70 px-3 py-2 text-[11px] text-muted-foreground">
                   {visibleItems.length} items · synced {formatRelativeTime(listQuery.data.syncedAt)}
                 </div>
               ) : null}
