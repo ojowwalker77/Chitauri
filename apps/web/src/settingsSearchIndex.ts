@@ -211,6 +211,13 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 
   // ── Behavior ──────────────────────────────────────────────────────────────────
   {
+    id: "behavior:task-list-location",
+    section: "behavior",
+    title: "Task list location",
+    keywords:
+      "Choose where active tasks open by default. right sidebar vertical above composer inline plan steps",
+  },
+  {
     id: "behavior:assistant-output",
     section: "behavior",
     title: "Assistant output",

@@ -4658,7 +4658,26 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("shows the skinny inline plan card for active turn plans", async () => {
+  it("opens active turn tasks in the right sidebar by default", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotWithActiveInlinePlan(),
+    });
+
+    try {
+      await expect.element(page.getByLabelText("Close plan sidebar")).toBeInTheDocument();
+      expect(document.querySelector('[data-testid="active-task-list-card"]')).toBeNull();
+      expect(document.body.textContent).toContain("Inspecting ChatView boundaries");
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("shows the skinny inline plan card when tasks default above the composer", async () => {
+    localStorage.setItem(
+      "chitauri:app-settings:v1",
+      JSON.stringify({ taskListDisplayMode: "composer" }),
+    );
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotWithActiveInlinePlan(),
@@ -4670,34 +4689,16 @@ describe("ChatView timeline estimator parity (full app)", () => {
           expect(document.body.textContent).toContain("1 out of 3 tasks completed");
           expect(document.body.textContent).toContain("Inspecting ChatView boundaries");
           expect(document.body.textContent).toContain("Patch the shared checklist receiver");
-          expect(document.body.textContent).toContain("1 background agent");
+          expect(document.body.textContent).toContain("1 agent running");
         },
         { timeout: 8_000, interval: 16 },
       );
 
-      const transcriptPane = document.querySelector<HTMLElement>("[data-chat-transcript-pane]");
       const taskListCard = document.querySelector<HTMLElement>(
         '[data-testid="active-task-list-card"]',
       );
-      const composerShell = document.querySelector<HTMLElement>(
-        'form[data-chat-composer-form="true"] .chat-composer-shell',
-      );
-      expect(transcriptPane).not.toBeNull();
       expect(taskListCard).not.toBeNull();
-      expect(composerShell).not.toBeNull();
-      expect(transcriptPane!.getBoundingClientRect().bottom).toBeGreaterThan(
-        taskListCard!.getBoundingClientRect().top + 1,
-      );
-      // Active plan activity shares the queued-follow-up rail: full composer-input width,
-      // centered, with the composer retaining its own rounded top corners. Full width keeps
-      // the overlapped transcript from peeking past the panel in side gutters.
-      const taskRect = taskListCard!.getBoundingClientRect();
-      const composerRect = composerShell!.getBoundingClientRect();
-      expect(Math.abs(taskRect.width - composerRect.width)).toBeLessThanOrEqual(2);
-      expect(
-        Math.abs(taskRect.left + taskRect.width / 2 - (composerRect.left + composerRect.width / 2)),
-      ).toBeLessThanOrEqual(1);
-      expect(parseFloat(getComputedStyle(composerShell!).borderTopLeftRadius)).toBeGreaterThan(0);
+      expect(document.querySelector('[aria-label="Close plan sidebar"]')).toBeNull();
 
       const openPlanButton = await waitForElement(
         () => document.querySelector<HTMLButtonElement>('button[title="Open tasks sidebar"]'),
@@ -4722,7 +4723,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         () => {
           expect(document.body.textContent).toContain("Finished the investigation.");
           expect(document.body.textContent).not.toContain("1 out of 3 tasks completed");
-          expect(document.body.textContent).not.toContain("1 background agent");
+          expect(document.body.textContent).not.toContain("1 agent running");
         },
         { timeout: 8_000, interval: 16 },
       );

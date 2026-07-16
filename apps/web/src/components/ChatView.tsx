@@ -2571,6 +2571,9 @@ export default function ChatView({
       ? null
       : deriveActiveTaskListState(threadActivities, activeLatestTurn?.turnId ?? undefined);
   }, [activeLatestTurn?.turnId, latestTurnSettled, showDebugTaskBanner, threadActivities]);
+  const activeTaskListTurnKey = activeTaskList
+    ? (activeTaskList.turnId ?? "__active-task-list__")
+    : null;
   const activeBackgroundTasks = useMemo(
     () =>
       latestTurnSettled
@@ -4750,13 +4753,13 @@ export default function ChatView({
     setPlanSidebarOpen((open) => {
       if (open) {
         planSidebarDismissedForTurnRef.current =
-          activeTaskList?.turnId ?? sidebarProposedPlan?.turnId ?? "__dismissed__";
+          activeTaskListTurnKey ?? sidebarProposedPlan?.turnId ?? "__dismissed__";
       } else {
         planSidebarDismissedForTurnRef.current = null;
       }
       return !open;
     });
-  }, [activeTaskList?.turnId, sidebarProposedPlan?.turnId]);
+  }, [activeTaskListTurnKey, sidebarProposedPlan?.turnId]);
   const setPlanMode = useCallback(
     (enabled: boolean) => {
       handleInteractionModeChange(enabled ? "plan" : "default");
@@ -5195,6 +5198,18 @@ export default function ChatView({
     }
     planSidebarDismissedForTurnRef.current = null;
   }, [activeThread?.id]);
+
+  useEffect(() => {
+    if (!activeTaskList || settings.taskListDisplayMode !== "sidebar") {
+      return;
+    }
+
+    if (planSidebarDismissedForTurnRef.current === activeTaskListTurnKey) {
+      return;
+    }
+
+    setPlanSidebarOpen(true);
+  }, [activeTaskList, activeTaskListTurnKey, settings.taskListDisplayMode]);
 
   useEffect(() => {
     if (!composerMenuOpen) {
@@ -7572,7 +7587,7 @@ export default function ChatView({
       if (dispatchMode === "steer" && selectedModelSelectionForSend.provider !== "codex") {
         setQueuedSteerGate({ sawInterruptGap: false, gapStartedAt: null });
       }
-      if (sourceProposedPlanForSend) {
+      if (sourceProposedPlanForSend && settings.taskListDisplayMode === "sidebar") {
         planSidebarDismissedForTurnRef.current = null;
         setPlanSidebarOpen(true);
       }
@@ -7987,10 +8002,10 @@ export default function ChatView({
       if (dispatchMode === "steer" && modelSelectionForPlanDispatch.provider !== "codex") {
         setQueuedSteerGate({ sawInterruptGap: false, gapStartedAt: null });
       }
-      // Optimistically open the plan sidebar when implementing (not refining).
+      // Optimistically use the preferred task-list surface when implementing (not refining).
       // "default" mode here means the agent is executing the plan, which produces
-      // step-tracking activities that the sidebar will display.
-      if (nextInteractionMode === "default") {
+      // step-tracking activities that the sidebar will display when it is the default.
+      if (nextInteractionMode === "default" && settings.taskListDisplayMode === "sidebar") {
         planSidebarDismissedForTurnRef.current = null;
         setPlanSidebarOpen(true);
       }
@@ -10894,7 +10909,7 @@ export default function ChatView({
             onClose={() => {
               setPlanSidebarOpen(false);
               // Track that the user explicitly dismissed for this turn so auto-open won't fight them.
-              const turnKey = activeTaskList?.turnId ?? sidebarProposedPlan?.turnId ?? null;
+              const turnKey = activeTaskListTurnKey ?? sidebarProposedPlan?.turnId ?? null;
               if (turnKey) {
                 planSidebarDismissedForTurnRef.current = turnKey;
               }
