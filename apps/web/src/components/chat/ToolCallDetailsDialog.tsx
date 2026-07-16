@@ -20,11 +20,11 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 
-const DETAIL_HEADER_CLASS_NAME = "border-b border-border/45 px-3 py-2 text-[10px] font-medium";
+const DETAIL_HEADER_CLASS_NAME = "border-b border-border/45 px-3 py-2 text-[11px] font-medium";
 const DETAIL_CODE_BLOCK_CLASS_NAME =
   "max-h-[min(46vh,30rem)] overflow-auto whitespace-pre-wrap break-words font-chat-code text-[11px] leading-relaxed text-foreground/88";
 const TOOL_DETAILS_MARKDOWN_CLASS_NAME =
-  "text-[length:var(--app-font-size-ui,12px)] leading-relaxed";
+  "text-[length:var(--app-font-size-ui,14px)] leading-relaxed";
 
 interface ToolCallDetailsDialogProps {
   entry: WorkLogEntry | null;
@@ -184,7 +184,7 @@ function ToolOutputMetadata({ output }: { output: WorkLogToolOutputDetails }) {
         </span>
       ) : null}
       {output.truncated ? (
-        <span className="rounded-full border border-amber-500/30 bg-amber-500/8 px-2 py-0.5 text-amber-200/90">
+        <span className="rounded-full border border-gold/30 bg-gold/8 px-2 py-0.5 text-gold">
           Truncated
         </span>
       ) : null}

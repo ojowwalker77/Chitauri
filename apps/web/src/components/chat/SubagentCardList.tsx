@@ -70,7 +70,7 @@ function OrchestrationSummaryHeader(props: {
           {summary.total} agents
         </span>
         {summary.isLive ? (
-          <span className="size-1 shrink-0 animate-pulse rounded-full bg-sky-300/90" />
+          <span className="size-1 shrink-0 animate-pulse rounded-full bg-claude" />
         ) : null}
         <span className="min-w-1 flex-1" />
         <OrchestrationCensusChips summary={summary} />
@@ -108,7 +108,7 @@ export const SubagentCardList = memo(function SubagentCardList({
   return (
     <div
       className={cn(
-        "space-y-[5px] rounded-[14px] border border-border/45 bg-background/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]",
+        "space-y-[5px] rounded-[14px] border border-panel-border bg-panel",
         compact ? "px-2.5 py-2" : "px-3 py-[9px]",
       )}
     >
@@ -129,7 +129,7 @@ export const SubagentCardList = memo(function SubagentCardList({
             <span
               className={cn(
                 "mt-1.5 size-1.5 shrink-0 rounded-full",
-                subagent.isActive ? "bg-sky-300/95" : "bg-muted-foreground/22",
+                subagent.isActive ? "bg-claude" : "bg-muted-foreground/22",
               )}
             />
             <div className="min-w-0 flex-1">
@@ -159,7 +159,7 @@ export const SubagentCardList = memo(function SubagentCardList({
               {subagent.latestUpdate ? (
                 <div
                   className="flex items-baseline gap-1.5 pt-1 text-muted-foreground/42"
-                  style={{ fontSize: `${Math.max(10, rowFontSizePx - 2)}px` }}
+                  style={{ fontSize: `${Math.max(11, rowFontSizePx - 2)}px` }}
                   title={subagent.latestUpdate}
                 >
                   <span className="shrink-0 text-muted-foreground/30">Latest</span>
@@ -171,7 +171,7 @@ export const SubagentCardList = memo(function SubagentCardList({
               {displayStatusLabel ? (
                 <span
                   className={cn(
-                    "shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-medium tracking-[0.08em]",
+                    "shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium tracking-[0.08em]",
                     subagentStatusClasses(
                       displayStatusLabel,
                       subagent.rawStatus,
@@ -185,7 +185,7 @@ export const SubagentCardList = memo(function SubagentCardList({
               <button
                 type="button"
                 className={cn(
-                  "shrink-0 rounded-full border border-border/45 px-2.5 py-1 text-[9px] font-medium text-muted-foreground/62 transition-colors",
+                  "shrink-0 rounded-full border border-border/45 px-2.5 py-1 text-[11px] font-medium text-muted-foreground/62 transition-colors",
                   canOpenThread
                     ? "hover:border-foreground/15 hover:text-foreground/84"
                     : "cursor-default opacity-50",
@@ -204,7 +204,7 @@ export const SubagentCardList = memo(function SubagentCardList({
         );
       })}
       {hiddenSubagentCount > 0 ? (
-        <div className="pl-4 text-[10px] text-muted-foreground/46">+{hiddenSubagentCount} more</div>
+        <div className="pl-4 text-[11px] text-muted-foreground/46">+{hiddenSubagentCount} more</div>
       ) : null}
     </div>
   );

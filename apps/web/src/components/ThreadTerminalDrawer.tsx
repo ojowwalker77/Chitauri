@@ -96,8 +96,8 @@ function TerminalRuntimeStatusOverlay({ status }: { status: TerminalRuntimeStatu
   return (
     <div
       className={cn(
-        "pointer-events-none absolute left-1 top-1 z-10 inline-flex h-6 max-w-[calc(100%-0.5rem)] items-center gap-1.5 rounded border px-2 text-[11px] leading-none shadow-sm backdrop-blur",
-        "border-destructive/30 bg-destructive/10 text-destructive",
+        "pointer-events-none absolute left-1 top-1 z-10 inline-flex h-6 max-w-[calc(100%-0.5rem)] items-center gap-1.5 rounded border px-2 text-[11px] leading-none",
+        "border-destructive/30 bg-panel text-destructive",
       )}
     >
       <TriangleAlertIcon className="size-3" />
@@ -649,8 +649,10 @@ export default function ThreadTerminalDrawer({
   return (
     <aside
       className={cn(
-        "thread-terminal-drawer relative flex w-full min-w-0 flex-col overflow-hidden bg-[var(--color-background-surface)]",
-        isWorkspaceMode ? "h-full min-h-0" : "shrink-0 border-t border-border/70",
+        "thread-terminal-drawer relative flex min-w-0 flex-col overflow-hidden bg-panel",
+        isWorkspaceMode
+          ? "m-3 h-[calc(100%_-_1.5rem)] min-h-0 w-[calc(100%_-_1.5rem)] rounded-xl border border-panel-border"
+          : "w-full shrink-0 border-t border-panel-border",
       )}
       style={isWorkspaceMode ? undefined : { height: `${drawerHeight}px` }}
     >

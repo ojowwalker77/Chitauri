@@ -44,7 +44,7 @@ function PreviewCardPopup({
       >
         <PreviewCardPrimitive.Popup
           className={cn(
-            "origin-(--transform-origin) overflow-hidden rounded-xl border border-[color:var(--color-border-light)] bg-[var(--color-background-surface-under)] text-[var(--color-text-foreground)] shadow-lg transition-[transform,scale,opacity] duration-menu ease-out data-ending-style:scale-98 data-starting-style:scale-98 data-ending-style:opacity-0 data-starting-style:opacity-0",
+            "origin-(--transform-origin) overflow-hidden rounded-xl border border-panel-border bg-panel text-foreground shadow-[0_16px_44px_rgba(0,0,0,0.5)] transition-[transform,scale,opacity] duration-menu ease-out data-ending-style:scale-98 data-starting-style:scale-98 data-ending-style:opacity-0 data-starting-style:opacity-0",
             className,
           )}
           data-slot="preview-card-popup"

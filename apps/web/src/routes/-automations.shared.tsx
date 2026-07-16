@@ -196,13 +196,13 @@ export function runStatusVariant(
 export function runStatusDotClassName(status: AutomationRun["status"]): string {
   switch (runStatusVariant(status)) {
     case "success":
-      return "text-emerald-500";
+      return "text-success";
     case "error":
       return "text-destructive";
     case "warning":
-      return "text-amber-500";
+      return "text-gold";
     case "info":
-      return "text-blue-500";
+      return "text-claude";
     case "outline":
       return "text-muted-foreground/50";
   }
@@ -350,10 +350,10 @@ export function automationStatusDotClass(
     latestRun?.status === "pending" ||
     latestRun?.status === "claimed"
   ) {
-    return "text-blue-500";
+    return "text-claude";
   }
   if (latestRun && isTriageRun(latestRun)) return "text-destructive";
-  return "text-emerald-500";
+  return "text-success";
 }
 
 const deletedAutomationIdsInCache = new Set<string>();
@@ -904,7 +904,7 @@ export function AutomationDialog({
                       className="mt-0.5"
                     />
                   ) : (
-                    <span className="mt-1 size-1.5 shrink-0 rounded-full bg-amber-500" />
+                    <span className="mt-1 size-1.5 shrink-0 rounded-full bg-gold" />
                   )}
                   <span className="min-w-0">
                     <span className="font-medium text-foreground">{warning.title}</span>
@@ -915,7 +915,7 @@ export function AutomationDialog({
             </div>
           ) : null}
           {fastIntervalLimitMessage ? (
-            <div className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-xs text-amber-700 dark:text-amber-300">
+            <div className="mt-2 rounded-md border border-gold/30 bg-gold/10 px-2.5 py-2 text-xs text-gold">
               {fastIntervalLimitMessage}
             </div>
           ) : null}

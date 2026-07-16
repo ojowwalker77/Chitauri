@@ -1,0 +1,1088 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chitauri — Object Threads</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #ffffff;
+        color: #111111;
+        font:
+          13.5px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          "SF Pro Text",
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      button,
+      textarea {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 0;
+      }
+      button {
+        cursor: pointer;
+      }
+      svg,
+      .icon {
+        display: none;
+      }
+      .mono {
+        font-family: ui-monospace, "SF Mono", SFMono-Regular, Consolas, monospace;
+      }
+      .nowrap {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .tabular {
+        font-variant-numeric: tabular-nums;
+      }
+      :focus-visible {
+        outline: 1px solid #111111;
+        outline-offset: 2px;
+      }
+      ::selection {
+        background: rgba(17, 17, 17, 0.08);
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #eeeeee;
+        border-radius: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      button:active,
+      .side-row:active,
+      .nav-row:active,
+      .cap-tab:active,
+      .object-tab:active,
+      .top-action:active,
+      .composer-chip:active,
+      .decision-choice:active,
+      .send:active,
+      .object-add:active,
+      .tab-close:active {
+        opacity: 0.6;
+      }
+
+      .app {
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+      }
+
+      /* ————— Sidebar ————— */
+      .sidebar {
+        min-height: 0;
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
+        border-right: 1px solid #eeeeee;
+      }
+      .window-bar {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 20px 24px 6px;
+      }
+      .traffic {
+        display: flex;
+        gap: 6px;
+      }
+      .traffic span {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #eeeeee;
+      }
+      .history {
+        display: flex;
+        gap: 2px;
+        margin-left: 6px;
+      }
+      .icon-button {
+        width: 22px;
+        height: 22px;
+      }
+
+      .sidebar-primary {
+        padding: 10px 24px 18px;
+        display: grid;
+        gap: 4px;
+      }
+      .nav-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 5px 0;
+        text-align: left;
+        color: #999999;
+        font-size: 13.5px;
+      }
+      .nav-row .shortcut {
+        color: #cccccc;
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .sidebar-scroll {
+        min-height: 0;
+        overflow: auto;
+        padding: 4px 24px 24px;
+      }
+      .section-head {
+        padding: 16px 0 6px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: #cccccc;
+        font-size: 11px;
+      }
+      .section-head button {
+        color: #cccccc;
+        font-size: 11px;
+      }
+      .side-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 0;
+        text-align: left;
+        color: #999999;
+        font-size: 13.5px;
+      }
+      .side-row .leading {
+        display: none;
+      }
+      .side-row .label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .side-row .meta {
+        color: #cccccc;
+        font-size: 11px;
+      }
+      .side-row.active {
+        color: #111111;
+      }
+      .side-row.project-active {
+        color: #111111;
+        font-weight: 500;
+      }
+      .side-row.active .provider-mark {
+        color: #999999;
+      }
+      .nested {
+        margin-left: 22px;
+      }
+      .nested .side-row {
+        font-size: 13px;
+        padding: 4px 0;
+      }
+      .provider-mark {
+        color: #999999;
+        font-size: 11px;
+      }
+      .working-label {
+        color: #999999;
+        font-size: 11px;
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.35;
+        }
+      }
+      .sidebar-footer {
+        padding: 12px 24px 22px;
+      }
+
+      /* ————— Main shell ————— */
+      .main {
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        grid-template-rows: auto auto auto minmax(0, 1fr);
+        overflow: hidden;
+      }
+
+      .project-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 28px 32px 18px;
+      }
+      .project-identity {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .project-title {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .project-detail {
+        margin-top: 4px;
+        color: #999999;
+        font-size: 11px;
+      }
+      .project-health {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: 8px;
+        color: #999999;
+        font-size: 11px;
+        font-weight: 400;
+      }
+      .dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: currentColor;
+        flex: none;
+      }
+      .dot.green {
+        color: #30a46c;
+        opacity: 0.75;
+      }
+      .dot.amber {
+        color: #d4a72c;
+        opacity: 0.8;
+      }
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      .top-action {
+        color: #999999;
+        font-size: 13.5px;
+      }
+      .top-action.primary {
+        color: #111111;
+        font-weight: 500;
+      }
+
+      /* ————— Capability tabs ————— */
+      .cap-tabs {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        padding: 0 32px 4px;
+        overflow-x: auto;
+      }
+      .cap-tab {
+        padding: 12px 0;
+        color: #999999;
+        font-size: 13.5px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .cap-tab.active {
+        color: #111111;
+        font-weight: 500;
+      }
+      .count {
+        color: #cccccc;
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+      }
+      .cap-tab.active .count {
+        color: #cccccc;
+      }
+
+      /* ————— Object tabs ————— */
+      .object-tabs {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        padding: 0 32px 20px;
+        overflow-x: auto;
+      }
+      .object-tab {
+        position: relative;
+        padding: 6px 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #999999;
+        font-size: 13px;
+      }
+      .object-tab.active {
+        color: #111111;
+      }
+      .tab-close {
+        color: #cccccc;
+        font-size: 12px;
+        opacity: 0;
+        padding-left: 2px;
+      }
+      .object-add {
+        color: #cccccc;
+        font-size: 15px;
+        padding: 0 4px;
+      }
+
+      /* ————— Thread ————— */
+      .object-thread {
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(480px, 1fr) 320px;
+      }
+      .conversation {
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+      }
+      .conversation-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 4px 32px 24px;
+      }
+      .conversation-title h1 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .conversation-title p {
+        margin: 4px 0 0;
+        color: #999999;
+        font-size: 11px;
+      }
+      .conversation-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #999999;
+        font-size: 11px;
+      }
+
+      .messages {
+        min-height: 0;
+        overflow: auto;
+        padding: 8px max(32px, calc((100% - 640px) / 2)) 20px;
+      }
+      .message {
+        width: min(640px, 100%);
+        margin: 0 auto 32px;
+      }
+      .message.user {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .messages .message {
+        opacity: 1;
+        transition: opacity 150ms ease-out;
+        @starting-style {
+          opacity: 0;
+        }
+      }
+      .bubble {
+        max-width: 78%;
+        color: #111111;
+        font-size: 13.5px;
+        line-height: 1.6;
+        text-align: right;
+      }
+      .assistant-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        color: #999999;
+        font-size: 11px;
+      }
+      .assistant-avatar {
+        color: #999999;
+        font-size: 11px;
+        font-weight: 500;
+      }
+      .assistant-copy {
+        color: #111111;
+        font-size: 13.5px;
+        line-height: 1.6;
+      }
+      .assistant-copy p {
+        margin: 0 0 16px;
+      }
+      .tools {
+        margin-top: 16px;
+        display: grid;
+        gap: 7px;
+      }
+      .tool {
+        color: #999999;
+        font-size: 12.5px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        opacity: 1;
+        transition: opacity 150ms ease-out;
+        transition-delay: calc(var(--i, 0) * 40ms);
+        @starting-style {
+          opacity: 0;
+        }
+      }
+      .tool::before {
+        content: "—";
+        color: #cccccc;
+      }
+
+      /* ————— Composer ————— */
+      .composer-wrap {
+        padding: 16px 32px 26px;
+        border-top: 1px solid #eeeeee;
+      }
+      .composer {
+        width: min(640px, 100%);
+        margin: 0 auto;
+      }
+      .composer textarea {
+        width: 100%;
+        min-height: 40px;
+        resize: none;
+        outline: 0;
+        padding: 8px 0;
+        color: #111111;
+        font-size: 13.5px;
+      }
+      .composer textarea::placeholder {
+        color: #cccccc;
+      }
+      .composer-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding-top: 8px;
+      }
+      .composer-left,
+      .composer-right {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+      .composer-chip {
+        color: #999999;
+        font-size: 12px;
+      }
+      .composer-model {
+        color: #999999;
+        font-size: 12px;
+      }
+      .send {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: #ffffff;
+        background: #111111;
+        font-size: 12px;
+      }
+
+      /* ————— Object pane ————— */
+      .object-pane {
+        min-width: 0;
+        min-height: 0;
+        overflow: auto;
+        border-left: 1px solid #eeeeee;
+      }
+      .pane-inner {
+        opacity: 1;
+        transition: opacity 150ms ease-out;
+        transition-delay: 30ms;
+        @starting-style {
+          opacity: 0;
+        }
+      }
+      .object-head {
+        padding: 32px 28px 20px;
+      }
+      .object-kind {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        color: #999999;
+        font-size: 11px;
+      }
+      .object-head h2 {
+        margin: 12px 0 0;
+        font-size: 17px;
+        font-weight: 600;
+        line-height: 1.35;
+        letter-spacing: -0.01em;
+      }
+      .object-head p {
+        margin: 8px 0 0;
+        color: #999999;
+        font-size: 13.5px;
+        line-height: 1.6;
+      }
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #999999;
+        font-size: 11px;
+      }
+      .object-section {
+        padding: 28px;
+      }
+      .object-section h3 {
+        margin: 0 0 12px;
+        color: #999999;
+        font-size: 11px;
+        font-weight: 400;
+      }
+      .object-card {
+        margin-top: 16px;
+      }
+      .object-card:first-child {
+        margin-top: 0;
+      }
+      .object-card b {
+        display: block;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: #111111;
+      }
+      .object-card p {
+        margin: 4px 0 0;
+        color: #999999;
+        font-size: 13.5px;
+        line-height: 1.6;
+      }
+      .diff-file {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 0 8px;
+        color: #999999;
+        font-size: 11px;
+        font-family: ui-monospace, "SF Mono", SFMono-Regular, Consolas, monospace;
+      }
+      .code-line {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        padding: 1px 0;
+        color: #999999;
+        font:
+          11px/1.5 ui-monospace,
+          "SF Mono",
+          SFMono-Regular,
+          Consolas,
+          monospace;
+      }
+      .code-line .ln {
+        color: #cccccc;
+        text-align: right;
+        padding-right: 10px;
+        user-select: none;
+        font-variant-numeric: tabular-nums;
+      }
+      .code-line.add {
+        color: #111111;
+      }
+      .decision-choice {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 6px 0;
+        text-align: left;
+        color: #999999;
+        font-size: 13.5px;
+      }
+      .decision-choice.selected {
+        color: #111111;
+      }
+      .decision-choice.selected span:first-child::before {
+        content: "· ";
+        color: #111111;
+      }
+      .ci-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 6px 0;
+        color: #999999;
+        font-size: 13.5px;
+      }
+      .ci-row time {
+        color: #999999;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ————— Toast ————— */
+      .toast {
+        position: fixed;
+        z-index: 40;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        padding: 8px 16px;
+        border: 1px solid #eeeeee;
+        color: #111111;
+        background: #ffffff;
+        font-size: 12.5px;
+        transition: opacity 150ms ease-out;
+        pointer-events: none;
+      }
+      .toast.show {
+        opacity: 1;
+      }
+
+      /* ————— Hover states (pointer devices only) ————— */
+      @media (hover: hover) and (pointer: fine) {
+        .nav-row:hover,
+        .side-row:hover,
+        .cap-tab:hover,
+        .object-tab:hover,
+        .top-action:hover,
+        .composer-chip:hover,
+        .decision-choice:hover,
+        .tab-close:hover,
+        .object-add:hover,
+        .section-head button:hover,
+        .icon-button:hover {
+          color: #111111;
+        }
+        .object-tab:hover .tab-close {
+          opacity: 1;
+        }
+        .decision-choice.selected:hover {
+          color: #111111;
+        }
+      }
+      .tab-close:focus-visible {
+        opacity: 1;
+      }
+
+      @media (max-width: 1180px) {
+        .app {
+          grid-template-columns: 200px minmax(0, 1fr);
+        }
+        .object-thread {
+          grid-template-columns: 1fr;
+        }
+        .object-pane {
+          display: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition-duration: 0ms !important;
+          animation: none !important;
+        }
+        .working-label {
+          opacity: 0.7;
+        }
+        .toast {
+          transition: opacity 100ms ease;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="window-bar">
+          <div class="traffic"><span></span><span></span><span></span></div>
+          <div class="history">
+            <button class="icon-button" aria-label="Back"></button
+            ><button class="icon-button" aria-label="Forward"></button>
+          </div>
+        </div>
+        <nav class="sidebar-primary">
+          <button class="nav-row"><span>New thread</span><span class="shortcut">⌘N</span></button>
+          <button class="nav-row"><span>Search</span><span class="shortcut">⌘K</span></button>
+          <button class="nav-row"><span>Automations</span></button>
+          <button class="nav-row capability-link" data-capability="research">
+            <span>Research</span>
+          </button>
+          <button class="nav-row capability-link" data-capability="github">
+            <span>GitHub</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-scroll">
+          <div class="section-head"><span>Pinned</span></div>
+          <button class="side-row">
+            <span class="label">Fix PR #16 diff viewer</span><span class="meta">Chitauri</span>
+          </button>
+          <button class="side-row">
+            <span class="leading"><span class="provider-mark">Cx</span></span
+            ><span class="label">Inspect TypeScript error</span><span class="meta">gcp</span>
+          </button>
+
+          <div class="section-head">
+            <span>Projects</span><button title="Collapse projects">hide</button>
+          </div>
+          <button class="side-row project-active">
+            <span class="label">Chitauri</span><span class="meta">main</span>
+          </button>
+          <div class="nested">
+            <button class="side-row active object-link" data-object="direction">
+              <span class="leading"><span class="provider-mark">Cx</span></span
+              ><span class="label">Project-first UI direction</span
+              ><span class="working-label">working</span>
+            </button>
+            <button class="side-row object-link" data-object="pr">
+              <span class="label">PR #16 · Diff audit</span><span class="meta">review</span>
+            </button>
+            <button class="side-row object-link" data-object="research">
+              <span class="label">Settings simplification</span><span class="meta">ready</span>
+            </button>
+          </div>
+          <button class="side-row"><span class="label">gcp-tracking-server</span></button>
+          <button class="side-row"><span class="label">breno-agent</span></button>
+          <button class="side-row"><span class="label">Synara</span></button>
+        </div>
+
+        <footer class="sidebar-footer">
+          <button class="nav-row"><span>Settings</span></button>
+        </footer>
+      </aside>
+
+      <main class="main">
+        <header class="project-header">
+          <div class="project-identity">
+            <div class="nowrap">
+              <div class="project-title">
+                Chitauri <span class="project-health"><span class="dot green"></span>Healthy</span>
+              </div>
+              <div class="project-detail mono">~/www/Chitauri · main</div>
+            </div>
+          </div>
+          <div class="header-actions">
+            <button class="top-action">Project settings</button
+            ><button class="top-action primary">New thread</button
+            ><button class="icon-button" aria-label="More"></button>
+          </div>
+        </header>
+
+        <nav class="cap-tabs" aria-label="Chitauri project sections">
+          <button class="cap-tab active" data-capability="threads">
+            Threads <span class="count">12</span>
+          </button>
+          <button class="cap-tab" data-capability="research">
+            Research <span class="count">8</span>
+          </button>
+          <button class="cap-tab" data-capability="github">
+            GitHub <span class="count">4</span>
+          </button>
+          <button class="cap-tab" data-capability="review">
+            Code review <span class="count">2</span>
+          </button>
+          <button class="cap-tab" data-capability="ci">CI &amp; delivery</button>
+          <button class="cap-tab" data-capability="infra">Infrastructure</button>
+        </nav>
+
+        <nav class="object-tabs" aria-label="Open object threads">
+          <button class="object-tab active" data-object="direction">
+            <span class="nowrap">Project-first UI direction</span
+            ><span class="tab-close" role="button" aria-label="Close tab">×</span>
+          </button>
+          <button class="object-tab" data-object="pr">
+            <span class="nowrap">PR #16 · Diff audit</span
+            ><span class="tab-close" role="button" aria-label="Close tab">×</span>
+          </button>
+          <button class="object-tab" data-object="research">
+            <span class="nowrap">Settings simplification</span
+            ><span class="tab-close" role="button" aria-label="Close tab">×</span>
+          </button>
+          <button class="object-tab" data-object="ci">
+            <span class="nowrap">CI run #883</span
+            ><span class="tab-close" role="button" aria-label="Close tab">×</span>
+          </button>
+          <button class="object-add" title="Open another project object">+</button>
+        </nav>
+
+        <section class="object-thread">
+          <section class="conversation">
+            <header class="conversation-header">
+              <div class="conversation-title">
+                <h1 id="thread-title">Project-first UI direction</h1>
+                <p id="thread-meta">Project decision · Codex working in chitauri/project-home</p>
+              </div>
+              <div class="conversation-status">
+                <span class="dot green"></span><span id="thread-status">Working</span
+                ><button class="icon-button" aria-label="Thread options"></button>
+              </div>
+            </header>
+            <div class="messages" id="messages"></div>
+            <div class="composer-wrap">
+              <div class="composer">
+                <textarea id="composer-input" placeholder="Ask for follow-up changes"></textarea>
+                <div class="composer-foot">
+                  <div class="composer-left">
+                    <button class="composer-chip" aria-label="Attach">Attach</button
+                    ><button class="composer-chip">Full access</button
+                    ><button class="composer-chip">
+                      <span id="branch-chip">chitauri/project-home</span>
+                    </button>
+                  </div>
+                  <div class="composer-right">
+                    <span class="composer-model">GPT-5.6 Sol · High</span
+                    ><button class="send" id="send" aria-label="Send">↑</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+          <aside class="object-pane" id="object-pane"></aside>
+        </section>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+
+    <script>
+      const objectData = {
+        direction: {
+          title: "Project-first UI direction",
+          meta: "Project decision · Codex working in chitauri/project-home",
+          status: "Working",
+          branch: "chitauri/project-home",
+          prompt:
+            "Keep threads as the primary way we collaborate with agents. Make the project the durable scope around them, using familiar horizontal tabs.",
+          answer:
+            "This direction keeps Chitauri’s current shell and changes the working model, not the visual language. Each horizontal tab is an object thread: a normal agent conversation anchored to a project decision, PR, research artifact, CI run, or infrastructure service.",
+          tools: [
+            "Matched the current Chitauri sidebar hierarchy",
+            "Kept threads as the default project section",
+            "Attached this conversation to a project decision",
+          ],
+          pane: `<div class="object-head"><div class="object-kind"><span>Project decision</span><span class="status-pill"><span class="dot amber"></span>Needs decision</span></div><h2>How should project work be organized?</h2><p>The thread remains the collaboration surface. The attached object carries durable state outside the transcript.</p></div><section class="object-section"><h3>Choose direction</h3><button class="decision-choice selected"><span>Object Threads</span></button><button class="decision-choice"><span>Traditional thread list</span></button><button class="decision-choice"><span>Project dashboard</span></button></section><section class="object-section"><h3>Design contract</h3><div class="object-card"><b>Project is the scope</b><p>Capabilities and object threads always belong to the selected project.</p></div><div class="object-card"><b>Thread is the collaboration</b><p>Every object opens with a full agent conversation, not a passive inspector.</p></div><div class="object-card"><b>Object is the memory</b><p>PR state, findings, decisions, and checks survive the transcript.</p></div></section>`,
+        },
+        pr: {
+          title: "PR #16 · Diff audit",
+          meta: "Pull request thread · Review agent · 8 files changed",
+          status: "Review ready",
+          branch: "chitauri/audit-pierre-diffs",
+          prompt:
+            "Review PR #16 and verify whether the Pierre diff integration introduces regressions.",
+          answer:
+            "The review is complete. I verified two actionable issues and attached them directly to this pull request object. We can discuss or fix them here without losing the PR context.",
+          tools: [
+            "Read the pull request diff",
+            "Ran focused viewer tests",
+            "Verified two findings against source",
+          ],
+          pane: `<div class="object-head"><div class="object-kind"><span>Pull request #16</span><span class="status-pill"><span class="dot green"></span>Ready for review</span></div><h2>Pierre diff integration audit</h2><p>8 files changed · +184 −61 · all focused checks passing</p></div><section class="object-section"><h3>Current diff</h3><div class="diff"><div class="diff-file"><span>DiffViewer.tsx</span><span>+12 −4</span></div><div class="code-line"><span class="ln">88</span><span>const viewer = createDiffViewer({</span></div><div class="code-line add"><span class="ln">89</span><span>+ renderGutter: true,</span></div><div class="code-line add"><span class="ln">90</span><span>+ collapseUnchanged: false,</span></div><div class="code-line"><span class="ln">91</span><span>  theme: resolvedTheme,</span></div><div class="code-line"><span class="ln">92</span><span>})</span></div></div></section><section class="object-section"><h3>Verified findings</h3><div class="object-card"><b>Viewer state resets on theme change</b><p>The adapter recreates the viewer and loses the current diff position.</p></div><div class="object-card"><b>Large diff threshold is not forwarded</b><p>The project virtualization guardrail is skipped by the new adapter.</p></div></section>`,
+        },
+        research: {
+          title: "Settings simplification",
+          meta: "Research thread · Artifact ready · Updated 48m ago",
+          status: "Ready to implement",
+          branch: "main",
+          prompt:
+            "Research how to simplify Chitauri settings without hiding important operational surfaces.",
+          answer:
+            "The research is complete. The recommended structure reduces Settings to four categories and moves operational destinations into the project shell. The full plan stays attached here while we discuss implementation.",
+          tools: [
+            "Mapped current settings routes",
+            "Traced search and navigation coupling",
+            "Produced 12 source-backed findings",
+          ],
+          pane: `<div class="object-head"><div class="object-kind"><span>Research artifact</span><span class="status-pill"><span class="dot green"></span>Complete</span></div><h2>Settings IA simplification</h2><p>12 findings · 7 decisions · implementation-ready</p></div><section class="object-section"><h3>Recommendation</h3><div class="object-card"><b>Four settings categories</b><p>General, Appearance, Agents, and Advanced.</p></div><div class="object-card"><b>Move operational surfaces out</b><p>Profile, Usage, Worktrees, Archived, and Shortcuts become first-class destinations.</p></div></section><section class="object-section"><h3>Next action</h3><button class="decision-choice selected"><span>Create implementation thread</span></button></section>`,
+        },
+        ci: {
+          title: "CI run #883",
+          meta: "Delivery thread · main · Triggered 6 minutes ago",
+          status: "18/18 passing",
+          branch: "main",
+          prompt: "Watch CI run #883 and tell me immediately if anything needs intervention.",
+          answer:
+            "All eighteen checks passed. The desktop bundle, focused transcript tests, and server contract suite are green. This thread can stay attached to the run for deployment follow-up.",
+          tools: ["Watched GitHub Actions", "Collected job timings", "Confirmed deployable state"],
+          pane: `<div class="object-head"><div class="object-kind"><span>CI run #883</span><span class="status-pill"><span class="dot green"></span>Passed</span></div><h2>Main is deployable</h2><p>18 checks passed · 2m 41s total · commit 92de34a</p></div><section class="object-section"><h3>Jobs</h3><div class="ci-row"><span>Focused web tests</span><time>41s</time></div><div class="ci-row"><span>Server contracts</span><time>36s</time></div><div class="ci-row"><span>Desktop bundle</span><time>1m 54s</time></div><div class="ci-row"><span>Secret scan</span><time>18s</time></div></section><section class="object-section"><h3>Next action</h3><button class="decision-choice"><span>Open deployment thread</span></button></section>`,
+        },
+        infra: {
+          title: "Production infrastructure",
+          meta: "Infrastructure thread · 6 services · Live project context",
+          status: "Healthy",
+          branch: "main",
+          prompt:
+            "Map the infrastructure for Chitauri and keep the thread attached to the live service inventory.",
+          answer:
+            "The initial map covers the web server, desktop runtime, WebSocket broker, provider sessions, state database, and CI delivery path. All six services are healthy.",
+          tools: [
+            "Discovered service boundaries",
+            "Mapped owners and environments",
+            "Checked current service health",
+          ],
+          pane: `<div class="object-head"><div class="object-kind"><span>Infrastructure map</span><span class="status-pill"><span class="dot green"></span>Healthy</span></div><h2>Production infrastructure</h2><p>6 services · 2 environments · no active incidents</p></div><section class="object-section"><h3>Services</h3><div class="object-card"><b>Web + WebSocket server</b><p>Production · healthy · owner: Chitauri</p></div><div class="object-card"><b>Desktop runtime</b><p>macOS · healthy · local provider sessions</p></div><div class="object-card"><b>State database</b><p>SQLite projections · healthy · local-first</p></div></section>`,
+        },
+      };
+
+      const messages = document.querySelector("#messages");
+      const pane = document.querySelector("#object-pane");
+      const title = document.querySelector("#thread-title");
+      const meta = document.querySelector("#thread-meta");
+      const status = document.querySelector("#thread-status");
+      const branch = document.querySelector("#branch-chip");
+      let activeObject = "direction";
+
+      function renderObject(id) {
+        const data = objectData[id];
+        if (!data) return;
+        activeObject = id;
+        title.textContent = data.title;
+        meta.textContent = data.meta;
+        status.textContent = data.status;
+        branch.textContent = data.branch;
+        messages.innerHTML = `<div class="message user"><div class="bubble"></div></div><div class="message assistant"><div class="assistant-head"><span class="assistant-avatar">Cx</span><span>Codex · working in Chitauri</span></div><div class="assistant-copy"><p></p><div class="tools"></div></div></div>`;
+        messages.querySelector(".bubble").textContent = data.prompt;
+        messages.querySelector(".assistant-copy p").textContent = data.answer;
+        const tools = messages.querySelector(".tools");
+        data.tools.forEach((tool, i) => {
+          const row = document.createElement("div");
+          row.className = "tool";
+          row.style.setProperty("--i", i);
+          row.innerHTML = `<span></span>`;
+          row.querySelector("span").textContent = tool;
+          tools.append(row);
+        });
+        pane.innerHTML = `<div class="pane-inner">${data.pane}</div>`;
+        document
+          .querySelectorAll(".object-tab")
+          .forEach((tab) => tab.classList.toggle("active", tab.dataset.object === id));
+        document
+          .querySelectorAll(".object-link")
+          .forEach((link) => link.classList.toggle("active", link.dataset.object === id));
+      }
+
+      document.querySelectorAll(".object-tab").forEach((tab) =>
+        tab.addEventListener("click", (event) => {
+          if (event.target.closest(".tab-close")) return;
+          renderObject(tab.dataset.object);
+        }),
+      );
+      document
+        .querySelectorAll(".object-link")
+        .forEach((link) => link.addEventListener("click", () => renderObject(link.dataset.object)));
+      document.querySelectorAll(".tab-close").forEach((close) =>
+        close.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const tab = close.closest(".object-tab");
+          const wasActive = tab.classList.contains("active");
+          tab.remove();
+          if (wasActive)
+            renderObject(document.querySelector(".object-tab")?.dataset.object || "direction");
+        }),
+      );
+
+      const capabilityMap = {
+        threads: "direction",
+        research: "research",
+        github: "pr",
+        review: "pr",
+        ci: "ci",
+        infra: "infra",
+      };
+      document.querySelectorAll(".cap-tab").forEach((tab) =>
+        tab.addEventListener("click", () => {
+          document.querySelectorAll(".cap-tab").forEach((item) => item.classList.remove("active"));
+          tab.classList.add("active");
+          renderObject(capabilityMap[tab.dataset.capability]);
+        }),
+      );
+      document
+        .querySelectorAll(".capability-link")
+        .forEach((link) =>
+          link.addEventListener("click", () =>
+            renderObject(capabilityMap[link.dataset.capability]),
+          ),
+        );
+
+      const input = document.querySelector("#composer-input");
+      function sendMessage() {
+        const value = input.value.trim();
+        if (!value) {
+          input.focus();
+          return;
+        }
+        const message = document.createElement("div");
+        message.className = "message user";
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+        bubble.textContent = value;
+        message.append(bubble);
+        messages.append(message);
+        messages.scrollTop = messages.scrollHeight;
+        input.value = "";
+        showToast(`Message sent in ${objectData[activeObject].title}`);
+      }
+      document.querySelector("#send").addEventListener("click", sendMessage);
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+          event.preventDefault();
+          sendMessage();
+        }
+      });
+      document
+        .querySelector(".object-add")
+        .addEventListener("click", () => showToast("Choose a Chitauri object to open as a thread"));
+
+      let toastTimer;
+      function showToast(text) {
+        const toast = document.querySelector("#toast");
+        toast.textContent = text;
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 1700);
+      }
+      renderObject("direction");
+    </script>
+  </body>
+</html>

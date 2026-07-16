@@ -15,13 +15,16 @@
 /**
  * Height (px) of the chat-surface top chrome bar — the row shared by the chat,
  * settings, workspace, and (open) sidebar headers. The web side renders this as the
- * Tailwind class `h-[46px]` (kept literal so Tailwind can scan it; guarded against
+ * Tailwind class `h-[52px]` (kept literal so Tailwind can scan it; guarded against
  * drift from this number in apps/web/.../chatHeaderControls.tsx).
  */
-export const CHAT_SURFACE_HEADER_HEIGHT_PX = 46;
+export const CHAT_SURFACE_HEADER_HEIGHT_PX = 52;
 
 /** Leading inset (px) of the macOS traffic-light cluster from the window's left edge. */
-export const MAC_TRAFFIC_LIGHT_INSET_X_PX = 16;
+export const MAC_TRAFFIC_LIGHT_INSET_X_PX = 28;
+
+/** Top inset of the floating sidebar panel. Matches the renderer's `p-3` shell inset. */
+export const MAC_DESKTOP_SHELL_INSET_TOP_PX = 12;
 
 /**
  * Radius (px) of a single macOS traffic-light dot. The dot measures ~14px across, so
@@ -42,7 +45,11 @@ export const MAC_TRAFFIC_LIGHT_DOT_RADIUS_PX = 7;
 export function getMacTrafficLightPosition(): { x: number; y: number } {
   return {
     x: MAC_TRAFFIC_LIGHT_INSET_X_PX,
-    y: Math.round(CHAT_SURFACE_HEADER_HEIGHT_PX / 2 - MAC_TRAFFIC_LIGHT_DOT_RADIUS_PX),
+    y: Math.round(
+      MAC_DESKTOP_SHELL_INSET_TOP_PX +
+        CHAT_SURFACE_HEADER_HEIGHT_PX / 2 -
+        MAC_TRAFFIC_LIGHT_DOT_RADIUS_PX,
+    ),
   };
 }
 
@@ -51,7 +58,7 @@ export function getMacTrafficLightPosition(): { x: number; y: number } {
  * route-nav cluster on macOS Electron. Native traffic lights do not scale with
  * `webContents` zoom, so callers divide this by the live zoom factor.
  */
-export const MAC_DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CSS_PX = 90;
+export const MAC_DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CSS_PX = 102;
 
 /** CSS custom property written by the web shell when macOS desktop zoom changes. */
 export const DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CSS_VAR =

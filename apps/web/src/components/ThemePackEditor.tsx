@@ -447,7 +447,7 @@ function CodeThemeBadge({ theme }: { theme: ChromeTheme }) {
   return (
     <span
       aria-hidden
-      className="flex size-5 shrink-0 items-center justify-center rounded-md border text-[10px] font-semibold leading-none"
+      className="flex size-5 shrink-0 items-center justify-center rounded-md border text-[11px] font-semibold leading-none"
       style={{
         backgroundColor: theme.surface,
         borderColor: mixColor(theme.surface, theme.ink, 0.16),

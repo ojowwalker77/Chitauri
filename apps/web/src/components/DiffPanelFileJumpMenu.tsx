@@ -66,7 +66,7 @@ const DiffFileJumpRow = memo(function DiffFileJumpRow(props: {
         <DiffStat
           additions={stat.additions}
           deletions={stat.deletions}
-          className="shrink-0 text-[10px] tabular-nums"
+          className="shrink-0 text-[11px] tabular-nums"
         />
       </div>
     </MenuItem>
