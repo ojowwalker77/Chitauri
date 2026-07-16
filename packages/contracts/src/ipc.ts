@@ -28,22 +28,6 @@ import type {
   AutomationUpdateInput,
 } from "./automation";
 import type {
-  ComputerScriptsAnalysisInput,
-  ComputerScriptsAnalysisSnapshot,
-  ComputerScriptsCancelAnalysisInput,
-  ComputerScriptsCancelRunInput,
-  ComputerScriptsCatalogResult,
-  ComputerScriptsListHistoryInput,
-  ComputerScriptsListHistoryResult,
-  ComputerScriptsRunInput,
-  ComputerScriptsRunSnapshot,
-  ComputerScriptsStartAnalysisInput,
-  ComputerScriptsStartAnalysisResult,
-  ComputerScriptsStartRunInput,
-  ComputerScriptsStartRunResult,
-  ComputerScriptsStreamEvent,
-} from "./computerScripts";
-import type {
   GitCheckoutInput,
   GitActionProgressEvent,
   GitCreateBranchInput,
@@ -619,23 +603,6 @@ export interface NativeApi {
     markRunRead: (input: AutomationMarkRunReadInput) => Promise<AutomationRunActionResult>;
     archiveRun: (input: AutomationArchiveRunInput) => Promise<AutomationRunActionResult>;
     onEvent: (callback: (event: AutomationStreamEvent) => void) => () => void;
-  };
-  computerScripts: {
-    catalog: () => Promise<ComputerScriptsCatalogResult>;
-    startAnalysis: (
-      input: ComputerScriptsStartAnalysisInput,
-    ) => Promise<ComputerScriptsStartAnalysisResult>;
-    analysis: (input: ComputerScriptsAnalysisInput) => Promise<ComputerScriptsAnalysisSnapshot>;
-    cancelAnalysis: (
-      input: ComputerScriptsCancelAnalysisInput,
-    ) => Promise<ComputerScriptsAnalysisSnapshot>;
-    startRun: (input: ComputerScriptsStartRunInput) => Promise<ComputerScriptsStartRunResult>;
-    run: (input: ComputerScriptsRunInput) => Promise<ComputerScriptsRunSnapshot>;
-    cancelRun: (input: ComputerScriptsCancelRunInput) => Promise<ComputerScriptsRunSnapshot>;
-    listHistory: (
-      input: ComputerScriptsListHistoryInput,
-    ) => Promise<ComputerScriptsListHistoryResult>;
-    onEvent: (callback: (event: ComputerScriptsStreamEvent) => void) => () => void;
   };
   browser: {
     open: (input: BrowserOpenInput) => Promise<ThreadBrowserState>;

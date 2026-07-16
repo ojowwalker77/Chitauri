@@ -1,8 +1,15 @@
-import type { Path } from "effect";
+// Minimal structural slice of a path module so callers can pass either the
+// Effect Path service or node:path directly.
+export interface ManagedWorktreePathApi {
+  isAbsolute(path: string): boolean;
+  normalize(path: string): string;
+  resolve(...pathSegments: string[]): string;
+  readonly sep: string;
+}
 
 export const parseManagedWorktreeWorkspaceRoot = (input: {
   readonly gitPointerFileContents: string;
-  readonly path: Path.Path;
+  readonly path: ManagedWorktreePathApi;
   readonly worktreePath: string;
 }): string | null => {
   const firstLine = input.gitPointerFileContents.split(/\r?\n/, 1)[0]?.trim() ?? "";
