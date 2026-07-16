@@ -45,6 +45,7 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import {
   type AppSettings,
+  type TaskListDisplayMode,
   DEFAULT_UI_DENSITY,
   type UiDensity,
   MAX_CHAT_FONT_SIZE_PX,
@@ -260,6 +261,20 @@ const HIGHLIGHT_COLOR_OPTIONS: ReadonlyArray<{
     icon: <HighlightColorSwatch color="#f472b6" />,
   },
 ];
+
+const TASK_LIST_DISPLAY_OPTIONS = [
+  {
+    value: "sidebar",
+    label: "Right sidebar",
+  },
+  {
+    value: "composer",
+    label: "Above composer",
+  },
+] as const satisfies ReadonlyArray<{
+  value: TaskListDisplayMode;
+  label: string;
+}>;
 
 const PROVIDER_SELECT_OPTIONS = [
   "codex",
@@ -1167,6 +1182,9 @@ function SettingsRouteView() {
       ? ["Provider update checks"]
       : []),
     ...(settings.diffWordWrap !== defaults.diffWordWrap ? ["Diff line wrapping"] : []),
+    ...(settings.taskListDisplayMode !== defaults.taskListDisplayMode
+      ? ["Task list location"]
+      : []),
     ...(settings.autoArchiveMergedPrThreads !== defaults.autoArchiveMergedPrThreads
       ? ["Auto-archive merged PRs"]
       : []),
@@ -2406,6 +2424,31 @@ function SettingsRouteView() {
 
   const renderBehaviorPanel = () => (
     <div className="space-y-6">
+      <SettingsSection title="Task lists">
+        <SettingsRow
+          title="Task list location"
+          description="Choose where active task lists open by default. You can still switch views from the task controls."
+          resetAction={
+            settings.taskListDisplayMode !== defaults.taskListDisplayMode ? (
+              <SettingResetButton
+                label="task list location"
+                onClick={() =>
+                  updateSettings({ taskListDisplayMode: defaults.taskListDisplayMode })
+                }
+              />
+            ) : null
+          }
+          control={
+            <SettingsSegmentedControl
+              value={settings.taskListDisplayMode}
+              onValueChange={(value) => updateSettings({ taskListDisplayMode: value })}
+              ariaLabel="Default task list location"
+              options={TASK_LIST_DISPLAY_OPTIONS}
+            />
+          }
+        />
+      </SettingsSection>
+
       <SettingsSection title="Orchestrator routing">
         {ORCHESTRATOR_LANES.map((lane) => {
           const route = settings.orchestratorRoutingPolicy.lanes[lane];
