@@ -50,6 +50,28 @@ const decodeOrchestrationCommand = Schema.decodeUnknownEffect(OrchestrationComma
 const decodeOrchestrationEvent = Schema.decodeUnknownEffect(OrchestrationEvent);
 const decodeThreadPullRequest = Schema.decodeUnknownEffect(OrchestrationThreadPullRequest);
 
+it.effect("preserves the orchestrator seat marker on thread creation", () =>
+  Effect.gen(function* () {
+    const command = yield* decodeClientOrchestrationCommand({
+      type: "thread.create",
+      commandId: "cmd-seat-create",
+      threadId: "thread-seat",
+      projectId: "project-seat",
+      title: "Orchestrator",
+      modelSelection: { provider: "codex", model: "gpt-5.6-sol" },
+      runtimeMode: "full-access",
+      branch: null,
+      worktreePath: null,
+      orchestratorMode: true,
+      createdAt: "2026-07-15T00:00:00.000Z",
+    });
+    assert.equal(command.type, "thread.create");
+    if (command.type === "thread.create") {
+      assert.equal(command.orchestratorMode, true);
+    }
+  }),
+);
+
 it.effect("decodes last-known PRs persisted before draft/mergeability/diff fields existed", () =>
   Effect.gen(function* () {
     const legacy = yield* decodeThreadPullRequest({

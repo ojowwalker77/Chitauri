@@ -51,6 +51,7 @@ import {
 import { resolveTextGenerationInputForSelection } from "../../git/textGenerationSelection.ts";
 import { ProviderService } from "../../provider/Services/ProviderService.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
+import { OrchestratorControlPlane } from "../../orchestrator/Services/OrchestratorControlPlane.ts";
 import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import {
   buildPriorTranscriptBootstrapText,
@@ -252,6 +253,7 @@ const make = Effect.gen(function* () {
   const git = yield* GitCore;
   const textGeneration = yield* TextGeneration;
   const serverSettings = yield* ServerSettingsService;
+  const orchestratorControlPlane = yield* OrchestratorControlPlane;
   const handledTurnStartKeys = yield* Cache.make<string, true>({
     capacity: HANDLED_TURN_START_KEY_MAX,
     timeToLive: HANDLED_TURN_START_KEY_TTL,
@@ -705,16 +707,22 @@ const make = Effect.gen(function* () {
       readonly resumeCursor?: unknown;
       readonly provider?: ProviderKind;
     }) =>
-      providerService.startSession(threadId, {
-        threadId,
-        ...(preferredProvider ? { provider: preferredProvider } : {}),
-        ...(effectiveCwd ? { cwd: effectiveCwd } : {}),
-        modelSelection: desiredModelSelection,
-        ...(options?.providerOptions !== undefined
-          ? { providerOptions: options.providerOptions }
-          : {}),
-        ...(input?.resumeCursor !== undefined ? { resumeCursor: input.resumeCursor } : {}),
-        runtimeMode: desiredRuntimeMode,
+      Effect.gen(function* () {
+        const orchestratorMcpServer = thread.orchestratorMode
+          ? yield* orchestratorControlPlane.getMcpServerForSeat(threadId)
+          : undefined;
+        return yield* providerService.startSession(threadId, {
+          threadId,
+          ...(preferredProvider ? { provider: preferredProvider } : {}),
+          ...(effectiveCwd ? { cwd: effectiveCwd } : {}),
+          modelSelection: desiredModelSelection,
+          ...(options?.providerOptions !== undefined
+            ? { providerOptions: options.providerOptions }
+            : {}),
+          ...(orchestratorMcpServer ? { mcpServers: [orchestratorMcpServer] } : {}),
+          ...(input?.resumeCursor !== undefined ? { resumeCursor: input.resumeCursor } : {}),
+          runtimeMode: desiredRuntimeMode,
+        });
       });
 
     const bindSessionToThread = (session: ProviderSession) =>

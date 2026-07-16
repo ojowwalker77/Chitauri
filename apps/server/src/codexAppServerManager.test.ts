@@ -20,6 +20,7 @@ import {
 } from "./codexProcessEnv";
 import {
   buildCodexInitializeParams,
+  buildCodexMcpConfig,
   CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS,
   CODEX_PLAN_MODE_DEVELOPER_INSTRUCTIONS,
   CodexAppServerManager,
@@ -715,6 +716,28 @@ describe("startSession", () => {
   it("uses an isolated scratch workspace path when no cwd is provided", () => {
     const cwd = ensureIsolatedScratchWorkspace(asThreadId("thread-1"));
     expect(cwd).toContain(`${path.sep}chitauri-codex-workspaces${path.sep}thread-1`);
+  });
+
+  it("maps orchestrator MCP servers to official Codex per-thread config", () => {
+    expect(
+      buildCodexMcpConfig([
+        {
+          name: "chitauri_orchestrator",
+          url: "http://127.0.0.1:5173/api/orchestrator/mcp",
+          headers: { Authorization: "Bearer seat-token" },
+          toolTimeoutMs: 3_600_000,
+        },
+      ]),
+    ).toEqual({
+      mcp_servers: {
+        chitauri_orchestrator: {
+          url: "http://127.0.0.1:5173/api/orchestrator/mcp",
+          http_headers: { Authorization: "Bearer seat-token" },
+          tool_timeout_sec: 3_600,
+          required: true,
+        },
+      },
+    });
   });
 
   it("fails fast with an upgrade message when codex is below the minimum supported version", async () => {

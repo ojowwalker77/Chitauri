@@ -32,6 +32,7 @@ import { LOCAL_IMAGE_ROUTE_PATH, resolveAllowedLocalPreviewFile } from "./localI
 import type { ProjectFaviconResolverShape } from "./project/Services/ProjectFaviconResolver";
 import { ProjectFaviconResolver } from "./project/Services/ProjectFaviconResolver";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
+import { OrchestratorControlPlane } from "./orchestrator/Services/OrchestratorControlPlane.ts";
 import { threadArchiveChunks, threadArchiveFileName } from "./orchestration/exportThreadArchive";
 import type { ServerReadiness } from "./server/readiness";
 import { resolveFavicon, tryParseHost } from "./siteFaviconCache";
@@ -169,6 +170,7 @@ export function makeEffectHttpRouteLayer(readiness: ServerReadiness) {
       ),
     ),
     authEffectRouteLayer,
+    orchestratorMcpEffectRouteLayer,
     projectFaviconEffectRouteLayer,
     threadExportEffectRouteLayer,
     siteFaviconEffectRouteLayer,
@@ -178,6 +180,24 @@ export function makeEffectHttpRouteLayer(readiness: ServerReadiness) {
     staticAndDevEffectRouteLayer,
   );
 }
+
+const orchestratorMcpEffectRouteLayer = HttpRouter.add(
+  "*",
+  "/api/orchestrator/mcp",
+  Effect.gen(function* () {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const controlPlane = yield* OrchestratorControlPlane;
+    const webRequest = yield* HttpServerRequest.toWeb(request);
+    const response = yield* controlPlane.handleHttpRequest(webRequest);
+    return HttpServerResponse.fromWeb(response);
+  }).pipe(
+    Effect.catch((cause) =>
+      Effect.logWarning("orchestrator MCP request failed", { cause }).pipe(
+        Effect.as(HttpServerResponse.text("Internal Server Error", { status: 500 })),
+      ),
+    ),
+  ),
+);
 
 const requireAuthenticatedRequest = Effect.gen(function* () {
   const request = yield* HttpServerRequest.HttpServerRequest;

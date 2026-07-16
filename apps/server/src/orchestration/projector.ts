@@ -327,6 +327,7 @@ export function projectEvent(
             associatedWorktreeRef: payload.associatedWorktreeRef,
             createBranchFlowCompleted: payload.createBranchFlowCompleted,
             isPinned: payload.isPinned,
+            orchestratorMode: payload.orchestratorMode,
             parentThreadId: payload.parentThreadId,
             subagentAgentId: payload.subagentAgentId,
             subagentNickname: payload.subagentNickname,
@@ -432,6 +433,9 @@ export function projectEvent(
                 ? { createBranchFlowCompleted: nextCreateBranchFlowCompleted }
                 : {}),
               ...(payload.isPinned !== undefined ? { isPinned: payload.isPinned } : {}),
+              ...(payload.orchestratorMode !== undefined
+                ? { orchestratorMode: payload.orchestratorMode }
+                : {}),
               ...(payload.parentThreadId !== undefined
                 ? { parentThreadId: payload.parentThreadId }
                 : {}),

@@ -5,6 +5,8 @@
 
 import {
   PROVIDER_DISPLAY_NAMES,
+  type ModelSelection,
+  type OrchestratorLane,
   type ProviderKind,
   type ServerProviderStatus,
   type ThreadId,
@@ -267,6 +269,48 @@ const PROVIDER_SELECT_OPTIONS = [
   "kilo",
   "pi",
 ] as const satisfies readonly ProviderKind[];
+
+const ORCHESTRATOR_LANES = ["bulk", "ui", "explore", "verify"] as const satisfies readonly OrchestratorLane[];
+const ORCHESTRATOR_EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
+
+function orchestratorEffort(selection: ModelSelection): string {
+  const options = selection.options;
+  if (!options) return "high";
+  if ("reasoningEffort" in options && options.reasoningEffort) return options.reasoningEffort;
+  if ("effort" in options && options.effort) return options.effort;
+  if ("thinkingLevel" in options && options.thinkingLevel) return options.thinkingLevel;
+  return "high";
+}
+
+function withOrchestratorEffort(selection: ModelSelection, effort: string): ModelSelection {
+  if (selection.provider === "claudeAgent") {
+    return { ...selection, options: { effort: effort as "low" | "medium" | "high" | "xhigh" | "max" } };
+  }
+  if (selection.provider === "pi") {
+    return { ...selection, options: { thinkingLevel: effort === "max" ? "xhigh" : effort as "low" | "medium" | "high" | "xhigh" } };
+  }
+  return { ...selection, options: { reasoningEffort: effort } };
+}
+
+function formatEscalation(selection: ModelSelection): string {
+  return `${selection.provider}:${selection.model}`;
+}
+
+function parseEscalation(value: string, fallbackProvider: ProviderKind): ModelSelection[] {
+  return value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const separator = entry.indexOf(":");
+      if (separator <= 0) return { provider: fallbackProvider, model: entry };
+      const provider = entry.slice(0, separator);
+      const model = entry.slice(separator + 1).trim();
+      return isProviderSelectOption(provider) && model
+        ? { provider, model }
+        : { provider: fallbackProvider, model: entry };
+    });
+}
 
 const TIMESTAMP_FORMAT_LABELS = {
   locale: "System default",
@@ -2321,8 +2365,122 @@ function SettingsRouteView() {
     </div>
   );
 
+  const updateOrchestratorLane = (
+    lane: OrchestratorLane,
+    route: AppSettings["orchestratorRoutingPolicy"]["lanes"][OrchestratorLane],
+  ) => {
+    updateSettings({
+      orchestratorRoutingPolicy: {
+        ...settings.orchestratorRoutingPolicy,
+        lanes: {
+          ...settings.orchestratorRoutingPolicy.lanes,
+          [lane]: route,
+        },
+      },
+    });
+  };
+
   const renderBehaviorPanel = () => (
     <div className="space-y-6">
+      <SettingsSection title="Orchestrator routing">
+        {ORCHESTRATOR_LANES.map((lane) => {
+          const route = settings.orchestratorRoutingPolicy.lanes[lane];
+          return (
+            <SettingsRow
+              key={lane}
+              title={`${lane[0]!.toUpperCase()}${lane.slice(1)} lane`}
+              description="Provider, model, effort, and manual escalation order for new delegated work."
+              resetAction={
+                JSON.stringify(route) !==
+                JSON.stringify(defaults.orchestratorRoutingPolicy.lanes[lane]) ? (
+                  <SettingResetButton
+                    label={`${lane} lane`}
+                    onClick={() =>
+                      updateOrchestratorLane(
+                        lane,
+                        defaults.orchestratorRoutingPolicy.lanes[lane],
+                      )
+                    }
+                  />
+                ) : null
+              }
+            >
+              <div className="mt-4 grid gap-2 sm:grid-cols-[9rem_minmax(0,1fr)_8rem]">
+                <SettingsSelectControl
+                  value={route.modelSelection.provider}
+                  onValueChange={(value) => {
+                    if (!isProviderSelectOption(value)) return;
+                    updateOrchestratorLane(lane, {
+                      ...route,
+                      modelSelection: withOrchestratorEffort(
+                        { ...route.modelSelection, provider: value },
+                        orchestratorEffort(route.modelSelection),
+                      ),
+                    });
+                  }}
+                  ariaLabel={`${lane} lane provider`}
+                  valueContent={PROVIDER_DISPLAY_NAMES[route.modelSelection.provider]}
+                >
+                  {PROVIDER_SELECT_OPTIONS.map((provider) => (
+                    <SelectItem hideIndicator key={provider} value={provider}>
+                      <ProviderOptionLabel
+                        provider={provider}
+                        label={PROVIDER_DISPLAY_NAMES[provider]}
+                      />
+                    </SelectItem>
+                  ))}
+                </SettingsSelectControl>
+                <DebouncedSettingTextInput
+                  size="sm"
+                  variant="soft"
+                  value={route.modelSelection.model}
+                  onCommit={(model) => {
+                    const normalized = model.trim();
+                    if (!normalized) return;
+                    updateOrchestratorLane(lane, {
+                      ...route,
+                      modelSelection: { ...route.modelSelection, model: normalized },
+                    });
+                  }}
+                  aria-label={`${lane} lane model`}
+                />
+                <SettingsSelectControl
+                  value={orchestratorEffort(route.modelSelection)}
+                  onValueChange={(effort) =>
+                    updateOrchestratorLane(lane, {
+                      ...route,
+                      modelSelection: withOrchestratorEffort(route.modelSelection, effort),
+                    })
+                  }
+                  ariaLabel={`${lane} lane effort`}
+                  valueContent={orchestratorEffort(route.modelSelection)}
+                >
+                  {ORCHESTRATOR_EFFORTS.map((effort) => (
+                    <SelectItem hideIndicator key={effort} value={effort}>
+                      {effort}
+                    </SelectItem>
+                  ))}
+                </SettingsSelectControl>
+              </div>
+              <DebouncedSettingTextInput
+                size="sm"
+                variant="soft"
+                className="mt-2"
+                value={route.escalation.map(formatEscalation).join(", ")}
+                onCommit={(value) =>
+                  updateOrchestratorLane(lane, {
+                    ...route,
+                    escalation: parseEscalation(value, route.modelSelection.provider),
+                  })
+                }
+                placeholder="codex:gpt-5.6-sol, claudeAgent:claude-fable-5"
+                aria-label={`${lane} lane escalation order`}
+              />
+            </SettingsRow>
+          );
+        })}
+      </SettingsSection>
+
       <SettingsSection title="Runtime behavior">
         {renderBooleanSettingRow({
           settingKey: "enableAssistantStreaming",

@@ -213,6 +213,7 @@ export interface Thread extends ThreadWorkspaceState {
   archivedAt?: string | null;
   updatedAt?: string | undefined;
   isPinned?: boolean;
+  orchestratorMode?: boolean;
   pinnedMessages?: PinnedMessage[];
   threadMarkers?: ThreadMarker[];
   notes?: string;
@@ -248,6 +249,7 @@ export interface ThreadShell extends ThreadWorkspaceState {
   archivedAt?: string | null;
   updatedAt?: string | undefined;
   isPinned?: boolean;
+  orchestratorMode?: boolean;
   // Per-thread workspace annotations carried through the normalized projection so
   // `getThreadFromState` reconstructs them (the shell is the source of truth for a Thread).
   // These do not arrive on the sidebar shell snapshot, so the snapshot path preserves them
@@ -292,6 +294,7 @@ export interface SidebarThreadSummary {
   archivedAt?: string | null;
   updatedAt?: string | undefined;
   isPinned?: boolean;
+  orchestratorMode?: boolean;
   latestTurn: OrchestrationLatestTurn | null;
   lastVisitedAt?: string | undefined;
   parentThreadId?: ThreadId | null;

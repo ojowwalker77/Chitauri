@@ -199,7 +199,29 @@ export interface CodexAppServerStartSessionInput {
   readonly serviceTier?: string;
   readonly resumeCursor?: unknown;
   readonly providerOptions?: ProviderSessionStartInput["providerOptions"];
+  readonly mcpServers?: ProviderSessionStartInput["mcpServers"];
   readonly runtimeMode: RuntimeMode;
+}
+
+export function buildCodexMcpConfig(
+  mcpServers: ProviderSessionStartInput["mcpServers"],
+): Record<string, unknown> | undefined {
+  if (!mcpServers || mcpServers.length === 0) return undefined;
+  return {
+    mcp_servers: Object.fromEntries(
+      mcpServers.map((server) => [
+        server.name,
+        {
+          url: server.url,
+          ...(server.headers ? { http_headers: server.headers } : {}),
+          ...(server.toolTimeoutMs
+            ? { tool_timeout_sec: Math.ceil(server.toolTimeoutMs / 1_000) }
+            : {}),
+          required: true,
+        },
+      ]),
+    ),
+  };
 }
 
 export interface CodexThreadTurnSnapshot {
@@ -849,11 +871,13 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         normalizeCodexModelSlug(input.model),
         context.account,
       );
+      const mcpConfig = buildCodexMcpConfig(input.mcpServers);
       const sessionOverrides = {
         model: normalizedModel ?? null,
         ...(input.serviceTier !== undefined ? { serviceTier: input.serviceTier } : {}),
         cwd: resolvedCwd,
         ...mapCodexRuntimeMode(input.runtimeMode ?? "full-access"),
+        ...(mcpConfig ? { config: mcpConfig } : {}),
       };
 
       const threadStartParams = {

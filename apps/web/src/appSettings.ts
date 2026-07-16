@@ -9,7 +9,9 @@ import { Option, Schema } from "effect";
 import {
   type AssistantDeliveryMode,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
+  DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
   DEFAULT_SERVER_SETTINGS,
+  OrchestratorRoutingPolicy,
   TrimmedNonEmptyString,
   ProviderKind,
   type ProviderStartOptions,
@@ -197,6 +199,9 @@ export const AppSettingsSchema = Schema.Struct({
   enableNativeFontSmoothing: Schema.Boolean.pipe(withDefaults(getDefaultNativeFontSmoothing)),
   enableTaskCompletionToasts: Schema.Boolean.pipe(withDefaults(() => true)),
   enableSystemTaskCompletionNotifications: Schema.Boolean.pipe(withDefaults(() => true)),
+  orchestratorRoutingPolicy: OrchestratorRoutingPolicy.pipe(
+    withDefaults(() => DEFAULT_ORCHESTRATOR_ROUTING_POLICY),
+  ),
   sidebarProjectSortOrder: SidebarProjectSortOrder.pipe(
     withDefaults(() => DEFAULT_SIDEBAR_PROJECT_SORT_ORDER),
   ),
@@ -473,6 +478,7 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     customPiModels: settings.providers.pi.customModels,
     textGenerationProvider: settings.textGenerationModelSelection.provider,
     textGenerationModel: settings.textGenerationModelSelection.model,
+    orchestratorRoutingPolicy: settings.orchestrator,
   };
 }
 
@@ -528,6 +534,9 @@ function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): Ser
       }),
       model,
     };
+  }
+  if (patch.orchestratorRoutingPolicy) {
+    serverPatch.orchestrator = patch.orchestratorRoutingPolicy;
   }
 
   if (
