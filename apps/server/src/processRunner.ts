@@ -9,6 +9,7 @@ export interface ProcessRunOptions {
   allowNonZeroExit?: boolean | undefined;
   maxBufferBytes?: number | undefined;
   outputMode?: "error" | "truncate" | undefined;
+  signal?: AbortSignal | undefined;
 }
 
 export interface ProcessRunResult {
@@ -152,6 +153,7 @@ export async function runProcess(
     let stdoutTruncated = false;
     let stderrTruncated = false;
     let timedOut = false;
+    let aborted = false;
     let settled = false;
     let forceKillTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -163,10 +165,24 @@ export async function runProcess(
       }, 1_000);
     }, timeoutMs);
 
+    const abortListener = (): void => {
+      aborted = true;
+      killChild(child, "SIGTERM");
+      forceKillTimer = setTimeout(() => {
+        killChild(child, "SIGKILL");
+      }, 1_000);
+    };
+    if (options.signal?.aborted) {
+      abortListener();
+    } else {
+      options.signal?.addEventListener("abort", abortListener, { once: true });
+    }
+
     const finalize = (callback: () => void): void => {
       if (settled) return;
       settled = true;
       clearTimeout(timeoutTimer);
+      options.signal?.removeEventListener("abort", abortListener);
       if (forceKillTimer) {
         clearTimeout(forceKillTimer);
       }
@@ -239,14 +255,14 @@ export async function runProcess(
         stdout,
         stderr,
         code,
-        signal,
+        signal: aborted ? (signal ?? "SIGTERM") : signal,
         timedOut,
         stdoutTruncated,
         stderrTruncated,
       };
 
       finalize(() => {
-        if (!options.allowNonZeroExit && (timedOut || (code !== null && code !== 0))) {
+        if (!options.allowNonZeroExit && (aborted || timedOut || (code !== null && code !== 0))) {
           reject(normalizeExitError(command, args, result));
           return;
         }

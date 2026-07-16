@@ -10,6 +10,7 @@ import {
   WS_METHODS,
   WsRpcGroup,
   type AutomationStreamEvent,
+  type ComputerScriptsStreamEvent,
   type GitActionProgressEvent,
   type GitRunStackedActionResult,
   type OrchestrationEvent,
@@ -433,6 +434,14 @@ export class WsTransport {
             (event: AutomationStreamEvent) => this.emit(WS_CHANNELS.automationEvent, event),
             restartChannel,
           );
+        } else if (channel === WS_CHANNELS.computerScriptsEvent) {
+          this.startStream(
+            "computerScripts.events",
+            client[WS_METHODS.subscribeComputerScriptsEvents]({}),
+            (event: ComputerScriptsStreamEvent) =>
+              this.emit(WS_CHANNELS.computerScriptsEvent, event),
+            restartChannel,
+          );
         } else if (channel === ORCHESTRATION_WS_CHANNELS.domainEvent) {
           this.startStream(
             "orchestration.domain",
@@ -460,6 +469,8 @@ export class WsTransport {
     else if (channel === WS_CHANNELS.terminalEvent) this.stopStream("terminal.events");
     else if (channel === WS_CHANNELS.projectDevServerEvent) this.stopStream("project.devServers");
     else if (channel === WS_CHANNELS.automationEvent) this.stopStream("automation.events");
+    else if (channel === WS_CHANNELS.computerScriptsEvent)
+      this.stopStream("computerScripts.events");
     else if (channel === ORCHESTRATION_WS_CHANNELS.domainEvent)
       this.stopStream("orchestration.domain");
   }

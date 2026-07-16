@@ -16,6 +16,7 @@ import {
   GitMergedSimpleIcon,
   GitHubIcon,
   GitPullRequestIcon,
+  HammerIcon,
   type LucideIcon,
   NewThreadIcon,
   PencilIcon,
@@ -1339,6 +1340,7 @@ export default function Sidebar() {
   const isOnWorkspace = pathname.startsWith("/workspace");
   const isOnAutomations = pathname.startsWith("/automations");
   const isOnGitHub = pathname.startsWith("/github");
+  const isOnComputerScripts = pathname.startsWith("/computer-scripts");
   const isOnResearch = pathname.startsWith("/research");
   // Lightweight read of automations to drive the sidebar attention badge. Shares the
   // ["automations"] query cache with the Automations route (and its live stream updates).
@@ -6576,6 +6578,14 @@ export default function Sidebar() {
                       active={isOnResearch}
                       onClick={() => {
                         void navigate({ to: "/research" });
+                      }}
+                    />
+                    <SidebarPrimaryAction
+                      icon={HammerIcon}
+                      label="Computer Scripts"
+                      active={isOnComputerScripts}
+                      onClick={() => {
+                        void navigate({ to: "/computer-scripts" });
                       }}
                     />
                     <SidebarPrimaryAction

@@ -325,13 +325,11 @@ function SummaryView({
             <Stat
               label="Checks"
               value={item.checkStatus ?? (detail.checks.length > 0 ? "Unknown" : "No checks")}
-              tone={
-                item.checkStatus === "success"
-                  ? "success"
-                  : item.checkStatus === "failure"
-                    ? "danger"
-                    : undefined
-              }
+              {...(item.checkStatus === "success"
+                ? { tone: "success" as const }
+                : item.checkStatus === "failure"
+                  ? { tone: "danger" as const }
+                  : {})}
             />
             <Stat label="Files" value={String(item.changedFiles ?? "—")} />
             <Stat label="Diff" value={`+${item.additions ?? "—"} −${item.deletions ?? "—"}`} />
