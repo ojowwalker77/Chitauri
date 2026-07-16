@@ -81,7 +81,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
         <span className="flex items-center gap-2">
           <ProviderIcon
             provider={topProvider.provider}
-            className="size-6 shrink-0 text-slate-700"
+            className="size-6 shrink-0 text-[#4d4944]"
           />
           {topProvider.percent !== null ? (
             <span className={VALUE_CLASS}>{`${Math.round(topProvider.percent)}%`}</span>
@@ -101,7 +101,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
     <div
       ref={ref}
       style={{ width: `${SHARE_CARD_WIDTH}px`, height: `${SHARE_CARD_HEIGHT}px` }}
-      className="flex flex-col justify-center gap-7 overflow-hidden bg-white px-12 font-sans text-slate-900"
+      className="flex flex-col justify-center gap-7 overflow-hidden bg-white px-12 font-sans text-[#292724]"
     >
       {/* Header: user-edited identity truncates before it can collide with the fixed brand. */}
       <div className="flex min-w-0 items-center justify-between gap-6">
@@ -117,11 +117,11 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
             <span className="truncate text-2xl font-normal leading-tight tracking-tight">
               {displayName}
             </span>
-            <span className="truncate text-base font-normal text-slate-400">{handle}</span>
+            <span className="truncate text-base font-normal text-[#9c9891]">{handle}</span>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2 text-slate-600">
-          <ChitauriLogo className="size-6 text-slate-700" />
+        <div className="flex shrink-0 items-center gap-2 text-[#6f6b65]">
+          <ChitauriLogo className="size-6 text-[#4d4944]" />
           <span className="text-xl font-normal tracking-tight">Chitauri</span>
         </div>
       </div>
@@ -140,7 +140,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
         {tiles.map((tile) => (
           <div key={tile.key} className="flex flex-1 flex-col items-start gap-1">
             {tile.value}
-            <span className="text-sm font-normal text-slate-400">{tile.label}</span>
+            <span className="text-sm font-normal text-[#9c9891]">{tile.label}</span>
           </div>
         ))}
       </div>

@@ -52,7 +52,7 @@ export function UsageProgressTrack({
           style={{ left: `${marker}%` }}
           aria-hidden
         >
-          <span className={cn("h-full w-0.5 rounded-full shadow-sm", markerClassName)} />
+          <span className={cn("h-full w-0.5 rounded-full", markerClassName)} />
         </div>
       ) : null}
     </div>

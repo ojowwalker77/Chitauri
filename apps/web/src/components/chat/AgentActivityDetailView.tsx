@@ -108,7 +108,7 @@ export const AgentActivityDetailView = memo(function AgentActivityDetailView({
                 <h2 className="truncate text-[18px] font-medium leading-6 text-foreground/92">
                   {detail.title}
                 </h2>
-                <span className="rounded-full border border-border/45 px-2 py-0.5 text-[10px] font-medium text-muted-foreground/56">
+                <span className="rounded-full border border-border/45 px-2 py-0.5 text-[11px] font-medium text-muted-foreground/56">
                   {`${detail.entries.length} ${pluralize(detail.entries.length, "update")}`}
                 </span>
               </div>
@@ -246,7 +246,7 @@ function SubagentDetailRow(props: {
       <span
         className={cn(
           "mt-2 size-1.5 shrink-0 rounded-full",
-          props.subagent.isActive ? "bg-sky-300/95" : "bg-muted-foreground/24",
+          props.subagent.isActive ? "bg-claude" : "bg-muted-foreground/24",
         )}
       />
       <div className="min-w-0 flex-1">
@@ -270,7 +270,7 @@ function SubagentDetailRow(props: {
       <button
         type="button"
         className={cn(
-          "shrink-0 rounded-full border border-border/45 px-2.5 py-1 text-[9px] font-medium text-muted-foreground/62 transition-colors",
+          "shrink-0 rounded-full border border-border/45 px-2.5 py-1 text-[11px] font-medium text-muted-foreground/62 transition-colors",
           canOpenThread
             ? "hover:border-foreground/15 hover:text-foreground/84"
             : "cursor-default opacity-50",

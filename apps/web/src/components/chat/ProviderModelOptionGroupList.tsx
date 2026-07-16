@@ -73,7 +73,7 @@ function ProviderModelRadioItem(
             className={cn(
               "inline-flex size-5 shrink-0 items-center justify-center text-muted-foreground/50 transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_5%,transparent)] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/60",
               COMPOSER_PICKER_RADIUS_CLASS_NAME,
-              isFavorite && "text-amber-400 hover:text-amber-300",
+              isFavorite && "text-gold hover:text-gold/80",
             )}
             onClick={(event) => {
               event.preventDefault();
@@ -133,7 +133,7 @@ function CollapsibleModelGroup(
         <span className="col-start-2 min-w-0 truncate normal-case tracking-normal">
           {props.group.label}
         </span>
-        <span className="col-start-3 shrink-0 justify-self-end rounded-full bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)] px-1.5 py-px text-[9px] font-normal tabular-nums normal-case tracking-normal text-muted-foreground/70">
+        <span className="col-start-3 shrink-0 justify-self-end rounded-full bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)] px-1.5 py-px text-[11px] font-normal tabular-nums normal-case tracking-normal text-muted-foreground/70">
           {props.group.options.length}
         </span>
       </CollapsibleTrigger>

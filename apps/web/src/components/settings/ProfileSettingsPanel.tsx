@@ -111,7 +111,7 @@ function ProfileContent({
           initials={stats.identity.initials}
           color={avatarColor}
           image={avatarImage}
-          className="size-16 shadow-sm"
+          className="size-16"
           textClassName="text-xl"
         />
         <div className="flex flex-col items-center gap-1.5">
@@ -127,7 +127,7 @@ function ProfileContent({
       </header>
 
       {/* Stat tiles */}
-      <div className="grid grid-cols-2 divide-x divide-y divide-border/50 overflow-hidden rounded-2xl border border-border/60 sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0">
+      <div className="grid grid-cols-2 divide-x divide-y divide-border/50 overflow-hidden rounded-xl border border-panel-border bg-panel sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0">
         <StatTile
           label="Lifetime tokens"
           value={tokensPending ? null : formatCompact(tokenStats?.lifetimeTotalTokens ?? null)}
@@ -389,7 +389,7 @@ function ProfileSkeleton() {
         <Skeleton className="h-6 w-40" />
         <Skeleton className="h-3 w-24" />
       </div>
-      <Skeleton className="h-[72px] w-full rounded-2xl" />
+      <Skeleton className="h-[72px] w-full rounded-xl" />
       <Skeleton className="h-24 w-full rounded-lg" />
       <div className="grid w-full gap-7 md:grid-cols-2">
         <Skeleton className="h-40 w-full rounded-lg" />

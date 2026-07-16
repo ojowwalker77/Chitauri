@@ -5,6 +5,7 @@
 
 import {
   type MessageId,
+  type ProviderKind,
   type ProviderMentionReference,
   ThreadId,
   type ThreadMarker,
@@ -41,6 +42,7 @@ import {
 } from "../../types";
 import ChatMarkdown from "../ChatMarkdown";
 import { InlineLinkChip } from "../InlineLinkChip";
+import { ProviderIcon } from "../ProviderIcon";
 import {
   ArrowUpCircleIcon,
   BotIcon,
@@ -150,6 +152,12 @@ import { getAppTypographyScale } from "../../lib/appTypography";
 import { formatSubagentModelLabel } from "../../lib/subagentPresentation";
 import { SubagentCardList, subagentPrimaryLabel } from "./SubagentCardList";
 import { deriveUserMessagePreviewState } from "./userMessagePreview";
+import {
+  groupWorkLedgerEntries,
+  sequenceWorkLedgerEntries,
+  summarizeWorkLedger,
+  type SequencedWorkLedgerEntry,
+} from "./workLedger";
 import {
   resolveActiveTrailSnapshot,
   type ActiveTrailSnapshot,
@@ -316,7 +324,7 @@ function WorktreeSetupStepGlyph({ status }: { status: WorktreeSetupStep["status"
 // status chip rather than a full-width block.
 function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> }) {
   return (
-    <div className="w-fit max-w-full rounded-xl border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-primary)] px-3.5 py-3 font-system-ui shadow-xs">
+    <div className="w-fit max-w-full rounded-xl border border-panel-border bg-panel px-3.5 py-3 font-system-ui">
       <div className="flex items-center gap-2">
         <WorktreeIcon className="size-3.5 shrink-0 text-[var(--color-text-foreground-tertiary)]" />
         <span className="shimmer text-[13px] font-medium text-[var(--color-text-foreground-secondary)]">
@@ -364,6 +372,7 @@ function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> 
 }
 
 interface MessagesTimelineProps {
+  assistantProvider?: ProviderKind;
   hasMessages: boolean;
   isWorking: boolean;
   activeTurnInProgress: boolean;
@@ -429,6 +438,7 @@ interface MessagesTimelineProps {
 }
 
 export const MessagesTimeline = memo(function MessagesTimeline({
+  assistantProvider,
   hasMessages,
   isWorking,
   activeTurnInProgress,
@@ -939,11 +949,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       className={cn(
         CHAT_COLUMN_FRAME_CLASS_NAME,
         "px-1 transition-colors duration-500",
-        row.kind === "work" ||
-          row.kind === "working-header" ||
-          (row.kind === "message" && row.message.role === "assistant")
-          ? "pb-2"
-          : "pb-4",
+        row.kind === "work" || row.kind === "working-header" ? "pb-2" : "pb-6",
         row.kind === "message" && row.message.role === "assistant" ? "group/assistant" : null,
         row.kind === "message" && row.message.id === highlightedMessageId
           ? "rounded-xl bg-[var(--color-background-elevated-secondary)]"
@@ -966,17 +972,41 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               : groupedEntries;
           const hiddenCount = groupedEntries.length - visibleEntries.length;
           const showOverflowToggle = hasOverflow;
+          const summary = summarizeWorkLedger(groupedEntries);
+          const visibleLedgerEntries = sequenceWorkLedgerEntries(groupedEntries).slice(
+            groupedEntries.length - visibleEntries.length,
+          );
+          const ledgerLabel = row.activeTurnStartedAt ? (
+            <>
+              Working for{" "}
+              {nowIso ? (
+                (formatWorkingTimer(row.activeTurnStartedAt, nowIso) ?? "0s")
+              ) : (
+                <WorkingTimer createdAt={row.activeTurnStartedAt} />
+              )}
+            </>
+          ) : (
+            "Activity"
+          );
 
           return (
-            <div>
-              <div className="space-y-0.5">
-                {visibleEntries.map((workEntry) => (
+            <WorkLedgerFrame>
+              <WorkLedgerHeaderContent
+                status={row.activeTurnStartedAt ? "active" : "neutral"}
+                label={ledgerLabel}
+                operationCount={summary.operationCount}
+                changedFileCount={summary.changedFileCount}
+                chatMetaFontSizePx={appTypographyScale.uiSmPx}
+              />
+              <WorkLedgerSections
+                entries={visibleLedgerEntries}
+                renderEntry={({ entry: workEntry }) => (
                   <SimpleWorkEntryRow
                     key={`work-row:${workEntry.id}`}
                     workEntry={workEntry}
-                    chatMetaFontSizePx={appTypographyScale.chatMetaPx}
-                    textFontSizePx={normalizedChatFontSizePx}
-                    density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
+                    chatMetaFontSizePx={appTypographyScale.uiSmPx}
+                    textFontSizePx={appTypographyScale.uiSmPx}
+                    density="compact"
                     markdownCwd={markdownCwd}
                     onImageExpand={onImageExpand}
                     onOpenToolDetails={openToolDetails}
@@ -984,21 +1014,18 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     {...(onOpenThread ? { onOpenThread } : {})}
                     {...(onOpenAutomation ? { onOpenAutomation } : {})}
                   />
-                ))}
-              </div>
-              {showOverflowToggle && (
-                <div className="mt-1.5 flex items-center justify-start gap-2 px-0.5">
-                  <button
-                    type="button"
-                    className="font-system-ui text-muted-foreground/55 transition-colors duration-150 hover:text-foreground/75"
-                    style={{ fontSize: `${appTypographyScale.uiSmPx}px` }}
-                    onClick={() => handleToggleWorkGroup(groupId)}
-                  >
-                    {isExpanded ? "Show less" : `Show ${hiddenCount} more`}
-                  </button>
-                </div>
-              )}
-            </div>
+                )}
+              />
+              {showOverflowToggle ? (
+                <WorkLedgerOverflowToggle
+                  hiddenCount={hiddenCount}
+                  expanded={isExpanded}
+                  earlier
+                  chatMetaFontSizePx={appTypographyScale.uiSmPx}
+                  onToggle={() => handleToggleWorkGroup(groupId)}
+                />
+              ) : null}
+            </WorkLedgerFrame>
           );
         })()}
 
@@ -1078,7 +1105,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               <div
                 className={cn(
                   "group flex flex-col items-end gap-px",
-                  isEditingThisMessage ? "w-full max-w-full" : "max-w-[80%]",
+                  isEditingThisMessage ? "w-full max-w-full" : "max-w-[78%]",
                 )}
               >
                 {/* Keep user-message chrome outside the bubble so the message reads as one simple block. */}
@@ -1237,55 +1264,30 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           const messageText = row.message.text || (row.message.streaming ? "" : "(empty response)");
           const messageMarkers =
             threadMarkersByMessageId.get(row.message.id) ?? EMPTY_MESSAGE_MARKERS;
-          const buildWorkDisplay = (workEntries: WorkLogEntry[], workGroupId: string | null) => {
-            const toolEntries = workEntries.filter((entry) => entry.tone === "tool");
-            const statusEntries = workEntries.filter((entry) => entry.tone !== "tool");
-            const toolGroupId = toolEntries.length > 0 ? workGroupId : null;
-            const toolExpanded =
-              toolGroupId !== null ? (expandedWorkGroupsState[toolGroupId] ?? false) : false;
-            const visibleToolEntries =
-              toolExpanded || toolEntries.length <= MAX_VISIBLE_INLINE_TOOL_ENTRIES
-                ? toolEntries
-                : activeTurnInProgress
-                  ? toolEntries.slice(-MAX_VISIBLE_INLINE_TOOL_ENTRIES)
-                  : toolEntries.slice(0, MAX_VISIBLE_INLINE_TOOL_ENTRIES);
-            const hasGenericFileChangeEntry = toolEntries.some(
-              (workEntry) =>
-                isFileChangeWorkEntry(workEntry) && (workEntry.changedFiles?.length ?? 0) === 0,
-            );
-            const visibleRenderableToolEntries = visibleToolEntries.filter(
-              (workEntry) =>
-                !(
-                  hasGenericFileChangeEntry &&
-                  isFileChangeWorkEntry(workEntry) &&
-                  (workEntry.changedFiles?.length ?? 0) === 0
-                ),
-            );
-            return {
-              toolEntries,
-              statusEntries,
-              toolGroupId,
-              toolExpanded,
-              visibleRenderableToolEntries,
-              hiddenToolCount: toolEntries.length - visibleToolEntries.length,
-              hasGenericFileChangeEntry,
-            };
-          };
-          const leadingWorkDisplay = buildWorkDisplay(
-            row.leadingWorkEntries ?? [],
-            row.leadingWorkGroupId ?? null,
+          const workEntries = [...(row.leadingWorkEntries ?? []), ...(row.inlineWorkEntries ?? [])];
+          const workGroupId = row.leadingWorkGroupId ?? row.inlineWorkGroupId ?? null;
+          const workExpanded =
+            workGroupId !== null ? (expandedWorkGroupsState[workGroupId] ?? false) : false;
+          const sequencedWorkEntries = sequenceWorkLedgerEntries(workEntries);
+          const visibleSequencedWorkEntries =
+            workExpanded || workEntries.length <= MAX_VISIBLE_INLINE_TOOL_ENTRIES
+              ? sequencedWorkEntries
+              : activeTurnInProgress
+                ? sequencedWorkEntries.slice(-MAX_VISIBLE_INLINE_TOOL_ENTRIES)
+                : sequencedWorkEntries.slice(0, MAX_VISIBLE_INLINE_TOOL_ENTRIES);
+          const hasGenericFileChangeEntry = workEntries.some(
+            (workEntry) =>
+              isFileChangeWorkEntry(workEntry) && (workEntry.changedFiles?.length ?? 0) === 0,
           );
-          const inlineWorkDisplay = buildWorkDisplay(
-            row.inlineWorkEntries ?? [],
-            row.inlineWorkGroupId ?? null,
+          const visibleRenderableWorkEntries = visibleSequencedWorkEntries.filter(
+            ({ entry: workEntry }) =>
+              !(
+                hasGenericFileChangeEntry &&
+                isFileChangeWorkEntry(workEntry) &&
+                (workEntry.changedFiles?.length ?? 0) === 0
+              ),
           );
-          const inlineWorkSummary =
-            leadingWorkDisplay.toolEntries.length + inlineWorkDisplay.toolEntries.length > 0
-              ? null
-              : formatInlineWorkSummary([
-                  ...leadingWorkDisplay.statusEntries,
-                  ...inlineWorkDisplay.statusEntries,
-                ]);
+          const hiddenWorkCount = workEntries.length - visibleSequencedWorkEntries.length;
           const assistantCopyState = resolveAssistantMessageCopyState({
             text: row.message.text ?? null,
             showCopyButton: row.showAssistantCopyButton,
@@ -1310,9 +1312,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             ]),
           );
           const inlineEditedFilesFromTurnSummary =
-            (leadingWorkDisplay.hasGenericFileChangeEntry ||
-              inlineWorkDisplay.hasGenericFileChangeEntry) &&
-            (turnSummary?.files.length ?? 0) > 0
+            hasGenericFileChangeEntry && (turnSummary?.files.length ?? 0) > 0
               ? turnSummary!.files
               : [];
           // Only the turn's final answer carries a timestamp. Intermediate
@@ -1325,7 +1325,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             isTerminalAssistantMessage
               ? formatShortTimestamp(row.message.createdAt, timestampFormat)
               : null,
-            inlineWorkSummary,
           ]
             .filter((value): value is string => Boolean(value))
             .join(" • ");
@@ -1338,100 +1337,117 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             ? undefined
             : settledTurnCollapseTransitions[row.message.id];
           const isTailContentRow = row.id === tailContentRowId;
-          const renderWorkDisplay = (
-            display: typeof leadingWorkDisplay,
-            placement: "leading" | "inline",
-          ) => (
-            <>
-              {!hasCollapsedWork && display.visibleRenderableToolEntries.length > 0 && (
-                <div className={placement === "leading" ? "mb-1.5" : "mt-1.5"}>
-                  <div className="space-y-px">
-                    {display.visibleRenderableToolEntries.map((workEntry) => (
-                      <SimpleWorkEntryRow
-                        key={`${placement}-tool-row:${row.message.id}:${workEntry.id}`}
-                        workEntry={workEntry}
-                        chatMetaFontSizePx={appTypographyScale.chatMetaPx}
-                        textFontSizePx={normalizedChatFontSizePx}
-                        density="compact"
-                        fileDiffStatByPath={fileDiffStatByPath}
-                        markdownCwd={markdownCwd}
-                        onImageExpand={onImageExpand}
-                        onOpenTurnDiff={onOpenTurnDiff}
-                        onOpenToolDetails={openToolDetails}
-                        {...(onOpenAgentActivity ? { onOpenAgentActivity } : {})}
-                        {...(onOpenThread ? { onOpenThread } : {})}
-                        {...(onOpenAutomation ? { onOpenAutomation } : {})}
-                        {...(turnSummary?.turnId ? { turnId: turnSummary.turnId } : {})}
-                      />
-                    ))}
-                  </div>
-                  {display.toolGroupId &&
-                    display.toolEntries.length > MAX_VISIBLE_INLINE_TOOL_ENTRIES && (
-                      <div className="py-0.5">
-                        <button
-                          type="button"
-                          className="text-muted-foreground/50 transition-colors duration-150 hover:text-foreground/72"
-                          style={{ fontSize: `${normalizedChatFontSizePx}px` }}
-                          onClick={() => handleToggleWorkGroup(display.toolGroupId!)}
-                        >
-                          {display.toolExpanded
-                            ? "Show less"
-                            : `+${display.hiddenToolCount} more tool calls`}
-                        </button>
-                      </div>
-                    )}
-                </div>
-              )}
-              {!hasCollapsedWork && display.statusEntries.length > 0 && (
-                <div className={cn("space-y-0.5", placement === "leading" ? "mb-2" : "mt-2")}>
-                  {display.statusEntries.map((workEntry) => (
-                    <SimpleWorkEntryRow
-                      key={`${placement}-status-row:${row.message.id}:${workEntry.id}`}
-                      workEntry={workEntry}
-                      chatMetaFontSizePx={appTypographyScale.chatMetaPx}
-                      textFontSizePx={normalizedChatFontSizePx}
-                      density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
-                      markdownCwd={markdownCwd}
-                      onImageExpand={onImageExpand}
-                      onOpenToolDetails={openToolDetails}
-                      {...(onOpenAgentActivity ? { onOpenAgentActivity } : {})}
-                      {...(onOpenThread ? { onOpenThread } : {})}
-                      {...(onOpenAutomation ? { onOpenAutomation } : {})}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
+          const renderLedgerWorkEntry = ({ entry: workEntry }: SequencedWorkLedgerEntry) => (
+            <SimpleWorkEntryRow
+              key={`ledger-work-row:${row.message.id}:${workEntry.id}`}
+              workEntry={workEntry}
+              chatMetaFontSizePx={appTypographyScale.uiSmPx}
+              textFontSizePx={appTypographyScale.uiSmPx}
+              density="compact"
+              fileDiffStatByPath={fileDiffStatByPath}
+              markdownCwd={markdownCwd}
+              onImageExpand={onImageExpand}
+              onOpenTurnDiff={onOpenTurnDiff}
+              onOpenToolDetails={openToolDetails}
+              {...(onOpenAgentActivity ? { onOpenAgentActivity } : {})}
+              {...(onOpenThread ? { onOpenThread } : {})}
+              {...(onOpenAutomation ? { onOpenAutomation } : {})}
+              {...(turnSummary?.turnId ? { turnId: turnSummary.turnId } : {})}
+            />
           );
-          const renderCollapsedTurnItem = (item: CollapsedTurnItem, keyPrefix: string) =>
-            item.kind === "work" ? (
-              <SimpleWorkEntryRow
-                key={`${keyPrefix}:work:${row.message.id}:${item.id}`}
-                workEntry={item.entry}
-                chatMetaFontSizePx={appTypographyScale.chatMetaPx}
-                textFontSizePx={normalizedChatFontSizePx}
-                density={prefersCompactWorkEntryRow(item.entry) ? "compact" : "default"}
-                markdownCwd={markdownCwd}
-                onImageExpand={onImageExpand}
-                onOpenToolDetails={openToolDetails}
-                {...(onOpenAgentActivity ? { onOpenAgentActivity } : {})}
-                {...(onOpenThread ? { onOpenThread } : {})}
-                {...(onOpenAutomation ? { onOpenAutomation } : {})}
-              />
-            ) : (
-              <div
-                key={`${keyPrefix}:narration:${row.message.id}:${item.id}`}
-                className="text-muted-foreground/80"
-              >
-                <ChatMarkdown
-                  text={item.message.text}
-                  cwd={markdownCwd}
-                  isStreaming={false}
-                  style={chatTypographyStyle}
-                  onImageExpand={onImageExpand}
+          const renderCollapsedLedgerBody = (
+            items: ReadonlyArray<CollapsedTurnItem>,
+            keyPrefix: string,
+          ) => {
+            const collapsedWorkEntries = items.flatMap((item) =>
+              item.kind === "work" ? [item.entry] : [],
+            );
+            const collapsedHasGenericFileChange = collapsedWorkEntries.some(
+              (entry) => isFileChangeWorkEntry(entry) && (entry.changedFiles?.length ?? 0) === 0,
+            );
+            const collapsedLedgerEntries = sequenceWorkLedgerEntries(collapsedWorkEntries).filter(
+              ({ entry }) =>
+                !(
+                  collapsedHasGenericFileChange &&
+                  (turnSummary?.files.length ?? 0) > 0 &&
+                  isFileChangeWorkEntry(entry) &&
+                  (entry.changedFiles?.length ?? 0) === 0
+                ),
+            );
+            const narrationItems = items.filter(
+              (item): item is Extract<CollapsedTurnItem, { kind: "narration" }> =>
+                item.kind === "narration",
+            );
+            return (
+              <div key={keyPrefix}>
+                <WorkLedgerSections
+                  entries={collapsedLedgerEntries}
+                  renderEntry={renderLedgerWorkEntry}
                 />
+                {collapsedHasGenericFileChange && turnSummary ? (
+                  <WorkLedgerEditedFilesSection
+                    files={turnSummary.files}
+                    startSequence={Math.max(collapsedWorkEntries.length, 1)}
+                    fontSizePx={appTypographyScale.uiSmPx}
+                    onOpen={(filePath) => onOpenTurnDiff(turnSummary.turnId, filePath)}
+                  />
+                ) : null}
+                {narrationItems.length > 0 ? (
+                  <section className="pt-1.5" data-ledger-section="notes">
+                    <div className="mb-1.5 font-system-ui text-[10px] font-medium text-muted-foreground/48">
+                      Agent notes · {narrationItems.length}
+                    </div>
+                    <div className="space-y-2 text-muted-foreground/72">
+                      {narrationItems.map((item) => (
+                        <ChatMarkdown
+                          key={`${keyPrefix}:narration:${row.message.id}:${item.id}`}
+                          text={item.message.text}
+                          cwd={markdownCwd}
+                          isStreaming={false}
+                          style={getChatTranscriptTextStyle(appTypographyScale.uiSmPx)}
+                          onImageExpand={onImageExpand}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
               </div>
             );
+          };
+          const collapsedWorkEntries = collapsedTurnItems?.flatMap((item) =>
+            item.kind === "work" ? [item.entry] : [],
+          );
+          const collapsedSummary = summarizeWorkLedger(collapsedWorkEntries ?? []);
+          const collapsedChangedFileCount =
+            turnSummary &&
+            (collapsedWorkEntries?.some((entry) => isFileChangeWorkEntry(entry)) ?? false)
+              ? new Set([
+                  ...(collapsedWorkEntries?.flatMap((entry) => entry.changedFiles ?? []) ?? []),
+                  ...turnSummary.files.map((file) => file.path),
+                ]).size
+              : collapsedSummary.changedFileCount;
+          const activeSummary = summarizeWorkLedger(workEntries);
+          const activeChangedFileCount = new Set([
+            ...workEntries.flatMap((entry) => entry.changedFiles ?? []),
+            ...inlineEditedFilesFromTurnSummary.map((file) => file.path),
+          ]).size;
+          const hasActiveLedger =
+            !hasCollapsedWork &&
+            (visibleRenderableWorkEntries.length > 0 ||
+              inlineEditedFilesFromTurnSummary.length > 0 ||
+              Boolean(row.activeTurnStartedAt));
+          const activeLedgerLabel = row.activeTurnStartedAt ? (
+            <>
+              Working for{" "}
+              {nowIso ? (
+                (formatWorkingTimer(row.activeTurnStartedAt, nowIso) ?? "0s")
+              ) : (
+                <WorkingTimer createdAt={row.activeTurnStartedAt} />
+              )}
+            </>
+          ) : (
+            "Activity"
+          );
           return (
             <>
               {settledCollapseTransition && (
@@ -1443,18 +1459,18 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                   className="pointer-events-none mb-3 select-none"
                   data-settled-turn-collapse-transition="true"
                 >
-                  <DisclosureRegion
-                    open={settledCollapseTransition.open}
-                    contentClassName="space-y-1.5 pb-2.5"
-                  >
-                    {settledCollapseTransition.items.map((item) =>
-                      renderCollapsedTurnItem(item, "settling-turn-close"),
-                    )}
-                  </DisclosureRegion>
+                  <WorkLedgerFrame>
+                    <DisclosureRegion open={settledCollapseTransition.open}>
+                      {renderCollapsedLedgerBody(
+                        settledCollapseTransition.items,
+                        "settling-turn-close",
+                      )}
+                    </DisclosureRegion>
+                  </WorkLedgerFrame>
                 </div>
               )}
               {hasCollapsedWork && (
-                <div className="mb-3">
+                <WorkLedgerFrame className="mb-3">
                   <Collapsible
                     className="group/collapsed-work"
                     open={isCollapsedWorkExpanded}
@@ -1465,40 +1481,77 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     <CollapsibleTrigger
                       // ChatView's click anchor preserves this trigger's screen position
                       // while the disclosure height animates, so opening it should not tail-scroll.
-                      // -ml-0.5 optically aligns the leading "W" with the reply
-                      // text below: the box is already flush, but the W glyph
-                      // carries a left side-bearing that reads as an inset.
-                      className="-ml-0.5 inline-flex items-center gap-1 pb-2 text-left text-muted-foreground/70 transition-colors duration-200 hover:text-muted-foreground/90"
-                      style={{ fontSize: chatTypographyStyle.fontSize }}
+                      className="block w-full text-left transition-colors duration-150 ease-out hover:bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)]"
                     >
-                      <span>
-                        {row.collapsedWorkElapsed
-                          ? `Worked for ${row.collapsedWorkElapsed}`
-                          : "Details"}
-                      </span>
-                      <DisclosureChevron
-                        open={isCollapsedWorkExpanded}
-                        className="text-muted-foreground/55"
+                      <WorkLedgerHeaderContent
+                        status="settled"
+                        label={
+                          row.collapsedWorkElapsed
+                            ? `Worked for ${row.collapsedWorkElapsed}`
+                            : "Activity"
+                        }
+                        operationCount={collapsedSummary.operationCount}
+                        changedFileCount={collapsedChangedFileCount}
+                        expanded={isCollapsedWorkExpanded}
+                        chatMetaFontSizePx={appTypographyScale.uiSmPx}
                       />
                     </CollapsibleTrigger>
                     <CollapsiblePanel>
                       <div
-                        className={disclosureContentClassName(
-                          isCollapsedWorkExpanded,
-                          "mb-2.5 space-y-1.5",
-                        )}
+                        className={disclosureContentClassName(isCollapsedWorkExpanded, "min-w-0")}
                       >
-                        {collapsedTurnItems!.map((item) =>
-                          renderCollapsedTurnItem(item, "collapsed-panel"),
-                        )}
+                        {renderCollapsedLedgerBody(collapsedTurnItems!, "collapsed-panel")}
                       </div>
                     </CollapsiblePanel>
                   </Collapsible>
-                  <div className="h-px w-full bg-border" />
-                </div>
+                </WorkLedgerFrame>
               )}
               <div className="group min-w-0 py-0.5">
-                {renderWorkDisplay(leadingWorkDisplay, "leading")}
+                <div
+                  className="mb-2.5 flex items-center gap-2 font-system-ui text-[11px] text-muted-foreground"
+                  data-assistant-provider={assistantProvider ?? "unknown"}
+                >
+                  <span aria-hidden="true" className="flex size-4 items-center justify-center">
+                    <ProviderIcon
+                      provider={assistantProvider}
+                      fallback={<BotIcon className="size-3.5 text-muted-foreground" />}
+                      className="size-3.5"
+                    />
+                  </span>
+                  <span>{row.message.streaming ? "Working" : "Agent"}</span>
+                </div>
+                {hasActiveLedger ? (
+                  <WorkLedgerFrame className="mb-3">
+                    <WorkLedgerHeaderContent
+                      status={row.activeTurnStartedAt ? "active" : "neutral"}
+                      label={activeLedgerLabel}
+                      operationCount={activeSummary.operationCount}
+                      changedFileCount={activeChangedFileCount}
+                      chatMetaFontSizePx={appTypographyScale.uiSmPx}
+                    />
+                    <WorkLedgerSections
+                      entries={visibleRenderableWorkEntries}
+                      renderEntry={renderLedgerWorkEntry}
+                    />
+                    {inlineEditedFilesFromTurnSummary.length > 0 && turnSummary ? (
+                      <WorkLedgerEditedFilesSection
+                        files={inlineEditedFilesFromTurnSummary}
+                        startSequence={Math.max(workEntries.length, 1)}
+                        fontSizePx={appTypographyScale.uiSmPx}
+                        onOpen={(filePath) => onOpenTurnDiff(turnSummary.turnId, filePath)}
+                      />
+                    ) : null}
+                    {workGroupId && workEntries.length > MAX_VISIBLE_INLINE_TOOL_ENTRIES ? (
+                      <WorkLedgerOverflowToggle
+                        hiddenCount={hiddenWorkCount}
+                        expanded={workExpanded}
+                        earlier={activeTurnInProgress}
+                        chatMetaFontSizePx={appTypographyScale.uiSmPx}
+                        onToggle={() => handleToggleWorkGroup(workGroupId)}
+                      />
+                    ) : null}
+                  </WorkLedgerFrame>
+                ) : null}
                 <div data-assistant-message-id={row.message.id}>
                   <ChatMarkdown
                     text={messageText}
@@ -1509,28 +1562,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     markers={messageMarkers}
                   />
                 </div>
-                {renderWorkDisplay(inlineWorkDisplay, "inline")}
-                {inlineEditedFilesFromTurnSummary.length > 0 && (
-                  <div className="mt-2 space-y-0.5">
-                    {inlineEditedFilesFromTurnSummary.map((file) => (
-                      <button
-                        key={`inline-summary-edit:${row.message.id}:${file.path}`}
-                        type="button"
-                        className="group/file-row flex w-full max-w-full items-center gap-2 px-0 py-1.5 text-left transition-colors duration-150 focus-visible:outline-none"
-                        title={file.path}
-                        onClick={() => onOpenTurnDiff(turnSummary!.turnId, file.path)}
-                      >
-                        <EditedFileRowContent
-                          filePath={file.path}
-                          additions={file.additions}
-                          deletions={file.deletions}
-                          fontSizePx={normalizedChatFontSizePx}
-                          compact={false}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                )}
                 {(showPinToggle || assistantCopyState.visible || assistantMeta.length > 0) && (
                   <div
                     className="mt-0.5 flex items-center gap-2 font-system-ui font-normal text-muted-foreground/45"
@@ -1760,23 +1791,24 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       )}
 
       {row.kind === "working-header" && (
-        <div>
-          {/* Non-collapsible twin of the settled "Worked for" header: same label
-              tone, size, and full-width divider, but counting up live. -ml-0.5
-              optically aligns the leading "W" with the reply text below. */}
-          <div
-            className="-ml-0.5 pb-2 text-muted-foreground/70"
-            style={{ fontSize: chatTypographyStyle.fontSize }}
-          >
-            Working for{" "}
-            {nowIso ? (
-              (formatWorkingTimer(row.createdAt, nowIso) ?? "0s")
-            ) : (
-              <WorkingTimer createdAt={row.createdAt} />
-            )}
-          </div>
-          <div className="h-px w-full bg-border" />
-        </div>
+        <WorkLedgerFrame>
+          <WorkLedgerHeaderContent
+            status="active"
+            label={
+              <>
+                Working for{" "}
+                {nowIso ? (
+                  (formatWorkingTimer(row.createdAt, nowIso) ?? "0s")
+                ) : (
+                  <WorkingTimer createdAt={row.createdAt} />
+                )}
+              </>
+            }
+            operationCount={0}
+            changedFileCount={0}
+            chatMetaFontSizePx={appTypographyScale.uiSmPx}
+          />
+        </WorkLedgerFrame>
       )}
 
       {row.kind === "working" && (
@@ -2224,10 +2256,6 @@ function formatWorkingTimerNow(startIso: string): string {
   return formatWorkingTimer(startIso, new Date().toISOString()) ?? "0s";
 }
 
-function formatInlineWorkSummary(_groupedEntries: TimelineWorkEntry[]): string | null {
-  return null;
-}
-
 const UserMessageTerminalContextInlineLabel = memo(
   function UserMessageTerminalContextInlineLabel(props: { context: ParsedTerminalContextEntry }) {
     const tooltipText =
@@ -2251,7 +2279,7 @@ const UserImageAttachmentThumbnail = memo(function UserImageAttachmentThumbnail(
   return (
     <button
       type="button"
-      className="flex size-15 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-background/82 text-left shadow-[0_1px_0_rgba(255,255,255,0.2)_inset] transition-colors hover:bg-background/94"
+      className="flex size-15 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-panel-border bg-background/82 text-left transition-colors hover:bg-background/94"
       aria-label={`Preview ${props.image.name}`}
       title={props.image.name}
       onClick={() => {
@@ -2886,6 +2914,179 @@ function ToolRowTooltip(props: { content: ReactNode; children: ReactElement }) {
         {props.content}
       </TooltipPopup>
     </Tooltip>
+  );
+}
+
+function WorkLedgerFrame(props: { children: ReactNode; className?: string }) {
+  return (
+    <div
+      className={cn("border-l border-foreground/9 pl-3", props.className)}
+      data-work-ledger="true"
+    >
+      {props.children}
+    </div>
+  );
+}
+
+function WorkLedgerHeaderContent(props: {
+  status: "active" | "settled" | "neutral";
+  label: ReactNode;
+  operationCount: number;
+  changedFileCount: number;
+  expanded?: boolean | undefined;
+  chatMetaFontSizePx: number;
+}) {
+  const StatusIcon =
+    props.status === "active" ? LoaderIcon : props.status === "settled" ? CircleCheckIcon : ZapIcon;
+  const summaryParts = [
+    props.operationCount > 0
+      ? `${props.operationCount} ${pluralize(props.operationCount, "call")}`
+      : null,
+    props.changedFileCount > 0
+      ? `${props.changedFileCount} ${pluralize(props.changedFileCount, "file")}`
+      : null,
+  ].filter((part): part is string => Boolean(part));
+
+  return (
+    <span className="grid min-h-10 w-full grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-2 text-left">
+      <span
+        className={cn(
+          "flex size-4 items-center justify-center",
+          props.status === "active"
+            ? "text-foreground/68"
+            : props.status === "settled"
+              ? "text-emerald-600/80 dark:text-emerald-400/70"
+              : "text-muted-foreground/55",
+        )}
+      >
+        <StatusIcon className={cn("size-3", props.status === "active" && "animate-spin")} />
+      </span>
+      <span
+        className="min-w-0 truncate font-system-ui font-medium text-foreground/78"
+        style={{ fontSize: `${props.chatMetaFontSizePx}px` }}
+      >
+        {props.label}
+      </span>
+      <span className="flex min-w-0 items-center gap-1.5">
+        {summaryParts.length > 0 ? (
+          <span className="font-system-ui truncate text-[10px] tabular-nums text-muted-foreground/48">
+            {summaryParts.join(" · ")}
+          </span>
+        ) : null}
+        {typeof props.expanded === "boolean" ? (
+          <DisclosureChevron open={props.expanded} className="text-muted-foreground/45" />
+        ) : null}
+      </span>
+    </span>
+  );
+}
+
+function WorkLedgerSections(props: {
+  entries: ReadonlyArray<SequencedWorkLedgerEntry>;
+  renderEntry: (entry: SequencedWorkLedgerEntry) => ReactNode;
+}) {
+  const sections = groupWorkLedgerEntries(props.entries);
+  if (sections.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-1 pb-1.5">
+      {sections.map((section) => (
+        <section key={section.kind} className="py-1" data-ledger-section={section.kind}>
+          <div className="flex items-center gap-2 pb-0.5 font-system-ui text-[10px] font-medium text-muted-foreground/45">
+            <span>{section.label}</span>
+            <span className="tabular-nums">{section.entries.length}</span>
+          </div>
+          <div>
+            {section.entries.map((entry) => (
+              <div
+                key={entry.entry.id}
+                className="grid min-w-0 grid-cols-[1.55rem_minmax(0,1fr)] items-start"
+                data-ledger-sequence={entry.sequence}
+                data-work-ledger-entry-id={entry.entry.id}
+              >
+                <span className="font-chat-code pt-0.5 text-[9px] leading-5 tabular-nums text-muted-foreground/28">
+                  {String(entry.sequence).padStart(2, "0")}
+                </span>
+                <div className="min-w-0">{props.renderEntry(entry)}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function WorkLedgerEditedFilesSection(props: {
+  files: ReadonlyArray<TurnDiffSummary["files"][number]>;
+  startSequence: number;
+  fontSizePx: number;
+  onOpen: (filePath: string) => void;
+}) {
+  if (props.files.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="py-1.5" data-ledger-section="modify">
+      <div className="flex items-center gap-2 pb-0.5 font-system-ui text-[10px] font-medium text-muted-foreground/45">
+        <span>Modify</span>
+        <span className="tabular-nums">{props.files.length}</span>
+      </div>
+      {props.files.map((file, index) => (
+        <div
+          key={file.path}
+          className="grid min-w-0 grid-cols-[1.55rem_minmax(0,1fr)] items-center"
+          data-ledger-sequence={props.startSequence + index}
+        >
+          <span className="font-chat-code text-[9px] leading-5 tabular-nums text-muted-foreground/28">
+            {String(props.startSequence + index).padStart(2, "0")}
+          </span>
+          <button
+            type="button"
+            className="group/file-row flex min-h-7 w-full min-w-0 items-center gap-1.5 text-left transition-[color,scale] duration-150 ease-out focus-visible:outline-none active:scale-[0.96]"
+            title={file.path}
+            onClick={() => props.onOpen(file.path)}
+          >
+            <EditedFileRowContent
+              filePath={file.path}
+              additions={file.additions}
+              deletions={file.deletions}
+              fontSizePx={props.fontSizePx}
+              compact
+            />
+          </button>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function WorkLedgerOverflowToggle(props: {
+  hiddenCount: number;
+  expanded: boolean;
+  earlier: boolean;
+  chatMetaFontSizePx: number;
+  onToggle: () => void;
+}) {
+  if (props.hiddenCount <= 0 && !props.expanded) {
+    return null;
+  }
+  return (
+    <div>
+      <button
+        type="button"
+        className="min-h-10 font-system-ui text-muted-foreground/52 transition-[color,scale] duration-150 ease-out hover:text-foreground/75 active:scale-[0.96]"
+        style={{ fontSize: `${props.chatMetaFontSizePx}px` }}
+        onClick={props.onToggle}
+      >
+        {props.expanded
+          ? "Show less"
+          : `${props.hiddenCount} ${props.earlier ? "earlier" : "more"} ${pluralize(props.hiddenCount, "operation")}`}
+      </button>
+    </div>
   );
 }
 

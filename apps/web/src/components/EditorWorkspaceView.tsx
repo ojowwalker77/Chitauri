@@ -214,7 +214,7 @@ function DiffFileRow(props: {
       <DiffStat
         additions={stat.additions}
         deletions={stat.deletions}
-        className="shrink-0 text-[10px] tabular-nums"
+        className="shrink-0 text-[11px] tabular-nums"
       />
     </button>
   );
@@ -272,7 +272,7 @@ function DiffFilesSidebar(props: {
         </span>
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {props.files.length > 0 ? (
-            <span className="rounded-full bg-muted px-1.5 text-[10px] font-medium text-muted-foreground tabular-nums">
+            <span className="rounded-full bg-muted px-1.5 text-[11px] font-medium text-muted-foreground tabular-nums">
               {props.files.length}
             </span>
           ) : null}

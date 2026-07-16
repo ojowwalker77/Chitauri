@@ -1,5 +1,5 @@
 // FILE: SettingsPanelPrimitives.tsx
-// Purpose: Shared settings section card and row primitives (Codex-style bordered groups).
+// Purpose: Shared settings section card and row primitives for Claude-style panel groups.
 // Layer: Settings UI components
 // Exports: SettingsCard, SettingsSection, SettingsListRow, SettingsRow, SettingsSelectPopup
 
@@ -35,7 +35,7 @@ export function SettingsSection({ title, children }: { title: string; children: 
   );
 }
 
-/** Frosted select dropdown panel with settings `rounded-lg` chrome. */
+/** Opaque select dropdown panel with settings control chrome. */
 export function SettingsSelectPopup({
   align = "end",
   alignItemWithTrigger = false,

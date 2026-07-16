@@ -9,8 +9,20 @@ import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "~/components/
 import { DisclosureChevron } from "~/components/ui/DisclosureChevron";
 
 function delegationState(thread: Thread): "running" | "needs_review" | "failed" {
-  if (thread.error || thread.latestTurn?.state === "error") return "failed";
-  if (thread.session?.status === "running" || thread.latestTurn?.state === "running") {
+  if (
+    thread.error ||
+    thread.latestTurn?.state === "error" ||
+    thread.latestTurn?.state === "interrupted" ||
+    thread.session?.orchestrationStatus === "error" ||
+    thread.session?.orchestrationStatus === "interrupted"
+  ) {
+    return "failed";
+  }
+  if (
+    thread.session?.status === "running" ||
+    thread.session?.orchestrationStatus === "running" ||
+    thread.latestTurn?.state === "running"
+  ) {
     return "running";
   }
   return "needs_review";
@@ -129,7 +141,7 @@ export function OrchestratorDelegationPanel(props: {
                   aria-hidden
                 />
                 <span className="min-w-0 flex-1 truncate text-xs font-medium">{thread.title}</span>
-                <span className="hidden shrink-0 text-[10px] text-muted-foreground sm:inline">
+                <span className="hidden shrink-0 text-[11px] text-muted-foreground sm:inline">
                   {stateCopy.label}
                 </span>
                 <DisclosureChevron open={open} className="opacity-70" />
@@ -140,7 +152,10 @@ export function OrchestratorDelegationPanel(props: {
                     {state === "running"
                       ? `Working as ${thread.subagentRole ?? "a delegated specialist"} with ${thread.modelSelection.model} in an isolated worktree.`
                       : state === "failed"
-                        ? (thread.error ?? "The delegated turn failed.")
+                        ? (thread.error ??
+                          (thread.latestTurn?.state === "interrupted"
+                            ? "The delegated turn was interrupted before it finished. Open the task to inspect or retry it."
+                            : "The delegated turn failed."))
                         : (finalMessage ?? "Delegated work finished and is ready for diff review.")}
                   </p>
                   <div className="mt-3 flex items-center gap-2">

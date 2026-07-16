@@ -71,7 +71,7 @@ function isArchiveUndoToast(toast: ToastObject<ThreadToastData>): boolean {
 // toast root no-drag so Electron titlebar hit testing cannot swallow clicks.
 const ARCHIVE_UNDO_TOAST_SURFACE_CLASS_NAME = cn(
   APP_TOOLTIP_SURFACE_CLASS_NAME,
-  "absolute w-max max-w-[min(calc(100vw-2rem),28rem)] rounded-2xl [--notification-fg:var(--popover-foreground)] [-webkit-app-region:no-drag]",
+  "absolute w-max max-w-[min(calc(100vw-2rem),28rem)] rounded-[11px] [--notification-fg:var(--popover-foreground)] [-webkit-app-region:no-drag]",
 );
 
 const ARCHIVE_UNDO_TOAST_LINK_CLASS_NAME =
@@ -85,7 +85,14 @@ function toastRootClassName(position: ToastPosition, compact: boolean): string {
 }
 
 function toastIconClassName(type: ToastObject<ThreadToastData>["type"]): string {
-  return cn(NOTIFICATION_ICON_CLASS_NAME, type === "loading" && "animate-spin opacity-90");
+  return cn(
+    NOTIFICATION_ICON_CLASS_NAME,
+    type === "loading" && "animate-spin text-claude",
+    type === "success" && "text-success",
+    type === "warning" && "text-gold",
+    type === "error" && "text-destructive",
+    type === "info" && "text-muted-foreground",
+  );
 }
 
 type ToastPosition =
@@ -345,7 +352,7 @@ function ArchiveUndoToastSurface({
       />
       <Toast.Content
         className={cn(
-          "pointer-events-auto relative flex items-center gap-2 overflow-hidden px-3.5 py-2 text-[length:var(--app-font-size-ui-sm,11px)] leading-normal transition-opacity duration-250 data-expanded:opacity-100",
+          "pointer-events-auto relative flex items-center gap-2 overflow-hidden px-3.5 py-2 text-[length:var(--app-font-size-ui-sm,13px)] leading-normal transition-opacity duration-250 data-expanded:opacity-100",
           hideCollapsedContent &&
             "not-data-expanded:pointer-events-none not-data-expanded:opacity-0",
         )}
@@ -400,8 +407,8 @@ function ToastSurface({
       className={cn(
         "pointer-events-auto relative flex overflow-hidden transition-opacity duration-250 data-expanded:opacity-100",
         compact
-          ? "items-center gap-2 px-3 py-1.5 pr-1.5 text-[length:var(--app-font-size-ui-sm,11px)] leading-normal"
-          : "items-start gap-2 px-3.5 py-3 pr-10 text-sm",
+          ? "items-center gap-2 px-3 py-2 pr-1.5 text-[12.5px] font-medium leading-normal"
+          : "items-start gap-2 px-3.5 py-3 pr-10 text-[12.5px] font-medium",
         hideCollapsedContent && "not-data-expanded:pointer-events-none not-data-expanded:opacity-0",
       )}
     >
@@ -486,8 +493,8 @@ function Toasts({ position = "top-center" }: { position: ToastPosition }) {
           "fixed z-[200] mx-auto flex w-[calc(100%-var(--toast-inset)*2)] max-w-sm [--toast-inset:--spacing(4)] sm:[--toast-inset:--spacing(8)]",
           // Vertical positioning
           "data-[position=top-center]:top-4",
-          "data-[position=top-left]:top-[calc(var(--toast-inset)+46px)]",
-          "data-[position=top-right]:top-[calc(var(--toast-inset)+46px)]",
+          "data-[position=top-left]:top-[calc(var(--toast-inset)+52px)]",
+          "data-[position=top-right]:top-[calc(var(--toast-inset)+52px)]",
           "data-[position*=bottom]:bottom-(--toast-inset)",
           // Horizontal positioning
           "data-[position*=left]:left-(--toast-inset)",
@@ -513,7 +520,7 @@ function Toasts({ position = "top-center" }: { position: ToastPosition }) {
           return (
             <Toast.Root
               className={cn(
-                "absolute z-[calc(9999-var(--toast-index))] h-(--toast-calc-height) select-none [transition:transform_.5s_cubic-bezier(.22,1,.36,1),opacity_.5s,height_.15s]",
+                "absolute z-[calc(9999-var(--toast-index))] h-(--toast-calc-height) select-none transition-[transform,opacity,height] duration-menu ease-out",
                 archiveUndoToast
                   ? cn(
                       ARCHIVE_UNDO_TOAST_SURFACE_CLASS_NAME,
@@ -658,7 +665,7 @@ function AnchoredToasts() {
                   className={cn(
                     "relative text-balance transition-[scale,opacity] data-ending-style:scale-98 data-starting-style:scale-98 data-ending-style:opacity-0 data-starting-style:opacity-0",
                     tooltipStyle
-                      ? "rounded-lg border bg-popover text-popover-foreground text-xs shadow-md/5 [-webkit-app-region:no-drag] before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-lg)-1px)] before:shadow-[0_1px_--theme(--color-black/4%)] dark:before:shadow-[0_-1px_--theme(--color-white/6%)]"
+                      ? "rounded-xl border border-panel-border bg-panel text-popover-foreground text-xs shadow-[0_16px_44px_rgba(0,0,0,0.5)] [-webkit-app-region:no-drag]"
                       : compact
                         ? COMPACT_NOTIFICATION_SURFACE_CLASS_NAME
                         : EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME,

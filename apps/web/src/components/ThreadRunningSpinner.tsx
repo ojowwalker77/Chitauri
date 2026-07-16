@@ -10,11 +10,12 @@ export function ThreadRunningSpinner({ className }: { className?: string }) {
     <span
       aria-hidden="true"
       className={cn(
-        "inline-block size-3 shrink-0 animate-spin rounded-full text-muted-foreground/55 [animation-duration:1.6s]",
+        "thread-running-spinner inline-block size-3.5 shrink-0 animate-spin rounded-full text-claude [animation-duration:800ms] motion-reduce:animate-none",
         className,
       )}
       style={{
-        background: "conic-gradient(from 0deg, transparent 25%, currentColor)",
+        background:
+          "conic-gradient(from 0deg, color-mix(in srgb, currentColor 25%, transparent) 0 75%, currentColor 75% 100%)",
         mask: "radial-gradient(farthest-side, transparent calc(100% - 1.5px), black calc(100% - 1.5px))",
         WebkitMask:
           "radial-gradient(farthest-side, transparent calc(100% - 1.5px), black calc(100% - 1.5px))",
