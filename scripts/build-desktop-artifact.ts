@@ -29,9 +29,16 @@ import {
   resolveCatalogDependencies,
 } from "./lib/resolve-catalog.ts";
 
-import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { Config, Data, Effect, FileSystem, Layer, Logger, Option, Path, Schema } from "effect";
 import type * as EffectProcess from "effect/unstable/process";
+
+const platformNodeRootUrl = import.meta.resolve("@effect/platform-node");
+const NodeRuntime = (await import(
+  new URL("./NodeRuntime.js", platformNodeRootUrl).href
+)) as typeof import("@effect/platform-node/NodeRuntime");
+const NodeServices = (await import(
+  new URL("./NodeServices.js", platformNodeRootUrl).href
+)) as typeof import("@effect/platform-node/NodeServices");
 
 const effectRootUrl = import.meta.resolve("effect");
 const { Command, Flag } = (await import(
