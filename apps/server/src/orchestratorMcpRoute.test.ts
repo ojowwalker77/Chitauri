@@ -54,7 +54,10 @@ it("preserves MCP response headers across the Web-to-Effect HTTP bridge", async 
       capabilities: { tools: { listChanged: true } },
     },
   };
-  const controlPlane = {
+  const unexpectedControlPlaneCall = (method: string) =>
+    Effect.die(new Error(`Unexpected OrchestratorControlPlane.${method} call`));
+  const controlPlane: OrchestratorControlPlaneShape = {
+    getMcpServerForSeat: () => unexpectedControlPlaneCall("getMcpServerForSeat"),
     handleHttpRequest: () =>
       Effect.succeed(
         new Response(JSON.stringify(initializeResult), {
@@ -64,7 +67,9 @@ it("preserves MCP response headers across the Web-to-Effect HTTP bridge", async 
           },
         }),
       ),
-  } as OrchestratorControlPlaneShape;
+    getTaskStatus: () => unexpectedControlPlaneCall("getTaskStatus"),
+    getTaskResult: () => unexpectedControlPlaneCall("getTaskResult"),
+  };
 
   await withOrchestratorMcpServer(controlPlane, async (origin) => {
     const response = await fetch(`${origin}/api/orchestrator/mcp`, {
