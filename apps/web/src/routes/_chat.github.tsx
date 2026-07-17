@@ -102,7 +102,7 @@ function StatusDot({ status }: { status: GitHubCheckStatus | null }) {
         "size-2 shrink-0 rounded-full border",
         status === "success" && "border-success/60 bg-success",
         status === "failure" && "border-destructive/60 bg-destructive",
-        status === "pending" && "border-gold/60 bg-gold",
+        status === "pending" && "border-[var(--info)]/60 bg-[var(--info)]",
         status === "cancelled" && "border-faint/60 bg-faint",
         (status === "neutral" || status === "skipped" || status === null) &&
           "border-muted-foreground/40 bg-muted-foreground/25",
@@ -900,7 +900,7 @@ function GitHubWorkbenchRoute() {
             )}
           >
             <SidebarHeaderNavigationControls />
-            <GitHubIcon className="size-4 text-claude" />
+            <GitHubIcon className="size-4 text-foreground" />
             <span className="text-[14px] font-[590] tracking-[-0.005em]">GitHub</span>
             <RepositoryProjectFilter
               ariaLabel="GitHub repository"

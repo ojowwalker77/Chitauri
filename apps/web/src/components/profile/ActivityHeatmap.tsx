@@ -10,26 +10,26 @@ import { cn } from "~/lib/utils";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { formatCompact, formatShortDate } from "./profileFormatting";
 
-// Single-hue ramp built from the theme identity accent (`--info`, defaults to coral) for the
-// in-app page (level 0 → 4). Mixes toward transparent so it sits well on light/dark.
+// Grayscale intensity ramp (Design §6) for the in-app page (level 0 → 4). Mixes the
+// neutral `--foreground` toward transparent so it sits well on light/dark.
 export const APP_HEATMAP_INTENSITY_CLASSES: readonly string[] = [
   "bg-muted/70 dark:bg-white/[0.06]",
-  "bg-[color-mix(in_srgb,var(--info)_24%,transparent)]",
-  "bg-[color-mix(in_srgb,var(--info)_46%,transparent)]",
-  "bg-[color-mix(in_srgb,var(--info)_72%,transparent)]",
-  "bg-[var(--info)]",
+  "bg-[color-mix(in_srgb,var(--foreground)_12%,transparent)]",
+  "bg-[color-mix(in_srgb,var(--foreground)_28%,transparent)]",
+  "bg-[color-mix(in_srgb,var(--foreground)_48%,transparent)]",
+  "bg-[color-mix(in_srgb,var(--foreground)_72%,transparent)]",
 ];
 
-// Accent ramp for the exported card. Mixes toward white so the steps stay opaque on the
-// card's white background and reproduce identically via html-to-image. Level 0 mirrors the
-// in-app heatmap's empty cell (`bg-muted/70`, i.e. black ~2.8%) flattened to an opaque color
-// on white, so the exported image matches the empty-box color shown in the app.
+// Grayscale ramp for the exported card. Mixes `--foreground` toward white so the steps
+// stay opaque on the card's white background and reproduce identically via html-to-image.
+// Level 0 mirrors the in-app heatmap's empty cell (`bg-muted/70`, i.e. black ~2.8%)
+// flattened to an opaque color on white, so the exported image matches the app.
 export const CARD_HEATMAP_INTENSITY_CLASSES: readonly string[] = [
   "bg-[color-mix(in_srgb,black_2.8%,white)]",
-  "bg-[color-mix(in_srgb,var(--info)_22%,white)]",
-  "bg-[color-mix(in_srgb,var(--info)_45%,white)]",
-  "bg-[color-mix(in_srgb,var(--info)_70%,white)]",
-  "bg-[var(--info)]",
+  "bg-[color-mix(in_srgb,var(--foreground)_12%,white)]",
+  "bg-[color-mix(in_srgb,var(--foreground)_28%,white)]",
+  "bg-[color-mix(in_srgb,var(--foreground)_48%,white)]",
+  "bg-[color-mix(in_srgb,var(--foreground)_72%,white)]",
 ];
 
 const MONTH_LABELS = [

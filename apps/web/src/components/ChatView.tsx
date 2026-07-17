@@ -9267,7 +9267,7 @@ export default function ChatView({
           activeThreadId={activeThread.id}
           activeThreadTitle={surfaceTitle ?? activeThreadDisplayTitle}
           activeThreadEntryPoint={terminalState.entryPoint}
-          activeProvider={activeThread.session?.provider ?? activeThread.modelSelection.provider}
+          activeProvider={activeThread.modelSelection.provider ?? activeThread.session?.provider}
           activeProjectName={isEditorRail ? undefined : activeProjectDisplayName}
           threadBreadcrumbs={threadBreadcrumbs}
           {...(isEditorRail

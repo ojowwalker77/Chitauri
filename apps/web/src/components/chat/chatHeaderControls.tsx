@@ -214,7 +214,7 @@ export function SurfaceTabChip({
         >
           <span
             className={cn(
-              "flex items-center justify-center group-data-[active=true]/dock-tab:text-claude",
+              "flex items-center justify-center group-data-[active=true]/dock-tab:text-foreground",
               DOCK_TAB_ICON_HOVER_HIDE_CLASS_NAME,
             )}
           >
@@ -223,7 +223,7 @@ export function SurfaceTabChip({
           <CentralIcon name="cross-small" className={DOCK_TAB_CLOSE_GLYPH_CLASS_NAME} />
         </button>
       ) : (
-        <span className="flex size-4 shrink-0 items-center justify-center group-data-[active=true]/dock-tab:text-claude">
+        <span className="flex size-4 shrink-0 items-center justify-center group-data-[active=true]/dock-tab:text-foreground">
           {icon}
         </span>
       )}

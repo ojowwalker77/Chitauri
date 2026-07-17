@@ -419,8 +419,8 @@ export function resolveThreadStatusPill(input: {
     }
     return {
       label: "Pending Approval",
-      colorClass: "text-gold",
-      dotClass: "bg-gold",
+      colorClass: "text-info",
+      dotClass: "bg-info",
       pulse: false,
       dismissible: true,
       dismissalKey,
@@ -434,8 +434,8 @@ export function resolveThreadStatusPill(input: {
     }
     return {
       label: "Awaiting Input",
-      colorClass: "text-gold",
-      dotClass: "bg-gold",
+      colorClass: "text-info",
+      dotClass: "bg-info",
       pulse: false,
       dismissible: true,
       dismissalKey,
@@ -445,8 +445,10 @@ export function resolveThreadStatusPill(input: {
   if (thread.hasLiveTailWork) {
     return {
       label: "Working",
-      colorClass: "text-claude",
-      dotClass: "bg-claude",
+      // Work-in-progress: label stays monochrome; the pulsing dot carries the
+      // "active" meaning in info (Design.md §3 state table).
+      colorClass: "text-muted-foreground",
+      dotClass: "bg-info",
       pulse: true,
       dismissible: false,
     };
@@ -458,8 +460,8 @@ export function resolveThreadStatusPill(input: {
   ) {
     return {
       label: "Working",
-      colorClass: "text-claude",
-      dotClass: "bg-claude",
+      colorClass: "text-muted-foreground",
+      dotClass: "bg-info",
       pulse: true,
       dismissible: false,
     };
@@ -468,8 +470,8 @@ export function resolveThreadStatusPill(input: {
   if (thread.session?.status === "connecting") {
     return {
       label: "Connecting",
-      colorClass: "text-claude",
-      dotClass: "bg-claude",
+      colorClass: "text-muted-foreground",
+      dotClass: "bg-info",
       pulse: true,
       dismissible: false,
     };
@@ -491,8 +493,8 @@ export function resolveThreadStatusPill(input: {
     }
     return {
       label: "Plan Ready",
-      colorClass: "text-claude",
-      dotClass: "bg-claude",
+      colorClass: "text-info",
+      dotClass: "bg-info",
       pulse: false,
       dismissible: true,
       dismissalKey,
@@ -1497,7 +1499,7 @@ export function resolvePrStatePresentation(pr: {
     if (pr.mergeability === "conflicting") {
       return {
         label: "PR has conflicts",
-        colorClass: "text-gold",
+        colorClass: "text-destructive",
         iconKind: "pull-request",
       };
     }

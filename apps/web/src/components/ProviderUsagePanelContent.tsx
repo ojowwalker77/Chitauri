@@ -53,7 +53,7 @@ export const ProviderUsagePanelContent = memo(function ProviderUsagePanelContent
         </div>
       ) : null}
       {props.notice ? (
-        <p className="flex items-start gap-1.5 text-[length:var(--app-font-size-chat-meta,11px)] leading-relaxed text-gold">
+        <p className="flex items-start gap-1.5 text-[length:var(--app-font-size-chat-meta,11px)] leading-relaxed text-destructive">
           <TriangleAlertIcon className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
           <span>{props.notice}</span>
         </p>

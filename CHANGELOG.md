@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.0 - 2026-07-17
+
+### Changed
+
+- Redesigned the entire UI around a monochromatic design system (see `Design.md`): grayscale chrome on a neutral ramp (white/near-black, inverted for dark mode), with color reserved exclusively for meaning — red for errors and destructive actions, green for success, blue for needs-attention states, links, focus, and selection. The brand-orange accent, gold warning accent, and all decorative tints (selection, caret, drag strip, ultrathink chrome, heatmap) are gone.
+- The composer no longer shows a colored border when focused; its hairline border darkens one step instead. Keyboard focus rings across the app are now blue.
+- Provider icons render monochrome and thread status indicators (working, pending approval, awaiting input, plan ready, completed) now use the semantic red/green/blue set.
+
+### Fixed
+
+- Fixed chats sometimes showing the wrong provider icon (for example a Codex chat displaying the Claude mark): the icon now derives from the thread's current model selection instead of a stale session or cached editor-tab value.
+
 ## 0.5.0 - 2026-07-16
 
 ### Added

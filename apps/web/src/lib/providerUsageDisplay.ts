@@ -38,8 +38,8 @@ export interface ProviderUsagePaceDetails {
 
 export const PROVIDER_USAGE_TONE_CLASS_NAME: Record<ProviderUsageTone, string> = {
   healthy: "bg-success",
-  warning: "bg-gold",
-  danger: "bg-red-500",
+  warning: "bg-destructive",
+  danger: "bg-destructive",
 };
 
 function clampPercent(value: number): number {

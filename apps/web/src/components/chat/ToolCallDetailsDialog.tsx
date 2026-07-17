@@ -184,7 +184,7 @@ function ToolOutputMetadata({ output }: { output: WorkLogToolOutputDetails }) {
         </span>
       ) : null}
       {output.truncated ? (
-        <span className="rounded-full border border-gold/30 bg-gold/8 px-2 py-0.5 text-gold">
+        <span className="rounded-full border border-info/30 bg-info/10 px-2 py-0.5 text-info">
           Truncated
         </span>
       ) : null}
@@ -259,7 +259,7 @@ function ToolCodeBlock(props: { children: string; tone?: "default" | "command"; 
     <pre
       className={cn(
         DETAIL_CODE_BLOCK_CLASS_NAME,
-        props.tone === "command" && "text-sky-100/92",
+        props.tone === "command" && "text-foreground/92",
         props.bare
           ? "px-3 py-2.5"
           : "rounded-lg border border-border/45 bg-background/70 px-3 py-2.5",
@@ -285,7 +285,7 @@ function DiffCodeBlock({ children }: { children: string }) {
             line.startsWith("-") && !line.startsWith("---")
               ? "bg-[color-mix(in_srgb,var(--destructive)_8%,transparent)] text-destructive"
               : null,
-            line.startsWith("@@") ? "text-sky-200/90" : null,
+            line.startsWith("@@") ? "text-muted-foreground/70" : null,
             /^(diff --git|index |--- |\+\+\+ )/.test(line) ? "text-muted-foreground/62" : null,
           )}
         >

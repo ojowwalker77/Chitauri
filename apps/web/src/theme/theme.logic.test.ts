@@ -428,7 +428,7 @@ describe("buildThemeCssVariables", () => {
     expect(tokens.aliases["--color-token-terminal-ansi-bright-black"]).toBe(
       tokens.derived.textForegroundSecondary,
     );
-    expect(tokens.aliases["--color-token-terminal-ansi-yellow"]).toBe("#cf9d5e");
+    expect(tokens.aliases["--color-token-terminal-ansi-yellow"]).toBe("#e94b4b");
   });
 
   it("derives the fixed dark appearance palette", () => {
@@ -447,19 +447,20 @@ describe("buildThemeCssVariables", () => {
       "dark",
     );
 
-    expect(tokens.derived.controlBackgroundOpaque).toBe("rgb(42, 41, 41)");
-    expect(tokens.aliases["--color-token-dropdown-background"]).toBe("rgb(42, 41, 41)");
-    expect(tokens.computed.surfaceUnder).toBe("#0a0a0a");
-    expect(tokens.derived.textForegroundSecondary).toBe("#9c9a96");
-    expect(tokens.derived.textForegroundTertiary).toBe("#6b6965");
-    expect(variables["--background"]).toBe("#0a0a0a");
-    expect(variables["--panel"]).toBe("#171717");
-    expect(variables["--foreground"]).toBe("#e6e4e1");
-    expect(variables["--accent"]).toBe("#d97757");
-    expect(variables["--claude"]).toBe("#d97757");
-    expect(variables["--gold"]).toBe("#cf9d5e");
-    expect(variables["--composer-surface"]).toBe("#141414");
-    expect(variables["--app-user-message-background"]).toBe("#1f1f1f");
+    expect(tokens.derived.controlBackgroundOpaque).toBe("rgb(47, 48, 53)");
+    expect(tokens.aliases["--color-token-dropdown-background"]).toBe("rgb(47, 48, 53)");
+    expect(tokens.computed.surfaceUnder).toBe("#111318");
+    expect(tokens.derived.textForegroundSecondary).toBe("#9aa1ad");
+    expect(tokens.derived.textForegroundTertiary).toBe("#797a7e");
+    expect(variables["--background"]).toBe("#111318");
+    expect(variables["--panel"]).toBe("#1b1c21");
+    expect(variables["--foreground"]).toBe("#f7f8fa");
+    expect(variables["--accent"]).toBe("#3b82f6");
+    // The retired brand tokens are no longer emitted at all.
+    expect(variables["--claude"]).toBeUndefined();
+    expect(variables["--gold"]).toBeUndefined();
+    expect(variables["--composer-surface"]).toBe("#16181d");
+    expect(variables["--app-user-message-background"]).toBe("#1d1f24");
     expect(variables["--vscode-terminal-ansiBlue"]).toBe("#75a7e0");
     expect(variables["--vscode-terminal-ansiCyan"]).toBe("#66b8b0");
     expect(variables["--vscode-terminal-ansiMagenta"]).toBe("#b99ad6");
@@ -475,11 +476,11 @@ describe("buildThemeCssVariables", () => {
       "light",
     );
 
-    expect(darkVariables["--destructive"]).toBe("#d9685f");
+    expect(darkVariables["--destructive"]).toBe("#e94b4b");
     expect(darkVariables["--success"]).toBe("#4cb782");
-    expect(darkVariables["--warning"]).toBe("#cf9d5e");
-    expect(darkVariables["--info"]).toBe("#9c9a96");
-    expect(lightTokens.computed.surfaceUnder).toBe("#e7e4df");
+    expect(darkVariables["--warning"]).toBe("#e94b4b");
+    expect(darkVariables["--info"]).toBe("#3b82f6");
+    expect(lightTokens.computed.surfaceUnder).toBe("#ffffff");
   });
 
   it("matches Codex's light composer surface token path", () => {

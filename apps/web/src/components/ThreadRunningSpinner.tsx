@@ -10,7 +10,7 @@ export function ThreadRunningSpinner({ className }: { className?: string }) {
     <span
       aria-hidden="true"
       className={cn(
-        "thread-running-spinner inline-block size-3.5 shrink-0 animate-spin rounded-full text-claude [animation-duration:800ms] motion-reduce:animate-none",
+        "thread-running-spinner inline-block size-3.5 shrink-0 animate-spin rounded-full text-muted-foreground [animation-duration:800ms] motion-reduce:animate-none",
         className,
       )}
       style={{

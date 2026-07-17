@@ -116,7 +116,9 @@ const buttonVariants = cva(
           "border-panel-border bg-transparent text-[var(--color-text-foreground)] hover:bg-hover data-pressed:bg-hover",
         subtle:
           "border-transparent bg-selected text-[var(--color-text-foreground)] hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)] data-pressed:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]",
-        gold: "border-transparent bg-[color-mix(in_srgb,var(--gold)_12%,transparent)] text-gold hover:bg-[color-mix(in_srgb,var(--gold)_18%,transparent)] data-pressed:bg-[color-mix(in_srgb,var(--gold)_18%,transparent)]",
+        // Was a gold "needs attention" pill; keeps the variant name for external
+        // callers but now signals attention with the info tint (§3 state table).
+        gold: "border-[color:color-mix(in_srgb,var(--info)_30%,transparent)] bg-[color-mix(in_srgb,var(--info)_10%,transparent)] text-info hover:bg-[color-mix(in_srgb,var(--info)_16%,transparent)] data-pressed:bg-[color-mix(in_srgb,var(--info)_16%,transparent)]",
       },
     },
     compoundVariants: [

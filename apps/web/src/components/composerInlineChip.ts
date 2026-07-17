@@ -35,8 +35,11 @@ export const COMPOSER_INLINE_DECORATOR_HOST_CLASS_NAME = "inline";
 // `plain`  → in-composer look: no background, sits inline with typed text.
 // `soft`   → tinted pill used when a token is echoed inside a sent message.
 export type ComposerInlineChipFill = "plain" | "soft";
-// `accent` → skill + file/folder/plugin tokens (shared info color).
-// `neutral`→ generic tokens (foreground color).
+// Both tones are grayscale: inline chips are structure, not status (Design §6),
+// so they never carry a semantic hue. The tones are kept as distinct API values
+// for callers, but both resolve to the neutral treatment.
+// `accent` → skill + file/folder/plugin/link tokens.
+// `neutral`→ generic tokens.
 export type ComposerInlineChipTone = "accent" | "neutral";
 
 const COMPOSER_INLINE_CHIP_FILL_CLASS_NAME: Record<ComposerInlineChipFill, string> = {
@@ -45,13 +48,13 @@ const COMPOSER_INLINE_CHIP_FILL_CLASS_NAME: Record<ComposerInlineChipFill, strin
 };
 
 const COMPOSER_INLINE_CHIP_TONE_TEXT_CLASS_NAME: Record<ComposerInlineChipTone, string> = {
-  accent: "text-[var(--info-foreground)]",
+  accent: "text-[var(--color-text-foreground)]",
   neutral: "text-[var(--color-text-foreground)]",
 };
 
-// Background tint for `soft` fill, kept in the same family as the tone color.
+// Neutral grayscale surface for `soft` fill — chips read as structure.
 const COMPOSER_INLINE_CHIP_TONE_SOFT_BG_CLASS_NAME: Record<ComposerInlineChipTone, string> = {
-  accent: "bg-[var(--info)]/10",
+  accent: "bg-[var(--selected)]",
   neutral: "bg-[var(--sidebar-accent-active)]",
 };
 
@@ -116,17 +119,22 @@ export interface AgentChipColor {
   readonly bg: string;
   readonly text: string;
 }
+// Agent tokens are structure, not status (Design §6) — the chip shape/label
+// identifies the agent, never a hue. Every agent renders the same neutral chip.
+// Values are plain `var()` tokens so they stay valid as inline `style` values and
+// invert correctly in dark mode.
 export const DEFAULT_AGENT_CHIP_COLOR: AgentChipColor = {
-  bg: "rgb(245 158 11 / 0.15)",
-  text: "rgb(245 158 11)",
+  bg: "var(--selected)",
+  text: "var(--foreground)",
 };
+// Map retained so keyed callers keep working; every entry is the neutral chip.
 const AGENT_CHIP_COLOR_BY_NAME: Record<string, AgentChipColor> = {
-  violet: { bg: "rgb(139 92 246 / 0.15)", text: "rgb(139 92 246)" },
-  fuchsia: { bg: "rgb(217 70 239 / 0.15)", text: "rgb(217 70 239)" },
-  teal: { bg: "rgb(20 184 166 / 0.15)", text: "rgb(20 184 166)" },
-  cyan: { bg: "rgb(6 182 212 / 0.15)", text: "rgb(6 182 212)" },
+  violet: DEFAULT_AGENT_CHIP_COLOR,
+  fuchsia: DEFAULT_AGENT_CHIP_COLOR,
+  teal: DEFAULT_AGENT_CHIP_COLOR,
+  cyan: DEFAULT_AGENT_CHIP_COLOR,
   amber: DEFAULT_AGENT_CHIP_COLOR,
-  orange: { bg: "rgb(249 115 22 / 0.15)", text: "rgb(249 115 22)" },
+  orange: DEFAULT_AGENT_CHIP_COLOR,
 };
 export function resolveAgentChipColor(color: string | undefined): AgentChipColor {
   return (color ? AGENT_CHIP_COLOR_BY_NAME[color] : undefined) ?? DEFAULT_AGENT_CHIP_COLOR;
