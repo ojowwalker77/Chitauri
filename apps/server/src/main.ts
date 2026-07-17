@@ -6,6 +6,8 @@
  *
  * @module CliConfig
  */
+import "@t3tools/shared/teacodeEnvironmentBootstrap";
+
 import OS from "node:os";
 import { Config, Data, Effect, FileSystem, Layer, Option, Path, Schema, ServiceMap } from "effect";
 import { Command, Flag } from "effect/unstable/cli";
@@ -101,7 +103,7 @@ export class CliConfig extends ServiceMap.Service<CliConfig, CliConfigShape>()(
 }
 
 const CliEnvConfig = Config.all({
-  mode: Config.string("CHITAURI_MODE").pipe(
+  mode: Config.string("TEACODE_MODE").pipe(
     Config.option,
     Config.map(
       Option.match<RuntimeMode, string>({
@@ -110,36 +112,36 @@ const CliEnvConfig = Config.all({
       }),
     ),
   ),
-  port: Config.port("CHITAURI_PORT").pipe(Config.option, Config.map(Option.getOrUndefined)),
-  host: Config.string("CHITAURI_HOST").pipe(Config.option, Config.map(Option.getOrUndefined)),
-  chitauriHome: Config.string("CHITAURI_HOME").pipe(
+  port: Config.port("TEACODE_PORT").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  host: Config.string("TEACODE_HOST").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  chitauriHome: Config.string("TEACODE_HOME").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
   devUrl: Config.url("VITE_DEV_SERVER_URL").pipe(Config.option, Config.map(Option.getOrUndefined)),
   // Explicit state-dir namespace override. Lets a dev build share the production
   // `userdata` namespace (continue real threads) instead of the isolated `dev` one.
-  chitauriStateNamespace: Config.string("CHITAURI_STATE_NAMESPACE").pipe(
+  chitauriStateNamespace: Config.string("TEACODE_STATE_NAMESPACE").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  noBrowser: Config.boolean("CHITAURI_NO_BROWSER").pipe(
+  noBrowser: Config.boolean("TEACODE_NO_BROWSER").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  authToken: Config.string("CHITAURI_AUTH_TOKEN").pipe(
+  authToken: Config.string("TEACODE_AUTH_TOKEN").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  autoBootstrapProjectFromCwd: Config.boolean("CHITAURI_AUTO_BOOTSTRAP_PROJECT_FROM_CWD").pipe(
+  autoBootstrapProjectFromCwd: Config.boolean("TEACODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  logProviderEvents: Config.boolean("CHITAURI_LOG_PROVIDER_EVENTS").pipe(
+  logProviderEvents: Config.boolean("TEACODE_LOG_PROVIDER_EVENTS").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  logWebSocketEvents: Config.boolean("CHITAURI_LOG_WS_EVENTS").pipe(
+  logWebSocketEvents: Config.boolean("TEACODE_LOG_WS_EVENTS").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
@@ -181,7 +183,7 @@ const ServerConfigLive = (input: CliInput) =>
       const configuredHome = Option.getOrUndefined(input.chitauriHome) ?? env.chitauriHome;
       const userHomeDir = OS.homedir();
       const baseDir = yield* resolveBaseDir(configuredHome);
-      // Import legacy state before runtime paths are derived under ~/.chitauri.
+      // Import legacy state before runtime paths are derived under ~/.teacode.
       yield* migrateLegacyHomeIfNeeded({
         baseDir,
         homeDir: userHomeDir,
@@ -191,7 +193,7 @@ const ServerConfigLive = (input: CliInput) =>
         Effect.mapError(
           (cause) =>
             new StartupError({
-              message: "Failed to migrate legacy Chitauri home directory",
+              message: "Failed to migrate legacy TeaCode home directory",
               cause,
             }),
         ),
@@ -328,7 +330,7 @@ const makeServerProgram = (input: CliInput) =>
     yield* Effect.forkChild(recordStartupHeartbeat);
     // Optional Claude OAuth keepalive. Disabled by default because it touches
     // Claude Code auth data in the background; users can opt in with
-    // CHITAURI_CLAUDE_KEEPALIVE=1.
+    // TEACODE_CLAUDE_KEEPALIVE=1.
     yield* Effect.forkChild(
       Effect.gen(function* () {
         const settings = yield* serverSettings.getSettings;
@@ -351,7 +353,7 @@ const makeServerProgram = (input: CliInput) =>
         ? `http://${formatHostForUrl(config.host)}:${config.port}`
         : localUrl;
     const { authToken, devUrl, ...safeConfig } = config;
-    yield* Effect.logInfo("Chitauri running", {
+    yield* Effect.logInfo("TeaCode running", {
       ...safeConfig,
       devUrl: devUrl?.toString(),
       authEnabled: Boolean(authToken),
@@ -389,7 +391,7 @@ const hostFlag = Flag.string("host").pipe(
   Flag.optional,
 );
 const chitauriHomeFlag = Flag.string("home-dir").pipe(
-  Flag.withDescription("Base directory for all Chitauri data (equivalent to CHITAURI_HOME)."),
+  Flag.withDescription("Base directory for all TeaCode data (equivalent to TEACODE_HOME)."),
   Flag.optional,
 );
 const devUrlFlag = Flag.string("dev-url").pipe(
@@ -414,13 +416,13 @@ const autoBootstrapProjectFromCwdFlag = Flag.boolean("auto-bootstrap-project-fro
 );
 const logProviderEventsFlag = Flag.boolean("log-provider-events").pipe(
   Flag.withDescription(
-    "Emit native/canonical provider NDJSON logs for debugging (equivalent to CHITAURI_LOG_PROVIDER_EVENTS).",
+    "Emit native/canonical provider NDJSON logs for debugging (equivalent to TEACODE_LOG_PROVIDER_EVENTS).",
   ),
   Flag.optional,
 );
 const logWebSocketEventsFlag = Flag.boolean("log-websocket-events").pipe(
   Flag.withDescription(
-    "Emit server-side logs for outbound WebSocket push traffic (equivalent to CHITAURI_LOG_WS_EVENTS).",
+    "Emit server-side logs for outbound WebSocket push traffic (equivalent to TEACODE_LOG_WS_EVENTS).",
   ),
   Flag.withAlias("log-ws-events"),
   Flag.optional,
@@ -438,6 +440,6 @@ export const t3Cli = Command.make("t3", {
   logProviderEvents: logProviderEventsFlag,
   logWebSocketEvents: logWebSocketEventsFlag,
 }).pipe(
-  Command.withDescription("Run the Chitauri server."),
+  Command.withDescription("Run the TeaCode server."),
   Command.withHandler((input) => Effect.scoped(makeServerProgram(input))),
 );

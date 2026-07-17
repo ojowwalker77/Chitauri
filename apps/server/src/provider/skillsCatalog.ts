@@ -1,7 +1,7 @@
 // FILE: skillsCatalog.ts
 // Purpose: Generic Agent Skill discovery primitives (frontmatter parsing, SKILL.md
-//          walking) plus the unified cross-provider skills catalog backing Chitauri
-//          portable skills. Aggregates `~/.chitauri/skills` with every provider-native
+//          walking) plus the unified cross-provider skills catalog backing TeaCode
+//          portable skills. Aggregates `~/.teacode/skills` with every provider-native
 //          skills folder, deduping by name with provider-native copies winning for
 //          the active provider.
 // Layer: Server provider discovery helper
@@ -383,7 +383,7 @@ interface SkillOriginRootSpec {
 const SKILL_ORIGIN_ROOTS = {
   chitauri: {
     homeRoots: (input) => [chitauriSkillsDir(input.chitauriBaseDir)],
-    projectRootNames: [".chitauri", ".synara"],
+    projectRootNames: [".teacode", ".chitauri", ".synara"],
   },
   codex: {
     // Keep Chitauri's existing Codex-local root. Official Codex discovery uses

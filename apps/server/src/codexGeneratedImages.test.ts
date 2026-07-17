@@ -112,11 +112,11 @@ describe("resolveCodexGeneratedImagesRoot(s)", () => {
 
   it("collapses to a single root when overlay equals source", () => {
     delete process.env.CHITAURI_HOME;
-    // The overlay falls under `<dirname(source)>/.chitauri/runtime/codex-home-overlay`,
+    // The overlay falls under `<dirname(source)>/.teacode/runtime/codex-home-overlay`,
     // which is always distinct from `<source>` itself, so the helper still returns
     // both candidates; this test guards the dedupe path with an artificial home
     // whose dirname happens to equal the overlay root.
-    const homePath = "/runtime/.chitauri/runtime/codex-home-overlay";
+    const homePath = "/runtime/.teacode/runtime/codex-home-overlay";
     const roots = resolveCodexGeneratedImagesRoots(homePath);
     assert.ok(roots.length >= 1 && roots.length <= 2, `expected 1-2 roots, got ${roots.length}`);
     assert.ok(roots.includes(path.join(homePath, "generated_images")));

@@ -270,12 +270,12 @@ function researchSkillMarkdown(chitauriBaseDir: string): string {
   const plansRoot = researchPlansRoot(chitauriBaseDir);
   return `---
 name: research
-description: Create or substantially revise a durable Chitauri research plan. Use when the user invokes /research, asks to research a repository before implementation, wants an implementation plan saved for later, or asks for a polished Markdown or HTML research artifact with clickable sources.
+description: Create or substantially revise a durable TeaCode research plan. Use when the user invokes /research, asks to research a repository before implementation, wants an implementation plan saved for later, or asks for a polished Markdown or HTML research artifact with clickable sources.
 ---
 
 ${MANAGED_SKILL_MARKER}
 
-# Create Chitauri research
+# Create TeaCode research
 
 Research the real repository before writing conclusions. Save the durable result outside the repository so it survives branch and worktree deletion.
 
@@ -297,7 +297,7 @@ Use lowercase filesystem-safe slugs. Create missing directories. Never save secr
 - Use Markdown for direct technical plans.
 - Use a self-contained HTML document when diagrams, comparisons, flows, or visual hierarchy materially improve understanding.
 
-For HTML, include all CSS inline, make it responsive and printable, use semantic HTML, accessible contrast, restrained motion with reduced-motion support, excellent typography, and polished cards/tables/diagrams. Do not include JavaScript, forms, tracking, remote fonts, or framework/CDN dependencies. Chitauri renders HTML in a script-disabled sandbox.
+For HTML, include all CSS inline, make it responsive and printable, use semantic HTML, accessible contrast, restrained motion with reduced-motion support, excellent typography, and polished cards/tables/diagrams. Do not include JavaScript, forms, tracking, remote fonts, or framework/CDN dependencies. TeaCode renders HTML in a script-disabled sandbox.
 
 ## Manifest object
 
@@ -330,13 +330,13 @@ Write valid JSON with this shape:
 }
 \`\`\`
 
-\`repository.root\` MUST be the main repository checkout (the folder the user added as a project), never a temporary or linked worktree (for example anything under \`.chitauri/worktrees\`). If you are running inside a worktree, resolve the main checkout with \`git rev-parse --path-format=absolute --git-common-dir\` (the root is its parent directory), put that in \`root\`, and put the worktree you are working in under \`worktree\`.
+\`repository.root\` MUST be the main repository checkout (the folder the user added as a project), never a temporary or linked worktree (for example anything under \`.teacode/worktrees\` or the legacy \`.chitauri/worktrees\`). If you are running inside a worktree, resolve the main checkout with \`git rev-parse --path-format=absolute --git-common-dir\` (the root is its parent directory), put that in \`root\`, and put the worktree you are working in under \`worktree\`.
 
 Allowed reference kinds are \`file\`, \`url\`, \`command\`, \`issue\`, \`pull-request\`, and \`other\`. Use absolute paths for file references and HTTPS URLs for web references. Omit \`line\` when it does not apply. Use JSON \`null\` for an unavailable worktree or branch.
 
 ## Finish
 
-Validate that both files exist and that the manifest parses as JSON. Return one compact object in the final response so Chitauri and the user can identify the artifact:
+Validate that both files exist and that the manifest parses as JSON. Return one compact object in the final response so TeaCode and the user can identify the artifact:
 
 \`{"type":"chitauri.research","documentPath":"<absolute path>","manifestPath":"<absolute path>","title":"<title>","referenceCount":<number>}\`
 `;

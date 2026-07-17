@@ -42,7 +42,7 @@ describe("resolveChitauriCodexHomeOverlayPath", () => {
   it("derives a default overlay sibling of the source home", () => {
     assert.equal(
       resolveChitauriCodexHomeOverlayPath({}, "/users/me/.codex"),
-      path.join("/users/me", ".chitauri", "runtime", "codex-home-overlay"),
+      path.join("/users/me", ".teacode", "runtime", "codex-home-overlay"),
     );
   });
 });

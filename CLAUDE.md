@@ -9,9 +9,9 @@
 
 ## Project Snapshot
 
-Chitauri is a minimal web GUI for using coding agents. It is multi-provider: `ProviderKind` currently spans 7 providers — Codex, Claude (`claudeAgent`), Cursor, Grok, Kilo, OpenCode, and Pi. Each provider has its own model options and capabilities (reasoning effort, thinking budget/level, context window, fast mode), defined in `packages/contracts` and resolved in `packages/shared/src/model.ts`.
+TeaCode is a minimal web GUI for using coding agents. It is multi-provider: `ProviderKind` currently spans 7 providers — Codex, Claude (`claudeAgent`), Cursor, Grok, Kilo, OpenCode, and Pi. Each provider has its own model options and capabilities (reasoning effort, thinking budget/level, context window, fast mode), defined in `packages/contracts` and resolved in `packages/shared/src/model.ts`.
 
-Codex was the first integration and remains the most fleshed-out reference (see the Codex App Server section), but Chitauri is not Codex-only.
+Codex was the first integration and remains the most fleshed-out reference (see the Codex App Server section), but TeaCode is not Codex-only.
 
 This repository is a VERY EARLY WIP. Proposing sweeping changes that improve long-term maintainability is encouraged.
 

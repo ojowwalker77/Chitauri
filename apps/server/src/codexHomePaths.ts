@@ -34,9 +34,9 @@ export function resolveChitauriCodexHomeOverlayPath(
   env: NodeJS.ProcessEnv,
   sourceHomePath: string,
 ): string {
-  const runtimeHome = env.CHITAURI_HOME?.trim();
+  const runtimeHome = env.TEACODE_HOME?.trim() || env.CHITAURI_HOME?.trim();
   const overlayRoot =
-    runtimeHome || path.join(path.dirname(sourceHomePath), ".chitauri", "runtime");
+    runtimeHome || path.join(path.dirname(sourceHomePath), ".teacode", "runtime");
   return path.join(overlayRoot, CHITAURI_CODEX_HOME_OVERLAY_DIR);
 }
 

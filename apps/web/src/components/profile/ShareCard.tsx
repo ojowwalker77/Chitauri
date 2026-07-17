@@ -8,7 +8,7 @@
 import { forwardRef, type ReactNode } from "react";
 import type { ProfileStats, ProfileTokenStats } from "@t3tools/contracts";
 import { ProviderIcon } from "~/components/ProviderIcon";
-import { ChitauriLogo } from "~/components/ChitauriLogo";
+import { TeaCodeLogo } from "~/components/TeaCodeLogo";
 import { ActivityHeatmap, CARD_HEATMAP_INTENSITY_CLASSES } from "./ActivityHeatmap";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { formatCompact, formatDays } from "./profileFormatting";
@@ -121,8 +121,8 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2 text-[#6f6b65]">
-          <ChitauriLogo className="size-6 text-[#4d4944]" />
-          <span className="text-xl font-normal tracking-tight">Chitauri</span>
+          <TeaCodeLogo className="size-6 text-[#4d4944]" />
+          <span className="text-xl font-normal tracking-tight">TeaCode</span>
         </div>
       </div>
 

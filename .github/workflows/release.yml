@@ -4,13 +4,10 @@ on:
   push:
     tags:
       - "v*.*.*"
-      # Support legacy bare SemVer tags too. The preflight job remains the
-      # authoritative validator, so this only widens the event trigger.
-      - "[0-9]*.[0-9]*.[0-9]*"
   workflow_dispatch:
     inputs:
-      version:
-        description: "Release version (for example 1.2.3 or v1.2.3)"
+      tag:
+        description: "Existing release tag to retry (for example v1.2.3)"
         required: true
         type: string
 
@@ -34,37 +31,37 @@ jobs:
       matrix: ${{ steps.build_matrix.outputs.matrix }}
       release_mac: ${{ steps.build_matrix.outputs.release_mac }}
       release_files: ${{ steps.build_matrix.outputs.release_files }}
-      ref: ${{ github.sha }}
+      ref: ${{ steps.release_meta.outputs.ref }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - id: release_meta
         name: Resolve release version
         shell: bash
         run: |
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            raw="${{ github.event.inputs.version }}"
+            raw="${{ github.event.inputs.tag }}"
           else
             raw="${GITHUB_REF_NAME}"
           fi
 
+          if [[ ! "$raw" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]; then
+            echo "Invalid canonical release tag: $raw" >&2
+            exit 1
+          fi
           version="${raw#v}"
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Invalid release version: $raw" >&2
+          ref="$(git rev-list -n 1 "$raw" 2>/dev/null || true)"
+          if [[ -z "$ref" ]]; then
+            echo "Release tag does not exist: $raw" >&2
             exit 1
           fi
 
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          # A pushed tag is the release identity, including legacy bare SemVer
-          # tags. Manual dispatch keeps the documented canonical v-prefixed
-          # release tag.
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            tag="v$version"
-          else
-            tag="$raw"
-          fi
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "tag=$raw" >> "$GITHUB_OUTPUT"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
           if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
             echo "make_latest=true" >> "$GITHUB_OUTPUT"
@@ -72,6 +69,17 @@ jobs:
             echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
             echo "make_latest=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Checkout resolved tag commit
+        run: git checkout --detach "${{ steps.release_meta.outputs.ref }}"
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+
+      - name: Validate committed release source
+        run: ./script/release-preflight "${{ steps.release_meta.outputs.tag }}"
 
       - id: build_matrix
         name: Resolve build matrix
@@ -83,37 +91,36 @@ jobs:
           linux_win='{"label":"Linux x64","runner":"ubuntu-24.04","platform":"linux","target":"AppImage","arch":"x64"},{"label":"Windows x64","runner":"windows-2022","platform":"win","target":"nsis","arch":"x64"}'
           mac='{"label":"macOS arm64","runner":"macos-14","platform":"mac","target":"dmg","arch":"arm64"},{"label":"macOS x64","runner":"macos-15-intel","platform":"mac","target":"dmg","arch":"x64"}'
 
-          if [[ "${{ vars.RELEASE_MAC }}" == "1" ]]; then
-            echo "release_mac=true" >> "$GITHUB_OUTPUT"
-            echo "matrix={\"include\":[$mac,$linux_win]}" >> "$GITHUB_OUTPUT"
-          else
-            echo "release_mac=false" >> "$GITHUB_OUTPUT"
-            echo "matrix={\"include\":[$linux_win]}" >> "$GITHUB_OUTPUT"
-            echo "::notice title=macOS excluded from this release::RELEASE_MAC is not set to 1. Configure the Apple secrets and enable the repository variable before the next release."
+          if [[ "${{ vars.RELEASE_MAC }}" != "1" ]]; then
+            echo "::error title=macOS release is required::Set RELEASE_MAC=1 after configuring signing and notarization secrets."
+            exit 1
           fi
+          echo "release_mac=true" >> "$GITHUB_OUTPUT"
+          echo "matrix={\"include\":[$mac,$linux_win]}" >> "$GITHUB_OUTPUT"
 
-          # Kept in sync with the matrix above: publishing asserts every pattern
-          # matches, so mac-only patterns must not be listed when mac is excluded.
+          # Kept in sync with the required matrix above.
           {
             echo "release_files<<RELEASE_FILES_EOF"
-            if [[ "${{ vars.RELEASE_MAC }}" == "1" ]]; then
-              echo "release-assets/*.dmg"
-              echo "release-assets/*.zip"
-            fi
+            echo "release-assets/*.dmg"
+            echo "release-assets/*.zip"
             echo "release-assets/*.AppImage"
             echo "release-assets/*.exe"
             echo "release-assets/*.blockmap"
             echo "release-assets/latest*.yml"
+            echo "release-assets/SHA256SUMS.txt"
             echo "RELEASE_FILES_EOF"
           } >> "$GITHUB_OUTPUT"
 
   quality:
     name: Release quality gates
+    needs: preflight
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.preflight.outputs.ref }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -139,16 +146,10 @@ jobs:
         run: sha256sum --check vendor/effect/SHA256SUMS
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: ./script/bootstrap
 
-      - name: Lint
-        run: bun run lint
-
-      - name: Typecheck
-        run: bun run typecheck
-
-      - name: Test
-        run: bun run test
+      - name: Run shared quality contract
+        run: ./script/check
 
   build:
     name: Build ${{ matrix.label }}
@@ -206,19 +207,16 @@ jobs:
       - name: Install dependencies
         # The quality job runs the full lifecycle-script install plus lint,
         # typecheck, and tests. Artifact jobs only need dependencies available.
-        run: bun install --frozen-lockfile --ignore-scripts
-
-      - name: Align package versions to release version
-        run: node scripts/update-release-package-versions.ts "${{ needs.preflight.outputs.version }}"
+        run: ./script/bootstrap --ignore-scripts
 
       - name: Build desktop artifact
         shell: bash
         env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          CSC_LINK: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 || secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD || secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY_P8 || secrets.APPLE_API_KEY }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER_ID || secrets.APPLE_API_ISSUER }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -246,12 +244,12 @@ jobs:
 
           if [[ "${{ matrix.platform }}" == "mac" ]]; then
             if ! has_all "$CSC_LINK" "$CSC_KEY_PASSWORD"; then
-              echo "::error title=macOS release signing is required::Configure CSC_LINK and CSC_KEY_PASSWORD."
+              echo "::error title=macOS release signing is required::Configure MACOS_CERTIFICATE_P12_BASE64 and MACOS_CERTIFICATE_PASSWORD."
               exit 1
             fi
 
             if ! has_all "$APPLE_API_KEY" "$APPLE_API_KEY_ID" "$APPLE_API_ISSUER"; then
-              echo "::error title=macOS notarization is required::Configure APPLE_API_KEY, APPLE_API_KEY_ID, and APPLE_API_ISSUER."
+              echo "::error title=macOS notarization is required::Configure APPLE_API_KEY_P8, APPLE_API_KEY_ID, and APPLE_API_ISSUER_ID."
               exit 1
             fi
 
@@ -334,7 +332,7 @@ jobs:
 
   publish_cli:
     name: Publish CLI to npm
-    if: ${{ vars.CHITAURI_PUBLISH_CLI == '1' }}
+    if: ${{ vars.TEACODE_PUBLISH_CLI == '1' }}
     needs: [preflight, quality, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -361,10 +359,7 @@ jobs:
       - name: Install dependencies
         # The quality job validates lifecycle scripts; the publish job only
         # needs dependencies available to build the package.
-        run: bun install --frozen-lockfile --ignore-scripts
-
-      - name: Align package versions to release version
-        run: node scripts/update-release-package-versions.ts "${{ needs.preflight.outputs.version }}"
+        run: ./script/bootstrap --ignore-scripts
 
       - name: Build CLI package
         run: bun run build --filter=@t3tools/web --filter=t3
@@ -405,91 +400,19 @@ jobs:
             release-assets/latest-mac-x64.yml
           rm -f release-assets/latest-mac-x64.yml
 
+      - name: Generate release checksums
+        run: |
+          cd release-assets
+          shasum -a 256 * > SHA256SUMS.txt
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.preflight.outputs.tag }}
           target_commitish: ${{ needs.preflight.outputs.ref }}
-          name: Chitauri v${{ needs.preflight.outputs.version }}
+          name: TeaCode v${{ needs.preflight.outputs.version }}
           generate_release_notes: true
           prerelease: ${{ needs.preflight.outputs.is_prerelease }}
           make_latest: ${{ needs.preflight.outputs.make_latest }}
           files: ${{ needs.preflight.outputs.release_files }}
           fail_on_unmatched_files: true
-
-  finalize:
-    name: Finalize release
-    if: ${{ vars.CHITAURI_FINALIZE_RELEASE == '1' }}
-    needs: [preflight, release]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - id: app_token
-        name: Mint release app token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.RELEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: main
-          fetch-depth: 0
-          token: ${{ steps.app_token.outputs.token }}
-          persist-credentials: true
-
-      - id: app_bot
-        name: Resolve GitHub App bot identity
-        env:
-          GH_TOKEN: ${{ steps.app_token.outputs.token }}
-          APP_SLUG: ${{ steps.app_token.outputs.app-slug }}
-        run: |
-          user_id="$(gh api "/users/${APP_SLUG}[bot]" --jq .id)"
-          echo "name=${APP_SLUG}[bot]" >> "$GITHUB_OUTPUT"
-          echo "email=${user_id}+${APP_SLUG}[bot]@users.noreply.github.com" >> "$GITHUB_OUTPUT"
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: package.json
-
-      - id: update_versions
-        name: Update version strings
-        env:
-          RELEASE_VERSION: ${{ needs.preflight.outputs.version }}
-        run: node scripts/update-release-package-versions.ts "$RELEASE_VERSION" --github-output
-
-      - name: Format package.json files
-        if: steps.update_versions.outputs.changed == 'true'
-        run: bunx oxfmt apps/server/package.json apps/desktop/package.json apps/web/package.json packages/contracts/package.json
-
-      - name: Refresh lockfile
-        if: steps.update_versions.outputs.changed == 'true'
-        run: bun install --lockfile-only --ignore-scripts
-
-      - name: Commit and push version bump
-        if: steps.update_versions.outputs.changed == 'true'
-        shell: bash
-        env:
-          RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
-        run: |
-          if git diff --quiet -- apps/server/package.json apps/desktop/package.json apps/web/package.json packages/contracts/package.json bun.lock; then
-            echo "No version changes to commit."
-            exit 0
-          fi
-
-          git config user.name "${{ steps.app_bot.outputs.name }}"
-          git config user.email "${{ steps.app_bot.outputs.email }}"
-
-          git add apps/server/package.json apps/desktop/package.json apps/web/package.json packages/contracts/package.json bun.lock
-          git commit -m "chore(release): prepare $RELEASE_TAG"
-          git push origin HEAD:main

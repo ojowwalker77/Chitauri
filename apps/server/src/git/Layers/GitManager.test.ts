@@ -393,7 +393,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
               {
                 number: 13,
                 title: "Existing PR",
-                url: "https://github.com/pingdotgg/codething-mvp/pull/13",
+                url: "https://github.com/acme/widgets/pull/13",
                 baseRefName: "main",
                 headRefName: "feature/status-open-pr",
                 isDraft: true,
@@ -412,7 +412,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       expect(status.pr).toEqual({
         number: 13,
         title: "Existing PR",
-        url: "https://github.com/pingdotgg/codething-mvp/pull/13",
+        url: "https://github.com/acme/widgets/pull/13",
         baseBranch: "main",
         headBranch: "feature/status-open-pr",
         state: "open",
@@ -455,7 +455,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
                 {
                   number: 488,
                   title: "Rebase this PR on latest main",
-                  url: "https://github.com/pingdotgg/codething-mvp/pull/488",
+                  url: "https://github.com/acme/widgets/pull/488",
                   baseRefName: "main",
                   headRefName: "statemachine",
                   state: "OPEN",
@@ -471,7 +471,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         expect(status.pr).toEqual({
           number: 488,
           title: "Rebase this PR on latest main",
-          url: "https://github.com/pingdotgg/codething-mvp/pull/488",
+          url: "https://github.com/acme/widgets/pull/488",
           baseBranch: "main",
           headBranch: "statemachine",
           state: "open",
@@ -501,7 +501,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
               {
                 number: 22,
                 title: "Merged PR",
-                url: "https://github.com/pingdotgg/codething-mvp/pull/22",
+                url: "https://github.com/acme/widgets/pull/22",
                 baseRefName: "main",
                 headRefName: "feature/status-merged-pr",
                 state: "MERGED",
@@ -518,7 +518,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       expect(status.pr).toEqual({
         number: 22,
         title: "Merged PR",
-        url: "https://github.com/pingdotgg/codething-mvp/pull/22",
+        url: "https://github.com/acme/widgets/pull/22",
         baseBranch: "main",
         headBranch: "feature/status-merged-pr",
         state: "merged",
@@ -544,7 +544,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
               {
                 number: 45,
                 title: "Merged PR",
-                url: "https://github.com/pingdotgg/codething-mvp/pull/45",
+                url: "https://github.com/acme/widgets/pull/45",
                 baseRefName: "main",
                 headRefName: "feature/status-open-over-merged",
                 state: "MERGED",
@@ -554,7 +554,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
               {
                 number: 46,
                 title: "Open PR",
-                url: "https://github.com/pingdotgg/codething-mvp/pull/46",
+                url: "https://github.com/acme/widgets/pull/46",
                 baseRefName: "main",
                 headRefName: "feature/status-open-over-merged",
                 state: "OPEN",
@@ -570,7 +570,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       expect(status.pr).toEqual({
         number: 46,
         title: "Open PR",
-        url: "https://github.com/pingdotgg/codething-mvp/pull/46",
+        url: "https://github.com/acme/widgets/pull/46",
         baseBranch: "main",
         headBranch: "feature/status-open-over-merged",
         state: "open",
@@ -937,7 +937,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
                 {
                   number: 90,
                   title: "Create PR from default branch",
-                  url: "https://github.com/pingdotgg/codething-mvp/pull/90",
+                  url: "https://github.com/acme/widgets/pull/90",
                   baseRefName: "main",
                   headRefName: "feature/create-pr-from-default-branch",
                 },
@@ -1123,7 +1123,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
                 {
                   number: 77,
                   title: "Add no-upstream PR flow",
-                  url: "https://github.com/pingdotgg/codething-mvp/pull/77",
+                  url: "https://github.com/acme/widgets/pull/77",
                   baseRefName: "main",
                   headRefName: "feature/no-upstream-pr",
                 },
@@ -1230,7 +1230,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
                 {
                   number: 89,
                   title: "Create PR only",
-                  url: "https://github.com/pingdotgg/codething-mvp/pull/89",
+                  url: "https://github.com/acme/widgets/pull/89",
                   baseRefName: "main",
                   headRefName: "feature/create-pr-only",
                 },
@@ -1294,7 +1294,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       yield* runGit(repoDir, [
         "config",
         "remote.origin.url",
-        "git@github.com:pingdotgg/codething-mvp.git",
+        "git@github.com:acme/widgets.git",
       ]);
       yield* runGit(repoDir, ["config", "remote.origin.pushurl", originDir]);
       yield* runGit(repoDir, [
@@ -1344,7 +1344,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
               {
                 number: 42,
                 title: "Existing PR",
-                url: "https://github.com/pingdotgg/codething-mvp/pull/42",
+                url: "https://github.com/acme/widgets/pull/42",
                 baseRefName: "main",
                 headRefName: "feature/existing-pr",
               },
@@ -1375,7 +1375,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       yield* runGit(repoDir, [
         "config",
         "remote.origin.url",
-        "git@github.com:pingdotgg/codething-mvp.git",
+        "git@github.com:acme/widgets.git",
       ]);
 
       const { manager, ghCalls } = yield* makeManager({
@@ -1401,12 +1401,12 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
               {
                 number: 202,
                 title: "Correct repo PR",
-                url: "https://github.com/pingdotgg/codething-mvp/pull/202",
+                url: "https://github.com/acme/widgets/pull/202",
                 baseRefName: "main",
                 headRefName: "feature/collision",
                 isCrossRepository: false,
                 headRepository: {
-                  nameWithOwner: "pingdotgg/codething-mvp",
+                  nameWithOwner: "acme/widgets",
                 },
                 headRepositoryOwner: {
                   login: "pingdotgg",
@@ -1456,7 +1456,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
                 {
                   number: 142,
                   title: "Existing fork PR",
-                  url: "https://github.com/pingdotgg/codething-mvp/pull/142",
+                  url: "https://github.com/acme/widgets/pull/142",
                   baseRefName: "main",
                   headRefName: "statemachine",
                 },
@@ -1508,7 +1508,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
                 {
                   number: 41,
                   title: "Unrelated same-repo PR",
-                  url: "https://github.com/pingdotgg/codething-mvp/pull/41",
+                  url: "https://github.com/acme/widgets/pull/41",
                   baseRefName: "main",
                   headRefName: "statemachine",
                 },
@@ -1517,7 +1517,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
                 {
                   number: 142,
                   title: "Existing fork PR",
-                  url: "https://github.com/pingdotgg/codething-mvp/pull/142",
+                  url: "https://github.com/acme/widgets/pull/142",
                   baseRefName: "main",
                   headRefName: "statemachine",
                 },
@@ -1569,7 +1569,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
                 {
                   number: 142,
                   title: "Existing fork PR",
-                  url: "https://github.com/pingdotgg/codething-mvp/pull/142",
+                  url: "https://github.com/acme/widgets/pull/142",
                   baseRefName: "main",
                   headRefName: "statemachine",
                 },
@@ -1621,7 +1621,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
               {
                 number: 88,
                 title: "Add stacked git actions",
-                url: "https://github.com/pingdotgg/codething-mvp/pull/88",
+                url: "https://github.com/acme/widgets/pull/88",
                 baseRefName: "main",
                 headRefName: "feature-create-pr",
               },
@@ -1657,7 +1657,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       yield* runGit(repoDir, ["push", "-u", "origin", "feature/already-created"]);
       yield* runGit(repoDir, ["config", "branch.feature/already-created.gh-merge-base", "main"]);
 
-      const existingPrUrl = "https://github.com/pingdotgg/codething-mvp/pull/82";
+      const existingPrUrl = "https://github.com/acme/widgets/pull/82";
       const { manager, ghCalls } = yield* makeManager({
         ghScenario: {
           prListSequence: ["[]"],
@@ -1720,7 +1720,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
               {
                 number: 188,
                 title: "Add stacked git actions",
-                url: "https://github.com/pingdotgg/codething-mvp/pull/188",
+                url: "https://github.com/acme/widgets/pull/188",
                 baseRefName: "main",
                 headRefName: "statemachine",
               },
@@ -1833,7 +1833,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           pullRequest: {
             number: 42,
             title: "Resolve PR",
-            url: "https://github.com/pingdotgg/codething-mvp/pull/42",
+            url: "https://github.com/acme/widgets/pull/42",
             baseRefName: "main",
             headRefName: "feature/resolve-pr",
             state: "open",
@@ -1849,7 +1849,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       expect(result.pullRequest).toEqual({
         number: 42,
         title: "Resolve PR",
-        url: "https://github.com/pingdotgg/codething-mvp/pull/42",
+        url: "https://github.com/acme/widgets/pull/42",
         baseBranch: "main",
         headBranch: "feature/resolve-pr",
         state: "open",
@@ -1878,7 +1878,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           author: "codex-bot",
           body: "Avoid returning shims directly",
           path: "CursorAcpCommand.ts",
-          url: "https://github.com/pingdotgg/codething-mvp/pull/42#discussion_r11",
+          url: "https://github.com/acme/widgets/pull/42#discussion_r11",
           createdAt: "2026-07-01T10:00:00Z",
         },
       ];
@@ -1888,7 +1888,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           pullRequest: {
             number: 42,
             title: "Snapshot PR",
-            url: "https://github.enterprise.test/pingdotgg/codething-mvp/pull/42",
+            url: "https://github.enterprise.test/acme/widgets/pull/42",
             baseRefName: "main",
             headRefName: "feature/snapshot-pr",
             state: "open",
@@ -1914,7 +1914,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       );
       // Owner/repo come from the PR URL, not the local checkout's remotes.
       expect(ghCalls).toContain(
-        "api graphql reviewThreads github.enterprise.test/pingdotgg/codething-mvp#42",
+        "api graphql reviewThreads github.enterprise.test/acme/widgets#42",
       );
     }),
   );
@@ -1932,7 +1932,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           pullRequest: {
             number: 43,
             title: "Checks still visible",
-            url: "https://github.com/pingdotgg/codething-mvp/pull/43",
+            url: "https://github.com/acme/widgets/pull/43",
             baseRefName: "main",
             headRefName: "feature/checks-still-visible",
             state: "open",
@@ -1999,7 +1999,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           pullRequest: {
             number: 64,
             title: "Local PR",
-            url: "https://github.com/pingdotgg/codething-mvp/pull/64",
+            url: "https://github.com/acme/widgets/pull/64",
             baseRefName: "main",
             headRefName: "feature/pr-local",
             state: "open",
@@ -2041,7 +2041,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           pullRequest: {
             number: 77,
             title: "Worktree PR",
-            url: "https://github.com/pingdotgg/codething-mvp/pull/77",
+            url: "https://github.com/acme/widgets/pull/77",
             baseRefName: "main",
             headRefName: "feature/pr-worktree",
             state: "open",
@@ -2087,7 +2087,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           pullRequest: {
             number: 81,
             title: "Fork PR",
-            url: "https://github.com/pingdotgg/codething-mvp/pull/81",
+            url: "https://github.com/acme/widgets/pull/81",
             baseRefName: "main",
             headRefName: "feature/pr-fork",
             state: "open",
@@ -2150,7 +2150,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           pullRequest: {
             number: 82,
             title: "Local Fork PR",
-            url: "https://github.com/pingdotgg/codething-mvp/pull/82",
+            url: "https://github.com/acme/widgets/pull/82",
             baseRefName: "main",
             headRefName: "feature/pr-local-fork",
             state: "open",
@@ -2208,7 +2208,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           pullRequest: {
             number: 642,
             title: "fix: use commit as the default git action without origin",
-            url: "https://github.com/pingdotgg/t3code/pull/642",
+            url: "https://github.com/acme/widgets/pull/642",
             baseRefName: "main",
             headRefName: "fix/git-action-default-without-origin",
             state: "open",
@@ -2255,7 +2255,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           pullRequest: {
             number: 78,
             title: "Existing worktree PR",
-            url: "https://github.com/pingdotgg/codething-mvp/pull/78",
+            url: "https://github.com/acme/widgets/pull/78",
             baseRefName: "main",
             headRefName: "feature/pr-existing-worktree",
             state: "open",
@@ -2300,7 +2300,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
             pullRequest: {
               number: 91,
               title: "Fork main PR",
-              url: "https://github.com/pingdotgg/codething-mvp/pull/91",
+              url: "https://github.com/acme/widgets/pull/91",
               baseRefName: "main",
               headRefName: "main",
               state: "open",
@@ -2361,7 +2361,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
             pullRequest: {
               number: 92,
               title: "Fork main overwrite PR",
-              url: "https://github.com/pingdotgg/codething-mvp/pull/92",
+              url: "https://github.com/acme/widgets/pull/92",
               baseRefName: "main",
               headRefName: "main",
               state: "open",
@@ -2420,7 +2420,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           pullRequest: {
             number: 83,
             title: "Reused Fork PR",
-            url: "https://github.com/pingdotgg/codething-mvp/pull/83",
+            url: "https://github.com/acme/widgets/pull/83",
             baseRefName: "main",
             headRefName: "feature/pr-reused-fork",
             state: "open",
@@ -2463,7 +2463,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           pullRequest: {
             number: 79,
             title: "Root-only PR",
-            url: "https://github.com/pingdotgg/codething-mvp/pull/79",
+            url: "https://github.com/acme/widgets/pull/79",
             baseRefName: "main",
             headRefName: "feature/pr-root-only",
             state: "open",

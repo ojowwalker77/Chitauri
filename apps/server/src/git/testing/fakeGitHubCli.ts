@@ -109,7 +109,7 @@ export function createGitHubCliWithFakeGh(scenario: FakeGhScenario = {}): {
       }
       return Effect.succeed({
         stdout:
-          (scenario.createdPrUrl ?? "https://github.com/pingdotgg/codething-mvp/pull/101") + "\n",
+          (scenario.createdPrUrl ?? "https://github.com/acme/widgets/pull/101") + "\n",
         stderr: "",
         code: 0,
         signal: null,
@@ -121,7 +121,7 @@ export function createGitHubCliWithFakeGh(scenario: FakeGhScenario = {}): {
       const pullRequest: FakePullRequest = scenario.pullRequest ?? {
         number: 101,
         title: "Pull request",
-        url: "https://github.com/pingdotgg/codething-mvp/pull/101",
+        url: "https://github.com/acme/widgets/pull/101",
         baseRefName: "main",
         headRefName: "feature/pull-request",
         state: "open",

@@ -603,7 +603,7 @@ async function fetchLocalPageTitleResponse(
     signal: AbortSignal.timeout(PAGE_TITLE_FETCH_TIMEOUT_MS),
     headers: {
       Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1",
-      "User-Agent": "ChitauriLocalServerMonitor/1.0",
+      "User-Agent": "TeaCodeLocalServerMonitor/1.0",
     },
   });
   if (response.status >= 300 && response.status < 400) {
@@ -809,7 +809,7 @@ function toServerProcess(
     ports,
     addresses,
     isStoppable,
-    ...(isStoppable ? {} : { stopDisabledReason: "Chitauri cannot signal this process." }),
+    ...(isStoppable ? {} : { stopDisabledReason: "TeaCode cannot signal this process." }),
   };
 }
 
@@ -985,7 +985,7 @@ export async function stopLocalServer(
     return {
       pid: input.pid,
       stopped: false,
-      message: target.stopDisabledReason ?? "Chitauri cannot stop this process.",
+      message: target.stopDisabledReason ?? "TeaCode cannot stop this process.",
     };
   }
 

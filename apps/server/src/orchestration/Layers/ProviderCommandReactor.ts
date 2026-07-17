@@ -1049,7 +1049,7 @@ const make = Effect.gen(function* () {
             }
 
             // Claude cannot continue from a missing native session; clear the
-            // dead cursor and replay once with Chitauri transcript context.
+            // dead cursor and replay once with TeaCode transcript context.
             yield* clearStaleProviderResumeState({
               threadId: input.threadId,
               cause: error,

@@ -40,19 +40,19 @@ const runResolveCanonicalWorkspaceRoots = (input: {
   Effect.runPromise(resolveCanonicalWorkspaceRoots(input).pipe(Effect.provide(NodeServices.layer)));
 
 describe("resolveDefaultChatWorkspaceRoot", () => {
-  it("places the managed chat workspace under Documents/Chitauri on macOS and Linux", () => {
+  it("places the managed chat workspace under Documents/TeaCode on macOS and Linux", () => {
     expect(
       resolveDefaultChatWorkspaceRoot({
         homeDir: "/Users/tester",
         platform: "darwin",
       }),
-    ).toBe("/Users/tester/Documents/Chitauri");
+    ).toBe("/Users/tester/Documents/TeaCode");
     expect(
       resolveDefaultChatWorkspaceRoot({
         homeDir: "/home/tester",
         platform: "linux",
       }),
-    ).toBe("/home/tester/Documents/Chitauri");
+    ).toBe("/home/tester/Documents/TeaCode");
   });
 
   it("uses Windows separators when deriving the managed chat workspace on Windows", () => {
@@ -61,7 +61,7 @@ describe("resolveDefaultChatWorkspaceRoot", () => {
         homeDir: "C:\\Users\\tester",
         platform: "win32",
       }),
-    ).toBe("C:\\Users\\tester\\Documents\\Chitauri");
+    ).toBe("C:\\Users\\tester\\Documents\\TeaCode");
   });
 
   it("defaults to the current process platform when no platform is supplied", () => {
@@ -73,7 +73,7 @@ describe("resolveDefaultChatWorkspaceRoot", () => {
 
     try {
       expect(resolveDefaultChatWorkspaceRoot({ homeDir: "C:\\Users\\tester" })).toBe(
-        "C:\\Users\\tester\\Documents\\Chitauri",
+        "C:\\Users\\tester\\Documents\\TeaCode",
       );
     } finally {
       Object.defineProperty(process, "platform", originalPlatformDescriptor!);
@@ -99,7 +99,7 @@ describe("resolveCanonicalWorkspaceRoots", () => {
     // chatWorkspaceRoot doesn't exist yet under the resolved home, so it must be re-derived
     // from the canonicalized (symlink-free)
     // home rather than the raw, symlinked input.
-    expect(result.chatWorkspaceRoot).toBe(path.join(expectedHomeDir, "Documents", "Chitauri"));
+    expect(result.chatWorkspaceRoot).toBe(path.join(expectedHomeDir, "Documents", "TeaCode"));
   });
 
   it("canonicalizes the nearest existing ancestor when the workspace root itself does not exist yet", async () => {
@@ -110,7 +110,7 @@ describe("resolveCanonicalWorkspaceRoots", () => {
     fs.mkdirSync(homeDir, { recursive: true });
     // Symlink ~/Documents to a real directory elsewhere, matching the bug
     // report scenario (e.g. iCloud-managed Documents on macOS). Neither
-    // Chitauri/ does not exist yet underneath it.
+    // TeaCode/ does not exist yet underneath it.
     const symlinkedDocuments = path.join(homeDir, "Documents");
     fs.symlinkSync(realDocuments, symlinkedDocuments, "dir");
 
@@ -121,7 +121,7 @@ describe("resolveCanonicalWorkspaceRoots", () => {
 
     const expectedDocuments = fs.realpathSync(realDocuments);
     expect(result.homeDir).toBe(fs.realpathSync(homeDir));
-    expect(result.chatWorkspaceRoot).toBe(path.join(expectedDocuments, "Chitauri"));
+    expect(result.chatWorkspaceRoot).toBe(path.join(expectedDocuments, "TeaCode"));
     expect(fs.existsSync(result.chatWorkspaceRoot)).toBe(false);
 
     // Once the lazily-created directory shows up on disk, realpath must agree

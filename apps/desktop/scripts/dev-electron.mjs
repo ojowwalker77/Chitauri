@@ -56,7 +56,7 @@ function listStaleComputerUsePids() {
     return [];
   }
 
-  const result = spawnSync("pgrep", ["-fal", "Chitauri \\(Dev\\).*(computerUseMcp\\.mjs mcp)"], {
+  const result = spawnSync("pgrep", ["-fal", "TeaCode \\(Dev\\).*(computerUseMcp\\.mjs mcp)"], {
     encoding: "utf8",
   });
   const output = typeof result.stdout === "string" ? result.stdout.trim() : "";
@@ -97,7 +97,7 @@ function cleanupStaleComputerUseApps() {
   }
 
   console.error(
-    `[desktop-dev] Cleaning up ${stalePids.length} stale Chitauri (Dev) Computer Use helper process${stalePids.length === 1 ? "" : "es"} from other worktrees.`,
+    `[desktop-dev] Cleaning up ${stalePids.length} stale TeaCode (Dev) Computer Use helper process${stalePids.length === 1 ? "" : "es"} from other worktrees.`,
   );
 
   for (const pid of stalePids) {
@@ -118,7 +118,7 @@ function warnIfAlphaAppRunning() {
 
   const result = spawnSync(
     "pgrep",
-    ["-fal", "/Applications/Chitauri\\.app/Contents/MacOS/Chitauri"],
+    ["-fal", "/Applications/TeaCode\\.app/Contents/MacOS/TeaCode"],
     {
       encoding: "utf8",
     },
@@ -129,7 +129,7 @@ function warnIfAlphaAppRunning() {
   }
 
   console.error(
-    "[desktop-dev] Chitauri is still running. Close it before testing voice in Chitauri (Dev), or you may be looking at the wrong app/runtime.",
+    "[desktop-dev] TeaCode is still running. Close it before testing voice in TeaCode (Dev), or you may be looking at the wrong app/runtime.",
   );
   console.error(output);
 }

@@ -43,12 +43,12 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.deepStrictEqual(linux.asarUnpack, ["node_modules/node-pty/**"]);
     assert.deepStrictEqual(linux.linux, {
       target: ["AppImage"],
-      executableName: "chitauri",
+      executableName: "teacode",
       icon: "icon.png",
       category: "Development",
       desktop: {
         entry: {
-          StartupWMClass: "chitauri",
+          StartupWMClass: "teacode",
         },
       },
     });
@@ -103,11 +103,8 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.ok(issue?.includes("Build linux/x64 on a matching Linux host"));
   });
 
-  it("keeps separate macOS sources for solid and rounded icons", () => {
-    assert.equal(BRAND_ASSET_PATHS.productionMacIconPng, "assets/prod/black-macos-1024.png");
-    assert.equal(
-      BRAND_ASSET_PATHS.productionMacLegacyIconPng,
-      "assets/prod/black-macos-legacy-1024.png",
-    );
+  it("uses the validated TeaCode production icon sources", () => {
+    assert.equal(BRAND_ASSET_PATHS.productionMacIconPng, "assets/prod/teacode-master-1024.png");
+    assert.equal(BRAND_ASSET_PATHS.productionMacIconIcns, "assets/prod/teacode.icns");
   });
 });

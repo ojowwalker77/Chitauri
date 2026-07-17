@@ -4101,7 +4101,7 @@ export default function Sidebar() {
   }, [discoveredScriptTargetsByProjectId, standardProjects]);
   projectRunCommandByProjectIdRef.current = projectRunCommandByProjectId;
   // Keep manual server attribution alive without repeating the expensive
-  // port/process scan while no Chitauri-owned run needs near-real-time status.
+  // port/process scan while no TeaCode-owned run needs near-real-time status.
   const hasActiveProjectRun = useMemo(
     () => Object.keys(projectRunsByProjectId).length > 0,
     [projectRunsByProjectId],
@@ -4115,7 +4115,7 @@ export default function Sidebar() {
   const projectRunServerByProjectId = useMemo(() => {
     const servers = projectRunLocalServersQuery.data?.servers ?? [];
     const serverByProjectId = new Map<ProjectId, ServerLocalServerProcess>();
-    // 1. Authoritative: Chitauri-tracked runs matched by pid/ppid.
+    // 1. Authoritative: TeaCode-tracked runs matched by pid/ppid.
     for (const run of Object.values(projectRunsByProjectId)) {
       const server = findTrackedProjectRunServer(run, servers);
       if (server) {
@@ -4123,7 +4123,7 @@ export default function Sidebar() {
       }
     }
     // 2. Fallback: attribute remaining servers to a project by cwd, so dev
-    //    servers started outside Chitauri still light up the running indicator.
+    //    servers started outside TeaCode still light up the running indicator.
     for (const server of servers) {
       if (!server.cwd) {
         continue;
@@ -5455,8 +5455,8 @@ export default function Sidebar() {
     const projectFolderIconClassName = isProjectPinned ? "opacity-0" : undefined;
     const projectRun = projectRunsByProjectId[project.id] ?? null;
     const projectRunServer = projectRunServerByProjectId.get(project.id) ?? null;
-    // A project reads as "running" when Chitauri tracks a run for it or when a
-    // local server (possibly started outside Chitauri) is attributed by cwd.
+    // A project reads as "running" when TeaCode tracks a run for it or when a
+    // local server (possibly started outside TeaCode) is attributed by cwd.
     const isProjectRunning = projectRun !== null || projectRunServer !== null;
     // The "open dev server" affordance now lives in the project context menu, so
     // the hover toolbar always reserves space for the three thread actions. The
@@ -6133,7 +6133,7 @@ export default function Sidebar() {
             toastManager.add({
               type: "info",
               title: "Preparing update",
-              description: `Chitauri is preparing version ${nextState.availableVersion ?? "available"} in the background.`,
+              description: `TeaCode is preparing version ${nextState.availableVersion ?? "available"} in the background.`,
             });
             return;
           }
@@ -6142,7 +6142,7 @@ export default function Sidebar() {
             toastManager.add({
               type: "info",
               title: "Preparing update",
-              description: "Chitauri is downloading the update in the background.",
+              description: "TeaCode is downloading the update in the background.",
             });
             return;
           }
@@ -6160,7 +6160,7 @@ export default function Sidebar() {
             toastManager.add({
               type: "info",
               title: "You're up to date",
-              description: `Chitauri ${nextState.currentVersion} is already the newest version.`,
+              description: `TeaCode ${nextState.currentVersion} is already the newest version.`,
             });
             return;
           }

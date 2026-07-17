@@ -21,7 +21,7 @@ export type ProjectHoverCardContentProps = {
   name: string;
   isPinned: boolean;
   chatCount: number;
-  /** Display path (already home-abbreviated, e.g. ~/Developer/Chitauri). */
+  /** Display path (already home-abbreviated, e.g. ~/Developer/TeaCode). */
   path: string;
   onTogglePin: () => void;
   onEditProject: () => void;

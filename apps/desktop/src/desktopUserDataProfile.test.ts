@@ -11,16 +11,18 @@ import {
 } from "./desktopUserDataProfile";
 
 describe("desktopUserDataProfile", () => {
-  it("resolves Chitauri profile names without reusing legacy profile paths", () => {
+  it("resolves TeaCode profile names while retaining Chitauri migration sources", () => {
     const appDataBase = "/Users/tester/Library/Application Support";
 
     expect(resolveDesktopUserDataPath({ appDataBase, isDevelopment: true })).toBe(
-      "/Users/tester/Library/Application Support/chitauri-dev",
+      "/Users/tester/Library/Application Support/teacode-dev",
     );
     expect(resolveDesktopUserDataPath({ appDataBase, isDevelopment: false })).toBe(
-      "/Users/tester/Library/Application Support/chitauri",
+      "/Users/tester/Library/Application Support/teacode",
     );
     expect(resolveLegacyDesktopUserDataPaths({ appDataBase, isDevelopment: true })).toEqual([
+      "/Users/tester/Library/Application Support/chitauri-dev",
+      "/Users/tester/Library/Application Support/Chitauri (Dev)",
       "/Users/tester/Library/Application Support/synara-dev",
       "/Users/tester/Library/Application Support/Synara (Dev)",
       "/Users/tester/Library/Application Support/dpcode-dev",
@@ -39,11 +41,11 @@ describe("desktopUserDataProfile", () => {
     ).toBe("/tmp/xdg");
   });
 
-  it("seeds local persistent renderer data into the new Chitauri profile once", () => {
+  it("seeds local persistent renderer data into the new TeaCode profile once", () => {
     const tempDir = FS.mkdtempSync(Path.join(OS.tmpdir(), "synara-userdata-profile-"));
     try {
       const legacyPath = Path.join(tempDir, "t3code-dev");
-      const targetPath = Path.join(tempDir, "chitauri-dev");
+      const targetPath = Path.join(tempDir, "teacode-dev");
       FS.mkdirSync(Path.join(legacyPath, "Local Storage", "leveldb"), { recursive: true });
       FS.writeFileSync(
         Path.join(legacyPath, "Local Storage", "leveldb", "000003.log"),

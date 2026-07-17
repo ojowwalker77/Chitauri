@@ -2,8 +2,8 @@
  * Sanitize an arbitrary string into a valid, lowercase git branch fragment.
  * Strips quotes, collapses separators, limits to 64 chars.
  */
-export const WORKTREE_BRANCH_PREFIX = "chitauri";
-const LEGACY_WORKTREE_BRANCH_PREFIXES = ["synara", "dpcode", "t3code"] as const;
+export const WORKTREE_BRANCH_PREFIX = "teacode";
+const LEGACY_WORKTREE_BRANCH_PREFIXES = ["chitauri", "synara", "dpcode", "t3code"] as const;
 const TEMP_WORKTREE_BRANCH_PATTERN = new RegExp(
   `^(${[WORKTREE_BRANCH_PREFIX, ...LEGACY_WORKTREE_BRANCH_PREFIXES].join("|")})\\/[0-9a-f]{8}$`,
 );
@@ -39,7 +39,7 @@ export function sanitizeFeatureBranchName(raw: string): string {
 }
 
 const AUTO_FEATURE_BRANCH_FALLBACK = "feature/update";
-const CHITAURI_BRANCH_FALLBACK = "update";
+const TEACODE_BRANCH_FALLBACK = "update";
 
 /**
  * Resolve a unique `feature/…` branch name that doesn't collide with
@@ -67,19 +67,20 @@ export function resolveAutoFeatureBranchName(
   return `${resolvedBase}-${suffix}`;
 }
 
-export function buildChitauriBranchName(preferredBranch?: string | null): string {
+export function buildTeaCodeBranchName(preferredBranch?: string | null): string {
   const normalizedExisting =
-    preferredBranch?.trim().replace(/^(codex|t3code|dpcode|synara|chitauri)\//i, "") ?? "";
+    preferredBranch?.trim().replace(/^(codex|teacode|chitauri|t3code|dpcode|synara)\//i, "") ??
+    "";
   return `${WORKTREE_BRANCH_PREFIX}/${sanitizeBranchFragment(
-    normalizedExisting || CHITAURI_BRANCH_FALLBACK,
+    normalizedExisting || TEACODE_BRANCH_FALLBACK,
   )}`;
 }
 
-export function resolveUniqueChitauriBranchName(
+export function resolveUniqueTeaCodeBranchName(
   existingBranchNames: readonly string[],
   preferredBranch?: string | null,
 ): string {
-  const resolvedBase = buildChitauriBranchName(preferredBranch);
+  const resolvedBase = buildTeaCodeBranchName(preferredBranch);
   const existingNames = new Set(existingBranchNames.map((branch) => branch.toLowerCase()));
 
   if (!existingNames.has(resolvedBase)) {
@@ -93,6 +94,11 @@ export function resolveUniqueChitauriBranchName(
 
   return `${resolvedBase}-${suffix}`;
 }
+
+/** @deprecated Use buildTeaCodeBranchName. */
+export const buildChitauriBranchName = buildTeaCodeBranchName;
+/** @deprecated Use resolveUniqueTeaCodeBranchName. */
+export const resolveUniqueChitauriBranchName = resolveUniqueTeaCodeBranchName;
 
 export function isTemporaryWorktreeBranch(branch: string): boolean {
   return TEMP_WORKTREE_BRANCH_PATTERN.test(branch.trim().toLowerCase());

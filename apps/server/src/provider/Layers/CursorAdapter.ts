@@ -120,7 +120,7 @@ const ACP_PLAN_MODE_ALIASES = ["plan", "architect"];
 const ACP_IMPLEMENT_MODE_ALIASES = ["code", "agent", "default", "chat", "implement"];
 const ACP_APPROVAL_MODE_ALIASES = ["ask"];
 const CURSOR_PLAN_MODE_PROMPT_PREFIX = [
-  "Chitauri Cursor plan mode is active.",
+  "TeaCode Cursor plan mode is active.",
   "Do not implement or mutate files in this turn.",
   "Do not ask follow-up questions or wait for confirmation; if scope is ambiguous, choose a reasonable default and state the assumption in the plan.",
   "When ready, create the final implementation plan.",
@@ -715,7 +715,7 @@ export function makeCursorAdapter(
             childProcessSpawner,
             cwd,
             ...(resumeSessionId ? { resumeSessionId } : {}),
-            clientInfo: { name: "Chitauri", version: "0.0.0" },
+            clientInfo: { name: "TeaCode", version: "0.0.0" },
             ...acpNativeLoggers,
           }).pipe(
             Effect.provideService(Scope.Scope, sessionScope),
@@ -1550,7 +1550,7 @@ export function makeCursorAdapter(
           cursorSettings: effectiveAcpSettings,
           childProcessSpawner,
           cwd: process.cwd(),
-          clientInfo: { name: "Chitauri", version: "0.0.0" },
+          clientInfo: { name: "TeaCode", version: "0.0.0" },
         });
         const started = yield* runtime.start();
         const models = yield* fetchCursorAcpModelDescriptors(runtime, started.sessionId);

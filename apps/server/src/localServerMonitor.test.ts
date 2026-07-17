@@ -77,7 +77,7 @@ describe("localServerMonitor", () => {
     );
   });
 
-  it("keeps dev servers and ignores Electron/Chitauri-style application listeners", () => {
+  it("keeps dev servers and ignores Electron/TeaCode-style application listeners", () => {
     expect(
       isLikelyDevServerProcess({
         command: "node",
@@ -88,14 +88,14 @@ describe("localServerMonitor", () => {
     expect(
       isIgnoredLocalServerProcess({
         command: "Electron",
-        args: "/Applications/Chitauri.app/Contents/MacOS/Chitauri",
+        args: "/Applications/TeaCode.app/Contents/MacOS/TeaCode",
         ports: [61449],
       }),
     ).toBe(true);
     expect(
       isIgnoredLocalServerProcess({
-        command: "Chitauri",
-        args: "/Applications/Chitauri.app/Contents/MacOS/Chitauri",
+        command: "TeaCode",
+        args: "/Applications/TeaCode.app/Contents/MacOS/TeaCode",
         ports: [61449],
       }),
     ).toBe(true);

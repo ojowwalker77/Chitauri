@@ -706,7 +706,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                   <p className="mt-1 text-xs text-muted-foreground">
                     {showManualImport
                       ? "Resume a provider session when it does not appear in desktop history."
-                      : "Continue a Codex or Claude conversation in Chitauri."}
+                      : "Continue a Codex or Claude conversation in TeaCode."}
                   </p>
                 </div>
               </div>
