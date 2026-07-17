@@ -31,12 +31,8 @@ export function migrateTeaCodeLocalStorageKeys(): void {
       }
     }
     legacyKeys.sort((left, right) => {
-      const leftPriority = LEGACY_STORAGE_PREFIXES.findIndex((prefix) =>
-        left.startsWith(prefix),
-      );
-      const rightPriority = LEGACY_STORAGE_PREFIXES.findIndex((prefix) =>
-        right.startsWith(prefix),
-      );
+      const leftPriority = LEGACY_STORAGE_PREFIXES.findIndex((prefix) => left.startsWith(prefix));
+      const rightPriority = LEGACY_STORAGE_PREFIXES.findIndex((prefix) => right.startsWith(prefix));
       return leftPriority - rightPriority;
     });
 

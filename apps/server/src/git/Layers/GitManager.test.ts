@@ -1291,11 +1291,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       yield* runGit(repoDir, ["remote", "add", "fork", forkDir]);
       yield* runGit(repoDir, ["push", "origin", "main"]);
       yield* runGit(repoDir, ["push", "-u", "fork", "main"]);
-      yield* runGit(repoDir, [
-        "config",
-        "remote.origin.url",
-        "git@github.com:acme/widgets.git",
-      ]);
+      yield* runGit(repoDir, ["config", "remote.origin.url", "git@github.com:acme/widgets.git"]);
       yield* runGit(repoDir, ["config", "remote.origin.pushurl", originDir]);
       yield* runGit(repoDir, [
         "config",
@@ -1372,11 +1368,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       const originDir = yield* createBareRemote();
       yield* runGit(repoDir, ["remote", "add", "origin", originDir]);
       yield* runGit(repoDir, ["push", "-u", "origin", "feature/collision"]);
-      yield* runGit(repoDir, [
-        "config",
-        "remote.origin.url",
-        "git@github.com:acme/widgets.git",
-      ]);
+      yield* runGit(repoDir, ["config", "remote.origin.url", "git@github.com:acme/widgets.git"]);
 
       const { manager, ghCalls } = yield* makeManager({
         ghScenario: {
@@ -1913,9 +1905,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         `pr view 42 --json ${PULL_REQUEST_SUMMARY_JSON_FIELDS},statusCheckRollup`,
       );
       // Owner/repo come from the PR URL, not the local checkout's remotes.
-      expect(ghCalls).toContain(
-        "api graphql reviewThreads github.enterprise.test/acme/widgets#42",
-      );
+      expect(ghCalls).toContain("api graphql reviewThreads github.enterprise.test/acme/widgets#42");
     }),
   );
 

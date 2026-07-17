@@ -59,8 +59,7 @@ export function resolveConfiguredBrowserUsePipePath(
   platform = process.platform,
 ): string {
   const configured =
-    env[TEACODE_BROWSER_USE_PIPE_ENV]?.trim() ||
-    env[LEGACY_CHITAURI_BROWSER_USE_PIPE_ENV]?.trim();
+    env[TEACODE_BROWSER_USE_PIPE_ENV]?.trim() || env[LEGACY_CHITAURI_BROWSER_USE_PIPE_ENV]?.trim();
   return configured || resolveDefaultBrowserUsePipePath(platform);
 }
 

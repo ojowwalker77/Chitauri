@@ -69,8 +69,7 @@ export function resolveAutoFeatureBranchName(
 
 export function buildTeaCodeBranchName(preferredBranch?: string | null): string {
   const normalizedExisting =
-    preferredBranch?.trim().replace(/^(codex|teacode|chitauri|t3code|dpcode|synara)\//i, "") ??
-    "";
+    preferredBranch?.trim().replace(/^(codex|teacode|chitauri|t3code|dpcode|synara)\//i, "") ?? "";
   return `${WORKTREE_BRANCH_PREFIX}/${sanitizeBranchFragment(
     normalizedExisting || TEACODE_BRANCH_FALLBACK,
   )}`;

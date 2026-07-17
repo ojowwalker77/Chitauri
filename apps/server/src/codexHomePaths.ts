@@ -35,8 +35,7 @@ export function resolveChitauriCodexHomeOverlayPath(
   sourceHomePath: string,
 ): string {
   const runtimeHome = env.TEACODE_HOME?.trim() || env.CHITAURI_HOME?.trim();
-  const overlayRoot =
-    runtimeHome || path.join(path.dirname(sourceHomePath), ".teacode", "runtime");
+  const overlayRoot = runtimeHome || path.join(path.dirname(sourceHomePath), ".teacode", "runtime");
   return path.join(overlayRoot, CHITAURI_CODEX_HOME_OVERLAY_DIR);
 }
 

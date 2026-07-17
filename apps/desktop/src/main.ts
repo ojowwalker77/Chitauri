@@ -770,7 +770,9 @@ function resolveAboutCommitHash(): string | null {
     return aboutCommitHashCache;
   }
 
-  const envCommitHash = normalizeCommitHash(readTeaCodeEnvironmentValue(process.env, "COMMIT_HASH"));
+  const envCommitHash = normalizeCommitHash(
+    readTeaCodeEnvironmentValue(process.env, "COMMIT_HASH"),
+  );
   if (envCommitHash) {
     aboutCommitHashCache = envCommitHash;
     return aboutCommitHashCache;

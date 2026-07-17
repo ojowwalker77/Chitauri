@@ -116,7 +116,11 @@ export function seedDesktopUserDataProfileFromLegacy(input: {
         force: false,
       });
     }
-    const teaCodeBrowserPartitionPath = Path.join(input.targetPath, "Partitions", "teacode-browser");
+    const teaCodeBrowserPartitionPath = Path.join(
+      input.targetPath,
+      "Partitions",
+      "teacode-browser",
+    );
     const legacyBrowserPartitionPath = ["chitauri-browser", "synara-browser"]
       .map((name) => Path.join(input.targetPath, "Partitions", name))
       .find((candidate) => FS.existsSync(candidate));

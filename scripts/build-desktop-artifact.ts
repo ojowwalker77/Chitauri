@@ -884,9 +884,7 @@ const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
     Flag.optional,
   ),
   mockUpdateServerPort: Flag.string("mock-update-server-port").pipe(
-    Flag.withDescription(
-      "Mock update server port (env: TEACODE_DESKTOP_MOCK_UPDATE_SERVER_PORT).",
-    ),
+    Flag.withDescription("Mock update server port (env: TEACODE_DESKTOP_MOCK_UPDATE_SERVER_PORT)."),
     Flag.optional,
   ),
 }).pipe(

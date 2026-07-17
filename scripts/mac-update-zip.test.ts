@@ -77,8 +77,7 @@ describe("mac-update-zip", () => {
     );
 
     assert.throws(
-      () =>
-        resolveSingleMacUpdateZipFileName(["TeaCode-0.1.5-arm64.zip", "TeaCode-0.1.5-x64.zip"]),
+      () => resolveSingleMacUpdateZipFileName(["TeaCode-0.1.5-arm64.zip", "TeaCode-0.1.5-x64.zip"]),
       /Expected one macOS update zip artifact/,
     );
   });

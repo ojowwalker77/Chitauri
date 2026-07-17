@@ -5,9 +5,7 @@
 
 import { defineConfig } from "tsdown";
 
-const sourcemapEnv = (
-  process.env.TEACODE_SERVER_SOURCEMAP ?? process.env.CHITAURI_SERVER_SOURCEMAP
-)
+const sourcemapEnv = (process.env.TEACODE_SERVER_SOURCEMAP ?? process.env.CHITAURI_SERVER_SOURCEMAP)
   ?.trim()
   .toLowerCase();
 const buildSourcemap = sourcemapEnv === "1" || sourcemapEnv === "true";

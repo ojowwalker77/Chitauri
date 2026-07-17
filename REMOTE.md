@@ -8,13 +8,13 @@ The TeaCode CLI accepts the following configuration options, available either as
 
 | CLI flag                | Env var               | Notes                              |
 | ----------------------- | --------------------- | ---------------------------------- |
-| `--mode <web\|desktop>` | `TEACODE_MODE`       | Runtime mode.                      |
-| `--port <number>`       | `TEACODE_PORT`       | HTTP/WebSocket port.               |
-| `--host <address>`      | `TEACODE_HOST`       | Bind interface/address.            |
-| `--home-dir <path>`     | `TEACODE_HOME`       | Base directory.                    |
+| `--mode <web\|desktop>` | `TEACODE_MODE`        | Runtime mode.                      |
+| `--port <number>`       | `TEACODE_PORT`        | HTTP/WebSocket port.               |
+| `--host <address>`      | `TEACODE_HOST`        | Bind interface/address.            |
+| `--home-dir <path>`     | `TEACODE_HOME`        | Base directory.                    |
 | `--dev-url <url>`       | `VITE_DEV_SERVER_URL` | Dev web URL redirect/proxy target. |
-| `--no-browser`          | `TEACODE_NO_BROWSER` | Disable auto-open browser.         |
-| `--auth-token <token>`  | `TEACODE_AUTH_TOKEN` | WebSocket auth token.              |
+| `--no-browser`          | `TEACODE_NO_BROWSER`  | Disable auto-open browser.         |
+| `--auth-token <token>`  | `TEACODE_AUTH_TOKEN`  | WebSocket auth token.              |
 
 > TIP: Use the `--help` flag to see all available options and their descriptions.
 

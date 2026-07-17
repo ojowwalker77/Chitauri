@@ -108,8 +108,7 @@ export function createGitHubCliWithFakeGh(scenario: FakeGhScenario = {}): {
         return Effect.fail(scenario.createPullRequestError);
       }
       return Effect.succeed({
-        stdout:
-          (scenario.createdPrUrl ?? "https://github.com/acme/widgets/pull/101") + "\n",
+        stdout: (scenario.createdPrUrl ?? "https://github.com/acme/widgets/pull/101") + "\n",
         stderr: "",
         code: 0,
         signal: null,
