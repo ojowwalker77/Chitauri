@@ -184,6 +184,15 @@ const WORK_ROW_MUTED_HOVER_TONE: Record<"tool-row" | "file-row", string> = {
   "file-row":
     "text-muted-foreground/70 transition-colors group-hover/file-row:text-foreground group-focus-visible/file-row:text-foreground",
 };
+// Ledger section eyebrow + numbered sequence gutter. Single source so every
+// grouped section (Explore/Modify/Run/Status/…) and its rows render identically
+// and — critically — legibly: readable contrast instead of the near-invisible
+// sub-10px / <40%-opacity treatment they used to carry. Font sizes are supplied
+// by the app typography scale so they still honor the user's font-size setting.
+const LEDGER_SECTION_EYEBROW_CLASS =
+  "flex items-center gap-2 px-2.5 pb-1 font-chat-code font-medium tracking-[0.05em] text-muted-foreground/75 uppercase";
+const LEDGER_SECTION_COUNT_CLASS = "tabular-nums text-muted-foreground/45";
+const LEDGER_SEQUENCE_CLASS = "font-chat-code leading-5 tabular-nums text-muted-foreground/50";
 // How long a jumped-to message keeps its highlight tint before fading back out.
 const JUMP_HIGHLIGHT_DURATION_MS = 1200;
 const MARKER_FINE_SCROLL_RETRY_TIMEOUT_MS = 900;
@@ -1000,6 +1009,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               />
               <WorkLedgerSections
                 entries={visibleLedgerEntries}
+                metaFontSizePx={appTypographyScale.uiXsPx}
                 renderEntry={({ entry: workEntry }) => (
                   <SimpleWorkEntryRow
                     key={`work-row:${workEntry.id}`}
@@ -1382,6 +1392,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               <div key={keyPrefix}>
                 <WorkLedgerSections
                   entries={collapsedLedgerEntries}
+                  metaFontSizePx={appTypographyScale.uiXsPx}
                   renderEntry={renderLedgerWorkEntry}
                 />
                 {collapsedHasGenericFileChange && turnSummary ? (
@@ -1521,6 +1532,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     />
                     <WorkLedgerSections
                       entries={visibleRenderableWorkEntries}
+                      metaFontSizePx={appTypographyScale.uiXsPx}
                       renderEntry={renderLedgerWorkEntry}
                     />
                     {inlineEditedFilesFromTurnSummary.length > 0 && turnSummary ? (
@@ -2955,14 +2967,17 @@ function WorkLedgerHeaderContent(props: {
         <StatusIcon className={cn("size-3", props.status === "active" && "animate-spin")} />
       </span>
       <span
-        className="min-w-0 truncate font-system-ui font-medium text-foreground/78"
+        className="min-w-0 truncate font-system-ui font-medium text-foreground/90"
         style={{ fontSize: `${props.chatMetaFontSizePx}px` }}
       >
         {props.label}
       </span>
       <span className="flex min-w-0 items-center gap-1.5">
         {summaryParts.length > 0 ? (
-          <span className="font-chat-code truncate text-[9px] tabular-nums text-muted-foreground/48">
+          <span
+            className="font-chat-code truncate tabular-nums text-muted-foreground/62"
+            style={{ fontSize: `${Math.max(10, props.chatMetaFontSizePx - 1)}px` }}
+          >
             {summaryParts.join(" · ")}
           </span>
         ) : null}
@@ -2977,19 +2992,21 @@ function WorkLedgerHeaderContent(props: {
 function WorkLedgerSections(props: {
   entries: ReadonlyArray<SequencedWorkLedgerEntry>;
   renderEntry: (entry: SequencedWorkLedgerEntry) => ReactNode;
+  metaFontSizePx?: number;
 }) {
   const sections = groupWorkLedgerEntries(props.entries);
   if (sections.length === 0) {
     return null;
   }
+  const metaFontSizePx = props.metaFontSizePx ?? 11;
 
   return (
     <div className="border-t border-[color:color-mix(in_srgb,var(--foreground)_6%,transparent)] py-1.5">
       {sections.map((section) => (
         <section key={section.kind} className="py-1" data-ledger-section={section.kind}>
-          <div className="flex items-center gap-2 px-2.5 pb-0.5 font-chat-code text-[8px] font-medium tracking-[0.08em] text-muted-foreground/38 uppercase">
+          <div className={LEDGER_SECTION_EYEBROW_CLASS} style={{ fontSize: `${metaFontSizePx}px` }}>
             <span>{section.label}</span>
-            <span className="tabular-nums">{section.entries.length}</span>
+            <span className={LEDGER_SECTION_COUNT_CLASS}>{section.entries.length}</span>
           </div>
           <div>
             {section.entries.map((entry) => (
@@ -2999,7 +3016,10 @@ function WorkLedgerSections(props: {
                 data-ledger-sequence={entry.sequence}
                 data-work-ledger-entry-id={entry.entry.id}
               >
-                <span className="font-chat-code pt-0.5 text-[9px] leading-5 tabular-nums text-muted-foreground/28">
+                <span
+                  className={cn(LEDGER_SEQUENCE_CLASS, "pt-0.5")}
+                  style={{ fontSize: `${metaFontSizePx}px` }}
+                >
                   {String(entry.sequence).padStart(2, "0")}
                 </span>
                 <div className="min-w-0">{props.renderEntry(entry)}</div>
@@ -3027,9 +3047,12 @@ function WorkLedgerEditedFilesSection(props: {
       className="border-t border-[color:color-mix(in_srgb,var(--foreground)_6%,transparent)] py-2"
       data-ledger-section="modify"
     >
-      <div className="flex items-center gap-2 px-2.5 pb-0.5 font-chat-code text-[8px] font-medium tracking-[0.08em] text-muted-foreground/38 uppercase">
+      <div
+        className={LEDGER_SECTION_EYEBROW_CLASS}
+        style={{ fontSize: `${Math.max(10, props.fontSizePx - 1)}px` }}
+      >
         <span>Modify</span>
-        <span className="tabular-nums">{props.files.length}</span>
+        <span className={LEDGER_SECTION_COUNT_CLASS}>{props.files.length}</span>
       </div>
       {props.files.map((file, index) => (
         <div
@@ -3037,7 +3060,10 @@ function WorkLedgerEditedFilesSection(props: {
           className="grid min-w-0 grid-cols-[1.55rem_minmax(0,1fr)] items-center px-2.5"
           data-ledger-sequence={props.startSequence + index}
         >
-          <span className="font-chat-code text-[9px] leading-5 tabular-nums text-muted-foreground/28">
+          <span
+            className={LEDGER_SEQUENCE_CLASS}
+            style={{ fontSize: `${Math.max(10, props.fontSizePx - 1)}px` }}
+          >
             {String(props.startSequence + index).padStart(2, "0")}
           </span>
           <button
@@ -3117,6 +3143,11 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
     onOpenAutomation,
   } = props;
   const compact = density === "compact";
+  // Status entries (failures, runtime warnings, reasoning) carry the message the
+  // user actually needs to read, so they wrap instead of truncating; failures also
+  // pick up the destructive tone so they're scannable in the ledger's Status group.
+  const isStatusTone = workEntry.tone !== "tool";
+  const isErrorTone = workEntry.tone === "error";
   const EntryIcon = workEntryIcon(workEntry);
   // Web-fetch tool calls surface the target site (favicon + URL) instead of the raw
   // `WebFetch: {json}` arguments, reusing the same link-chip icon/label path as
@@ -3326,7 +3357,7 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
               <span
                 className={cn(
                   "flex shrink-0 items-center justify-center",
-                  WORK_ROW_MUTED_HOVER_TONE["tool-row"],
+                  isErrorTone ? "text-destructive/70" : WORK_ROW_MUTED_HOVER_TONE["tool-row"],
                   compact ? "size-4" : "size-5",
                 )}
                 data-tool-icon={leftIconKind}
@@ -3370,10 +3401,22 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
                 ) : (
                   <p
                     className={cn(
-                      compact ? "truncate leading-5" : "truncate leading-6",
-                      // Match the leading icon's tone so the row reads as one muted unit, and
-                      // brighten the whole row to foreground on hover/focus instead of a fill.
-                      WORK_ROW_MUTED_HOVER_TONE["tool-row"],
+                      // Status/error entries hold the text worth reading (an error message,
+                      // a runtime warning), so let them wrap up to three lines instead of
+                      // truncating; tool rows stay single-line since their labels are short.
+                      isStatusTone
+                        ? "line-clamp-3 break-words leading-5"
+                        : compact
+                          ? "truncate leading-5"
+                          : "truncate leading-6",
+                      // Failures read in the destructive tone; other status lines sit at a
+                      // legible near-foreground; tool rows keep the shared muted→foreground
+                      // hover treatment so the row reads as one unit.
+                      isErrorTone
+                        ? "font-medium text-destructive/90 transition-colors group-hover/tool-row:text-destructive"
+                        : isStatusTone
+                          ? "text-foreground/72 transition-colors group-hover/tool-row:text-foreground"
+                          : WORK_ROW_MUTED_HOVER_TONE["tool-row"],
                     )}
                     style={{ fontSize: `${rowFontSizePx}px` }}
                   >
