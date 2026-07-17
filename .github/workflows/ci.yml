@@ -58,7 +58,14 @@ jobs:
         run: ./script/bootstrap
 
       - name: Run ${{ matrix.label }}
+        if: matrix.command != 'fmt:check'
         run: bun run ${{ matrix.command }}
+
+      - name: Check formatting with an actionable diff
+        if: matrix.command == 'fmt:check'
+        run: |
+          bun run fmt
+          git diff --exit-code
 
   browser_test:
     name: Browser tests (advisory)

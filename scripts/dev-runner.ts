@@ -431,7 +431,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       baseEnv: process.env,
       serverOffset,
       webOffset,
-      chitauriHome: input.teacodeHome,
+      chitauriHome: input.chitauriHome,
       authToken: input.authToken,
       noBrowser: resolveOptionalBooleanOverride(input.noBrowser, envOverrides.noBrowser),
       autoBootstrapProjectFromCwd: resolveOptionalBooleanOverride(
