@@ -1293,11 +1293,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       yield* runGit(repoDir, ["push", "-u", "fork", "main"]);
       yield* runGit(repoDir, ["config", "remote.origin.url", "git@github.com:acme/widgets.git"]);
       yield* runGit(repoDir, ["config", "remote.origin.pushurl", originDir]);
-      yield* runGit(repoDir, [
-        "config",
-        "remote.fork.url",
-        "git@github.com:octocat/widgets.git",
-      ]);
+      yield* runGit(repoDir, ["config", "remote.fork.url", "git@github.com:octocat/widgets.git"]);
       yield* runGit(repoDir, ["config", "remote.fork.pushurl", forkDir]);
       fs.writeFileSync(path.join(repoDir, "cross-repo-pr.txt"), "fork main change\n");
       yield* runGit(repoDir, ["add", "cross-repo-pr.txt"]);
