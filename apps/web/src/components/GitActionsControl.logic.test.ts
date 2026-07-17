@@ -1340,32 +1340,32 @@ describe("resolveAutoFeatureBranchName", () => {
 });
 
 describe("resolveDefaultCreateBranchName", () => {
-  it("uses Chitauri as the default namespace", () => {
+  it("uses TeaCode as the default namespace", () => {
     const branch = resolveDefaultCreateBranchName(["main"], "fix toast copy");
-    assert.equal(branch, "chitauri/fix-toast-copy");
+    assert.equal(branch, "teacode/fix-toast-copy");
   });
 
   it("normalizes an existing legacy dpcode namespace", () => {
     const branch = resolveDefaultCreateBranchName(["main"], "dpcode/refine-toolbar-actions");
-    assert.equal(branch, "chitauri/refine-toolbar-actions");
+    assert.equal(branch, "teacode/refine-toolbar-actions");
   });
 
-  it("preserves nested namespaces under Chitauri", () => {
+  it("preserves nested namespaces under TeaCode", () => {
     const branch = resolveDefaultCreateBranchName(["main"], "feature/refine-toolbar-actions");
-    assert.equal(branch, "chitauri/feature/refine-toolbar-actions");
+    assert.equal(branch, "teacode/feature/refine-toolbar-actions");
   });
 
-  it("increments suffix when the Chitauri branch already exists", () => {
+  it("increments suffix when the TeaCode branch already exists", () => {
     const branch = resolveDefaultCreateBranchName(
-      ["main", "chitauri/fix-toast-copy", "chitauri/fix-toast-copy-2"],
+      ["main", "teacode/fix-toast-copy", "teacode/fix-toast-copy-2"],
       "fix toast copy",
     );
-    assert.equal(branch, "chitauri/fix-toast-copy-3");
+    assert.equal(branch, "teacode/fix-toast-copy-3");
   });
 
-  it("falls back to chitauri/update when no preferred name is provided", () => {
+  it("falls back to teacode/update when no preferred name is provided", () => {
     const branch = resolveDefaultCreateBranchName(["main"]);
-    assert.equal(branch, "chitauri/update");
+    assert.equal(branch, "teacode/update");
   });
 });
 
