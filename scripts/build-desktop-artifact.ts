@@ -29,8 +29,7 @@ import {
   resolveCatalogDependencies,
 } from "./lib/resolve-catalog.ts";
 
-import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
-import * as NodeServices from "@effect/platform-node/NodeServices";
+import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { Config, Data, Effect, FileSystem, Layer, Logger, Option, Path, Schema } from "effect";
 import { Command, Flag } from "effect/unstable/cli";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
