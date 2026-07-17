@@ -22,7 +22,6 @@ import {
   PencilIcon,
   PinIcon,
   PlayIcon,
-  SearchIcon,
   SettingsIcon,
   StopFilledIcon,
   TemporaryThreadIcon,
@@ -1251,7 +1250,6 @@ export default function Sidebar() {
   const unpinThread = usePinnedThreadsStore((store) => store.unpinThread);
   const prunePinnedThreads = usePinnedThreadsStore((store) => store.prunePinnedThreads);
   const workspacePages = useWorkspaceStore((store) => store.workspacePages);
-  const createWorkspace = useWorkspaceStore((store) => store.createWorkspace);
   const renameWorkspace = useWorkspaceStore((store) => store.renameWorkspace);
   const deleteWorkspace = useWorkspaceStore((store) => store.deleteWorkspace);
   const reorderWorkspace = useWorkspaceStore((store) => store.reorderWorkspace);
@@ -2213,11 +2211,6 @@ export default function Sidebar() {
       handleSidebarViewChange("threads");
     }
   }, [handleSidebarViewChange, isOnSettings, isOnWorkspace, workspaceSectionVisible]);
-
-  const handleCreateWorkspace = useCallback(() => {
-    const workspaceId = createWorkspace();
-    navigateToWorkspace(workspaceId);
-  }, [createWorkspace, navigateToWorkspace]);
 
   useEffect(() => {
     // Persisted paths make homeDir truthy immediately on reload, before the first shell snapshot.
@@ -6041,9 +6034,6 @@ export default function Sidebar() {
     shortcutLabelForCommand(keybindings, "chat.newChat") ??
     shortcutLabelForCommand(keybindings, "chat.newLocal");
   const newTerminalThreadShortcutLabel = shortcutLabelForCommand(keybindings, "chat.newTerminal");
-  const searchShortcutLabel =
-    shortcutLabelForCommand(keybindings, "sidebar.search") ??
-    (isMacPlatform(navigator.platform) ? "⌘K" : "Ctrl+K");
   const importThreadShortcutLabel =
     shortcutLabelForCommand(keybindings, "sidebar.importThread") ??
     (isMacPlatform(navigator.platform) ? "⌘I" : "Ctrl+I");
@@ -6324,66 +6314,21 @@ export default function Sidebar() {
   // in useDesktopTopBarTrafficLightGutterClassName used by the closed-state surfaces).
   const isMacDesktop = typeof navigator !== "undefined" ? isMacPlatform(navigator.platform) : false;
 
-  // Open-sidebar (in-sidebar) and non-electron wordmark clusters share the one
-  // SidebarLeadingControls primitive with the closed-state host headers, so the
-  // toggle + arrows look identical whether the sidebar is open or collapsed; only
-  // the wrapper layout differs per host.
+  // Open-sidebar and non-electron headers share the same lone sidebar toggle with
+  // closed-state host headers, so opening and closing the sidebar does not change
+  // the available chrome.
   const titlebarControls = (
-    <div className="ml-auto hidden items-center gap-1 md:flex [-webkit-app-region:no-drag]">
+    <div className="ml-auto hidden items-center md:flex [-webkit-app-region:no-drag]">
       <SidebarLeadingControls />
-      <button
-        type="button"
-        aria-label="Search"
-        title="Search"
-        className="inline-flex size-8 items-center justify-center rounded-[9px] text-muted-foreground transition-[background-color,color,scale] duration-press ease-out hover:bg-hover hover:text-foreground active:scale-[0.96]"
-        onClick={() => {
-          setSearchPaletteMode("search");
-          setSearchPaletteInitialQuery(null);
-          setSearchPaletteOpen(true);
-        }}
-      >
-        <SearchIcon className="size-4" />
-      </button>
     </div>
   );
 
   const headerControls = <SidebarLeadingControls className="hidden md:flex" />;
 
-  const headerPrimaryActions = !isOnSettings ? (
-    <div className="ml-auto flex shrink-0 items-center gap-0.5 [-webkit-app-region:no-drag]">
-      <SidebarIconButton
-        icon={SearchIcon}
-        label="Search"
-        className={cn(
-          "size-7 text-muted-foreground/70 hover:text-foreground",
-          searchPaletteOpen && "bg-[var(--sidebar-accent-active)] text-foreground",
-        )}
-        onClick={() => setSearchPaletteOpen(true)}
-        tooltip={searchShortcutLabel ? `Search (${searchShortcutLabel})` : "Search"}
-        tooltipSide="bottom"
-      />
-      <SidebarIconButton
-        icon={isOnWorkspace ? TerminalIcon : NewThreadIcon}
-        label={isOnWorkspace ? "New workspace" : "New thread"}
-        className="size-7 text-muted-foreground/70 hover:text-foreground"
-        onClick={isOnWorkspace ? handleCreateWorkspace : handlePrimaryNewThread}
-        tooltip={
-          isOnWorkspace
-            ? "New workspace"
-            : newThreadShortcutLabel
-              ? `New thread (${newThreadShortcutLabel})`
-              : "New thread"
-        }
-        tooltipSide="bottom"
-      />
-    </div>
-  ) : null;
-
   const wordmark = (
     <div className="flex w-full items-center gap-1.5">
       <SidebarTrigger className="shrink-0 text-muted-foreground/75 hover:text-foreground md:hidden" />
       {headerControls}
-      {headerPrimaryActions}
     </div>
   );
 
@@ -6497,7 +6442,6 @@ export default function Sidebar() {
             )}
           >
             {titlebarControls}
-            {headerPrimaryActions}
           </SidebarHeader>
         </>
       ) : (
