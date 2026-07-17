@@ -373,7 +373,7 @@ function ModelUsageRow({
       </div>
       <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full rounded-full bg-[var(--info)]"
+          className="h-full rounded-full bg-[var(--foreground)]"
           style={{ width: `${Math.min(100, Math.max(2, percent))}%` }}
         />
       </div>

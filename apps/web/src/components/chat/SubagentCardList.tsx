@@ -70,7 +70,7 @@ function OrchestrationSummaryHeader(props: {
           {summary.total} agents
         </span>
         {summary.isLive ? (
-          <span className="size-1 shrink-0 animate-pulse rounded-full bg-claude" />
+          <span className="size-1 shrink-0 animate-pulse rounded-full bg-info" />
         ) : null}
         <span className="min-w-1 flex-1" />
         <OrchestrationCensusChips summary={summary} />
@@ -129,7 +129,7 @@ export const SubagentCardList = memo(function SubagentCardList({
             <span
               className={cn(
                 "mt-1.5 size-1.5 shrink-0 rounded-full",
-                subagent.isActive ? "bg-claude" : "bg-muted-foreground/22",
+                subagent.isActive ? "animate-pulse bg-info" : "bg-muted-foreground/22",
               )}
             />
             <div className="min-w-0 flex-1">

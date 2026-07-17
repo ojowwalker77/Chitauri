@@ -42,7 +42,7 @@ const APPROVAL_ACTIONS: ReadonlyArray<ApprovalAction> = [
     decision: "accept",
     label: "Approve once",
     description: "Allow just this request",
-    tone: "gold",
+    tone: "success",
   },
   {
     decision: "acceptForSession",
@@ -109,7 +109,7 @@ export const ComposerPendingApprovalPanel = memo(function ComposerPendingApprova
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2">
-          <span aria-hidden="true" className="mt-1 size-1.5 shrink-0 rounded-full bg-gold" />
+          <span aria-hidden="true" className="mt-1 size-1.5 shrink-0 rounded-full bg-info" />
           <p className="min-w-0 text-[13px] font-medium leading-snug text-foreground/90">
             {KIND_PROMPT[approval.requestKind]}
             {parsed.tool ? (

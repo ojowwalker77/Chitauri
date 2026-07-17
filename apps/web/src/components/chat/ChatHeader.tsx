@@ -195,7 +195,7 @@ function EditorChatHistoryMenu(props: {
               }}
             >
               <ProviderIcon
-                provider={thread.session?.provider ?? thread.modelSelection.provider}
+                provider={thread.modelSelection.provider ?? thread.session?.provider}
                 tone="header"
                 className="size-3.5 shrink-0"
               />
@@ -313,7 +313,7 @@ function EditorRailTabs(props: {
         {
           id: thread.id,
           title: thread.title,
-          provider: thread.session?.provider ?? thread.modelSelection.provider,
+          provider: thread.modelSelection.provider ?? thread.session?.provider,
         },
       ]),
     );
@@ -353,7 +353,7 @@ function EditorRailTabs(props: {
       const nextTab = {
         id: sidebarThread.id,
         title: sidebarThread.title,
-        provider: sidebarThread.session?.provider ?? sidebarThread.modelSelection.provider,
+        provider: sidebarThread.modelSelection.provider ?? sidebarThread.session?.provider,
       };
       setAndStoreOpenChatTabs((current) =>
         current.some((thread) => thread.id === threadId) ? current : [...current, nextTab],

@@ -246,7 +246,7 @@ function SubagentDetailRow(props: {
       <span
         className={cn(
           "mt-2 size-1.5 shrink-0 rounded-full",
-          props.subagent.isActive ? "bg-claude" : "bg-muted-foreground/24",
+          props.subagent.isActive ? "animate-pulse bg-info" : "bg-muted-foreground/24",
         )}
       />
       <div className="min-w-0 flex-1">

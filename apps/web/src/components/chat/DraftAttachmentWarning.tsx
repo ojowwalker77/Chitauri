@@ -1,6 +1,6 @@
 // FILE: DraftAttachmentWarning.tsx
 // Purpose: Single source of truth for the "this draft attachment may not survive a
-//   reload" warning shared by image and file attachment chips — the amber glyph, its
+//   reload" note shared by image and file attachment chips — the muted glyph, its
 //   accessible label, and the explanatory copy. Keeps the wording and affordance from
 //   drifting between the two surfaces.
 // Layer: Chat attachment presentation
@@ -38,7 +38,7 @@ export const DraftAttachmentWarningIcon = forwardRef<
       role="img"
       aria-label={DRAFT_ATTACHMENT_WARNING_LABEL}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full text-gold",
+        "inline-flex shrink-0 items-center justify-center rounded-full text-muted-foreground",
         variant === "badge" ? "size-5 bg-[var(--composer-surface)]" : "size-4",
         className,
       )}

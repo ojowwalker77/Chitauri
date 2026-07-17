@@ -6,7 +6,7 @@
 import { OVERLAY_SURFACE_CLASS_NAME } from "~/components/ui/surface";
 
 // `--notification-fg` keeps the text/icon/control color readable against the
-// accent-tinted surface. It tracks the theme's own foreground token, so it is
+// notification surface. It tracks the theme's own foreground token, so it is
 // near-black in light themes and near-white in dark themes automatically —
 // without depending on the `.dark` class. Children reference it via
 // `text-[var(--notification-fg)]` so the contrast fix lives in one place for

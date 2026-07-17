@@ -149,36 +149,40 @@ const SURFACE_UNDER_CONTRAST_STEP: Record<ThemeVariant, number> = {
   light: 0.0012,
 };
 const CANVAS_COLOR_BY_VARIANT: Record<ThemeVariant, string> = {
-  dark: "#0a0a0a",
-  light: "#e7e4df",
+  dark: "#111318",
+  light: "#ffffff",
 };
+// Info is the single indication blue; identical in both variants per the mono
+// design (dark may only lighten via mix, never a new hue).
 const INFO_COLOR_BY_VARIANT: Record<ThemeVariant, string> = {
-  dark: "#9c9a96",
-  light: "#6b6965",
+  dark: "#3b82f6",
+  light: "#3b82f6",
 };
+// "Warning" no longer has its own hue: it collapses onto the danger red so old
+// call sites stay legible until they migrate to the semantic tokens.
 const WARNING_COLOR_BY_VARIANT: Record<ThemeVariant, string> = {
-  dark: "#cf9d5e",
-  light: "#a96f35",
+  dark: "#e94b4b",
+  light: "#e94b4b",
 };
 const MUTED_COLOR_BY_VARIANT: Record<ThemeVariant, string> = {
-  dark: "#9c9a96",
-  light: "#696661",
+  dark: "#9aa1ad",
+  light: "#6b7280",
 };
 const FAINT_COLOR_BY_VARIANT: Record<ThemeVariant, string> = {
-  dark: "#6b6965",
-  light: "#85817a",
+  dark: "#797a7e",
+  light: "#949597",
 };
 const SUCCESS_FOREGROUND_BY_VARIANT: Record<ThemeVariant, string> = {
   dark: "#a5d6b7",
   light: "#27694c",
 };
 const DESTRUCTIVE_FOREGROUND_BY_VARIANT: Record<ThemeVariant, string> = {
-  dark: "#f0b4af",
-  light: "#7e2f2a",
+  dark: "#ef9091",
+  light: "#933537",
 };
 const WARNING_FOREGROUND_BY_VARIANT: Record<ThemeVariant, string> = {
-  dark: "#e5c8a5",
-  light: "#5c3b1d",
+  dark: "#ef9091",
+  light: "#933537",
 };
 const TERMINAL_ANSI_BY_VARIANT: Record<
   ThemeVariant,
@@ -188,12 +192,12 @@ const TERMINAL_ANSI_BY_VARIANT: Record<
   light: { blue: "#326aa5", cyan: "#2f7f79", magenta: "#76508f" },
 };
 const COMPOSER_SURFACE_BY_VARIANT: Record<ThemeVariant, string> = {
-  dark: "#141414",
-  light: "#efebe5",
+  dark: "#16181d",
+  light: "#f2f2f4",
 };
 const INPUT_SURFACE_BY_VARIANT: Record<ThemeVariant, string> = {
-  dark: "#1f1f1f",
-  light: "#ebe7e1",
+  dark: "#1d1f24",
+  light: "#f2f2f4",
 };
 const PANEL_BASE_ALPHA: Record<ThemeVariant, number> = {
   dark: 0,
@@ -275,30 +279,30 @@ export const CODE_THEME_OPTIONS: readonly CodeThemeOption[] = [
 
 export const DEFAULT_CHROME_THEME_BY_VARIANT: Record<ThemeVariant, ChromeTheme> = {
   dark: {
-    accent: "#d97757",
+    accent: "#3b82f6",
     contrast: 60,
     fonts: { code: null, ui: null },
-    ink: "#e6e4e1",
+    ink: "#f7f8fa",
     opaqueWindows: true,
     semanticColors: {
       diffAdded: "#4cb782",
-      diffRemoved: "#d9685f",
-      skill: "#9c9a96",
+      diffRemoved: "#e94b4b",
+      skill: "#9aa1ad",
     },
-    surface: "#171717",
+    surface: "#1b1c21",
   },
   light: {
-    accent: "#d97757",
+    accent: "#3b82f6",
     contrast: 45,
     fonts: { code: null, ui: null },
-    ink: "#252421",
+    ink: "#111318",
     opaqueWindows: true,
     semanticColors: {
       diffAdded: "#4cb782",
-      diffRemoved: "#c4554e",
-      skill: "#6b6965",
+      diffRemoved: "#e94b4b",
+      skill: "#6b7280",
     },
-    surface: "#f5f2ed",
+    surface: "#f7f8fa",
   },
 };
 
@@ -839,7 +843,6 @@ export function buildThemeCssVariables(
       : pack.theme.semanticColors.diffRemoved,
     "--foreground": readCodexVariable("--color-text-foreground"),
     "--faint": readCodexVariable("--color-text-foreground-tertiary"),
-    "--gold": warningColor,
     "--hover": readCodexVariable("--color-background-button-secondary-hover"),
     "--info": INFO_COLOR_BY_VARIANT[variant],
     "--info-foreground": INFO_COLOR_BY_VARIANT[variant],
@@ -870,7 +873,6 @@ export function buildThemeCssVariables(
     "--theme-font-ui-family": normalizeFontFamilyCssValue(pack.theme.fonts.ui) ?? "",
     "--warning": warningColor,
     "--warning-foreground": isDefaultTheme ? WARNING_FOREGROUND_BY_VARIANT[variant] : warningColor,
-    "--claude": pack.theme.accent,
     "--well": composerSurface,
   };
 
@@ -1144,7 +1146,7 @@ function getRequiredVariable(variables: Record<string, string>, name: string): s
 
 function buildLightDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
   // Retains the established light-theme derivation while the default seed supplies
-  // the warmer Claude palette.
+  // the neutral monochrome palette.
   const isDefaultTheme = haveSameChromePalette(theme.theme, DEFAULT_CHROME_THEME_BY_VARIANT.light);
   const quietInk = isDefaultTheme ? BLACK : theme.ink;
   const controlBase = mixRgb(theme.surface, WHITE, 0.09 + theme.contrast * 0.04);
@@ -1212,7 +1214,7 @@ function buildLightDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
 }
 
 function buildDarkDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
-  // Claude dark chrome uses one restrained panel layer over a flat canvas.
+  // Dark chrome uses one restrained panel layer over a flat canvas.
   const isDefaultTheme = haveSameChromePalette(theme.theme, DEFAULT_CHROME_THEME_BY_VARIANT.dark);
   const quietInk = isDefaultTheme ? WHITE : theme.ink;
   const controlBase = mixRgb(theme.surface, theme.ink, 0.06 + theme.contrast * 0.05);

@@ -85,11 +85,11 @@ function toastRootClassName(position: ToastPosition, compact: boolean): string {
 function toastIconClassName(type: ToastObject<ThreadToastData>["type"]): string {
   return cn(
     NOTIFICATION_ICON_CLASS_NAME,
-    type === "loading" && "animate-spin text-claude",
+    type === "loading" && "animate-spin text-muted-foreground",
     type === "success" && "text-success",
-    type === "warning" && "text-gold",
+    type === "warning" && "text-destructive",
     type === "error" && "text-destructive",
-    type === "info" && "text-muted-foreground",
+    type === "info" && "text-info",
   );
 }
 

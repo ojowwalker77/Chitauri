@@ -161,7 +161,7 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2">
-          <span aria-hidden="true" className="mt-1 text-[13px] leading-none text-claude">
+          <span aria-hidden="true" className="mt-1 text-[13px] leading-none text-info">
             ✳
           </span>
           <p className="min-w-0 text-[13px] font-medium leading-snug text-foreground/90">

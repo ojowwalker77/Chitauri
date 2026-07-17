@@ -23,7 +23,7 @@ export default function TerminalActivityIndicator({
         aria-hidden="true"
         className={cn(
           "inline-flex size-1.5 shrink-0 rounded-full",
-          state === "attention" ? "bg-gold" : "bg-success",
+          state === "attention" ? "bg-[var(--info)]" : "bg-success",
           className,
         )}
       />

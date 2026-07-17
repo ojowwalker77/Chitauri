@@ -12,13 +12,14 @@ import {
 } from "../../lib/subagentPresentation";
 import type { OrchestrationSummary } from "./orchestrationSummary.logic";
 
-// Status palette shared by the per-agent pill and census chips. Coral is live
-// agent identity, green is health, gold is attention, and queued/idle stay quiet.
+// Status palette shared by the per-agent pill and census chips. Only the three
+// semantic hues carry meaning: info marks a live/in-progress agent, green is health,
+// red is failure; cancelled and queued/idle stay quiet monochrome.
 export const STATUS_KIND_CLASSES: Record<SubagentStatusKind, string> = {
-  running: "border-claude/18 bg-claude/8 text-claude",
-  completed: "border-success/18 bg-success/8 text-success",
-  failed: "border-rose-500/18 bg-rose-500/8 text-rose-200/90",
-  stopped: "border-gold/18 bg-gold/8 text-gold",
+  running: "border-info/30 bg-info/10 text-info",
+  completed: "border-success/30 bg-success/10 text-success",
+  failed: "border-destructive/30 bg-destructive/10 text-destructive",
+  stopped: "border-border bg-hover text-muted-foreground",
   queued: "border-border bg-hover text-muted-foreground",
   idle: "border-border/45 bg-background/85 text-muted-foreground/68",
 };

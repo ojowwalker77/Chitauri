@@ -921,24 +921,24 @@ describe("resolveProjectStatusIndicator", () => {
       resolveProjectStatusIndicator([
         {
           label: "Completed",
-          colorClass: "text-emerald-600",
-          dotClass: "bg-emerald-500",
+          colorClass: "text-success",
+          dotClass: "bg-success",
           pulse: false,
         },
         {
           label: "Pending Approval",
-          colorClass: "text-amber-600",
-          dotClass: "bg-amber-500",
+          colorClass: "text-info",
+          dotClass: "bg-info",
           pulse: false,
         },
         {
           label: "Working",
-          colorClass: "text-sky-600",
-          dotClass: "bg-sky-500",
+          colorClass: "text-muted-foreground",
+          dotClass: "bg-info",
           pulse: true,
         },
       ]),
-    ).toMatchObject({ label: "Pending Approval", dotClass: "bg-amber-500" });
+    ).toMatchObject({ label: "Pending Approval", dotClass: "bg-info" });
   });
 
   it("prefers plan-ready over completed when no stronger action is needed", () => {
@@ -946,32 +946,32 @@ describe("resolveProjectStatusIndicator", () => {
       resolveProjectStatusIndicator([
         {
           label: "Completed",
-          colorClass: "text-emerald-600",
-          dotClass: "bg-emerald-500",
+          colorClass: "text-success",
+          dotClass: "bg-success",
           pulse: false,
         },
         {
           label: "Plan Ready",
-          colorClass: "text-violet-600",
-          dotClass: "bg-violet-500",
+          colorClass: "text-info",
+          dotClass: "bg-info",
           pulse: false,
         },
       ]),
-    ).toMatchObject({ label: "Plan Ready", dotClass: "bg-violet-500" });
+    ).toMatchObject({ label: "Plan Ready", dotClass: "bg-info" });
   });
 });
 
 describe("Tree Map sidebar labels", () => {
   const workingStatus = {
     label: "Working",
-    colorClass: "text-sky-600",
-    dotClass: "bg-sky-500",
+    colorClass: "text-muted-foreground",
+    dotClass: "bg-info",
     pulse: true,
   } as const;
   const approvalStatus = {
     label: "Pending Approval",
-    colorClass: "text-amber-600",
-    dotClass: "bg-amber-500",
+    colorClass: "text-info",
+    dotClass: "bg-info",
     pulse: false,
   } as const;
 

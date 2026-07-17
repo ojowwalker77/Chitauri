@@ -73,7 +73,7 @@ function ProviderModelRadioItem(
             className={cn(
               "inline-flex size-5 shrink-0 items-center justify-center text-muted-foreground/50 transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_5%,transparent)] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/60",
               COMPOSER_PICKER_RADIUS_CLASS_NAME,
-              isFavorite && "text-gold hover:text-gold/80",
+              isFavorite && "text-foreground hover:text-foreground/80",
             )}
             onClick={(event) => {
               event.preventDefault();

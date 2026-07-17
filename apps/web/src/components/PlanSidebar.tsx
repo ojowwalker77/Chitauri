@@ -24,7 +24,7 @@ function stepStatusIcon(status: string): React.ReactNode {
   }
   if (status === "inProgress") {
     return (
-      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--claude)_15%,transparent)] text-claude">
+      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--info)_15%,transparent)] text-[var(--info)]">
         <LoaderIcon className="size-3 animate-spin motion-reduce:animate-none" />
       </span>
     );
@@ -118,7 +118,7 @@ const PlanSidebar = memo(function PlanSidebar({
                   className={cn(
                     "flex items-start gap-2.5 rounded-lg px-2.5 py-2 transition-colors duration-menu ease-out",
                     task.status === "inProgress" &&
-                      "bg-[color-mix(in_srgb,var(--claude)_5%,transparent)]",
+                      "bg-[color-mix(in_srgb,var(--info)_5%,transparent)]",
                     task.status === "completed" &&
                       "bg-[color-mix(in_srgb,var(--success)_5%,transparent)]",
                   )}

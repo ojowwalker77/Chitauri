@@ -121,7 +121,7 @@ function ResearchIndexRoute() {
           >
             <div className={cn("flex items-center gap-3", CHAT_SURFACE_HEADER_HEIGHT_CLASS)}>
               <SidebarHeaderNavigationControls />
-              <BrainIcon className="size-4 text-claude" />
+              <BrainIcon className="size-4 text-foreground" />
               <span className="min-w-0 flex-1 truncate text-[14px] font-[590] tracking-[-0.005em] text-foreground">
                 Research
               </span>
@@ -192,7 +192,7 @@ function ResearchIndexRoute() {
                 </div>
               ) : documents.length === 0 ? (
                 <div className="flex flex-col items-center rounded-xl border border-panel-border bg-panel px-8 py-16 text-center">
-                  <BrainIcon className="mb-3 size-6 text-claude" />
+                  <BrainIcon className="mb-3 size-6 text-muted-foreground" />
                   <p className="text-sm font-medium text-foreground">
                     {project ? "This research library is ready" : "Your research library is ready"}
                   </p>
@@ -210,7 +210,7 @@ function ResearchIndexRoute() {
                       onClick={() => void openResearch(document)}
                       className="group flex w-full items-start gap-3 border-b border-panel-border px-4 py-3.5 text-left transition-[background-color,scale] duration-press ease-out last:border-b-0 hover:bg-hover active:scale-[0.96] motion-reduce:transition-none"
                     >
-                      <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-selected text-claude">
+                      <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-selected text-foreground">
                         <FileIcon className="size-3.5" />
                       </span>
                       <div className="min-w-0 flex-1">

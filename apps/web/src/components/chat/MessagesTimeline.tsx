@@ -268,7 +268,7 @@ function AssistantMessageHeader(props: {
     >
       <span
         aria-hidden="true"
-        className="flex size-5 shrink-0 items-center justify-center text-[16px] font-semibold leading-none text-claude"
+        className="flex size-5 shrink-0 items-center justify-center text-[16px] font-semibold leading-none text-muted-foreground"
       >
         ✳
       </span>
@@ -338,7 +338,9 @@ function WorktreeSetupStepGlyph({ status }: { status: WorktreeSetupStep["status"
     return <CircleCheckIcon className="size-2.5 text-success" />;
   }
   if (status === "active") {
-    return <LoaderIcon className="size-2.5 animate-spin text-claude motion-reduce:animate-none" />;
+    return (
+      <LoaderIcon className="size-2.5 animate-spin text-muted-foreground motion-reduce:animate-none" />
+    );
   }
   if (status === "error") {
     return <CircleAlertIcon className="size-2.5 text-destructive" />;
@@ -381,7 +383,7 @@ function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> 
                 className={cn(
                   "text-[13px] leading-5",
                   step.status === "active"
-                    ? "text-claude"
+                    ? "text-info"
                     : step.status === "done"
                       ? "text-[var(--color-text-foreground)]"
                       : step.status === "error"
@@ -1823,7 +1825,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           className="flex items-center gap-2 pt-0.5 font-system-ui text-muted-foreground/70"
           style={{ fontSize: `${appTypographyScale.chatPx}px` }}
         >
-          <span aria-hidden="true" className="text-claude">
+          <span aria-hidden="true" className="text-muted-foreground">
             ✳
           </span>
           <span className="shimmer">Thinking</span>
@@ -2627,7 +2629,7 @@ function workToneIcon(tone: TimelineWorkEntry["tone"]): {
   if (tone === "thinking") {
     return {
       icon: BotIcon,
-      className: "text-claude",
+      className: "text-muted-foreground",
     };
   }
   if (tone === "info") {
@@ -2941,7 +2943,7 @@ function WorkTrailHeaderContent(props: {
         className={cn(
           "flex size-4 items-center justify-center",
           props.status === "active"
-            ? "text-claude"
+            ? "text-muted-foreground"
             : props.status === "settled"
               ? "text-success"
               : "text-muted-foreground/55",
@@ -3236,7 +3238,7 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
           >
             <span
               className={cn(
-                "flex shrink-0 items-center justify-center text-claude",
+                "flex shrink-0 items-center justify-center text-info",
                 compact ? "size-4" : "size-5",
               )}
             >

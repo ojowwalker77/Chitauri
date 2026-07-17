@@ -524,18 +524,12 @@ function SidebarStatusTrailingGlyph({ status }: { status: ThreadStatusPill }) {
     );
   }
   if (status.pulse) {
-    return <ThreadRunningSpinner className="text-[var(--app-sidebar-coral)]" />;
+    // A spinner spinning already indicates work; motion carries the meaning so the
+    // glyph itself stays monochrome (Design.md §3).
+    return <ThreadRunningSpinner className="text-muted-foreground" />;
   }
   return (
-    <span
-      aria-hidden="true"
-      className={cn("size-1.5 shrink-0 rounded-full", status.dotClass)}
-      style={
-        status.label === "Pending Approval"
-          ? { backgroundColor: "var(--app-sidebar-gold)" }
-          : undefined
-      }
-    />
+    <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", status.dotClass)} />
   );
 }
 
@@ -665,10 +659,6 @@ function ProviderAvatarWithTerminal({
   const badgeColorClass = terminalStatus?.colorClass ?? "text-muted-foreground/55";
 
   const hasHandoff = Boolean(handoffSourceProvider);
-  const providerStyle =
-    provider === "claudeAgent" ? { color: "var(--app-sidebar-coral)" } : undefined;
-  const handoffProviderStyle =
-    handoffSourceProvider === "claudeAgent" ? { color: "var(--app-sidebar-coral)" } : undefined;
   const containerClass = hasHandoff
     ? "relative inline-flex h-3 w-4.5 shrink-0 items-center"
     : "relative inline-flex size-3 shrink-0 items-center justify-center";
@@ -676,19 +666,15 @@ function ProviderAvatarWithTerminal({
   const avatarNode = hasHandoff ? (
     <span className={containerClass}>
       <span className="sidebar-icon-chip absolute left-0 top-1/2 inline-flex size-3 -translate-y-1/2 items-center justify-center rounded-full">
-        <ProviderIcon
-          provider={handoffSourceProvider!}
-          className="size-2"
-          style={handoffProviderStyle}
-        />
+        <ProviderIcon provider={handoffSourceProvider!} className="size-2" />
       </span>
       <span className="sidebar-icon-chip absolute right-0 top-1/2 z-10 inline-flex size-3 -translate-y-1/2 items-center justify-center rounded-full">
-        <ProviderIcon provider={provider} className="size-2" style={providerStyle} />
+        <ProviderIcon provider={provider} className="size-2" />
       </span>
     </span>
   ) : (
     <span className={containerClass}>
-      <ProviderIcon provider={provider} className="size-3" style={providerStyle} />
+      <ProviderIcon provider={provider} className="size-3" />
     </span>
   );
 
@@ -867,14 +853,14 @@ function terminalStatusFromThreadState(input: {
   if (terminalAttentionStates.includes("attention")) {
     return {
       label: "Terminal input needed",
-      colorClass: "text-gold",
+      colorClass: "text-info",
       pulse: false,
     };
   }
   if ((input.runningTerminalIds?.length ?? 0) > 0) {
     return {
       label: "Terminal process running",
-      colorClass: "text-teal-600 dark:text-teal-300/90",
+      colorClass: "text-success",
       pulse: true,
     };
   }
@@ -4705,7 +4691,7 @@ export default function Sidebar() {
               <SidebarGlyph icon={TerminalIcon} variant="chrome" />
             ) : showThreadProviderAvatar ? (
               <ProviderAvatarWithTerminal
-                provider={thread.session?.provider ?? thread.modelSelection.provider}
+                provider={thread.modelSelection.provider ?? thread.session?.provider}
                 handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
                 handoffTooltip={handoffBadgeLabel}
                 terminalStatus={terminalStatus}
@@ -4951,7 +4937,7 @@ export default function Sidebar() {
               isProjectTreeThread ? (
                 <span className="inline-flex size-[26px] shrink-0 items-center justify-center text-muted-foreground/85">
                   <ProviderAvatarWithTerminal
-                    provider={thread.session?.provider ?? thread.modelSelection.provider}
+                    provider={thread.modelSelection.provider ?? thread.session?.provider}
                     handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
                     handoffTooltip={handoffBadgeLabel}
                     terminalStatus={terminalStatus}
@@ -4960,7 +4946,7 @@ export default function Sidebar() {
                 </span>
               ) : (
                 <ProviderAvatarWithTerminal
-                  provider={thread.session?.provider ?? thread.modelSelection.provider}
+                  provider={thread.modelSelection.provider ?? thread.session?.provider}
                   handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
                   handoffTooltip={handoffBadgeLabel}
                   terminalStatus={terminalStatus}
@@ -6027,7 +6013,7 @@ export default function Sidebar() {
       <SidebarContent className="gap-0 font-system-ui">
         {showArm64IntelBuildWarning && arm64IntelBuildWarningDescription ? (
           <SidebarGroup className="px-2 pt-2 pb-0">
-            <Alert variant="warning" className="rounded-xl border-warning/40 bg-warning/8">
+            <Alert variant="warning" className="rounded-xl border-destructive/40 bg-destructive/8">
               <TriangleAlertIcon />
               <AlertTitle>Intel build on Apple Silicon</AlertTitle>
               <AlertDescription>{arm64IntelBuildWarningDescription}</AlertDescription>
@@ -6085,7 +6071,11 @@ export default function Sidebar() {
                   >
                     <SidebarLeadingIcon
                       size="sm"
-                      tone={isOnResearch ? "text-claude" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME}
+                      tone={
+                        isOnResearch
+                          ? "text-[var(--sidebar-accent-foreground)]"
+                          : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME
+                      }
                     >
                       <SidebarGlyph icon={BrainIcon} variant="leading" />
                     </SidebarLeadingIcon>
@@ -6106,7 +6096,11 @@ export default function Sidebar() {
                   >
                     <SidebarLeadingIcon
                       size="sm"
-                      tone={isOnGitHub ? "text-claude" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME}
+                      tone={
+                        isOnGitHub
+                          ? "text-[var(--sidebar-accent-foreground)]"
+                          : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME
+                      }
                     >
                       <SidebarGlyph icon={GitHubIcon} variant="leading" />
                     </SidebarLeadingIcon>

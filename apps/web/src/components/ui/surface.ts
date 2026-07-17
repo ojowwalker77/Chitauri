@@ -1,5 +1,5 @@
 // FILE: surface.ts
-// Purpose: Canonical structural surface recipes for the Claude-style shell.
+// Purpose: Canonical structural surface recipes for the application shell.
 // Layer: Shared UI styling helper
 
 /** Flat application canvas. Never receives persistent elevation. */

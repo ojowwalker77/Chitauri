@@ -80,7 +80,7 @@ export const BackgroundAgentsCard = memo(function BackgroundAgentsCard({
                 spawnCommand={agent.spawnCommand}
                 sessionProvider={provider}
                 className="size-3.5 shrink-0"
-                fallback={<span className="size-1.5 shrink-0 rounded-full bg-claude" />}
+                fallback={<span className="size-1.5 shrink-0 animate-pulse rounded-full bg-info" />}
               />
               <span className="min-w-0 flex-1 truncate text-[13px] leading-5 text-foreground/85">
                 {agent.title ?? "Agent"}

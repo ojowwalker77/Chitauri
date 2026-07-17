@@ -195,7 +195,7 @@ const PERMISSIONS_MODE_OPTIONS = [
   {
     value: "full-access",
     label: "Full access",
-    activeClassName: "text-[var(--color-text-accent)]",
+    activeClassName: "text-foreground",
   },
   { value: "approval-required", label: "Ask first" },
 ] as const satisfies ReadonlyArray<{
@@ -245,10 +245,8 @@ const HIGHLIGHT_COLOR_OPTIONS: ReadonlyArray<{
 }> = [
   {
     value: "yellow",
-    label: "Yellow",
-    icon: (
-      <HighlightColorSwatch color="color-mix(in srgb, var(--color-text-accent) 60%, transparent)" />
-    ),
+    label: "Blue",
+    icon: <HighlightColorSwatch color="color-mix(in srgb, var(--info) 60%, transparent)" />,
   },
   {
     value: "green",
@@ -257,8 +255,8 @@ const HIGHLIGHT_COLOR_OPTIONS: ReadonlyArray<{
   },
   {
     value: "pink",
-    label: "Pink",
-    icon: <HighlightColorSwatch color="#f472b6" />,
+    label: "Red",
+    icon: <HighlightColorSwatch color="color-mix(in srgb, var(--danger) 60%, transparent)" />,
   },
 ];
 

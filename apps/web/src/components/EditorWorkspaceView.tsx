@@ -672,7 +672,7 @@ export function EditorWorkspaceView(props: EditorWorkspaceViewProps) {
               aria-hidden="true"
             />
             <span
-              className="pointer-events-none absolute inset-y-0 left-0 w-px bg-[var(--app-surface-divider)] transition-colors group-hover:bg-[var(--color-text-accent)] group-focus-visible:bg-[var(--color-text-accent)]"
+              className="pointer-events-none absolute inset-y-0 left-0 w-px bg-[var(--app-surface-divider)] transition-colors group-hover:bg-[var(--info)] group-focus-visible:bg-[var(--info)]"
               aria-hidden="true"
             />
           </div>
