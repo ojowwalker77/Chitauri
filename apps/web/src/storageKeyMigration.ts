@@ -23,8 +23,9 @@ export function migrateTeaCodeLocalStorageKeys(): void {
     for (let index = 0; index < storage.length; index += 1) {
       const key = storage.key(index);
       if (
+        key !== null &&
         LEGACY_STORAGE_PREFIXES.some(
-          (prefix) => key?.startsWith(`${prefix}:`) || key?.startsWith(`${prefix}.`),
+          (prefix) => key.startsWith(`${prefix}:`) || key.startsWith(`${prefix}.`),
         )
       ) {
         legacyKeys.push(key);
