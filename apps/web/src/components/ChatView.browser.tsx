@@ -3699,7 +3699,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
       const modeTrigger = page.getByTestId("composer-thread-mode-trigger");
       await expect.element(modeTrigger).toHaveTextContent("Orchestrator");
-      await expect.element(page.getByTestId("orchestrator-onboarding")).toBeInTheDocument();
+      await expect.element(page.getByTestId("orchestrator-onboarding")).not.toBeInTheDocument();
 
       useComposerDraftStore.getState().setPrompt(newThreadId, "Coordinate this change");
       const composerEditor = await waitForComposerEditor();

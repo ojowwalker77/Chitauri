@@ -136,7 +136,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     id: "appearance:theme",
     section: "appearance",
     title: "Theme",
-    keywords: "Choose how TeaCode looks across the app. dark light system color",
+    keywords: "Choose how TeaCode looks across the app. follow system dark light appearance",
   },
   {
     id: "appearance:ui-density",
@@ -163,13 +163,6 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     section: "appearance",
     title: "Terminal font size",
     keywords: "Adjust terminal text independently from the app and chat font size.",
-  },
-  {
-    id: "appearance:terminal-font",
-    section: "appearance",
-    title: "Terminal font",
-    keywords:
-      "Type any monospace font installed on this device e.g. Fira Code. system monospace family",
   },
   {
     id: "appearance:font-smoothing",

@@ -4,8 +4,7 @@
 
 import { Terminal, type ITheme } from "@xterm/xterm";
 
-const FALLBACK_MONO_FONT_FAMILY =
-  '"JetBrains Mono", "JetBrainsMono NFM", "JetBrainsMono NF", monospace';
+const FALLBACK_MONO_FONT_FAMILY = '"0xProto", monospace';
 const FALLBACK_TERMINAL_FONT_SIZE_PX = 12;
 const TERMINAL_FONT_WEIGHT = 300;
 const TERMINAL_BOLD_FONT_WEIGHT = 500;

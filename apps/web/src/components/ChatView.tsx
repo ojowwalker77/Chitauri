@@ -228,7 +228,6 @@ import { useComposerCommandMenuItems } from "../hooks/useComposerCommandMenuItem
 import { useThreadHandoff } from "../hooks/useThreadHandoff";
 import { useTurnDiffSummaries } from "../hooks/useTurnDiffSummaries";
 import BranchToolbar, { RuntimeUsageControls } from "./BranchToolbar";
-import { TeaCodeLogo } from "./TeaCodeLogo";
 import { ThreadWorktreeHandoffDialog } from "./ThreadWorktreeHandoffDialog";
 import {
   formatShortcutLabel,
@@ -423,9 +422,7 @@ import {
   COMPOSER_COLUMN_FRAME_CLASS_NAME,
   COMPOSER_EDITOR_PADDING_CLASS_NAME,
   COMPOSER_FOOTER_ROW_CLASS_NAME,
-  COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME,
   CHAT_BACKGROUND_CLASS_NAME,
-  CHAT_COLUMN_FRAME_CLASS_NAME,
   CHAT_COLUMN_GUTTER_CLASS_NAME,
 } from "./chat/composerPickerStyles";
 import { getComposerTraitSelection } from "./chat/composerTraits";
@@ -9697,56 +9694,7 @@ export default function ChatView({
                   CHAT_COLUMN_GUTTER_CLASS_NAME,
                 )}
               >
-                {/* Center the heading, composer, and suggestion list together as a
-                    single group: the suggestions live in normal flow so the whole
-                    block (composer + suggestions) stays vertically centered in the
-                    view instead of the composer being centered with the list hanging
-                    below it. */}
                 <div className="flex w-full flex-col justify-center">
-                  <div
-                    className={cn(
-                      "flex flex-col items-center gap-4 px-6 pb-5 text-center select-none",
-                      CHAT_COLUMN_FRAME_CLASS_NAME,
-                    )}
-                  >
-                    <TeaCodeLogo aria-label="TeaCode logo" className="size-10" />
-                    <h2
-                      data-testid="empty-landing-heading"
-                      className="text-[26px] font-normal leading-[1.15] tracking-[-0.015em] text-foreground/95 sm:text-[30px]"
-                    >
-                      {isEmptyChatLanding ? (
-                        isComposerOrchestratorMode ? (
-                          "What should we orchestrate?"
-                        ) : (
-                          "What should we work on?"
-                        )
-                      ) : (
-                        <>
-                          {isComposerOrchestratorMode
-                            ? "What should we orchestrate in "
-                            : "What should we do in "}
-                          <span className={COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME}>
-                            {activeProjectDisplayName ?? "this folder"}
-                          </span>
-                          ?
-                        </>
-                      )}
-                    </h2>
-                  </div>
-                  {isComposerOrchestratorMode ? (
-                    <OrchestratorDelegationPanel
-                      threads={orchestratorDelegations}
-                      onOpenThread={onNavigateToThread}
-                      showOnboarding
-                      seatModel={orchestratorSeatModel.model}
-                      seatStatus={activeOrchestratorSeatStatus?.status ?? "pending"}
-                      seatStatusReason={activeOrchestratorSeatStatus?.reason ?? null}
-                      laneRoutes={orchestratorLaneRoutes}
-                      open={orchestratorPanelOpen}
-                      onOpenChange={setOrchestratorPanelOpen}
-                      panelRef={orchestratorPanelRef}
-                    />
-                  ) : null}
                   {composerSection}
                   {(isGitRepo && !isCenteredEmptyLanding) || relocateComposerLeadingControls ? (
                     <div className={COMPOSER_COLUMN_FRAME_CLASS_NAME}>

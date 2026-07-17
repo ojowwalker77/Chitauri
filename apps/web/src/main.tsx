@@ -2,7 +2,6 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 
-import "@fontsource-variable/jetbrains-mono";
 import "./index.css";
 import "./storageKeyMigration";
 

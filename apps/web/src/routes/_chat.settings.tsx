@@ -58,24 +58,14 @@ import {
   MIN_TERMINAL_FONT_SIZE_PX,
   MODEL_PROVIDER_SETTINGS,
   normalizeChatFontSizePx,
-  normalizeTerminalFontFamily,
   normalizeTerminalFontSizePx,
   patchCustomModels,
-  TERMINAL_FONT_FAMILY_SUGGESTIONS,
   useAppSettings,
 } from "../appSettings";
 import { APP_VERSION } from "../branding";
 import { useDesktopTopBarTrafficLightGutterClassName } from "../hooks/useDesktopTopBarGutter";
 import { useProviderModelCatalog } from "../hooks/useProviderModelCatalog";
 import { ProviderOptionLabel } from "../components/ProviderIcon";
-import {
-  Autocomplete,
-  AutocompleteEmpty,
-  AutocompleteInput,
-  AutocompleteItem,
-  AutocompleteList,
-  AutocompletePopup,
-} from "../components/ui/autocomplete";
 import { Button } from "../components/ui/button";
 import { Collapsible, CollapsibleContent } from "../components/ui/collapsible";
 import { Input } from "../components/ui/input";
@@ -87,7 +77,6 @@ import {
 import { Select, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Switch } from "../components/ui/switch";
 import { toastManager } from "../components/ui/toast";
-import { ThemePackEditor } from "../components/ThemePackEditor";
 import { DebouncedSettingTextInput } from "../components/settings/DebouncedSettingTextInput";
 import {
   SettingsCard,
@@ -207,6 +196,12 @@ const UI_DENSITY_OPTIONS = [
 
 const THEME_OPTIONS = [
   {
+    value: "system",
+    label: "Follow System",
+    description: "Match your OS appearance setting.",
+    icon: <DeviceLaptopIcon />,
+  },
+  {
     value: "light",
     label: "Light",
     description: "Always use the light theme.",
@@ -217,12 +212,6 @@ const THEME_OPTIONS = [
     label: "Dark",
     description: "Always use the dark theme.",
     icon: <MoonIcon />,
-  },
-  {
-    value: "system",
-    label: "System",
-    description: "Match your OS appearance setting.",
-    icon: <DeviceLaptopIcon />,
   },
 ] as const;
 
@@ -806,7 +795,7 @@ function SettingsRouteView() {
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
   const activeSectionItem = SETTINGS_NAV_ITEMS.find((item) => item.id === activeSection)!;
 
-  const { isDefaultActiveTheme, resetAllThemes, resolvedTheme, theme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { settings, defaults, updateSettings, resetSettings } = useAppSettings();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const queryClient = useQueryClient();
@@ -885,14 +874,6 @@ function SettingsRouteView() {
   const shouldShowFontSmoothing = isMacPlatform(
     typeof navigator === "undefined" ? "" : navigator.platform,
   );
-  const visibleTerminalFontFamilySuggestions = useMemo(() => {
-    const query = settings.terminalFontFamily.trim().toLowerCase();
-    if (!query) return TERMINAL_FONT_FAMILY_SUGGESTIONS;
-    return TERMINAL_FONT_FAMILY_SUGGESTIONS.filter((suggestion) =>
-      suggestion.toLowerCase().includes(query),
-    );
-  }, [settings.terminalFontFamily]);
-
   const hiddenProviderSet = useMemo(
     () => new Set<ProviderKind>(settings.hiddenProviders),
     [settings.hiddenProviders],
@@ -1144,7 +1125,6 @@ function SettingsRouteView() {
     settings.piAgentDir !== defaults.piAgentDir;
   const changedSettingLabels = [
     ...(theme !== "system" ? ["Theme"] : []),
-    ...(!isDefaultActiveTheme ? [`${resolvedTheme === "dark" ? "Dark" : "Light"} theme pack`] : []),
     ...(settings.defaultProvider !== defaults.defaultProvider ? ["Default provider"] : []),
     ...(settings.defaultThreadEnvMode !== defaults.defaultThreadEnvMode ? ["New thread mode"] : []),
     ...(settings.sidebarProjectSortOrder !== defaults.sidebarProjectSortOrder
@@ -1158,7 +1138,6 @@ function SettingsRouteView() {
     ...(settings.highlightColor !== defaults.highlightColor ? ["Highlight color"] : []),
     ...(settings.chatFontSizePx !== defaults.chatFontSizePx ? ["Base font size"] : []),
     ...(settings.terminalFontSizePx !== defaults.terminalFontSizePx ? ["Terminal font size"] : []),
-    ...(settings.terminalFontFamily !== defaults.terminalFontFamily ? ["Terminal font"] : []),
     ...(shouldShowFontSmoothing &&
     settings.enableNativeFontSmoothing !== defaults.enableNativeFontSmoothing
       ? ["Font smoothing"]
@@ -1399,7 +1378,6 @@ function SettingsRouteView() {
     if (!confirmed) return;
 
     setTheme("system");
-    resetAllThemes();
     resetSettings();
     setOpenInstallProviders({
       codex: false,
@@ -1925,20 +1903,6 @@ function SettingsRouteView() {
           />
         </SettingsCard>
 
-        <div className="space-y-3">
-          {(resolvedTheme === "dark"
-            ? (["dark", "light"] as const)
-            : (["light", "dark"] as const)
-          ).map((variant) => (
-            <ThemePackEditor
-              key={variant}
-              variant={variant}
-              isActive={resolvedTheme === variant}
-              mode={theme}
-            />
-          ))}
-        </div>
-
         <SettingsCard>
           <SettingsRow
             title="UI density"
@@ -2069,70 +2033,6 @@ function SettingsRouteView() {
                   aria-label="Terminal font size in pixels"
                 />
                 <span className="text-xs text-muted-foreground">px</span>
-              </div>
-            }
-          />
-
-          <SettingsRow
-            title="Terminal font"
-            description="Type any monospace font installed on this device (e.g. Fira Code). Leave empty for the default. Fonts that aren't installed fall back to the system monospace."
-            resetAction={
-              settings.terminalFontFamily !== defaults.terminalFontFamily ? (
-                <SettingResetButton
-                  label="terminal font"
-                  onClick={() =>
-                    updateSettings({
-                      terminalFontFamily: defaults.terminalFontFamily,
-                    })
-                  }
-                />
-              ) : null
-            }
-            control={
-              <div className="flex w-full items-center justify-end sm:w-auto">
-                <Autocomplete
-                  items={visibleTerminalFontFamilySuggestions}
-                  mode="none"
-                  openOnInputClick
-                  value={settings.terminalFontFamily}
-                  onValueChange={(value) => {
-                    updateSettings({
-                      terminalFontFamily: normalizeTerminalFontFamily(value),
-                    });
-                  }}
-                >
-                  <AutocompleteInput
-                    size="sm"
-                    variant="soft"
-                    showTrigger
-                    showClear={settings.terminalFontFamily.length > 0}
-                    spellCheck={false}
-                    autoComplete="off"
-                    placeholder="Default (JetBrains Mono)"
-                    className="w-full sm:w-56"
-                    aria-label="Terminal font family"
-                  />
-                  <AutocompletePopup className="w-56 min-w-56 font-system-ui">
-                    <AutocompleteList>
-                      {visibleTerminalFontFamilySuggestions.map((suggestion, index) => (
-                        <AutocompleteItem
-                          key={suggestion}
-                          index={index}
-                          value={suggestion}
-                          className="font-normal text-[var(--color-text-foreground)]"
-                          onClick={() => {
-                            updateSettings({
-                              terminalFontFamily: normalizeTerminalFontFamily(suggestion),
-                            });
-                          }}
-                        >
-                          {suggestion}
-                        </AutocompleteItem>
-                      ))}
-                      <AutocompleteEmpty>No matching suggested fonts.</AutocompleteEmpty>
-                    </AutocompleteList>
-                  </AutocompletePopup>
-                </Autocomplete>
               </div>
             }
           />

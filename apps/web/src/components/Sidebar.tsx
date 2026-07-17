@@ -4,8 +4,6 @@
 
 import {
   ArchiveIcon,
-  AppsIcon,
-  BrainIcon,
   CheckCircle2Icon,
   ChevronDownIcon,
   ChevronRightIcon,
@@ -14,7 +12,6 @@ import {
   FolderIcon,
   FolderOpenIcon,
   GitMergedSimpleIcon,
-  GitHubIcon,
   GitPullRequestIcon,
   type LucideIcon,
   NewThreadIcon,
@@ -31,7 +28,6 @@ import {
   XIcon,
 } from "~/lib/icons";
 import { PinStatusIcon, pinActionLabel } from "~/lib/pin";
-import { ensureNativeApi } from "~/nativeApi";
 import { autoAnimate } from "@formkit/auto-animate";
 import { FiGitBranch, FiPlus } from "react-icons/fi";
 import { GoRepoForked } from "react-icons/go";
@@ -312,7 +308,6 @@ import {
   resolveThreadHandoffBadgeLabel,
 } from "../lib/threadHandoff";
 import { isTerminalFocused } from "../lib/terminalFocus";
-import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import { normalizeSettingsSection } from "../settingsNavigation";
 import {
   sidebarHoverRevealHideClassName,
@@ -370,7 +365,6 @@ const EMPTY_THREAD_JUMP_LABELS = new Map<ThreadId, string>();
 const EMPTY_SHORTCUT_PARTS: readonly string[] = [];
 const ADD_PROJECT_SNAPSHOT_CATCH_UP_MAX_ATTEMPTS = 6;
 const ADD_PROJECT_SNAPSHOT_CATCH_UP_DELAY_MS = 50;
-type SidebarView = "threads";
 const DebugFeatureFlagsMenu = import.meta.env.DEV
   ? lazy(() =>
       import("./DebugFeatureFlagsMenu").then((module) => ({
@@ -1059,40 +1053,6 @@ function ChatSortMenu({
   );
 }
 
-function SidebarNavigationMenuItem({
-  icon: Icon,
-  label,
-  onClick,
-  active = false,
-  badgeCount,
-}: {
-  icon: LucideIcon;
-  label: string;
-  onClick?: () => void;
-  active?: boolean;
-  badgeCount?: number | null;
-}) {
-  const showBadge = typeof badgeCount === "number" && badgeCount > 0;
-
-  return (
-    <MenuItem
-      className={cn(
-        "min-h-8 gap-2 px-2.5 text-[length:var(--app-font-size-ui,12px)]",
-        active && "bg-[var(--color-background-button-secondary-hover)] text-foreground",
-      )}
-      onClick={onClick}
-    >
-      <SidebarGlyph icon={Icon} variant="leading" />
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      {showBadge ? (
-        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-md bg-muted px-1 text-[10px] font-medium tabular-nums text-muted-foreground">
-          {badgeCount}
-        </span>
-      ) : null}
-    </MenuItem>
-  );
-}
-
 function SortableProjectItem({
   projectId,
   disabled = false,
@@ -1174,12 +1134,9 @@ export default function Sidebar() {
   const chatWorkspaceRoot = useWorkspaceStore((store) => store.chatWorkspaceRoot);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const pathname = useLocation({ select: (loc) => loc.pathname });
   const isOnSettings = useLocation({
     select: (loc) => loc.pathname === "/settings",
   });
-  const isOnGitHub = pathname.startsWith("/github");
-  const isOnResearch = pathname.startsWith("/research");
   const { settings: appSettings, updateSettings } = useAppSettings();
   // Rootless chats can be hidden independently from the project thread list.
   const chatsSectionVisible = appSettings.showChatsSection;
@@ -1190,7 +1147,6 @@ export default function Sidebar() {
     strict: false,
     select: (params) => (params.threadId ? ThreadId.makeUnsafe(params.threadId) : null),
   });
-  const routeSearch = useDiffRouteSearch();
   const settingsSectionSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const activeSettingsSection = normalizeSettingsSection(settingsSectionSearch.section);
 
@@ -2015,16 +1971,6 @@ export default function Sidebar() {
     }
     void navigate({ to: "/" });
   }, [navigate, navigateToBackTarget, resolveBackToThreadsTarget]);
-
-  const handleSidebarViewChange = useCallback(
-    (_view: SidebarView) => {
-      if (navigateToBackTarget(resolveBackToThreadsTarget())) {
-        return;
-      }
-      void handleNewChat({ fresh: true });
-    },
-    [handleNewChat, navigateToBackTarget, resolveBackToThreadsTarget],
-  );
 
   useEffect(() => {
     // Persisted paths make homeDir truthy immediately on reload, before the first shell snapshot.
@@ -4900,7 +4846,7 @@ export default function Sidebar() {
         className={cn(
           "group/thread-row w-full",
           treeConnected &&
-            "before:absolute before:top-5 before:-left-2 before:h-px before:w-2 before:bg-foreground/[0.08]",
+            "before:absolute before:top-4 before:-left-2 before:h-px before:w-2 before:bg-foreground/[0.08]",
         )}
         data-thread-item
       >
@@ -4925,7 +4871,7 @@ export default function Sidebar() {
                     isActive,
                     isSelected,
                   }),
-                  isProjectTreeThread && "h-10 min-h-10 py-0",
+                  isProjectTreeThread && "!h-8 !min-h-8 py-0",
                   leadingPrStatus ? "pl-8" : topLevel && !isSubagentThread ? "pl-2" : null,
                   isSubagentThread
                     ? "pr-7.5"
@@ -5192,7 +5138,7 @@ export default function Sidebar() {
               size="sm"
               className={cn(
                 SIDEBAR_HEADER_ROW_CLASS_NAME,
-                "h-10 min-h-10 py-0 hover:bg-[var(--sidebar-accent)] group-hover/project-header:bg-[var(--sidebar-accent)] group-hover/project-header:text-[var(--sidebar-accent-foreground)]",
+                "!h-9 !min-h-9 py-0 hover:bg-[var(--sidebar-accent)] group-hover/project-header:bg-[var(--sidebar-accent)] group-hover/project-header:text-[var(--sidebar-accent-foreground)]",
                 isManualProjectSorting ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
               )}
               {...(isManualProjectSorting && dragHandleProps ? dragHandleProps.attributes : {})}
@@ -5324,6 +5270,7 @@ export default function Sidebar() {
           className={cn(
             disclosureShellClassName(project.expanded),
             SIDEBAR_NESTED_LIST_OFFSET_CLASS_NAME,
+            "!pt-0",
           )}
         >
           <div className={DISCLOSURE_INNER_CLASS}>
@@ -5331,6 +5278,7 @@ export default function Sidebar() {
               className={cn(
                 "my-0 mr-0 ml-2 w-auto translate-x-0 border-l border-foreground/[0.08] py-0 pr-0 pl-2",
                 SIDEBAR_NESTED_LIST_GAP_CLASS_NAME,
+                "!gap-0",
                 disclosureContentClassName(project.expanded),
               )}
             >
@@ -6039,52 +5987,6 @@ export default function Sidebar() {
     </div>
   );
 
-  const isOnProjects = !isOnSettings && !isOnGitHub && !isOnResearch;
-  const isOnUtility = isOnGitHub || isOnResearch;
-  const sidebarNavigationMenu = !isOnSettings ? (
-    <Menu>
-      <SidebarIconButton
-        render={<MenuTrigger />}
-        icon={AppsIcon}
-        label="Open navigation"
-        className={cn(
-          "size-7 text-muted-foreground/70 hover:text-foreground",
-          isOnUtility && "bg-[var(--sidebar-accent-active)] text-foreground",
-        )}
-        tooltip="More"
-        tooltipSide="top"
-      />
-      <MenuPopup
-        align="end"
-        side="top"
-        className="min-w-52 rounded-xl border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] shadow-lg"
-      >
-        <MenuGroup>
-          <SidebarNavigationMenuItem
-            icon={FolderIcon}
-            label="Projects"
-            active={isOnProjects}
-            onClick={() => handleSidebarViewChange("threads")}
-          />
-        </MenuGroup>
-        <MenuSeparator />
-        <MenuGroup>
-          <SidebarNavigationMenuItem
-            icon={BrainIcon}
-            label="Research"
-            active={isOnResearch}
-            onClick={() => void navigate({ to: "/research" })}
-          />
-          <SidebarNavigationMenuItem
-            icon={GitHubIcon}
-            label="GitHub"
-            active={isOnGitHub}
-            onClick={() => void navigate({ to: "/github" })}
-          />
-        </MenuGroup>
-      </MenuPopup>
-    </Menu>
-  ) : null;
   const renameProjectDialogProject = renameProjectDialogId
     ? (projectById.get(renameProjectDialogId) ?? null)
     : null;
@@ -6285,7 +6187,7 @@ export default function Sidebar() {
                   onDragEnd={handleProjectDragEnd}
                   onDragCancel={handleProjectDragCancel}
                 >
-                  <SidebarMenu className="gap-1">
+                  <SidebarMenu className="gap-0">
                     <SortableContext
                       items={standardProjects.map((project) => project.id)}
                       strategy={verticalListSortingStrategy}
@@ -6299,7 +6201,7 @@ export default function Sidebar() {
                   </SidebarMenu>
                 </DndContext>
               ) : (
-                <SidebarMenu ref={attachProjectListAutoAnimateRef} className="gap-1">
+                <SidebarMenu ref={attachProjectListAutoAnimateRef} className="gap-0">
                   {standardProjects.map((project) => (
                     <SidebarMenuItem key={project.id} className="rounded-md">
                       {renderProjectItem(project, null)}
@@ -6469,7 +6371,6 @@ export default function Sidebar() {
                     <span>Settings</span>
                   </SidebarMenuButton>
                 )}
-                {sidebarNavigationMenu}
                 {showDesktopUpdateButton ? (
                   <Tooltip>
                     <TooltipTrigger
