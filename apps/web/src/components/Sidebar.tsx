@@ -4,6 +4,7 @@
 
 import {
   ArchiveIcon,
+  AppsIcon,
   BrainIcon,
   CheckCircle2Icon,
   ChevronDownIcon,
@@ -16,13 +17,11 @@ import {
   GitMergedSimpleIcon,
   GitHubIcon,
   GitPullRequestIcon,
-  HammerIcon,
   type LucideIcon,
   NewThreadIcon,
   PencilIcon,
   PinIcon,
   PlayIcon,
-  SearchIcon,
   SettingsIcon,
   StopFilledIcon,
   TemporaryThreadIcon,
@@ -32,7 +31,6 @@ import {
   WorktreeIcon,
   XIcon,
 } from "~/lib/icons";
-import { CentralIcon } from "~/lib/central-icons";
 import { PinStatusIcon, pinActionLabel } from "~/lib/pin";
 import { ensureNativeApi } from "~/nativeApi";
 import { autoAnimate } from "@formkit/auto-animate";
@@ -131,9 +129,6 @@ import {
   gitResolvePullRequestQueryOptions,
   gitStatusQueryOptions,
 } from "../lib/gitReactQuery";
-import { githubWorkListQueryOptions } from "../lib/githubReactQuery";
-import { useGitHubInboxStore } from "../githubInboxStore";
-import { isActionableGitHubReason, isGithubItemSnoozed } from "../githubWorkbench.logic";
 import {
   providerComposerCapabilitiesQueryOptions,
   supportsThreadImport,
@@ -187,6 +182,7 @@ import { SidebarLeadingIcon } from "./SidebarLeadingIcon";
 import { SidebarMetaChipStack } from "./SidebarMetaChip";
 import { SidebarRowHoverActions } from "./SidebarRowHoverActions";
 import { SidebarSectionToolbar } from "./SidebarSectionToolbar";
+import { SidebarTreeBranchChip, SidebarTreeStatusPill } from "./SidebarTreeMap";
 import { SidebarGlyph, sidebarGlyphClass, SIDEBAR_TRAILING_ICON_CLASS } from "./sidebarGlyphs";
 import { ThreadPinToggleButton } from "./ThreadPinToggleButton";
 import { ThreadRunningSpinner } from "./ThreadRunningSpinner";
@@ -392,10 +388,6 @@ const EMPTY_SHORTCUT_PARTS: readonly string[] = [];
 const ADD_PROJECT_SNAPSHOT_CATCH_UP_MAX_ATTEMPTS = 6;
 const ADD_PROJECT_SNAPSHOT_CATCH_UP_DELAY_MS = 50;
 type SidebarView = "threads" | "workspace";
-const SIDEBAR_VIEW_LABELS: Record<SidebarView, string> = {
-  threads: "Projects",
-  workspace: "Workspace",
-};
 const DebugFeatureFlagsMenu = import.meta.env.DEV
   ? lazy(() =>
       import("./DebugFeatureFlagsMenu").then((module) => ({
@@ -555,10 +547,18 @@ function SidebarStatusTrailingGlyph({ status }: { status: ThreadStatusPill }) {
     );
   }
   if (status.pulse) {
-    return <ThreadRunningSpinner />;
+    return <ThreadRunningSpinner className="text-[var(--app-sidebar-coral)]" />;
   }
   return (
-    <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", status.dotClass)} />
+    <span
+      aria-hidden="true"
+      className={cn("size-1.5 shrink-0 rounded-full", status.dotClass)}
+      style={
+        status.label === "Pending Approval"
+          ? { backgroundColor: "var(--app-sidebar-gold)" }
+          : undefined
+      }
+    />
   );
 }
 
@@ -569,7 +569,7 @@ function ProjectRunIndicatorDot({ className }: { className?: string }) {
       aria-hidden="true"
       title="Dev server running"
       className={cn(
-        "size-1.5 shrink-0 rounded-full bg-emerald-400 motion-safe:animate-pulse",
+        "size-1.5 shrink-0 rounded-full bg-success motion-safe:animate-pulse",
         className,
       )}
     />
@@ -595,10 +595,10 @@ function threadRowTimestampSlotClassName(
     "flex shrink-0 items-center justify-end leading-none tabular-nums",
     sidebarHoverRevealHideClassName("thread-row"),
     isSubagentThread
-      ? "w-[1.2rem] text-[10px]"
+      ? "w-[1.2rem] text-[11px]"
       : // Nudge the timestamp a hair above the meta scale while still tracking the user's
         // typography setting (the CSS var is always set; the 11px is just an SSR fallback).
-        "w-[1.625rem] text-[length:calc(var(--app-font-size-ui-meta,11px)+0.5px)]",
+        "w-[1.625rem] text-[length:calc(var(--app-font-size-ui-meta,12px)+0.5px)]",
     toneClassName ?? (isSubagentThread ? "text-muted-foreground/26" : "text-muted-foreground/38"),
   );
 }
@@ -676,13 +676,7 @@ function resolveThreadRowMetaChips(input: {
     chips.push({
       id: "fork",
       tooltip: "Forked thread",
-      icon: (
-        <SidebarGlyph
-          icon={GoRepoForked}
-          variant="meta"
-          className="text-emerald-600 dark:text-emerald-300/90"
-        />
-      ),
+      icon: <SidebarGlyph icon={GoRepoForked} variant="meta" className="text-success" />,
     });
   }
 
@@ -719,6 +713,10 @@ function ProviderAvatarWithTerminal({
   const badgeColorClass = terminalStatus?.colorClass ?? "text-muted-foreground/55";
 
   const hasHandoff = Boolean(handoffSourceProvider);
+  const providerStyle =
+    provider === "claudeAgent" ? { color: "var(--app-sidebar-coral)" } : undefined;
+  const handoffProviderStyle =
+    handoffSourceProvider === "claudeAgent" ? { color: "var(--app-sidebar-coral)" } : undefined;
   const containerClass = hasHandoff
     ? "relative inline-flex h-3 w-4.5 shrink-0 items-center"
     : "relative inline-flex size-3 shrink-0 items-center justify-center";
@@ -726,15 +724,19 @@ function ProviderAvatarWithTerminal({
   const avatarNode = hasHandoff ? (
     <span className={containerClass}>
       <span className="sidebar-icon-chip absolute left-0 top-1/2 inline-flex size-3 -translate-y-1/2 items-center justify-center rounded-full">
-        <ProviderIcon provider={handoffSourceProvider!} className="size-2" />
+        <ProviderIcon
+          provider={handoffSourceProvider!}
+          className="size-2"
+          style={handoffProviderStyle}
+        />
       </span>
       <span className="sidebar-icon-chip absolute right-0 top-1/2 z-10 inline-flex size-3 -translate-y-1/2 items-center justify-center rounded-full">
-        <ProviderIcon provider={provider} className="size-2" />
+        <ProviderIcon provider={provider} className="size-2" style={providerStyle} />
       </span>
     </span>
   ) : (
     <span className={containerClass}>
-      <ProviderIcon provider={provider} className="size-3" />
+      <ProviderIcon provider={provider} className="size-3" style={providerStyle} />
     </span>
   );
 
@@ -762,7 +764,7 @@ function ProviderAvatarWithTerminal({
                 {terminalCount > 1 ? (
                   <span
                     className={cn(
-                      "text-[8px] font-semibold leading-none tabular-nums",
+                      "text-[11px] font-semibold leading-none tabular-nums",
                       badgeColorClass,
                     )}
                   >
@@ -913,7 +915,7 @@ function terminalStatusFromThreadState(input: {
   if (terminalAttentionStates.includes("attention")) {
     return {
       label: "Terminal input needed",
-      colorClass: "text-amber-600 dark:text-amber-300/90",
+      colorClass: "text-gold",
       pulse: false,
     };
   }
@@ -927,7 +929,7 @@ function terminalStatusFromThreadState(input: {
   if (terminalAttentionStates.includes("review")) {
     return {
       label: "Terminal task completed",
-      colorClass: "text-emerald-600 dark:text-emerald-300/90",
+      colorClass: "text-success",
       pulse: false,
     };
   }
@@ -1006,7 +1008,7 @@ function ProjectSortMenu({
       <MenuPopup
         align="end"
         side="bottom"
-        className="min-w-44 rounded-lg border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] shadow-lg"
+        className="min-w-44 rounded-xl border-panel-border bg-panel shadow-[0_16px_44px_rgba(0,0,0,0.5)]"
       >
         <MenuGroup>
           <div className="px-2 py-1 sm:text-xs font-medium text-muted-foreground">
@@ -1085,7 +1087,7 @@ function ChatSortMenu({
       <MenuPopup
         align="end"
         side="bottom"
-        className="min-w-44 rounded-lg border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] shadow-lg"
+        className="min-w-44 rounded-xl border-panel-border bg-panel shadow-[0_16px_44px_rgba(0,0,0,0.5)]"
       >
         <MenuGroup>
           <div className="px-2 py-1 sm:text-xs font-medium text-muted-foreground">Sort chats</div>
@@ -1099,62 +1101,37 @@ function ChatSortMenu({
   );
 }
 
-function SidebarPrimaryAction({
+function SidebarNavigationMenuItem({
   icon: Icon,
   label,
   onClick,
   active = false,
-  disabled = false,
-  shortcutLabel,
   badgeCount,
 }: {
   icon: LucideIcon;
   label: string;
   onClick?: () => void;
   active?: boolean;
-  disabled?: boolean;
-  shortcutLabel?: string | null;
   badgeCount?: number | null;
 }) {
-  const shortcutParts = shortcutLabel ? splitShortcutLabel(shortcutLabel) : [];
   const showBadge = typeof badgeCount === "number" && badgeCount > 0;
 
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        size="sm"
-        data-active={active}
-        aria-current={active ? "page" : undefined}
-        className={cn(
-          "group/sidebar-primary-action",
-          SIDEBAR_HEADER_ROW_CLASS_NAME,
-          active
-            ? SIDEBAR_ROW_ACTIVE_CLASS_NAME
-            : cn(SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME, SIDEBAR_ROW_HOVER_CLASS_NAME),
-        )}
-        aria-disabled={disabled || undefined}
-        disabled={disabled}
-        onClick={onClick}
-      >
-        <SidebarLeadingIcon size="sm" tone="text-inherit">
-          <SidebarGlyph icon={Icon} variant="leading" />
-        </SidebarLeadingIcon>
-        <span className="truncate">{label}</span>
-        {showBadge ? (
-          <span className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-md bg-muted px-1 text-[10px] font-medium text-muted-foreground">
-            {badgeCount}
-          </span>
-        ) : shortcutParts.length > 0 ? (
-          <span className="ml-auto opacity-0 transition-opacity group-hover/sidebar-primary-action:opacity-100 group-focus-visible/sidebar-primary-action:opacity-100">
-            <KbdGroup>
-              {shortcutParts.map((part) => (
-                <Kbd key={part}>{part}</Kbd>
-              ))}
-            </KbdGroup>
-          </span>
-        ) : null}
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+    <MenuItem
+      className={cn(
+        "min-h-8 gap-2 px-2.5 text-[length:var(--app-font-size-ui,12px)]",
+        active && "bg-[var(--color-background-button-secondary-hover)] text-foreground",
+      )}
+      onClick={onClick}
+    >
+      <SidebarGlyph icon={Icon} variant="leading" />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {showBadge ? (
+        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-md bg-muted px-1 text-[10px] font-medium tabular-nums text-muted-foreground">
+          {badgeCount}
+        </span>
+      ) : null}
+    </MenuItem>
   );
 }
 
@@ -1192,59 +1169,6 @@ function SortableProjectItem({
     >
       {children({ attributes, listeners, setActivatorNodeRef })}
     </li>
-  );
-}
-
-function SidebarSegmentedPicker({
-  views,
-  activeView,
-  onSelectView,
-}: {
-  views: ReadonlyArray<SidebarView>;
-  activeView: SidebarView;
-  onSelectView: (view: SidebarView) => void;
-}) {
-  // A single-option switcher is just a static label, so hide it entirely when the
-  // user has turned off one of the two sections in Settings.
-  if (views.length < 2) {
-    return null;
-  }
-  const activeIndex = views.indexOf(activeView);
-  return (
-    <div className="px-3 pb-2.5">
-      <div className="sidebar-segmented-picker relative isolate inline-flex w-full rounded-lg p-0.5">
-        {/* Single highlighted pill that glides between segments instead of snapping per-button. */}
-        <div
-          aria-hidden
-          className={cn(
-            "sidebar-segmented-thumb pointer-events-none absolute inset-y-0.5 left-0.5 z-0 rounded-md transition-transform duration-sheet ease-drawer",
-            activeIndex < 0 && "opacity-0",
-          )}
-          style={{
-            width: `calc((100% - 0.25rem) / ${views.length})`,
-            transform: `translateX(${Math.max(0, activeIndex) * 100}%)`,
-          }}
-        />
-        {views.map((view) => {
-          const active = activeView === view;
-          return (
-            <button
-              key={view}
-              type="button"
-              className={cn(
-                "relative z-10 flex-1 rounded-md px-2.5 py-1 text-[11.5px] font-medium transition-colors duration-200",
-                active
-                  ? "text-[var(--color-text-foreground)]"
-                  : "text-[var(--color-text-foreground-secondary)] hover:text-[var(--color-text-foreground)]",
-              )}
-              onClick={() => onSelectView(view)}
-            >
-              {SIDEBAR_VIEW_LABELS[view]}
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 }
 
@@ -1325,7 +1249,6 @@ export default function Sidebar() {
   const unpinThread = usePinnedThreadsStore((store) => store.unpinThread);
   const prunePinnedThreads = usePinnedThreadsStore((store) => store.prunePinnedThreads);
   const workspacePages = useWorkspaceStore((store) => store.workspacePages);
-  const createWorkspace = useWorkspaceStore((store) => store.createWorkspace);
   const renameWorkspace = useWorkspaceStore((store) => store.renameWorkspace);
   const deleteWorkspace = useWorkspaceStore((store) => store.deleteWorkspace);
   const reorderWorkspace = useWorkspaceStore((store) => store.reorderWorkspace);
@@ -1340,7 +1263,6 @@ export default function Sidebar() {
   const isOnWorkspace = pathname.startsWith("/workspace");
   const isOnAutomations = pathname.startsWith("/automations");
   const isOnGitHub = pathname.startsWith("/github");
-  const isOnComputerScripts = pathname.startsWith("/computer-scripts");
   const isOnResearch = pathname.startsWith("/research");
   // Lightweight read of automations to drive the sidebar attention badge. Shares the
   // ["automations"] query cache with the Automations route (and its live stream updates).
@@ -1361,26 +1283,6 @@ export default function Sidebar() {
     if (!data) return 0;
     return automationAttentionCount(data.runs);
   }, [automationListQuery.data]);
-  const githubInboxQuery = useQuery(
-    githubWorkListQueryOptions({
-      cwd: projects[0]?.cwd ?? null,
-      kind: "inbox",
-      view: "attention",
-      query: null,
-      repository: null,
-      limit: 75,
-    }),
-  );
-  const githubSnoozedUntilByItemId = useGitHubInboxStore((state) => state.snoozedUntilByItemId);
-  const githubAttentionBadgeCount = useMemo(
-    () =>
-      (githubInboxQuery.data?.items ?? []).filter(
-        (item) =>
-          isActionableGitHubReason(item.reason) &&
-          !isGithubItemSnoozed(item.id, githubSnoozedUntilByItemId),
-      ).length,
-    [githubInboxQuery.data?.items, githubSnoozedUntilByItemId],
-  );
   // Heartbeat automations grouped by their target thread, so each thread row can show a
   // clock chip indicating an automation is attached (mirrors the Environment panel section).
   const automationsByThreadId = useMemo(
@@ -2308,11 +2210,6 @@ export default function Sidebar() {
       handleSidebarViewChange("threads");
     }
   }, [handleSidebarViewChange, isOnSettings, isOnWorkspace, workspaceSectionVisible]);
-
-  const handleCreateWorkspace = useCallback(() => {
-    const workspaceId = createWorkspace();
-    navigateToWorkspace(workspaceId);
-  }, [createWorkspace, navigateToWorkspace]);
 
   useEffect(() => {
     // Persisted paths make homeDir truthy immediately on reload, before the first shell snapshot.
@@ -4902,6 +4799,7 @@ export default function Sidebar() {
     threadJumpLabelParts: readonly string[];
     rightMetaChips: ThreadMetaChip[];
     threadStatus: ReturnType<typeof resolveThreadStatusForSidebar>;
+    statusPresentation?: "glyph" | "label" | undefined;
     timestampToneClassName?: string;
     hoverActions: ReactNode;
   }) {
@@ -4919,11 +4817,17 @@ export default function Sidebar() {
             ))}
           </KbdGroup>
         ) : null}
-        {!input.threadJumpLabel && input.threadStatus ? (
+        {!input.threadJumpLabel && input.threadStatus && input.statusPresentation === "label" ? (
+          <span className={sidebarHoverRevealHideClassName("thread-row")}>
+            <SidebarTreeStatusPill status={input.threadStatus} />
+          </span>
+        ) : !input.threadJumpLabel && input.threadStatus ? (
           // The relative time now lives in the row hover card, so the trailing
           // slot only carries the live status/loader glyph; when idle it
           // collapses and the hover action icons sit flush at the end.
           <span
+            aria-label={`Thread status: ${input.threadStatus.label}`}
+            title={input.threadStatus.label}
             className={threadRowTimestampSlotClassName(
               input.isSubagentThread,
               input.timestampToneClassName,
@@ -4938,16 +4842,19 @@ export default function Sidebar() {
   }
 
   // Shared section header keeps sidebar list spacing and typography consistent.
-  function renderListSectionHeader(label: string, toolbar: ReactNode) {
+  function renderListSectionHeader(label: string, meta: string, toolbar: ReactNode) {
     return (
       <div className="group/project-header relative my-1">
         <div
           className={cn(
-            "flex h-7 w-full min-w-0 items-center px-2 py-0.5 pr-[4.75rem]",
+            "flex min-h-7 w-full min-w-0 items-center justify-between gap-2 px-2 py-1 pr-[4.75rem]",
             SIDEBAR_SECTION_LABEL_CLASS_NAME,
           )}
         >
           <span className="truncate">{label}</span>
+          <span className="shrink-0 font-system-ui text-[11px] font-normal tabular-nums text-muted-foreground/44">
+            {meta}
+          </span>
         </div>
         <SidebarSectionToolbar placement="overlay" revealOnHover>
           {toolbar}
@@ -4960,12 +4867,22 @@ export default function Sidebar() {
       return null;
     }
     return (
-      <div className="mb-3">
-        <div className="my-1 flex items-center justify-between px-2 py-1">
+      <div className="mb-3" data-sidebar-tree-section="pinned">
+        <div className="my-1 flex min-h-7 items-center justify-between px-2 py-1">
           <span className={SIDEBAR_SECTION_LABEL_CLASS_NAME}>Pinned</span>
+          <span className="font-system-ui text-[11px] font-normal tabular-nums text-muted-foreground/44">
+            {pinnedThreads.length}
+          </span>
         </div>
-        <div className="flex flex-col gap-0.5">
-          {pinnedThreads.map((thread) => renderPinnedThreadRow(thread))}
+        <div className="relative ml-2 flex flex-col gap-0.5 border-l border-foreground/[0.08] pl-2">
+          {pinnedThreads.map((thread) => (
+            <div
+              key={thread.id}
+              className="relative before:absolute before:top-5 before:-left-2 before:h-px before:w-2 before:bg-foreground/[0.08]"
+            >
+              {renderPinnedThreadRow(thread)}
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -5057,6 +4974,7 @@ export default function Sidebar() {
     const threadJumpLabel = visibleThreadJumpLabelByThreadId.get(thread.id) ?? null;
     const threadJumpLabelParts =
       visibleThreadJumpLabelPartsByThreadId.get(thread.id) ?? EMPTY_SHORTCUT_PARTS;
+    const showStatusLabel = Boolean(threadStatus) && !threadJumpLabel && !isSubagentThread;
     // The trailing cluster (meta chips + status glyph) is absolutely positioned; it
     // only grows past the reserve when a live glyph (spinner/check/dot or jump label)
     // occupies the status slot. In that state the right-aligned project label needs a
@@ -5095,11 +5013,12 @@ export default function Sidebar() {
               // space, with a trailing reserve that grows only for the badges actually
               // present — instead of a rigid grid that permanently fenced off a
               // timestamp-era column and squeezed the title/project even when wide.
-              "relative gap-1.5 transition-colors",
+              "relative h-auto min-h-10 gap-1.5 py-1 transition-colors",
               leadingPrStatus && "pl-8",
               resolveThreadRowTrailingReserveClass({
                 metaChipCount: rightMetaChips.length,
                 hasTrailingGlyph: hasTrailingStatusGlyph,
+                hasStatusLabel: showStatusLabel,
               }),
               isActive
                 ? SIDEBAR_ROW_ACTIVE_CLASS_NAME
@@ -5138,62 +5057,39 @@ export default function Sidebar() {
                 terminalCount={terminalCount}
               />
             ) : null}
-            <div className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
-              <span
-                className={cn(
-                  "min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,12px)] leading-5",
-                  isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
-                )}
-                data-testid={`thread-title-${thread.id}`}
-              >
-                {isSubagentThread ? (
-                  <SidebarSubagentLabel
-                    threadId={thread.id}
-                    parentThreadId={thread.parentThreadId}
-                    agentId={thread.subagentAgentId}
-                    nickname={thread.subagentNickname}
-                    role={thread.subagentRole}
-                    title={thread.title}
-                  />
-                ) : (
-                  thread.title
-                )}
-              </span>
-              {thread.orchestratorMode ? (
+            <div className="grid min-w-0 flex-1 gap-0.5 text-left">
+              <div className="flex min-w-0 items-center gap-1.5">
                 <span
-                  className="inline-flex shrink-0 items-center gap-0.5 rounded-sm bg-indigo-500/9 px-1.5 py-0.5 text-[9px] font-medium text-indigo-700 dark:text-indigo-300"
-                  title="Orchestrator thread"
+                  className={cn(
+                    "min-w-0 flex-1 truncate text-[length:calc(var(--app-font-size-ui,12px)+0.5px)] leading-5",
+                    isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
+                  )}
+                  data-testid={`thread-title-${thread.id}`}
                 >
-                  <CentralIcon name="agent-network" className="size-2.5" />
-                  Orchestrator
+                  {thread.orchestratorMode ? <span className="sr-only">Orchestrator: </span> : null}
+                  {isSubagentThread ? (
+                    <SidebarSubagentLabel
+                      threadId={thread.id}
+                      parentThreadId={thread.parentThreadId}
+                      agentId={thread.subagentAgentId}
+                      nickname={thread.subagentNickname}
+                      role={thread.subagentRole}
+                      title={thread.title}
+                    />
+                  ) : (
+                    thread.title
+                  )}
                 </span>
-              ) : null}
-              {!isSubagentThread && threadStatus?.label === "Pending Approval" ? (
-                <span
-                  aria-label="Pending approval"
-                  className={cn("shrink-0 text-[10px] font-medium", threadStatus.colorClass)}
-                >
-                  Pending
-                </span>
-              ) : null}
+              </div>
+              <div className="flex min-w-0 items-center gap-1.5 leading-none">
+                {projectLabel ? (
+                  <span className="min-w-0 truncate text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/38">
+                    {projectLabel}
+                  </span>
+                ) : null}
+                <SidebarTreeBranchChip branch={thread.branch} highlighted={isActive} />
+              </div>
             </div>
-            {projectLabel ? (
-              // Right-aligned project context for the flattened pinned list. The title
-              // (flex-1) pushes it to the content edge, so it shows in full when the row
-              // has room and only truncates under real pressure, shifting left as the
-              // trailing reserve grows on hover/status. When a live status glyph occupies
-              // the trailing slot (e.g. the running spinner), the absolute cluster reaches
-              // a few px past the reserve — a small margin keeps the folder name from
-              // touching the worktree chip. It costs no space when the row is idle.
-              <span
-                className={cn(
-                  "max-w-[40%] shrink-0 truncate text-right text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/38 transition-[margin] duration-150 ease-out",
-                  hasTrailingStatusGlyph && "mr-2",
-                )}
-              >
-                {projectLabel}
-              </span>
-            ) : null}
             <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
               {renderThreadRowTrailingCluster({
                 isSubagentThread,
@@ -5201,6 +5097,7 @@ export default function Sidebar() {
                 threadJumpLabelParts,
                 rightMetaChips,
                 threadStatus,
+                statusPresentation: showStatusLabel ? "label" : "glyph",
                 timestampToneClassName: "text-muted-foreground/38",
                 hoverActions: renderThreadHoverActions({
                   threadId: thread.id,
@@ -5227,6 +5124,7 @@ export default function Sidebar() {
     // their top-level rows align flush like pinned rows instead of the indented
     // column used for project-nested threads.
     topLevel = false,
+    treeConnected = false,
   ) {
     const threadTerminalState = selectThreadTerminalState(terminalStateByThreadId, thread.id);
     const threadEntryPoint = threadTerminalState.entryPoint;
@@ -5257,6 +5155,7 @@ export default function Sidebar() {
       threadAutomations: automationsByThreadId.get(thread.id),
     });
     const isSubagentThread = Boolean(thread.parentThreadId);
+    const isProjectTreeThread = !topLevel && !isSubagentThread;
     const leadingPrStatus =
       isSubagentThread || thread.forkSourceThreadId || thread.sidechatSourceThreadId
         ? null
@@ -5290,7 +5189,6 @@ export default function Sidebar() {
       scope: topLevel ? "chat" : "project",
       threadId: thread.id,
     });
-    const useProjectTreeLayout = !topLevel && !isSubagentThread;
 
     return (
       <SidebarMenuSubItem
@@ -5298,8 +5196,8 @@ export default function Sidebar() {
         data-thread-hover-anchor={hoverAnchorId}
         className={cn(
           "group/thread-row w-full",
-          useProjectTreeLayout &&
-            "before:absolute before:left-[1.125rem] before:top-[1.25rem] before:h-px before:w-3 before:bg-border/45",
+          treeConnected &&
+            "before:absolute before:top-5 before:-left-2 before:h-px before:w-2 before:bg-foreground/[0.08]",
         )}
         data-thread-item
       >
@@ -5324,14 +5222,15 @@ export default function Sidebar() {
                     isActive,
                     isSelected,
                   }),
-                  useProjectTreeLayout &&
-                    "h-10 min-h-10 items-center gap-2 pl-11 rounded-[10px] text-[length:calc(var(--app-font-size-ui,12px)+1px)]",
+                  isProjectTreeThread && "h-10 min-h-10 py-0",
                   leadingPrStatus ? "pl-8" : topLevel && !isSubagentThread ? "pl-2" : null,
                   isSubagentThread
                     ? "pr-7.5"
                     : resolveThreadRowTrailingReserveClass({
-                        metaChipCount: showCompactMeta ? rightMetaChips.length : 0,
+                        metaChipCount:
+                          showCompactMeta && !isProjectTreeThread ? rightMetaChips.length : 0,
                         hasTrailingGlyph: Boolean(threadStatus) || Boolean(threadJumpLabel),
+                        hasStatusLabel: false,
                       }),
                 )}
                 draggable
@@ -5403,7 +5302,7 @@ export default function Sidebar() {
                 />
               </span>
             ) : threadEntryPoint === "terminal" ? (
-              useProjectTreeLayout ? (
+              isProjectTreeThread ? (
                 <span className="inline-flex size-[26px] shrink-0 items-center justify-center rounded-full bg-muted/35 text-muted-foreground/85">
                   <SidebarGlyph icon={TerminalIcon} variant="chrome" />
                 </span>
@@ -5411,7 +5310,7 @@ export default function Sidebar() {
                 <SidebarGlyph icon={TerminalIcon} variant="chrome" />
               )
             ) : showThreadProviderAvatar ? (
-              useProjectTreeLayout ? (
+              isProjectTreeThread ? (
                 <span className="inline-flex size-[26px] shrink-0 items-center justify-center rounded-full bg-muted/35 text-muted-foreground/85">
                   <ProviderAvatarWithTerminal
                     provider={thread.session?.provider ?? thread.modelSelection.provider}
@@ -5437,52 +5336,33 @@ export default function Sidebar() {
                 isSubagentThread ? "gap-[5px]" : "gap-1.5",
               )}
             >
-              <span
-                className={cn(
-                  "min-w-0 flex-1 truncate",
-                  useProjectTreeLayout
-                    ? "text-[length:calc(var(--app-font-size-ui,12px)+1px)]"
-                    : "text-[length:var(--app-font-size-ui,12px)]",
-                  // Inactive thread names share the resting label color with
-                  // project/folder headers; the active row still pops via its
-                  // background + full-foreground color from resolveThreadRowClassName.
-                  isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
-                  isSubagentThread ? "leading-[18px] text-foreground/80" : "leading-5",
-                )}
-              >
-                {isSubagentThread ? (
-                  <SidebarSubagentLabel
-                    threadId={thread.id}
-                    parentThreadId={thread.parentThreadId}
-                    agentId={thread.subagentAgentId}
-                    nickname={thread.subagentNickname}
-                    role={thread.subagentRole}
-                    title={thread.title}
-                    roleClassName="text-muted-foreground/42"
-                  />
-                ) : (
-                  thread.title
-                )}
-              </span>
-              {thread.orchestratorMode && !useProjectTreeLayout ? (
+              <div className="flex min-w-0 items-center gap-1.5">
                 <span
-                  className="inline-flex shrink-0 items-center gap-0.5 rounded-sm bg-indigo-500/9 px-1.5 py-0.5 text-[9px] font-medium text-indigo-700 dark:text-indigo-300"
-                  title="Orchestrator thread"
+                  className={cn(
+                    "min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,12px)]",
+                    // Inactive thread names share the resting label color with
+                    // project/folder headers; the active row still pops via its
+                    // background + full-foreground color from resolveThreadRowClassName.
+                    isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
+                    isSubagentThread ? "leading-[18px] text-foreground/80" : "leading-5",
+                  )}
                 >
-                  <CentralIcon name="agent-network" className="size-2.5" />
-                  Orchestrator
+                  {thread.orchestratorMode ? <span className="sr-only">Orchestrator: </span> : null}
+                  {isSubagentThread ? (
+                    <SidebarSubagentLabel
+                      threadId={thread.id}
+                      parentThreadId={thread.parentThreadId}
+                      agentId={thread.subagentAgentId}
+                      nickname={thread.subagentNickname}
+                      role={thread.subagentRole}
+                      title={thread.title}
+                      roleClassName="text-muted-foreground/42"
+                    />
+                  ) : (
+                    thread.title
+                  )}
                 </span>
-              ) : null}
-              {!useProjectTreeLayout &&
-              !isSubagentThread &&
-              threadStatus?.label === "Pending Approval" ? (
-                <span
-                  aria-label="Pending approval"
-                  className={cn("shrink-0 text-[10px] font-medium", threadStatus.colorClass)}
-                >
-                  Pending
-                </span>
-              ) : null}
+              </div>
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-1.5 pr-1">
               {canToggleSubagents ? (
@@ -5501,7 +5381,7 @@ export default function Sidebar() {
                     toggleSubagentParent(thread.id);
                   }}
                 >
-                  <span className="text-[9px] font-medium leading-none tabular-nums">
+                  <span className="text-[11px] font-medium leading-none tabular-nums">
                     {childCount}
                   </span>
                   {isExpanded ? (
@@ -5524,13 +5404,14 @@ export default function Sidebar() {
                 </Tooltip>
               ) : null}
             </div>
-            <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
+            <div className={cn("absolute top-1/2 flex -translate-y-1/2 items-center", "right-1.5")}>
               {renderThreadRowTrailingCluster({
                 isSubagentThread,
                 threadJumpLabel,
                 threadJumpLabelParts,
-                rightMetaChips: showCompactMeta && !useProjectTreeLayout ? rightMetaChips : [],
+                rightMetaChips: showCompactMeta && !isProjectTreeThread ? rightMetaChips : [],
                 threadStatus,
+                statusPresentation: "glyph",
                 timestampToneClassName: isSubagentThread
                   ? isHighlighted
                     ? "text-foreground/38 dark:text-foreground/46"
@@ -5574,7 +5455,7 @@ export default function Sidebar() {
     const {
       orderedProjectThreadIds,
       allProjectThreadCount,
-      projectStatus,
+      projectActivityRollup,
       visibleEntries,
       threadListExtraPages,
       canShowMoreThreads,
@@ -5586,7 +5467,6 @@ export default function Sidebar() {
     // A project reads as "running" when Chitauri tracks a run for it or when a
     // local server (possibly started outside Chitauri) is attributed by cwd.
     const isProjectRunning = projectRun !== null || projectRunServer !== null;
-    const collapsedProjectStatus = project.expanded ? null : projectStatus;
     // The "open dev server" affordance now lives in the project context menu, so
     // the hover toolbar always reserves space for the three thread actions. The
     // reserve lives on the *name* container (not the button) so only the truncating
@@ -5597,7 +5477,7 @@ export default function Sidebar() {
       "group-hover/project-header:pr-[4.75rem] group-has-[:focus-visible]/project-header:pr-[4.75rem]";
 
     return (
-      <div className="group/collapsible">
+      <div className="group/collapsible" data-sidebar-tree-project={project.id}>
         <PreviewCard>
           <PreviewCardTrigger
             {...SIDEBAR_HOVER_CARD_TRIGGER_PROPS}
@@ -5613,8 +5493,7 @@ export default function Sidebar() {
               size="sm"
               className={cn(
                 SIDEBAR_HEADER_ROW_CLASS_NAME,
-                "h-10 min-h-10 rounded-[10px] text-[length:calc(var(--app-font-size-ui,12px)+1px)]",
-                "hover:bg-[var(--sidebar-accent)] group-hover/project-header:bg-[var(--sidebar-accent)] group-hover/project-header:text-[var(--sidebar-accent-foreground)]",
+                "h-10 min-h-10 py-0 hover:bg-[var(--sidebar-accent)] group-hover/project-header:bg-[var(--sidebar-accent)] group-hover/project-header:text-[var(--sidebar-accent-foreground)]",
                 isManualProjectSorting ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
               )}
               {...(isManualProjectSorting && dragHandleProps ? dragHandleProps.attributes : {})}
@@ -5639,45 +5518,36 @@ export default function Sidebar() {
               </SidebarLeadingIcon>
               <div
                 className={cn(
-                  "flex min-w-0 flex-1 items-center gap-2 overflow-hidden transition-[padding] duration-150 ease-out",
+                  "grid min-w-0 flex-1 gap-0.5 overflow-hidden text-left transition-[padding] duration-150 ease-out",
                   projectToolbarReserveClassName,
                 )}
               >
                 <span
                   className={cn(
-                    "truncate font-system-ui text-[length:calc(var(--app-font-size-ui,12px)+1px)] font-normal",
+                    "truncate font-system-ui text-[length:calc(var(--app-font-size-ui,12px)+0.5px)] font-normal",
                     SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
                   )}
                 >
                   {project.name}
                 </span>
-                {project.localName ? (
-                  <span className="shrink-0 truncate text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/40">
-                    {project.folderName}
-                  </span>
-                ) : null}
               </div>
-              {/* Claude-style project rows keep the child count visible at rest.
-                  Run/thread status replaces it when there is something actionable. */}
-              {isProjectRunning || collapsedProjectStatus || allProjectThreadCount > 0 ? (
+              {allProjectThreadCount > 0 || isProjectRunning || projectActivityRollup ? (
                 <span
-                  aria-label={
-                    collapsedProjectStatus
-                      ? `Project status: ${collapsedProjectStatus.label}`
-                      : undefined
-                  }
-                  title={collapsedProjectStatus?.label}
+                  aria-label={projectActivityRollup?.status.label}
                   className={cn(
-                    "ml-auto flex min-w-[1.625rem] shrink-0 items-center justify-end gap-2 self-center",
+                    "ml-auto flex shrink-0 items-center justify-end gap-1.5 self-center",
                     sidebarHoverRevealHideClassName("project-header"),
                   )}
                 >
-                  {isProjectRunning ? <ProjectRunIndicatorDot /> : null}
-                  {collapsedProjectStatus ? (
-                    <SidebarStatusTrailingGlyph status={collapsedProjectStatus} />
-                  ) : allProjectThreadCount > 0 ? (
-                    <span className="text-[11px] tabular-nums text-muted-foreground/45">
+                  {allProjectThreadCount > 0 ? (
+                    <span className="text-[11px] leading-none tabular-nums text-muted-foreground/58">
                       {allProjectThreadCount}
+                    </span>
+                  ) : null}
+                  {isProjectRunning ? <ProjectRunIndicatorDot /> : null}
+                  {projectActivityRollup ? (
+                    <span title={projectActivityRollup.label}>
+                      <SidebarStatusTrailingGlyph status={projectActivityRollup.status} />
                     </span>
                   ) : null}
                 </span>
@@ -5760,7 +5630,7 @@ export default function Sidebar() {
           <div className={DISCLOSURE_INNER_CLASS}>
             <SidebarMenuSub
               className={cn(
-                "relative mx-0 my-0 w-full translate-x-0 border-l-0 px-0 py-0 before:absolute before:top-0 before:bottom-4 before:left-[1.125rem] before:w-px before:bg-border/45",
+                "my-0 mr-0 ml-2 w-auto translate-x-0 border-l border-foreground/[0.08] py-0 pr-0 pl-2",
                 SIDEBAR_NESTED_LIST_GAP_CLASS_NAME,
                 disclosureContentClassName(project.expanded),
               )}
@@ -5772,6 +5642,8 @@ export default function Sidebar() {
                   entry.depth,
                   entry.childCount,
                   entry.isExpanded,
+                  false,
+                  entry.depth === 0,
                 ),
               )}
 
@@ -5783,7 +5655,7 @@ export default function Sidebar() {
                         render={<button type="button" />}
                         data-thread-selection-safe
                         size="sm"
-                        className="h-7 flex-1 translate-x-0 justify-start rounded-lg pr-2 pl-8 text-left text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]"
+                        className="h-7 flex-1 translate-x-0 justify-start rounded-lg pr-2 pl-8 text-left text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]"
                         onClick={() => {
                           showMoreThreadsForProject(project.cwd, threadListExtraPages);
                         }}
@@ -5797,7 +5669,7 @@ export default function Sidebar() {
                         data-thread-selection-safe
                         size="sm"
                         className={cn(
-                          "h-7 translate-x-0 justify-start rounded-lg text-left text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]",
+                          "h-7 translate-x-0 justify-start rounded-lg text-left text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]",
                           // Keep the left indent when "Show less" is the only affordance left.
                           canShowMoreThreads ? "w-auto flex-none px-2" : "flex-1 pr-2 pl-8",
                         )}
@@ -6159,7 +6031,7 @@ export default function Sidebar() {
     desktopUpdateButtonPresentation.secondaryLabel !== null;
   const desktopUpdateDownloadPercent = getDesktopUpdateDownloadPercent(desktopUpdateState);
   const desktopUpdateRowButtonClasses = cn(
-    "inline-flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[var(--info)] px-2.5 font-system-ui text-[length:var(--app-font-size-ui-xs,10px)] font-medium leading-none text-white transition-colors",
+    "inline-flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[var(--info)] px-2.5 font-system-ui text-[length:var(--app-font-size-ui-xs,12px)] font-medium leading-none text-white transition-colors",
     desktopUpdateButtonHasSecondaryLabel && "min-h-6 py-0.5",
     desktopUpdateButtonInteractivityClasses,
   );
@@ -6170,9 +6042,6 @@ export default function Sidebar() {
     shortcutLabelForCommand(keybindings, "chat.newChat") ??
     shortcutLabelForCommand(keybindings, "chat.newLocal");
   const newTerminalThreadShortcutLabel = shortcutLabelForCommand(keybindings, "chat.newTerminal");
-  const searchShortcutLabel =
-    shortcutLabelForCommand(keybindings, "sidebar.search") ??
-    (isMacPlatform(navigator.platform) ? "⌘K" : "Ctrl+K");
   const importThreadShortcutLabel =
     shortcutLabelForCommand(keybindings, "sidebar.importThread") ??
     (isMacPlatform(navigator.platform) ? "⌘I" : "Ctrl+I");
@@ -6453,13 +6322,16 @@ export default function Sidebar() {
   // in useDesktopTopBarTrafficLightGutterClassName used by the closed-state surfaces).
   const isMacDesktop = typeof navigator !== "undefined" ? isMacPlatform(navigator.platform) : false;
 
-  // Open-sidebar (in-sidebar) and non-electron wordmark clusters share the one
-  // SidebarLeadingControls primitive with the closed-state host headers, so the
-  // toggle + arrows look identical whether the sidebar is open or collapsed; only
-  // the wrapper layout differs per host.
-  const titlebarControls = <SidebarLeadingControls className="hidden md:flex" />;
+  // Open-sidebar and non-electron headers share the same lone sidebar toggle with
+  // closed-state host headers, so opening and closing the sidebar does not change
+  // the available chrome.
+  const titlebarControls = (
+    <div className="ml-auto hidden items-center md:flex [-webkit-app-region:no-drag]">
+      <SidebarLeadingControls />
+    </div>
+  );
 
-  const headerControls = <SidebarLeadingControls className="ml-auto hidden md:flex" />;
+  const headerControls = <SidebarLeadingControls className="hidden md:flex" />;
 
   const wordmark = (
     <div className="flex w-full items-center gap-1.5">
@@ -6467,6 +6339,69 @@ export default function Sidebar() {
       {headerControls}
     </div>
   );
+
+  const isOnProjects =
+    !isOnSettings && !isOnWorkspace && !isOnAutomations && !isOnGitHub && !isOnResearch;
+  const isOnUtility = isOnAutomations || isOnGitHub || isOnResearch;
+  const sidebarNavigationMenu = !isOnSettings ? (
+    <Menu>
+      <SidebarIconButton
+        render={<MenuTrigger />}
+        icon={AppsIcon}
+        label="Open navigation"
+        className={cn(
+          "size-7 text-muted-foreground/70 hover:text-foreground",
+          isOnUtility && "bg-[var(--sidebar-accent-active)] text-foreground",
+        )}
+        tooltip="More"
+        tooltipSide="top"
+      />
+      <MenuPopup
+        align="end"
+        side="top"
+        className="min-w-52 rounded-xl border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] shadow-lg"
+      >
+        <MenuGroup>
+          <SidebarNavigationMenuItem
+            icon={FolderIcon}
+            label="Projects"
+            active={isOnProjects}
+            onClick={() => handleSidebarViewChange("threads")}
+          />
+          {workspaceSectionVisible ? (
+            <SidebarNavigationMenuItem
+              icon={TerminalIcon}
+              label="Workspace"
+              active={isOnWorkspace}
+              onClick={() => handleSidebarViewChange("workspace")}
+            />
+          ) : null}
+        </MenuGroup>
+        <MenuSeparator />
+        <MenuGroup>
+          <SidebarNavigationMenuItem
+            icon={ClockIcon}
+            label="Automations"
+            active={isOnAutomations}
+            badgeCount={automationAttentionBadgeCount}
+            onClick={() => void navigate({ to: "/automations" })}
+          />
+          <SidebarNavigationMenuItem
+            icon={BrainIcon}
+            label="Research"
+            active={isOnResearch}
+            onClick={() => void navigate({ to: "/research" })}
+          />
+          <SidebarNavigationMenuItem
+            icon={GitHubIcon}
+            label="GitHub"
+            active={isOnGitHub}
+            onClick={() => void navigate({ to: "/github" })}
+          />
+        </MenuGroup>
+      </MenuPopup>
+    </Menu>
+  ) : null;
   const renameProjectDialogProject = renameProjectDialogId
     ? (projectById.get(renameProjectDialogId) ?? null)
     : null;
@@ -6526,7 +6461,7 @@ export default function Sidebar() {
       <SidebarContent className="gap-0 font-system-ui">
         {showArm64IntelBuildWarning && arm64IntelBuildWarningDescription ? (
           <SidebarGroup className="px-2 pt-2 pb-0">
-            <Alert variant="warning" className="rounded-2xl border-warning/40 bg-warning/8">
+            <Alert variant="warning" className="rounded-xl border-warning/40 bg-warning/8">
               <TriangleAlertIcon />
               <AlertTitle>Intel build on Apple Silicon</AlertTitle>
               <AlertDescription>{arm64IntelBuildWarningDescription}</AlertDescription>
@@ -6568,78 +6503,8 @@ export default function Sidebar() {
           </SidebarGroup>
         ) : (
           <>
-            <SidebarSegmentedPicker
-              views={["threads", ...(workspaceSectionVisible ? (["workspace"] as const) : [])]}
-              activeView={isOnWorkspace ? "workspace" : "threads"}
-              onSelectView={handleSidebarViewChange}
-            />
-            {/* Primary sidebar actions stay limited to features we currently ship. */}
-            <SidebarGroup className="px-1.5 pt-1 pb-1.5">
-              <SidebarMenu className="gap-0.5">
-                {isOnWorkspace ? (
-                  <SidebarPrimaryAction
-                    icon={TerminalIcon}
-                    label="New workspace"
-                    onClick={handleCreateWorkspace}
-                  />
-                ) : (
-                  <>
-                    <SidebarPrimaryAction
-                      icon={NewThreadIcon}
-                      label="New thread"
-                      onClick={handlePrimaryNewThread}
-                    />
-                    <SidebarPrimaryAction
-                      icon={SearchIcon}
-                      label="Search"
-                      active={searchPaletteOpen}
-                      onClick={() => {
-                        setSearchPaletteOpen(true);
-                      }}
-                      shortcutLabel={searchShortcutLabel}
-                    />
-                    <SidebarPrimaryAction
-                      icon={ClockIcon}
-                      label="Automations"
-                      active={isOnAutomations}
-                      badgeCount={automationAttentionBadgeCount}
-                      onClick={() => {
-                        void navigate({ to: "/automations" });
-                      }}
-                    />
-                    <SidebarPrimaryAction
-                      icon={BrainIcon}
-                      label="Research"
-                      active={isOnResearch}
-                      onClick={() => {
-                        void navigate({ to: "/research" });
-                      }}
-                    />
-                    <SidebarPrimaryAction
-                      icon={HammerIcon}
-                      label="Computer Scripts"
-                      active={isOnComputerScripts}
-                      onClick={() => {
-                        void navigate({ to: "/computer-scripts" });
-                      }}
-                    />
-                    <SidebarPrimaryAction
-                      icon={GitHubIcon}
-                      label="GitHub"
-                      active={isOnGitHub}
-                      badgeCount={githubAttentionBadgeCount}
-                      onClick={() => {
-                        void navigate({ to: "/github" });
-                      }}
-                    />
-                  </>
-                )}
-              </SidebarMenu>
-            </SidebarGroup>
-
             {isOnWorkspace ? (
               <SidebarGroup className="px-1.5 pt-1 pb-1.5">
-                <div className="my-2 h-px w-full bg-border" />
                 <div className="mb-1.5 flex items-center px-2">
                   <span className={SIDEBAR_SECTION_LABEL_CLASS_NAME}>Workspace</span>
                 </div>
@@ -6681,7 +6546,7 @@ export default function Sidebar() {
                                         setRenamingWorkspaceTitle(workspace.title);
                                       }
                                     }}
-                                    className="h-7 w-full rounded-md border border-[color:var(--color-border)] bg-[var(--color-background-control-opaque)] px-2 text-[length:var(--app-font-size-ui,12px)] text-[var(--color-text-foreground)] outline-none focus:border-[color:var(--color-border-focus)]"
+                                    className="h-7 w-full rounded-md border border-[color:var(--color-border)] bg-[var(--color-background-control-opaque)] px-2 text-[length:var(--app-font-size-ui,14px)] text-[var(--color-text-foreground)] outline-none focus:border-[color:var(--color-border-focus)]"
                                   />
                                 </div>
                               ) : (
@@ -6689,7 +6554,7 @@ export default function Sidebar() {
                                   <SidebarMenuButton
                                     size="sm"
                                     isActive={isActive}
-                                    className="h-8 gap-2 rounded-lg pl-2 pr-8 font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal text-foreground/89 transition-colors hover:bg-[var(--sidebar-accent)] data-[active=true]:bg-[var(--sidebar-accent-active)] data-[active=true]:text-[var(--sidebar-accent-foreground)]"
+                                    className="h-8 gap-2 rounded-lg pl-2 pr-8 font-system-ui text-[length:var(--app-font-size-ui,14px)] font-normal text-foreground/89 transition-colors hover:bg-[var(--sidebar-accent)] data-[active=true]:bg-[var(--sidebar-accent-active)] data-[active=true]:text-[var(--sidebar-accent-foreground)]"
                                     onClick={() => {
                                       navigateToWorkspace(workspace.id);
                                     }}
@@ -6716,16 +6581,16 @@ export default function Sidebar() {
                                         className={cn(
                                           "inline-flex size-1.5 shrink-0 rounded-full",
                                           workspace.terminalStatus.label === "Terminal input needed"
-                                            ? "bg-amber-500 dark:bg-amber-300/90"
+                                            ? "bg-gold"
                                             : workspace.terminalStatus.label ===
                                                 "Terminal process running"
                                               ? "bg-teal-500 dark:bg-teal-300/90"
-                                              : "bg-emerald-500 dark:bg-emerald-300/90",
+                                              : "bg-success",
                                         )}
                                       />
                                     )}
                                     {workspace.terminalCount > 0 && (
-                                      <span className="shrink-0 text-[length:var(--app-font-size-ui-xs,10px)] tabular-nums text-muted-foreground/50">
+                                      <span className="shrink-0 text-[length:var(--app-font-size-ui-xs,12px)] tabular-nums text-muted-foreground/50">
                                         {workspace.terminalCount}
                                       </span>
                                     )}
@@ -6751,10 +6616,11 @@ export default function Sidebar() {
                 </DndContext>
               </SidebarGroup>
             ) : (
-              <SidebarGroup className="px-1.5 py-1.5">
+              <SidebarGroup className="px-1.5 py-1.5" data-sidebar-tree-section="projects">
                 {renderPinnedThreadsSection()}
                 {renderListSectionHeader(
                   "Projects",
+                  `${standardProjects.length} ${pluralize(standardProjects.length, "repo")}`,
                   <>
                     {standardProjects.length > 0 ? (
                       <SidebarIconButton
@@ -6805,7 +6671,7 @@ export default function Sidebar() {
                       {isElectron && (
                         <button
                           type="button"
-                          className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-background-elevated-secondary)] px-2 text-[length:var(--app-font-size-ui,12px)] font-normal text-[var(--color-text-foreground-secondary)] transition-[background-color,color,scale] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] active:scale-[0.96] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
+                          className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-background-elevated-secondary)] px-2 text-[length:var(--app-font-size-ui,14px)] font-normal text-[var(--color-text-foreground-secondary)] transition-[background-color,color,scale] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] active:scale-[0.96] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
                           onClick={() => void handlePickFolder()}
                           disabled={isPickingFolder || isAddingProject}
                         >
@@ -6819,7 +6685,7 @@ export default function Sidebar() {
                       )}
                       <button
                         type="button"
-                        className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-background-elevated-secondary)] px-2 text-[length:var(--app-font-size-ui,12px)] font-normal text-[var(--color-text-foreground-secondary)] transition-[background-color,color,scale] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
+                        className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-background-elevated-secondary)] px-2 text-[length:var(--app-font-size-ui,14px)] font-normal text-[var(--color-text-foreground-secondary)] transition-[background-color,color,scale] duration-150 ease-out hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
                         onClick={() => {
                           setAddingProject(false);
                           setSearchPaletteMode("import");
@@ -6853,7 +6719,7 @@ export default function Sidebar() {
                     onDragEnd={handleProjectDragEnd}
                     onDragCancel={handleProjectDragCancel}
                   >
-                    <SidebarMenu className="gap-3">
+                    <SidebarMenu className="gap-1">
                       <SortableContext
                         items={standardProjects.map((project) => project.id)}
                         strategy={verticalListSortingStrategy}
@@ -6867,7 +6733,7 @@ export default function Sidebar() {
                     </SidebarMenu>
                   </DndContext>
                 ) : (
-                  <SidebarMenu ref={attachProjectListAutoAnimateRef} className="gap-3">
+                  <SidebarMenu ref={attachProjectListAutoAnimateRef} className="gap-1">
                     {standardProjects.map((project) => (
                       <SidebarMenuItem key={project.id} className="rounded-md">
                         {renderProjectItem(project, null)}
@@ -6882,7 +6748,7 @@ export default function Sidebar() {
                     aria-live="polite"
                     aria-label="Loading projects"
                   >
-                    <div className="text-center text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/58">
+                    <div className="text-center text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/58">
                       Loading projects...
                     </div>
                     <div className="mx-auto grid w-full max-w-42 gap-1.5 opacity-70">
@@ -6894,7 +6760,7 @@ export default function Sidebar() {
                 )}
 
                 {projectEmptyState === "empty" && (
-                  <div className="px-2 pt-4 text-center text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/58">
+                  <div className="px-2 pt-4 text-center text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/58">
                     No projects yet
                   </div>
                 )}
@@ -6923,7 +6789,7 @@ export default function Sidebar() {
                   }}
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
-                    <span className="truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal text-muted-foreground/79">
+                    <span className="truncate font-system-ui text-[length:var(--app-font-size-ui,14px)] font-normal text-muted-foreground/79">
                       Chats
                     </span>
                     <DisclosureChevron
@@ -6963,7 +6829,7 @@ export default function Sidebar() {
                     {visibleChatThreadRows.length > 0 ? (
                       renderedChatEntries.map((entry) => renderChatItem(entry.row))
                     ) : (
-                      <div className="px-2 py-2 text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/48">
+                      <div className="px-2 py-2 text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/48">
                         No chats yet
                       </div>
                     )}
@@ -6973,7 +6839,7 @@ export default function Sidebar() {
                           {canShowMoreChatThreads ? (
                             <SidebarMenuButton
                               size="sm"
-                              className="h-7 flex-1 justify-start rounded-lg pr-2 pl-8 text-left text-[length:var(--app-font-size-ui,12px)] font-normal text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]"
+                              className="h-7 flex-1 justify-start rounded-lg pr-2 pl-8 text-left text-[length:var(--app-font-size-ui,14px)] font-normal text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]"
                               onClick={() =>
                                 setChatThreadListExtraPages(chatThreadListEffectiveExtraPages + 1)
                               }
@@ -6985,7 +6851,7 @@ export default function Sidebar() {
                             <SidebarMenuButton
                               size="sm"
                               className={cn(
-                                "h-7 justify-start rounded-lg text-left text-[length:var(--app-font-size-ui,12px)] font-normal text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]",
+                                "h-7 justify-start rounded-lg text-left text-[length:var(--app-font-size-ui,14px)] font-normal text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]",
                                 // Keep the left indent when "Show less" is the only affordance left.
                                 canShowMoreChatThreads
                                   ? "w-auto flex-none px-2"
@@ -7038,6 +6904,7 @@ export default function Sidebar() {
                     <span>Settings</span>
                   </SidebarMenuButton>
                 )}
+                {sidebarNavigationMenu}
                 {showDesktopUpdateButton ? (
                   <Tooltip>
                     <TooltipTrigger
@@ -7055,13 +6922,13 @@ export default function Sidebar() {
                               {desktopUpdateButtonPresentation.label}
                             </span>
                             {desktopUpdateButtonPresentation.secondaryLabel ? (
-                              <span className="min-w-0 truncate text-center text-[length:var(--app-font-size-ui-xs,10px)] text-white/80">
+                              <span className="min-w-0 truncate text-center text-[length:var(--app-font-size-ui-xs,12px)] text-white/80">
                                 {desktopUpdateButtonPresentation.secondaryLabel}
                               </span>
                             ) : null}
                           </span>
                           {desktopUpdateDownloadPercent !== null ? (
-                            <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] font-semibold tabular-nums text-white/95">
+                            <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white/95">
                               {desktopUpdateDownloadPercent}%
                             </span>
                           ) : null}
@@ -7239,7 +7106,7 @@ export default function Sidebar() {
         <DialogPopup surface="solid" className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
-              <PlayIcon className="size-4 text-emerald-500" />
+              <PlayIcon className="size-4 text-success" />
               Start dev
             </DialogTitle>
             <DialogDescription>
@@ -7249,7 +7116,7 @@ export default function Sidebar() {
           <DialogPanel className="space-y-2">
             <label
               htmlFor="project-run-command-input"
-              className="block text-[length:var(--app-font-size-ui-xs,10px)] font-medium text-[var(--color-text-foreground-secondary)]"
+              className="block text-[length:var(--app-font-size-ui-xs,12px)] font-medium text-[var(--color-text-foreground-secondary)]"
             >
               Command
             </label>
@@ -7273,7 +7140,7 @@ export default function Sidebar() {
               }}
             />
             {projectRunDialogCommandIsValid ? null : (
-              <p className="text-[length:var(--app-font-size-ui-sm,11px)] text-destructive">
+              <p className="text-[length:var(--app-font-size-ui-sm,13px)] text-destructive">
                 Enter a command to run.
               </p>
             )}

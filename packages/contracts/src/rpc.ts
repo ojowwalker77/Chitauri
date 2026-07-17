@@ -18,22 +18,6 @@ import {
   AutomationStreamEvent,
   AutomationUpdateInput,
 } from "./automation";
-import {
-  ComputerScriptsAnalysisInput,
-  ComputerScriptsAnalysisSnapshot,
-  ComputerScriptsCancelAnalysisInput,
-  ComputerScriptsCancelRunInput,
-  ComputerScriptsCatalogResult,
-  ComputerScriptsListHistoryInput,
-  ComputerScriptsListHistoryResult,
-  ComputerScriptsRunInput,
-  ComputerScriptsRunSnapshot,
-  ComputerScriptsStartAnalysisInput,
-  ComputerScriptsStartAnalysisResult,
-  ComputerScriptsStartRunInput,
-  ComputerScriptsStartRunResult,
-  ComputerScriptsStreamEvent,
-} from "./computerScripts";
 import { OpenInEditorInput } from "./editor";
 import { FilesystemBrowseInput, FilesystemBrowseResult } from "./filesystem";
 import {
@@ -194,6 +178,7 @@ import {
   StatsGetProfileTokenStatsInput,
   StatsGetProfileTokenStatsResult,
 } from "./stats";
+import { PerformanceGetSnapshotInput, PerformanceGetSnapshotResult } from "./performance";
 import { WS_METHODS } from "./ws";
 
 export class WsRpcError extends Schema.TaggedErrorClass<WsRpcError>()("WsRpcError", {
@@ -720,6 +705,12 @@ export const WsServerGetDiagnosticsRpc = Rpc.make(WS_METHODS.serverGetDiagnostic
   error: WsRpcError,
 });
 
+export const WsPerformanceGetSnapshotRpc = Rpc.make(WS_METHODS.performanceGetSnapshot, {
+  payload: PerformanceGetSnapshotInput,
+  success: PerformanceGetSnapshotResult,
+  error: WsRpcError,
+});
+
 export const WsServerGenerateThreadRecapRpc = Rpc.make(WS_METHODS.serverGenerateThreadRecap, {
   payload: ServerGenerateThreadRecapInput,
   success: ServerGenerateThreadRecapResult,
@@ -884,67 +875,6 @@ export const WsSubscribeAutomationEventsRpc = Rpc.make(WS_METHODS.subscribeAutom
   stream: true,
 });
 
-export const WsComputerScriptsCatalogRpc = Rpc.make(WS_METHODS.computerScriptsCatalog, {
-  payload: Schema.Struct({}),
-  success: ComputerScriptsCatalogResult,
-  error: WsRpcError,
-});
-
-export const WsComputerScriptsStartAnalysisRpc = Rpc.make(WS_METHODS.computerScriptsStartAnalysis, {
-  payload: ComputerScriptsStartAnalysisInput,
-  success: ComputerScriptsStartAnalysisResult,
-  error: WsRpcError,
-});
-
-export const WsComputerScriptsAnalysisRpc = Rpc.make(WS_METHODS.computerScriptsAnalysis, {
-  payload: ComputerScriptsAnalysisInput,
-  success: ComputerScriptsAnalysisSnapshot,
-  error: WsRpcError,
-});
-
-export const WsComputerScriptsCancelAnalysisRpc = Rpc.make(
-  WS_METHODS.computerScriptsCancelAnalysis,
-  {
-    payload: ComputerScriptsCancelAnalysisInput,
-    success: ComputerScriptsAnalysisSnapshot,
-    error: WsRpcError,
-  },
-);
-
-export const WsComputerScriptsStartRunRpc = Rpc.make(WS_METHODS.computerScriptsStartRun, {
-  payload: ComputerScriptsStartRunInput,
-  success: ComputerScriptsStartRunResult,
-  error: WsRpcError,
-});
-
-export const WsComputerScriptsRunRpc = Rpc.make(WS_METHODS.computerScriptsRun, {
-  payload: ComputerScriptsRunInput,
-  success: ComputerScriptsRunSnapshot,
-  error: WsRpcError,
-});
-
-export const WsComputerScriptsCancelRunRpc = Rpc.make(WS_METHODS.computerScriptsCancelRun, {
-  payload: ComputerScriptsCancelRunInput,
-  success: ComputerScriptsRunSnapshot,
-  error: WsRpcError,
-});
-
-export const WsComputerScriptsListHistoryRpc = Rpc.make(WS_METHODS.computerScriptsListHistory, {
-  payload: ComputerScriptsListHistoryInput,
-  success: ComputerScriptsListHistoryResult,
-  error: WsRpcError,
-});
-
-export const WsSubscribeComputerScriptsEventsRpc = Rpc.make(
-  WS_METHODS.subscribeComputerScriptsEvents,
-  {
-    payload: Schema.Struct({}),
-    success: ComputerScriptsStreamEvent,
-    error: WsRpcError,
-    stream: true,
-  },
-);
-
 export const WsRpcGroup = RpcGroup.make(
   WsOrchestrationDispatchCommandRpc,
   WsOrchestrationListImportableDesktopThreadsRpc,
@@ -1026,6 +956,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsStatsGetProfileStatsRpc,
   WsStatsGetProfileTokenStatsRpc,
   WsServerGetDiagnosticsRpc,
+  WsPerformanceGetSnapshotRpc,
   WsServerGenerateThreadRecapRpc,
   WsServerGenerateAutomationIntentRpc,
   WsServerUpsertKeybindingRpc,
@@ -1051,13 +982,4 @@ export const WsRpcGroup = RpcGroup.make(
   WsAutomationMarkRunReadRpc,
   WsAutomationArchiveRunRpc,
   WsSubscribeAutomationEventsRpc,
-  WsComputerScriptsCatalogRpc,
-  WsComputerScriptsStartAnalysisRpc,
-  WsComputerScriptsAnalysisRpc,
-  WsComputerScriptsCancelAnalysisRpc,
-  WsComputerScriptsStartRunRpc,
-  WsComputerScriptsRunRpc,
-  WsComputerScriptsCancelRunRpc,
-  WsComputerScriptsListHistoryRpc,
-  WsSubscribeComputerScriptsEventsRpc,
 );

@@ -43,6 +43,7 @@ export type MessagesTimelineRow =
       id: string;
       createdAt: string;
       groupedEntries: WorkLogEntry[];
+      activeTurnStartedAt?: string | undefined;
     }
   | {
       kind: "message";
@@ -59,6 +60,10 @@ export type MessagesTimelineRow =
       showAssistantCopyButton: boolean;
       assistantCopyStreaming: boolean;
       assistantTurnDiffSummary?: TurnDiffSummary | undefined;
+      // The latest visible activity row owns the live elapsed header once the
+      // turn has produced work or assistant text. This keeps the header and the
+      // activity trail in one surface instead of rendering a detached divider.
+      activeTurnStartedAt?: string | undefined;
       // True while this row's turn is still running. The end-of-turn changes
       // card (Undo / Review) is held back until the turn settles so it cannot
       // pre-empt the composer's live changes strip mid-turn.
@@ -395,29 +400,51 @@ export function deriveMessagesTimelineRows(input: {
     activeTurnId: input.activeTurnId ?? null,
   });
 
-  // The live turn wears a "Working for Xs" header + divider — the counting-up
-  // twin of a settled turn's "Worked for Xs" disclosure. It anchors to the top
-  // of the active turn (right after the user message that opened it) and needs a
-  // real start time to count from; the trailing "Thinking" shimmer covers the
-  // gap before one exists. Inserted after collapse so folding is untouched.
+  // Once live work or narration exists, let its latest row own the elapsed
+  // header so the status and activity trail read as one surface. Before the
+  // first activity arrives, keep a standalone header immediately after the user
+  // message so the elapsed state is never lost.
   if (
     input.isWorking &&
     input.activeTurnStartedAt &&
     !(input.worktreeSetup && input.worktreeSetupOpen)
   ) {
-    nextRows.splice(findLiveTurnHeaderInsertIndex(nextRows), 0, {
-      kind: "working-header",
-      id: "working-header-row",
-      createdAt: input.activeTurnStartedAt,
-    });
+    const liveActivityOwnerIndex = findLiveTurnActivityOwnerIndex(nextRows);
+    const liveActivityOwner =
+      liveActivityOwnerIndex >= 0 ? nextRows[liveActivityOwnerIndex] : undefined;
+    if (liveActivityOwner?.kind === "message" || liveActivityOwner?.kind === "work") {
+      liveActivityOwner.activeTurnStartedAt = input.activeTurnStartedAt;
+    } else {
+      nextRows.splice(findLiveTurnHeaderInsertIndex(nextRows), 0, {
+        kind: "working-header",
+        id: "working-header-row",
+        createdAt: input.activeTurnStartedAt,
+      });
+    }
   }
 
   return nextRows;
 }
 
+// Finds the latest assistant/work row after the most recent user boundary. The
+// generic trailing "working" row is intentionally ignored: it is a spinner, not
+// durable transcript activity, and must not own the elapsed activity header.
+function findLiveTurnActivityOwnerIndex(rows: ReadonlyArray<MessagesTimelineRow>): number {
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    const row = rows[index]!;
+    if (row.kind === "message" && row.message.role === "user") {
+      return -1;
+    }
+    if (row.kind === "work" || (row.kind === "message" && row.message.role === "assistant")) {
+      return index;
+    }
+  }
+  return -1;
+}
+
 // The live turn starts at the most recent user message, so its header slots in
 // right after it. Absent any user message (degenerate transcripts) the header
-// leads the transcript so the "Working for" copy is never lost.
+// leads the transcript so the active "Working" status is never lost.
 function findLiveTurnHeaderInsertIndex(rows: ReadonlyArray<MessagesTimelineRow>): number {
   for (let index = rows.length - 1; index >= 0; index -= 1) {
     const row = rows[index]!;
@@ -788,6 +815,7 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
     case "work":
       return (
         a.createdAt === (b as typeof a).createdAt &&
+        a.activeTurnStartedAt === (b as typeof a).activeTurnStartedAt &&
         workLogEntryArraysEqual(a.groupedEntries, (b as typeof a).groupedEntries)
       );
 
@@ -801,6 +829,7 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         a.inlineWorkGroupId === bm.inlineWorkGroupId &&
         collapsedTurnItemsEqual(a.collapsedTurnItems, bm.collapsedTurnItems) &&
         a.collapsedWorkElapsed === bm.collapsedWorkElapsed &&
+        a.activeTurnStartedAt === bm.activeTurnStartedAt &&
         a.durationStart === bm.durationStart &&
         a.showAssistantCopyButton === bm.showAssistantCopyButton &&
         a.assistantCopyStreaming === bm.assistantCopyStreaming &&

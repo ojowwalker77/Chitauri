@@ -136,7 +136,7 @@ export function TerminalSearch({ searchAddon, isOpen, onClose }: TerminalSearchP
   if (!isOpen) return null;
 
   return (
-    <div className="absolute right-1 top-1 z-10 flex max-w-[calc(100%-0.5rem)] items-center rounded bg-popover/95 pl-2 pr-0.5 shadow-lg ring-1 ring-border/40 backdrop-blur">
+    <div className="absolute right-1 top-1 z-10 flex max-w-[calc(100%-0.5rem)] items-center rounded-xl border border-panel-border bg-panel pl-2 pr-0.5 shadow-[0_16px_44px_rgba(0,0,0,0.5)]">
       <input
         ref={inputRef}
         type="text"
@@ -160,7 +160,7 @@ export function TerminalSearch({ searchAddon, isOpen, onClose }: TerminalSearchP
               : "text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground",
           )}
         >
-          <span className="text-[10px] font-bold leading-none">Aa</span>
+          <span className="text-[11px] font-bold leading-none">Aa</span>
         </IconButton>
         <IconButton
           onClick={() => handleSearch("previous")}

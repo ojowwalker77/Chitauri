@@ -181,7 +181,30 @@ export function makeEffectHttpRouteLayer(readiness: ServerReadiness) {
   );
 }
 
-const orchestratorMcpEffectRouteLayer = HttpRouter.add(
+function toEffectMcpResponse(response: Response): HttpServerResponse.HttpServerResponse {
+  const headers = [...response.headers.entries()];
+  const contentType = response.headers.get("content-type");
+  const body = response.body;
+  const options = {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  };
+  if (!body) return HttpServerResponse.empty(options);
+
+  return HttpServerResponse.stream(
+    Stream.fromReadableStream({
+      evaluate: () => body,
+      onError: (cause) => cause,
+    }),
+    {
+      ...options,
+      ...(contentType ? { contentType } : {}),
+    },
+  );
+}
+
+export const orchestratorMcpEffectRouteLayer = HttpRouter.add(
   "*",
   "/api/orchestrator/mcp",
   Effect.gen(function* () {
@@ -189,7 +212,11 @@ const orchestratorMcpEffectRouteLayer = HttpRouter.add(
     const controlPlane = yield* OrchestratorControlPlane;
     const webRequest = yield* HttpServerRequest.toWeb(request);
     const response = yield* controlPlane.handleHttpRequest(webRequest);
-    return HttpServerResponse.fromWeb(response);
+    // Effect's Web Response bridge currently passes a native Headers instance
+    // where its own header record is expected, then assigns a default binary
+    // content type to the bridged stream. Rebuild the streaming response with
+    // explicit headers so MCP content types and session ids survive on the wire.
+    return toEffectMcpResponse(response);
   }).pipe(
     Effect.catch((cause) =>
       Effect.logWarning("orchestrator MCP request failed", { cause }).pipe(

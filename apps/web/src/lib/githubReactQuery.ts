@@ -30,8 +30,7 @@ export function githubWorkListQueryOptions(input: GitHubWorkListInput) {
   return queryOptions({
     queryKey: githubQueryKeys.list(input),
     queryFn: () => ensureNativeApi().github.listWork(input),
-    staleTime: input.kind === "inbox" ? 30_000 : 60_000,
-    refetchInterval: input.kind === "inbox" ? 60_000 : false,
+    staleTime: 60_000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: "always" as const,
   });

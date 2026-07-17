@@ -9,7 +9,7 @@ import { SURFACE_ELEVATION_2XL_SHADOW_CLASS_NAME } from "~/lib/surfaceElevation"
 function Card({ className, render, ...props }: useRender.ComponentProps<"div">) {
   const defaultProps = {
     className: cn(
-      "relative flex flex-col rounded-2xl border bg-card not-dark:bg-clip-padding text-card-foreground",
+      "relative flex flex-col rounded-xl border border-panel-border bg-panel text-card-foreground",
       SURFACE_ELEVATION_2XL_SHADOW_CLASS_NAME,
       className,
     ),
@@ -26,7 +26,7 @@ function Card({ className, render, ...props }: useRender.ComponentProps<"div">) 
 function CardFrame({ className, render, ...props }: useRender.ComponentProps<"div">) {
   const defaultProps = {
     className: cn(
-      "[--clip-top:-1rem] [--clip-bottom:-1rem] *:data-[slot=card]:first:[--clip-top:1px] *:data-[slot=card]:last:[--clip-bottom:1px] flex flex-col relative rounded-2xl border bg-card before:bg-muted/72 not-dark:bg-clip-padding text-card-foreground",
+      "[--clip-top:-1rem] [--clip-bottom:-1rem] *:data-[slot=card]:first:[--clip-top:1px] *:data-[slot=card]:last:[--clip-bottom:1px] relative flex flex-col rounded-xl border border-panel-border bg-panel text-card-foreground before:bg-muted/72",
       SURFACE_ELEVATION_2XL_SHADOW_CLASS_NAME,
       "*:data-[slot=card]:-m-px *:not-last:data-[slot=card]:rounded-b-xl *:not-last:data-[slot=card]:before:rounded-b-[calc(var(--radius-xl)-1px)] *:not-first:data-[slot=card]:rounded-t-xl *:not-first:data-[slot=card]:before:rounded-t-[calc(var(--radius-xl)-1px)] *:data-[slot=card]:[clip-path:inset(var(--clip-top)_1px_var(--clip-bottom)_1px_round_calc(var(--radius-2xl)-1px))] *:data-[slot=card]:shadow-none *:data-[slot=card]:before:hidden *:data-[slot=card]:bg-clip-padding",
       className,

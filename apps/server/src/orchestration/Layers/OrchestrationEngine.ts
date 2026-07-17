@@ -8,6 +8,7 @@ import { OrchestrationCommand, ORCHESTRATION_WS_METHODS } from "@t3tools/contrac
 import {
   Cause,
   Deferred,
+  Duration,
   Effect,
   Layer,
   Option,
@@ -20,6 +21,8 @@ import {
   Stream,
 } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
+
+import { perfCounters, type SqliteOpKind } from "../../performance/perfCounters.ts";
 
 import { toPersistenceSqlError } from "../../persistence/Errors.ts";
 import { OrchestrationEventStore } from "../../persistence/Services/OrchestrationEventStore.ts";
@@ -43,6 +46,23 @@ import {
 } from "../Services/OrchestrationEngine.ts";
 
 const ORCHESTRATION_DISPATCH_TIMEOUT_MS = 45_000;
+
+// Diagnostics label for the single serialized command queue (see perfCounters).
+const ORCHESTRATION_QUEUE_NAME = "orchestration.command";
+
+// Records the wall-clock duration of a durable SQLite step (append/project/receipt)
+// into the always-on perf counters. Success-only: a failed/interrupted step does
+// not pollute the latency series, and the wrapper never alters the effect's result
+// or error channel.
+const recordSqliteTiming =
+  (op: SqliteOpKind) =>
+  <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
+    Effect.timed(effect).pipe(
+      Effect.map(([duration, value]) => {
+        perfCounters.recordSqlite(op, Duration.toMillis(duration));
+        return value;
+      }),
+    );
 
 type CommandExecutionState = "queued" | "in-flight" | "abandoned";
 type DispatchTimeoutDecision = { kind: "abandon" } | { kind: "wait" };
@@ -395,12 +415,14 @@ const makeOrchestrationEngine = Effect.gen(function* () {
         let nextCommandReadModel = commandReadModel;
 
         for (const nextEvent of eventBases) {
-          const savedEvent = yield* eventStore.append(nextEvent);
+          const savedEvent = yield* recordSqliteTiming("append")(eventStore.append(nextEvent));
           nextCommandReadModel = yield* projectEvent(nextCommandReadModel, savedEvent);
           if (isProjectMetadataEvent(savedEvent)) {
-            yield* projectionPipeline.projectMetadataEvent(savedEvent);
+            yield* recordSqliteTiming("project")(
+              projectionPipeline.projectMetadataEvent(savedEvent),
+            );
           } else {
-            yield* projectionPipeline.projectHotEvent(savedEvent);
+            yield* recordSqliteTiming("project")(projectionPipeline.projectHotEvent(savedEvent));
           }
           committedEvents.push(savedEvent);
         }
@@ -413,15 +435,17 @@ const makeOrchestrationEngine = Effect.gen(function* () {
           });
         }
 
-        yield* commandReceiptRepository.upsert({
-          commandId: envelope.command.commandId,
-          aggregateKind: lastSavedEvent.aggregateKind,
-          aggregateId: lastSavedEvent.aggregateId,
-          acceptedAt: lastSavedEvent.occurredAt,
-          resultSequence: lastSavedEvent.sequence,
-          status: "accepted",
-          error: null,
-        });
+        yield* recordSqliteTiming("receipt")(
+          commandReceiptRepository.upsert({
+            commandId: envelope.command.commandId,
+            aggregateKind: lastSavedEvent.aggregateKind,
+            aggregateId: lastSavedEvent.aggregateId,
+            acceptedAt: lastSavedEvent.occurredAt,
+            resultSequence: lastSavedEvent.sequence,
+            status: "accepted",
+            error: null,
+          }),
+        );
 
         return {
           committedEvents,
@@ -621,7 +645,28 @@ const makeOrchestrationEngine = Effect.gen(function* () {
 
   commandReadModel = yield* projectionSnapshotQuery.getCommandReadModel();
 
-  const worker = Effect.forever(Queue.take(commandQueue).pipe(Effect.flatMap(processEnvelope)));
+  const worker = Effect.forever(
+    Queue.take(commandQueue).pipe(
+      Effect.flatMap((envelope) =>
+        Effect.suspend(() => {
+          // The worker owns the item now: drop it from the wait-queue gauge and
+          // time processing so oldestItemAgeMs reflects only items still waiting.
+          perfCounters.queueTaken(ORCHESTRATION_QUEUE_NAME);
+          const startedAt = performance.now();
+          return processEnvelope(envelope).pipe(
+            Effect.ensuring(
+              Effect.sync(() =>
+                perfCounters.queueProcessed(
+                  ORCHESTRATION_QUEUE_NAME,
+                  performance.now() - startedAt,
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    ),
+  );
   yield* Effect.forkScoped(worker);
   yield* Effect.log("orchestration engine started").pipe(
     Effect.annotateLogs({ sequence: commandReadModel.snapshotSequence }),
@@ -647,6 +692,7 @@ const makeOrchestrationEngine = Effect.gen(function* () {
         executionState,
         deadlineAtMs: Date.now() + ORCHESTRATION_DISPATCH_TIMEOUT_MS,
       });
+      yield* Effect.sync(() => perfCounters.queueEnqueued(ORCHESTRATION_QUEUE_NAME));
       return yield* Deferred.await(result).pipe(
         Effect.timeoutOption(`${ORCHESTRATION_DISPATCH_TIMEOUT_MS} millis`),
         Effect.flatMap((outcome) =>

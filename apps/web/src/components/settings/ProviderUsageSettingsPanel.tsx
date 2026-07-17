@@ -47,7 +47,7 @@ function statusPill(status: ServerProviderUsageSnapshot["status"]): StatusPill |
     case "needs-auth":
       return {
         label: "Not signed in",
-        className: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
+        className: "bg-gold/12 text-gold",
       };
     case "unsupported":
       return { label: "Unsupported", className: "bg-muted text-muted-foreground" };
@@ -108,7 +108,7 @@ function ProviderUsageCard({
         {status === "ok" && hasUsage ? (
           <>
             {usageSummary.usageNotice ? (
-              <p className="flex items-start gap-1.5 text-xs leading-relaxed text-amber-600 dark:text-amber-300/90">
+              <p className="flex items-start gap-1.5 text-xs leading-relaxed text-gold">
                 <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                 <span>{usageSummary.usageNotice}</span>
               </p>

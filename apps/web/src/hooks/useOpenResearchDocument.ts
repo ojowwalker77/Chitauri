@@ -3,11 +3,10 @@
 // Layer: Web research navigation
 
 import type { ResearchDocumentSummary } from "@t3tools/contracts";
-import { workspaceRootsEqual } from "@t3tools/shared/threadWorkspace";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
 
-import { createOrRecoverProjectFromPath } from "~/lib/projectCreation";
+import { resolveResearchProjectId } from "~/lib/researchProjectResolution";
 import { ensureNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
 import { toastManager } from "~/components/ui/toast";
@@ -33,17 +32,12 @@ export function useOpenResearchDocument() {
 
       try {
         const api = ensureNativeApi();
-        let projectId =
-          projects.find((project) => workspaceRootsEqual(project.cwd, repositoryRoot))?.id ?? null;
-        if (!projectId) {
-          const recovered = await createOrRecoverProjectFromPath({
-            api,
-            workspaceRoot: repositoryRoot,
-            loadSnapshot: () => api.orchestration.getShellSnapshot().catch(() => null),
-          });
-          projectId = recovered.projectId;
-          if (recovered.snapshot) syncServerShellSnapshot(recovered.snapshot);
-        }
+        const projectId = await resolveResearchProjectId({
+          api,
+          repositoryRoot,
+          projects,
+          onSnapshot: syncServerShellSnapshot,
+        });
 
         await handleNewThread(
           projectId,

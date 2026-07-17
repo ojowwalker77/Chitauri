@@ -162,6 +162,7 @@ export type SidebarDerivedProjectData = {
   canShowLessThreads: boolean;
   activeEntryId: ThreadId | null;
   projectStatus: ReturnType<typeof resolveProjectStatusIndicator>;
+  projectActivityRollup: SidebarProjectActivityRollup | null;
 };
 
 const THREAD_JUMP_COMMANDS = [
@@ -189,6 +190,11 @@ export interface ThreadStatusPill {
   pulse: boolean;
   dismissible?: boolean;
   dismissalKey?: string;
+}
+
+export interface SidebarProjectActivityRollup {
+  label: string;
+  status: ThreadStatusPill;
 }
 
 const THREAD_STATUS_PRIORITY: Record<ThreadStatusPill["label"], number> = {
@@ -347,12 +353,22 @@ export function pruneProjectThreadListPagingForCollapsedProjects<
 export function resolveThreadRowTrailingReserveClass(input: {
   metaChipCount: number;
   hasTrailingGlyph: boolean;
+  hasStatusLabel?: boolean | undefined;
 }): string {
   // Hover/focus reveals the pin/archive actions; the meta chips + glyph fade out
   // at the same time, so the hover reserve is constant regardless of rest content.
   const hoverReserve =
     "transition-[padding] duration-150 ease-out group-hover/thread-row:pr-[4.75rem] group-focus-within/thread-row:pr-[4.75rem]";
-  const { metaChipCount, hasTrailingGlyph } = input;
+  const { metaChipCount, hasStatusLabel, hasTrailingGlyph } = input;
+  if (hasStatusLabel) {
+    if (metaChipCount <= 0) {
+      return cn("pr-[6rem]", hoverReserve);
+    }
+    if (metaChipCount === 1) {
+      return cn("pr-[7.25rem]", hoverReserve);
+    }
+    return cn("pr-[8.5rem]", hoverReserve);
+  }
   if (metaChipCount <= 0) {
     return cn(hasTrailingGlyph ? "pr-[1.75rem]" : "pr-2", hoverReserve);
   }
@@ -407,8 +423,8 @@ export function resolveThreadStatusPill(input: {
     }
     return {
       label: "Pending Approval",
-      colorClass: "text-amber-600 dark:text-amber-300/90",
-      dotClass: "bg-amber-500 dark:bg-amber-300/90",
+      colorClass: "text-gold",
+      dotClass: "bg-gold",
       pulse: false,
       dismissible: true,
       dismissalKey,
@@ -422,8 +438,8 @@ export function resolveThreadStatusPill(input: {
     }
     return {
       label: "Awaiting Input",
-      colorClass: "text-indigo-600 dark:text-indigo-300/90",
-      dotClass: "bg-indigo-500 dark:bg-indigo-300/90",
+      colorClass: "text-gold",
+      dotClass: "bg-gold",
       pulse: false,
       dismissible: true,
       dismissalKey,
@@ -433,8 +449,8 @@ export function resolveThreadStatusPill(input: {
   if (thread.hasLiveTailWork) {
     return {
       label: "Working",
-      colorClass: "text-sky-600 dark:text-sky-300/80",
-      dotClass: "bg-sky-500 dark:bg-sky-300/80",
+      colorClass: "text-claude",
+      dotClass: "bg-claude",
       pulse: true,
       dismissible: false,
     };
@@ -446,8 +462,8 @@ export function resolveThreadStatusPill(input: {
   ) {
     return {
       label: "Working",
-      colorClass: "text-sky-600 dark:text-sky-300/80",
-      dotClass: "bg-sky-500 dark:bg-sky-300/80",
+      colorClass: "text-claude",
+      dotClass: "bg-claude",
       pulse: true,
       dismissible: false,
     };
@@ -456,8 +472,8 @@ export function resolveThreadStatusPill(input: {
   if (thread.session?.status === "connecting") {
     return {
       label: "Connecting",
-      colorClass: "text-sky-600 dark:text-sky-300/80",
-      dotClass: "bg-sky-500 dark:bg-sky-300/80",
+      colorClass: "text-claude",
+      dotClass: "bg-claude",
       pulse: true,
       dismissible: false,
     };
@@ -479,8 +495,8 @@ export function resolveThreadStatusPill(input: {
     }
     return {
       label: "Plan Ready",
-      colorClass: "text-violet-600 dark:text-violet-300/90",
-      dotClass: "bg-violet-500 dark:bg-violet-300/90",
+      colorClass: "text-claude",
+      dotClass: "bg-claude",
       pulse: false,
       dismissible: true,
       dismissalKey,
@@ -494,8 +510,8 @@ export function resolveThreadStatusPill(input: {
     }
     return {
       label: "Completed",
-      colorClass: "text-emerald-600 dark:text-emerald-300/90",
-      dotClass: "bg-emerald-500 dark:bg-emerald-300/90",
+      colorClass: "text-success",
+      dotClass: "bg-success",
       pulse: false,
       dismissible: true,
       ...(dismissalKey ? { dismissalKey } : {}),
@@ -521,6 +537,74 @@ export function resolveProjectStatusIndicator(
   }
 
   return highestPriorityStatus;
+}
+
+export function resolveSidebarStatusLabel(status: ThreadStatusPill): string {
+  switch (status.label) {
+    case "Pending Approval":
+      return "Approval";
+    case "Awaiting Input":
+      return "Input";
+    case "Plan Ready":
+      return "Plan ready";
+    case "Completed":
+      return "Done";
+    case "Connecting":
+    case "Working":
+      return status.label;
+  }
+}
+
+export function resolveSidebarBranchLabel(branch: string | null | undefined): string | null {
+  const normalized = branch?.trim().replace(/\/+$/, "");
+  if (!normalized) {
+    return null;
+  }
+
+  const defaultBranches = new Set(["main", "master", "dev", "develop"]);
+  if (defaultBranches.has(normalized.toLowerCase())) {
+    return null;
+  }
+
+  const leaf = normalized.slice(normalized.lastIndexOf("/") + 1);
+  return leaf.length > 24 ? `${leaf.slice(0, 23)}…` : leaf;
+}
+
+export function resolveProjectActivityRollup(
+  statuses: ReadonlyArray<ThreadStatusPill | null>,
+): SidebarProjectActivityRollup | null {
+  const status = resolveProjectStatusIndicator(statuses);
+  if (!status) {
+    return null;
+  }
+
+  const actionableCount = statuses.filter(
+    (candidate) => candidate?.label === "Pending Approval" || candidate?.label === "Awaiting Input",
+  ).length;
+  const liveCount = statuses.filter(
+    (candidate) => candidate?.label === "Working" || candidate?.label === "Connecting",
+  ).length;
+  const planCount = statuses.filter((candidate) => candidate?.label === "Plan Ready").length;
+  const completedCount = statuses.filter((candidate) => candidate?.label === "Completed").length;
+
+  switch (status.label) {
+    case "Pending Approval":
+    case "Awaiting Input":
+      return {
+        status,
+        label: actionableCount === 1 ? "Needs you" : `${actionableCount} need you`,
+      };
+    case "Working":
+    case "Connecting":
+      return { status, label: `${liveCount} live` };
+    case "Plan Ready":
+      return {
+        status,
+        label: planCount === 1 ? "Plan ready" : `${planCount} plans`,
+      };
+    case "Completed":
+      return { status, label: `${completedCount} done` };
+  }
 }
 
 export function findWorkspaceRootMatch<T>(
@@ -1288,17 +1372,17 @@ export function deriveSidebarProjectData(input: {
   for (const project of input.projects) {
     const allProjectThreads = input.sortedSidebarThreadsByProjectId.get(project.id) ?? [];
     const projectThreads = getUnpinnedThreadsForSidebar(allProjectThreads, input.pinnedThreadIds);
-    const projectStatus = resolveProjectStatusIndicator(
-      allProjectThreads.map((thread) =>
-        input.resolveThreadStatus
-          ? input.resolveThreadStatus(thread)
-          : resolveThreadStatusPill({
-              thread,
-              hasPendingApprovals: thread.hasPendingApprovals,
-              hasPendingUserInput: thread.hasPendingUserInput,
-            }),
-      ),
+    const projectThreadStatuses = allProjectThreads.map((thread) =>
+      input.resolveThreadStatus
+        ? input.resolveThreadStatus(thread)
+        : resolveThreadStatusPill({
+            thread,
+            hasPendingApprovals: thread.hasPendingApprovals,
+            hasPendingUserInput: thread.hasPendingUserInput,
+          }),
     );
+    const projectStatus = resolveProjectStatusIndicator(projectThreadStatuses);
+    const projectActivityRollup = resolveProjectActivityRollup(projectThreadStatuses);
     const requestedExtraPages =
       input.threadListExtraPagesByProjectCwd.get(input.normalizeProjectCwd(project.cwd)) ?? 0;
     const orderedProjectThreadIds = projectThreads.map((thread) => thread.id);
@@ -1340,6 +1424,7 @@ export function deriveSidebarProjectData(input: {
         canShowLessThreads: false,
         activeEntryId: activeThread?.id ?? null,
         projectStatus,
+        projectActivityRollup,
       });
       continue;
     }
@@ -1388,6 +1473,7 @@ export function deriveSidebarProjectData(input: {
       canShowLessThreads: paging.canShowLess,
       activeEntryId: activeEntry?.rowId ?? null,
       projectStatus,
+      projectActivityRollup,
     });
   }
 
@@ -1415,7 +1501,7 @@ export function resolvePrStatePresentation(pr: {
     if (pr.mergeability === "conflicting") {
       return {
         label: "PR has conflicts",
-        colorClass: "text-amber-600 dark:text-amber-300/90",
+        colorClass: "text-gold",
         iconKind: "pull-request",
       };
     }
@@ -1423,7 +1509,7 @@ export function resolvePrStatePresentation(pr: {
       return {
         label: "PR draft",
         // GitHub renders drafts gray; reuse the closed treatment so draft reads as "not live yet".
-        colorClass: "text-zinc-500 dark:text-zinc-400/80",
+        colorClass: "text-muted-foreground",
         iconKind: "pull-request",
       };
     }
@@ -1437,13 +1523,13 @@ export function resolvePrStatePresentation(pr: {
   if (pr.state === "closed") {
     return {
       label: "PR closed",
-      colorClass: "text-zinc-500 dark:text-zinc-400/80",
+      colorClass: "text-muted-foreground",
       iconKind: "pull-request",
     };
   }
   return {
     label: "PR merged",
-    colorClass: "text-indigo-500 dark:text-indigo-400",
+    colorClass: "text-success",
     iconKind: "merged-simple",
   };
 }

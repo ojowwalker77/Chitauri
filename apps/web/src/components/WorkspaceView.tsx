@@ -396,7 +396,7 @@ export default function WorkspaceView({ workspaceId }: { workspaceId: string }) 
             />
           ) : (
             <div className="flex h-full items-center justify-center px-6">
-              <div className="max-w-sm rounded-3xl border border-border/70 bg-card/40 p-6 text-center shadow-sm">
+              <div className="max-w-sm rounded-xl border border-panel-border bg-panel p-6 text-center">
                 <div className="text-base font-medium text-foreground/88">
                   This workspace has no open terminals
                 </div>

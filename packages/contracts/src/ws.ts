@@ -13,16 +13,6 @@ import {
   AutomationUpdateInput,
 } from "./automation";
 import {
-  ComputerScriptsAnalysisInput,
-  ComputerScriptsCancelAnalysisInput,
-  ComputerScriptsCancelRunInput,
-  ComputerScriptsListHistoryInput,
-  ComputerScriptsRunInput,
-  ComputerScriptsStartAnalysisInput,
-  ComputerScriptsStartRunInput,
-  ComputerScriptsStreamEvent,
-} from "./computerScripts";
-import {
   ClientOrchestrationCommand,
   OrchestrationEvent,
   OrchestrationImportThreadInput,
@@ -115,6 +105,7 @@ import {
   ServerStopLocalServerInput,
 } from "./server";
 import { StatsGetProfileStatsInput, StatsGetProfileTokenStatsInput } from "./stats";
+import { PerformanceGetSnapshotInput } from "./performance";
 import {
   ProviderListCommandsInput,
   ProviderGetComposerCapabilitiesInput,
@@ -214,6 +205,7 @@ export const WS_METHODS = {
   statsGetProfileStats: "stats.getProfileStats",
   statsGetProfileTokenStats: "stats.getProfileTokenStats",
   serverGetDiagnostics: "server.getDiagnostics",
+  performanceGetSnapshot: "performance.getSnapshot",
   serverGenerateThreadRecap: "server.generateThreadRecap",
   serverGenerateAutomationIntent: "server.generateAutomationIntent",
   serverUpsertKeybinding: "server.upsertKeybinding",
@@ -248,24 +240,12 @@ export const WS_METHODS = {
   automationMarkRunRead: "automation.markRunRead",
   automationArchiveRun: "automation.archiveRun",
   subscribeAutomationEvents: "automation.subscribe",
-
-  // Computer Scripts methods
-  computerScriptsCatalog: "computerScripts.catalog",
-  computerScriptsStartAnalysis: "computerScripts.startAnalysis",
-  computerScriptsAnalysis: "computerScripts.analysis",
-  computerScriptsCancelAnalysis: "computerScripts.cancelAnalysis",
-  computerScriptsStartRun: "computerScripts.startRun",
-  computerScriptsRun: "computerScripts.run",
-  computerScriptsCancelRun: "computerScripts.cancelRun",
-  computerScriptsListHistory: "computerScripts.listHistory",
-  subscribeComputerScriptsEvents: "computerScripts.subscribe",
 } as const;
 
 // ── Push Event Channels ──────────────────────────────────────────────
 
 export const WS_CHANNELS = {
   automationEvent: "automation.event",
-  computerScriptsEvent: "computerScripts.event",
   gitActionProgress: "git.actionProgress",
   terminalEvent: "terminal.event",
   projectDevServerEvent: "project.devServerEvent",
@@ -398,6 +378,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.statsGetProfileStats, StatsGetProfileStatsInput),
   tagRequestBody(WS_METHODS.statsGetProfileTokenStats, StatsGetProfileTokenStatsInput),
   tagRequestBody(WS_METHODS.serverGetDiagnostics, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.performanceGetSnapshot, PerformanceGetSnapshotInput),
   tagRequestBody(WS_METHODS.serverGenerateThreadRecap, ServerGenerateThreadRecapInput),
   tagRequestBody(WS_METHODS.serverGenerateAutomationIntent, ServerGenerateAutomationIntentInput),
   tagRequestBody(WS_METHODS.serverUpsertKeybinding, KeybindingRule),
@@ -423,17 +404,6 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.automationMarkRunRead, AutomationMarkRunReadInput),
   tagRequestBody(WS_METHODS.automationArchiveRun, AutomationArchiveRunInput),
   tagRequestBody(WS_METHODS.subscribeAutomationEvents, Schema.Struct({})),
-
-  // Computer Scripts methods
-  tagRequestBody(WS_METHODS.computerScriptsCatalog, Schema.Struct({})),
-  tagRequestBody(WS_METHODS.computerScriptsStartAnalysis, ComputerScriptsStartAnalysisInput),
-  tagRequestBody(WS_METHODS.computerScriptsAnalysis, ComputerScriptsAnalysisInput),
-  tagRequestBody(WS_METHODS.computerScriptsCancelAnalysis, ComputerScriptsCancelAnalysisInput),
-  tagRequestBody(WS_METHODS.computerScriptsStartRun, ComputerScriptsStartRunInput),
-  tagRequestBody(WS_METHODS.computerScriptsRun, ComputerScriptsRunInput),
-  tagRequestBody(WS_METHODS.computerScriptsCancelRun, ComputerScriptsCancelRunInput),
-  tagRequestBody(WS_METHODS.computerScriptsListHistory, ComputerScriptsListHistoryInput),
-  tagRequestBody(WS_METHODS.subscribeComputerScriptsEvents, Schema.Struct({})),
 ]);
 
 export const WebSocketRequest = Schema.Struct({
@@ -473,7 +443,6 @@ export interface WsPushPayloadByChannel {
   readonly [WS_CHANNELS.serverProviderStatusesUpdated]: typeof ServerProviderStatusesUpdatedPayload.Type;
   readonly [WS_CHANNELS.serverSettingsUpdated]: typeof ServerSettingsUpdatedPayload.Type;
   readonly [WS_CHANNELS.automationEvent]: typeof AutomationStreamEvent.Type;
-  readonly [WS_CHANNELS.computerScriptsEvent]: typeof ComputerScriptsStreamEvent.Type;
   readonly [WS_CHANNELS.gitActionProgress]: typeof GitActionProgressEvent.Type;
   readonly [WS_CHANNELS.terminalEvent]: typeof TerminalEvent.Type;
   readonly [WS_CHANNELS.projectDevServerEvent]: typeof ProjectDevServerEvent.Type;
@@ -517,10 +486,6 @@ export const WsPushAutomationEvent = makeWsPushSchema(
   WS_CHANNELS.automationEvent,
   AutomationStreamEvent,
 );
-export const WsPushComputerScriptsEvent = makeWsPushSchema(
-  WS_CHANNELS.computerScriptsEvent,
-  ComputerScriptsStreamEvent,
-);
 export const WsPushGitActionProgress = makeWsPushSchema(
   WS_CHANNELS.gitActionProgress,
   GitActionProgressEvent,
@@ -551,7 +516,6 @@ export const WsPushChannelSchema = Schema.Literals([
   WS_CHANNELS.serverProviderStatusesUpdated,
   WS_CHANNELS.serverSettingsUpdated,
   WS_CHANNELS.automationEvent,
-  WS_CHANNELS.computerScriptsEvent,
   WS_CHANNELS.terminalEvent,
   WS_CHANNELS.projectDevServerEvent,
   ORCHESTRATION_WS_CHANNELS.domainEvent,
@@ -567,7 +531,6 @@ export const WsPush = Schema.Union([
   WsPushServerProviderStatusesUpdated,
   WsPushServerSettingsUpdated,
   WsPushAutomationEvent,
-  WsPushComputerScriptsEvent,
   WsPushGitActionProgress,
   WsPushTerminalEvent,
   WsPushProjectDevServerEvent,

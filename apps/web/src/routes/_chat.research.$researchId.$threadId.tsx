@@ -20,6 +20,7 @@ import {
   resolvePreferredComposerModelSelection,
   useComposerDraftStore,
 } from "~/composerDraftStore";
+import { resolveResearchProjectId } from "~/lib/researchProjectResolution";
 import { newCommandId, newMessageId, newThreadId } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
@@ -56,6 +57,7 @@ function ResearchDetailRoute() {
   const { settings } = useAppSettings();
   const [applying, setApplying] = useState(false);
   const syncServerShellSnapshot = useStore((state) => state.syncServerShellSnapshot);
+  const projects = useStore((state) => state.projects);
   const serverThread = useStore((state) => getThreadFromState(state, threadId));
   const draftThread = useComposerDraftStore((state) => state.draftThreadsByThreadId[threadId]);
   const composerDraft = useComposerDraftStore((state) => state.draftsByThreadId[threadId]);
@@ -82,7 +84,7 @@ function ResearchDetailRoute() {
   );
 
   const applyInNewThread = async () => {
-    if (!document || !projectId || applying) return;
+    if (!document || applying) return;
     const api = ensureNativeApi();
     const nextThreadId = newThreadId();
     const createdAt = new Date().toISOString();
@@ -96,11 +98,25 @@ function ResearchDetailRoute() {
       serverThread?.worktreePath ?? draftThread?.worktreePath ?? document.worktreePath;
     setApplying(true);
     try {
+      // Anchor the implementation thread to the research document's own repository;
+      // the reader thread's project is only a fallback for documents without one.
+      const repositoryRoot = document.repositoryRoot?.trim();
+      const targetProjectId = repositoryRoot
+        ? await resolveResearchProjectId({
+            api,
+            repositoryRoot,
+            projects,
+            onSnapshot: syncServerShellSnapshot,
+          })
+        : projectId;
+      if (!targetProjectId) {
+        throw new Error("This research is not linked to a repository or project.");
+      }
       await api.orchestration.dispatchCommand({
         type: "thread.create",
         commandId: newCommandId(),
         threadId: nextThreadId,
-        projectId: projectId as ProjectId,
+        projectId: targetProjectId as ProjectId,
         title: truncateTitle(`Implement · ${document.title}`),
         modelSelection,
         runtimeMode,

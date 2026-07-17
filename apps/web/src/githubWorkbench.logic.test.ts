@@ -2,12 +2,10 @@ import { describe, expect, it } from "vitest";
 import { ProjectId } from "@t3tools/contracts";
 
 import {
+  DEFAULT_GITHUB_VIEW,
   buildGitHubAgentPrompt,
-  defaultGitHubView,
   findProjectForGitHubItem,
-  githubReasonLabel,
-  isActionableGitHubReason,
-  isGithubItemSnoozed,
+  groupGitHubItemsByRepository,
 } from "./githubWorkbench.logic";
 import type { Project } from "./types";
 
@@ -26,7 +24,6 @@ const project: Project = {
 
 const item = {
   id: "pull_request:ojowwalker77/Chitauri:9",
-  notificationId: null,
   kind: "pull_request" as const,
   repository: {
     nameWithOwner: "ojowwalker77/Chitauri",
@@ -38,8 +35,6 @@ const item = {
   url: "https://github.com/ojowwalker77/Chitauri/pull/9",
   state: "open" as const,
   isDraft: false,
-  unread: false,
-  reason: null,
   author: null,
   labels: [],
   assignees: [],
@@ -53,17 +48,49 @@ const item = {
   updatedAt: "2026-07-15T00:00:00Z",
 };
 
+const issueInOtherRepo = {
+  ...item,
+  id: "issue:acme/widgets:3",
+  kind: "issue" as const,
+  repository: {
+    nameWithOwner: "acme/widgets",
+    name: "widgets",
+    url: "https://github.com/acme/widgets",
+  },
+  number: 3,
+  title: "Widget breaks",
+  url: "https://github.com/acme/widgets/issues/3",
+  updatedAt: "2026-07-16T00:00:00Z",
+};
+
 describe("GitHub workbench logic", () => {
-  it("chooses daily-work defaults per surface", () => {
-    expect(defaultGitHubView("inbox")).toBe("attention");
-    expect(defaultGitHubView("pull_request")).toBe("reviewing");
-    expect(defaultGitHubView("issue")).toBe("assigned");
+  it("defaults to the All view", () => {
+    expect(DEFAULT_GITHUB_VIEW).toBe("all");
   });
 
-  it("separates actionable reasons from noisy authored updates", () => {
-    expect(githubReasonLabel("review_requested")).toBe("Review requested");
-    expect(isActionableGitHubReason("review_requested")).toBe(true);
-    expect(isActionableGitHubReason("author")).toBe(false);
+  it("groups pull requests and issues by repository, newest group first", () => {
+    const olderIssueSameRepo = {
+      ...item,
+      id: "issue:ojowwalker77/Chitauri:4",
+      kind: "issue" as const,
+      number: 4,
+      updatedAt: "2026-07-14T00:00:00Z",
+    };
+    const groups = groupGitHubItemsByRepository([[item], [issueInOtherRepo, olderIssueSameRepo]]);
+    expect(groups.map((group) => group.repository.nameWithOwner)).toEqual([
+      "acme/widgets",
+      "ojowwalker77/Chitauri",
+    ]);
+    expect(groups[1]?.items.map((entry) => entry.id)).toEqual([
+      item.id,
+      "issue:ojowwalker77/Chitauri:4",
+    ]);
+  });
+
+  it("deduplicates items that appear in multiple source lists", () => {
+    const groups = groupGitHubItemsByRepository([[item], [item]]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.items).toHaveLength(1);
   });
 
   it("matches GitHub work to an existing local project", () => {
@@ -75,22 +102,5 @@ describe("GitHub workbench logic", () => {
     expect(prompt.startsWith("$Splus PR Review")).toBe(true);
     expect(prompt).toContain("ojowwalker77/Chitauri#9");
     expect(prompt).toContain("post the verified review to GitHub");
-  });
-
-  it("hides only active snoozes", () => {
-    expect(
-      isGithubItemSnoozed(
-        item.id,
-        { [item.id]: "2026-07-16T00:00:00Z" },
-        Date.parse("2026-07-15T00:00:00Z"),
-      ),
-    ).toBe(true);
-    expect(
-      isGithubItemSnoozed(
-        item.id,
-        { [item.id]: "2026-07-14T00:00:00Z" },
-        Date.parse("2026-07-15T00:00:00Z"),
-      ),
-    ).toBe(false);
   });
 });

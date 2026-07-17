@@ -28,9 +28,9 @@ const SURFACE_CLASSES: Record<
     item: "space-y-0.5",
     row: "flex items-center justify-between gap-2 leading-tight",
     label: "text-[11px] font-medium text-foreground",
-    value: "text-right text-[length:var(--app-font-size-chat-meta,10px)] text-muted-foreground",
+    value: "text-right text-[length:var(--app-font-size-chat-meta,11px)] text-muted-foreground",
     subtitle:
-      "text-[length:var(--app-font-size-chat-meta,10px)] leading-tight text-muted-foreground/80",
+      "text-[length:var(--app-font-size-chat-meta,11px)] leading-tight text-muted-foreground/80",
   },
 };
 

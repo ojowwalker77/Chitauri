@@ -153,7 +153,12 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
   const canGoForward = !progress.isLastQuestion && progress.canAdvance;
 
   return (
-    <div className={cn(COMPOSER_INPUT_SURFACE_CLASS_NAME, "overflow-hidden px-3.5 py-3")}>
+    <div
+      className={cn(
+        COMPOSER_INPUT_SURFACE_CLASS_NAME,
+        "overflow-hidden !rounded-xl !border-panel-border !bg-panel px-3.5 py-3",
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <p className="min-w-0 text-[13px] font-medium leading-snug text-foreground/90">
           {activeQuestion.question}

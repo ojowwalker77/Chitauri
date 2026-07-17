@@ -16,8 +16,8 @@ const NOTIFICATION_FOREGROUND_CLASS_NAME =
 // notably the dismiss "X") clickable in the desktop app. Toasts render at the
 // top edge over Electron's draggable titlebar region; without this the OS
 // captures clicks in that band for window dragging and the X stops working.
-export const COMPACT_NOTIFICATION_SURFACE_CLASS_NAME = `w-max max-w-[min(calc(100vw-2rem),28rem)] rounded-xl border border-[color-mix(in_srgb,var(--color-text-accent)_14%,transparent)] bg-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] ${NOTIFICATION_FOREGROUND_CLASS_NAME} shadow-lg/10 backdrop-blur-xl before:hidden [-webkit-app-region:no-drag] dark:border-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] dark:shadow-lg/15`;
+export const COMPACT_NOTIFICATION_SURFACE_CLASS_NAME = `w-max max-w-[min(calc(100vw-2rem),28rem)] rounded-[11px] border border-panel-border bg-panel dark:bg-[#262626] ${NOTIFICATION_FOREGROUND_CLASS_NAME} shadow-[0_16px_44px_rgba(0,0,0,0.5)] before:hidden [-webkit-app-region:no-drag]`;
 
-export const EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME = `w-full rounded-2xl border border-[color-mix(in_srgb,var(--color-text-accent)_14%,transparent)] bg-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] ${NOTIFICATION_FOREGROUND_CLASS_NAME} shadow-lg/10 backdrop-blur-xl before:hidden [-webkit-app-region:no-drag] dark:border-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] dark:shadow-lg/15`;
+export const EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME = `w-full rounded-[11px] border border-panel-border bg-panel dark:bg-[#262626] ${NOTIFICATION_FOREGROUND_CLASS_NAME} shadow-[0_16px_44px_rgba(0,0,0,0.5)] before:hidden [-webkit-app-region:no-drag]`;
 
-export const NOTIFICATION_ICON_CLASS_NAME = "text-[var(--notification-fg)]/92";
+export const NOTIFICATION_ICON_CLASS_NAME = "text-muted-foreground";
