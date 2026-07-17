@@ -347,7 +347,10 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.gitStageFiles, GitStageFilesInput),
   tagRequestBody(WS_METHODS.gitUnstageFiles, GitUnstageFilesInput),
   tagRequestBody(WS_METHODS.gitHandoffThread, GitHandoffThreadInput),
-  tagRequestBody(WS_METHODS.workspaceProvisionThreadWorktree, WorkspaceProvisionThreadWorktreeInput),
+  tagRequestBody(
+    WS_METHODS.workspaceProvisionThreadWorktree,
+    WorkspaceProvisionThreadWorktreeInput,
+  ),
   tagRequestBody(WS_METHODS.workspaceHandoffThread, WorkspaceHandoffThreadInput),
   tagRequestBody(WS_METHODS.gitResolvePullRequest, GitPullRequestRefInput),
   tagRequestBody(WS_METHODS.gitPullRequestSnapshot, GitPullRequestSnapshotInput),

@@ -29,9 +29,7 @@ export interface GitHubViewer {
 }
 
 export interface GitHubApiClientShape {
-  readonly requestJson: <T = unknown>(
-    input: GitHubApiRequest,
-  ) => Effect.Effect<T, GitHubCliError>;
+  readonly requestJson: <T = unknown>(input: GitHubApiRequest) => Effect.Effect<T, GitHubCliError>;
   readonly requestText: (
     input: GitHubApiRequest,
   ) => Effect.Effect<GitHubApiTextResponse, GitHubCliError>;

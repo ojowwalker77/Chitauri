@@ -139,8 +139,8 @@ function pullRequestSummary(rawValue: unknown): GitHubPullRequestSummary {
         ? raw.isCrossRepository
         : Boolean(
             headRepositoryNameWithOwner &&
-              baseRepositoryNameWithOwner &&
-              headRepositoryNameWithOwner.toLowerCase() !== baseRepositoryNameWithOwner.toLowerCase(),
+            baseRepositoryNameWithOwner &&
+            headRepositoryNameWithOwner.toLowerCase() !== baseRepositoryNameWithOwner.toLowerCase(),
           ),
     headRepositoryNameWithOwner,
     headRepositoryOwnerLogin,
@@ -331,7 +331,9 @@ export const makeGitHubApi = Effect.gen(function* () {
         return yield* Effect.fail(
           new GitHubCliError({
             operation: "getPullRequestWithChecks",
-            detail: errors.map((error) => stringValue(asRecord(error).message) ?? "GraphQL error").join("; "),
+            detail: errors
+              .map((error) => stringValue(asRecord(error).message) ?? "GraphQL error")
+              .join("; "),
           }),
         );
       }
@@ -373,7 +375,9 @@ export const makeGitHubApi = Effect.gen(function* () {
           return yield* Effect.fail(
             new GitHubCliError({
               operation: "getPullRequestReviewComments",
-              detail: errors.map((error) => stringValue(asRecord(error).message) ?? "GraphQL error").join("; "),
+              detail: errors
+                .map((error) => stringValue(asRecord(error).message) ?? "GraphQL error")
+                .join("; "),
             }),
           );
         }

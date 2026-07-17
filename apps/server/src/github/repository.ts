@@ -11,14 +11,16 @@ export function parseGitHubRepositoryRemote(remoteUrl: string | null): GitHubRep
   if (!value) return null;
 
   const scp = /^(?:[^@/\s]+@)?([^:/\s]+):([^/\s]+)\/(.+?)(?:\.git)?\/?$/.exec(value);
-  const url = /^(?:https?|ssh|git):\/\/(?:[^@/\s]+@)?([^/\s]+)\/([^/\s]+)\/(.+?)(?:\.git)?\/?$/.exec(
-    value,
-  );
+  const url =
+    /^(?:https?|ssh|git):\/\/(?:[^@/\s]+@)?([^/\s]+)\/([^/\s]+)\/(.+?)(?:\.git)?\/?$/.exec(value);
   const match = url ?? scp;
   if (!match) return null;
   const host = match[1]?.trim();
   const owner = match[2]?.trim();
-  const repo = match[3]?.replace(/\.git$/i, "").replace(/\/$/, "").trim();
+  const repo = match[3]
+    ?.replace(/\.git$/i, "")
+    .replace(/\/$/, "")
+    .trim();
   return host && owner && repo ? { host, owner, repo } : null;
 }
 

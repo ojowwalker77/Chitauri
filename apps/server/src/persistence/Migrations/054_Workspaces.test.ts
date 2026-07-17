@@ -30,7 +30,10 @@ layer("054_Workspaces", (it) => {
       `;
 
       yield* runMigrations();
-      assert.deepStrictEqual(migrationEntries.find(([id]) => id === 54)?.slice(0, 2), [54, "Workspaces"]);
+      assert.deepStrictEqual(migrationEntries.find(([id]) => id === 54)?.slice(0, 2), [
+        54,
+        "Workspaces",
+      ]);
       const rows = yield* sql<{
         readonly workspace_id: string;
         readonly kind: string;
@@ -51,7 +54,10 @@ layer("054_Workspaces", (it) => {
         SELECT workspace_id, worktree_path FROM projection_threads WHERE thread_id = 'thread-1'
       `;
       assert.deepStrictEqual(threads, [
-        { workspace_id: "legacy-thread-thread-1", worktree_path: "/tmp/project-1/.worktrees/feature" },
+        {
+          workspace_id: "legacy-thread-thread-1",
+          worktree_path: "/tmp/project-1/.worktrees/feature",
+        },
       ]);
     }),
   );

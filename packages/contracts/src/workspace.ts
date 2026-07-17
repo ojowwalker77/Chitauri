@@ -1,6 +1,12 @@
 import { Schema } from "effect";
 
-import { IsoDateTime, ProjectId, ThreadId, TrimmedNonEmptyString, WorkspaceId } from "./baseSchemas";
+import {
+  IsoDateTime,
+  ProjectId,
+  ThreadId,
+  TrimmedNonEmptyString,
+  WorkspaceId,
+} from "./baseSchemas";
 
 /** A durable execution location owned by the server, not a transient thread field. */
 export const WorkspaceKind = Schema.Literals(["local", "worktree", "detached", "scratch"]);
@@ -51,7 +57,8 @@ export const WorkspaceProvisionThreadWorktreeInput = Schema.Struct({
   baseBranch: TrimmedNonEmptyString,
   newBranch: TrimmedNonEmptyString,
 });
-export type WorkspaceProvisionThreadWorktreeInput = typeof WorkspaceProvisionThreadWorktreeInput.Type;
+export type WorkspaceProvisionThreadWorktreeInput =
+  typeof WorkspaceProvisionThreadWorktreeInput.Type;
 
 /** Server-side handoff operation; current paths and branches are resolved from the projection. */
 export const WorkspaceHandoffThreadInput = Schema.Struct({

@@ -56,7 +56,9 @@ export interface WorkspaceManagerShape {
     workspaceId: WorkspaceRecord["id"],
   ) => Effect.Effect<WorkspaceRecord, WorkspaceLifecycleError>;
   /** Applies the non-destructive thread-delete lifecycle guard for opted-in records. */
-  readonly retireForThreadDeletion: (threadId: ThreadId) => Effect.Effect<void, WorkspaceLifecycleError>;
+  readonly retireForThreadDeletion: (
+    threadId: ThreadId,
+  ) => Effect.Effect<void, WorkspaceLifecycleError>;
 }
 
 export class WorkspaceManager extends ServiceMap.Service<WorkspaceManager, WorkspaceManagerShape>()(

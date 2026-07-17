@@ -56,7 +56,7 @@ export function useThreadWorkspaceHandoff(input: {
         });
 
         const workspacePatch = {
-          envMode: result.targetMode,
+          envMode: result.envMode,
           branch: result.branch,
           worktreePath: result.worktreePath,
           associatedWorktreePath: result.associatedWorktreePath,

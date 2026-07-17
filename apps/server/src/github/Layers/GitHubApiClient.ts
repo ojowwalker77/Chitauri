@@ -111,7 +111,9 @@ export const makeGitHubApiClient = Effect.gen(function* () {
         process.env.GITHUB_TOKEN?.trim();
       if (environmentToken) return environmentToken;
 
-      const stored = yield* secretStore.get(TOKEN_SECRET_NAME).pipe(Effect.orElseSucceed(() => null));
+      const stored = yield* secretStore
+        .get(TOKEN_SECRET_NAME)
+        .pipe(Effect.orElseSucceed(() => null));
       if (stored) {
         const token = new TextDecoder().decode(stored).trim();
         if (token) return token;

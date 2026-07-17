@@ -407,7 +407,11 @@ function repositoryFromApiUrl(value: unknown): GitHubRepositoryRef | null {
   if (!url) return null;
   const match = /^https?:\/\/([^/]+)\/(?:api\/v3\/)?repos\/([^/]+)\/([^/]+)/i.exec(url);
   return match
-    ? { host: match[1] === "api.github.com" ? "github.com" : match[1]!, owner: match[2]!, repo: match[3]! }
+    ? {
+        host: match[1] === "api.github.com" ? "github.com" : match[1]!,
+        owner: match[2]!,
+        repo: match[3]!,
+      }
     : null;
 }
 
@@ -465,9 +469,7 @@ function normalizeDetailNode(node: JsonRecord, kind: GitHubWorkItemKind): JsonRe
       authors: connectionNodes(commit.authors).map((author) => asRecord(author).user),
     };
   });
-  const headCommit = asRecord(
-    asRecord(connectionNodes(node.headCommit)[0]).commit,
-  );
+  const headCommit = asRecord(asRecord(connectionNodes(node.headCommit)[0]).commit);
   const checks = connectionNodes(asRecord(headCommit.statusCheckRollup).contexts);
   return {
     ...node,
@@ -522,12 +524,10 @@ export const GitHubWorkbenchLive = Layer.effect(
 
     const repositoryForCwd = (cwd: string | null) =>
       cwd
-        ? git
-            .readConfigValue(cwd, "remote.origin.url")
-            .pipe(
-              Effect.map(parseGitHubRepositoryRemote),
-              Effect.catch(() => Effect.succeed(null)),
-            )
+        ? git.readConfigValue(cwd, "remote.origin.url").pipe(
+            Effect.map(parseGitHubRepositoryRemote),
+            Effect.catch(() => Effect.succeed(null)),
+          )
         : Effect.succeed(null);
 
     const requireRepository = (nameWithOwner: string, cwd: string | null) => {
@@ -592,7 +592,9 @@ export const GitHubWorkbenchLive = Layer.effect(
                 cacheTtlMs: 5 * 60_000,
               })
               .pipe(
-                Effect.map((value) => repositoryFrom(value, `${localRepository.owner}/${localRepository.repo}`)),
+                Effect.map((value) =>
+                  repositoryFrom(value, `${localRepository.owner}/${localRepository.repo}`),
+                ),
                 Effect.catch(() => Effect.succeed(repositorySummary(localRepository))),
               )
           : null;
@@ -811,9 +813,7 @@ export const GitHubWorkbenchLive = Layer.effect(
             });
             const errors = graphQlErrors(response);
             if (errors) {
-              return yield* Effect.fail(
-                new GitHubCliError({ operation: "ready", detail: errors }),
-              );
+              return yield* Effect.fail(new GitHubCliError({ operation: "ready", detail: errors }));
             }
             message = "Pull request marked ready.";
             break;

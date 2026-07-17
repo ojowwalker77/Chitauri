@@ -186,7 +186,10 @@ export const makeWorkspaceManager = Effect.gen(function* () {
           existing.workspaceRoot !== input.workspaceRoot)
       ) {
         return yield* Effect.fail(
-          fail("workspace.provision", new Error("Workspace id belongs to a different workspace identity.")),
+          fail(
+            "workspace.provision",
+            new Error("Workspace id belongs to a different workspace identity."),
+          ),
         );
       }
 
@@ -205,7 +208,10 @@ export const makeWorkspaceManager = Effect.gen(function* () {
         `.pipe(Effect.mapError((cause) => fail("workspace.provision.ownership", cause)));
         if (conflicts[0]) {
           return yield* Effect.fail(
-            fail("workspace.provision", new Error("Workspace path, branch, or ref is already owned.")),
+            fail(
+              "workspace.provision",
+              new Error("Workspace path, branch, or ref is already owned."),
+            ),
           );
         }
       }
@@ -239,7 +245,8 @@ export const makeWorkspaceManager = Effect.gen(function* () {
         const live = yield* listLiveWorktrees(input.workspaceRoot);
         const materialized = live.find(
           (entry) =>
-            (materializedPath !== null && entry.path === materializedPath) || entry.branch === branch,
+            (materializedPath !== null && entry.path === materializedPath) ||
+            entry.branch === branch,
         );
         if (materialized) {
           materializedPath = materialized.path;
@@ -263,7 +270,9 @@ export const makeWorkspaceManager = Effect.gen(function* () {
           );
         }
         const live = yield* listLiveWorktrees(input.workspaceRoot);
-        const materialized = live.find((entry) => materializedPath !== null && entry.path === materializedPath);
+        const materialized = live.find(
+          (entry) => materializedPath !== null && entry.path === materializedPath,
+        );
         if (materialized) {
           materializedPath = materialized.path;
           branch = materialized.branch;
@@ -278,9 +287,9 @@ export const makeWorkspaceManager = Effect.gen(function* () {
       } else if (input.kind === "scratch") {
         materializedPath =
           materializedPath ?? path.join(input.workspaceRoot, ".chitauri", "scratch", randomUUID());
-        yield* fileSystem.makeDirectory(materializedPath, { recursive: true }).pipe(
-          Effect.mapError((cause) => fail("workspace.provision.scratch", cause)),
-        );
+        yield* fileSystem
+          .makeDirectory(materializedPath, { recursive: true })
+          .pipe(Effect.mapError((cause) => fail("workspace.provision.scratch", cause)));
       } else {
         materializedPath = input.workspaceRoot;
       }
@@ -291,7 +300,8 @@ export const makeWorkspaceManager = Effect.gen(function* () {
             updated_at = ${updatedAt}, retired_at = NULL
         WHERE workspace_id = ${input.workspaceId}
       `.pipe(Effect.mapError((cause) => fail("workspace.provision.ready", cause)));
-      if (input.ownerThreadId) yield* attach({ workspaceId: input.workspaceId, threadId: input.ownerThreadId });
+      if (input.ownerThreadId)
+        yield* attach({ workspaceId: input.workspaceId, threadId: input.ownerThreadId });
       const record = yield* getById(input.workspaceId);
       if (!record) {
         return yield* Effect.fail(
@@ -327,7 +337,10 @@ export const makeWorkspaceManager = Effect.gen(function* () {
       `.pipe(Effect.mapError((cause) => fail("workspace.attach.verify", cause)));
       if (persistedAttachment[0]?.workspaceId !== input.workspaceId) {
         return yield* Effect.fail(
-          fail("workspace.attach", new Error("Thread was concurrently attached to another workspace.")),
+          fail(
+            "workspace.attach",
+            new Error("Thread was concurrently attached to another workspace."),
+          ),
         );
       }
       // Keep the old single-owner column as a stable primary attachment only.

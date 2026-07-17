@@ -668,12 +668,7 @@ export const makeWsRpcLayer = () =>
             workspaceId: thread.workspaceId,
             projectId: project.id,
             ownerThreadId: input.threadId,
-            kind:
-              input.targetMode === "local"
-                ? "local"
-                : branch
-                  ? "worktree"
-                  : "detached",
+            kind: input.targetMode === "local" ? "local" : branch ? "worktree" : "detached",
             retentionPolicy: "retain",
             workspaceRoot: project.workspaceRoot,
             path: input.targetMode === "local" ? project.workspaceRoot : thread.worktreePath,
@@ -1112,10 +1107,7 @@ export const makeWsRpcLayer = () =>
             "Failed to hand off thread",
           ),
         [WS_METHODS.workspaceProvisionThreadWorktree]: (input) =>
-          rpcEffect(
-            provisionThreadWorktree(input),
-            "Failed to provision the thread workspace",
-          ),
+          rpcEffect(provisionThreadWorktree(input), "Failed to provision the thread workspace"),
         [WS_METHODS.workspaceHandoffThread]: (input) =>
           rpcEffect(handoffThreadWorkspace(input), "Failed to hand off the thread workspace"),
 

@@ -25,12 +25,8 @@ const RawPullRequest = Schema.Struct({
   deletions: Schema.optional(Schema.NullOr(Schema.Number)),
   changedFiles: Schema.optional(Schema.NullOr(Schema.Number)),
   isCrossRepository: Schema.optional(Schema.Boolean),
-  headRepository: Schema.optional(
-    Schema.NullOr(Schema.Struct({ nameWithOwner: Schema.String })),
-  ),
-  headRepositoryOwner: Schema.optional(
-    Schema.NullOr(Schema.Struct({ login: Schema.String })),
-  ),
+  headRepository: Schema.optional(Schema.NullOr(Schema.Struct({ nameWithOwner: Schema.String }))),
+  headRepositoryOwner: Schema.optional(Schema.NullOr(Schema.Struct({ login: Schema.String }))),
   updatedAt: Schema.optional(Schema.NullOr(Schema.String)),
 });
 
@@ -40,9 +36,7 @@ function normalizeCount(value: number | null | undefined): number | null {
   return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : null;
 }
 
-function normalizeEntry(
-  raw: Schema.Schema.Type<typeof RawPullRequest>,
-): GitHubPullRequestSummary {
+function normalizeEntry(raw: Schema.Schema.Type<typeof RawPullRequest>): GitHubPullRequestSummary {
   const headRepositoryNameWithOwner = raw.headRepository?.nameWithOwner ?? null;
   return {
     number: raw.number,

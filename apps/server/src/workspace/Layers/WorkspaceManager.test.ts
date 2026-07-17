@@ -101,8 +101,8 @@ layer("WorkspaceManager", (it) => {
         kind: "worktree",
         retentionPolicy: "retain",
         workspaceRoot: "/tmp/project",
-        path: "/tmp/project/.worktrees/managed",
-        branch: "feature/managed",
+        path: "/tmp/project/.worktrees/attached",
+        branch: "feature/attached",
       });
       yield* manager.attach({ workspaceId: "workspace-1" as never, threadId: "thread-1" as never });
       const rows = yield* sql<{
@@ -115,16 +115,19 @@ layer("WorkspaceManager", (it) => {
         {
           workspace_id: "workspace-1",
           env_mode: "worktree",
-          worktree_path: "/tmp/project/.worktrees/managed",
-          associated_worktree_branch: "feature/managed",
+          worktree_path: "/tmp/project/.worktrees/attached",
+          associated_worktree_branch: "feature/attached",
         },
       ]);
       yield* manager.detach("thread-1" as never);
-      const detached = yield* sql<{ readonly workspace_id: string | null; readonly worktree_path: string }>`
+      const detached = yield* sql<{
+        readonly workspace_id: string | null;
+        readonly worktree_path: string;
+      }>`
         SELECT workspace_id, worktree_path FROM projection_threads WHERE thread_id = 'thread-1'
       `;
       assert.deepStrictEqual(detached, [
-        { workspace_id: null, worktree_path: "/tmp/project/.worktrees/managed" },
+        { workspace_id: null, worktree_path: "/tmp/project/.worktrees/attached" },
       ]);
     }),
   );
@@ -158,36 +161,47 @@ layer("WorkspaceManager", (it) => {
     }),
   );
 
-  it.effect("attaches multiple threads to one workspace while retaining a primary legacy owner", () =>
-    Effect.gen(function* () {
-      const sql = yield* SqlClient.SqlClient;
-      const manager = yield* WorkspaceManager;
-      yield* runMigrations();
-      yield* sql`
+  it.effect(
+    "attaches multiple threads to one workspace while retaining a primary legacy owner",
+    () =>
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
+        const manager = yield* WorkspaceManager;
+        yield* runMigrations();
+        yield* sql`
         INSERT INTO projection_projects (project_id, kind, title, workspace_root, scripts_json, is_pinned, created_at, updated_at, deleted_at)
         VALUES ('project-shared', 'project', 'Shared', '/tmp/project', '[]', 0, '2026-07-17T00:00:00.000Z', '2026-07-17T00:00:00.000Z', NULL)
       `;
-      yield* sql`
+        yield* sql`
         INSERT INTO projection_threads (thread_id, project_id, title, model_selection_json, runtime_mode, interaction_mode, env_mode, created_at, updated_at, deleted_at)
         VALUES
           ('thread-seat', 'project-shared', 'Seat', '{"provider":"codex","model":"gpt-5.4"}', 'full-access', 'default', 'local', '2026-07-17T00:00:00.000Z', '2026-07-17T00:00:00.000Z', NULL),
           ('thread-agent', 'project-shared', 'Agent', '{"provider":"codex","model":"gpt-5.4"}', 'full-access', 'default', 'local', '2026-07-17T00:00:00.000Z', '2026-07-17T00:00:00.000Z', NULL)
       `;
-      yield* sql`
+        yield* sql`
         INSERT INTO workspaces (workspace_id, project_id, owner_thread_id, kind, state, retention_policy, workspace_root, path, branch, ref, created_at, updated_at, retired_at)
         VALUES ('shared-workspace', 'project-shared', NULL, 'worktree', 'ready', 'retain', '/tmp/project', '/tmp/project/.worktrees/managed', 'feature/managed', 'feature/managed', '2026-07-17T00:00:00.000Z', '2026-07-17T00:00:00.000Z', NULL)
       `;
-      yield* manager.attach({ workspaceId: "shared-workspace" as never, threadId: "thread-seat" as never });
-      yield* manager.attach({ workspaceId: "shared-workspace" as never, threadId: "thread-agent" as never });
-      const attachments = yield* sql<{ readonly thread_id: string }>`
+        yield* manager.attach({
+          workspaceId: "shared-workspace" as never,
+          threadId: "thread-seat" as never,
+        });
+        yield* manager.attach({
+          workspaceId: "shared-workspace" as never,
+          threadId: "thread-agent" as never,
+        });
+        const attachments = yield* sql<{ readonly thread_id: string }>`
         SELECT thread_id FROM workspace_attachments WHERE workspace_id = 'shared-workspace' ORDER BY thread_id
       `;
-      const owner = yield* sql<{ readonly owner_thread_id: string }>`
+        const owner = yield* sql<{ readonly owner_thread_id: string }>`
         SELECT owner_thread_id FROM workspaces WHERE workspace_id = 'shared-workspace'
       `;
-      assert.deepStrictEqual(attachments, [{ thread_id: "thread-agent" }, { thread_id: "thread-seat" }]);
-      assert.deepStrictEqual(owner, [{ owner_thread_id: "thread-seat" }]);
-    }),
+        assert.deepStrictEqual(attachments, [
+          { thread_id: "thread-agent" },
+          { thread_id: "thread-seat" },
+        ]);
+        assert.deepStrictEqual(owner, [{ owner_thread_id: "thread-seat" }]);
+      }),
   );
 
   it.effect("resumes an interrupted provision from the already materialized Git worktree", () =>
@@ -232,7 +246,10 @@ layer("WorkspaceManager", (it) => {
       `;
       yield* manager.retireForThreadDeletion("thread-3" as never);
       const rows = yield* sql<{ readonly workspace_id: string; readonly state: string }>`
-        SELECT workspace_id, state FROM workspaces ORDER BY workspace_id
+        SELECT workspace_id, state
+        FROM workspaces
+        WHERE workspace_id IN ('retain-me', 'retire-me')
+        ORDER BY workspace_id
       `;
       assert.deepStrictEqual(rows, [
         { workspace_id: "retain-me", state: "ready" },
