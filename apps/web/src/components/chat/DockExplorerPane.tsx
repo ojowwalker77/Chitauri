@@ -5,7 +5,7 @@
 // Layer: Chat right-dock UI
 // Exports: DockExplorerPane
 
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 
 import type { ChatFileReference } from "~/lib/chatReferences";
 import type { FileCommentSelection } from "~/lib/fileComments";
@@ -22,15 +22,22 @@ const DOCK_EXPLORER_SIDEBAR_CLASS =
 
 export const DockExplorerPane = memo(function DockExplorerPane(props: {
   workspaceRoot: string | null;
+  initialFilePath?: string | null;
   onReferenceInChat?: ((reference: ChatFileReference) => void) | undefined;
   onAskWhyInChat?: ((reference: ChatFileReference) => void) | undefined;
   onCommentInChat?: ((comment: FileCommentSelection) => void) | undefined;
 }) {
-  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(
+    props.initialFilePath ?? null,
+  );
   const [expandedDirectories, setExpandedDirectories] = useState<ReadonlySet<string>>(
     () => new Set<string>(),
   );
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    if (props.initialFilePath) setSelectedFilePath(props.initialFilePath);
+  }, [props.initialFilePath]);
 
   const handleSelectFile = useCallback((path: string) => {
     setSelectedFilePath(path);

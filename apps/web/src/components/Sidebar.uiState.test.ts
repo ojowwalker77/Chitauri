@@ -58,7 +58,6 @@ describe("Sidebar.uiState", () => {
       },
       lastThreadRoute: {
         threadId: "thread-123",
-        splitViewId: "split-456",
       },
     });
 
@@ -75,7 +74,6 @@ describe("Sidebar.uiState", () => {
       },
       lastThreadRoute: {
         threadId: "thread-123",
-        splitViewId: "split-456",
       },
     });
   });
@@ -100,7 +98,6 @@ describe("Sidebar.uiState", () => {
         },
         lastThreadRoute: {
           threadId: "thread-123",
-          splitViewId: 42,
         },
       }),
     );
@@ -145,7 +142,6 @@ describe("Sidebar.uiState", () => {
       JSON.stringify({
         lastThreadRoute: {
           threadId: 42,
-          splitViewId: "split-123",
         },
       }),
     );

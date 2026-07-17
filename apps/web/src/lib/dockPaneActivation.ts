@@ -13,8 +13,6 @@ export type DockPaneRuntimeMode = "live" | "preview";
 export const DOCK_PANE_DEFERRED_HYDRATION_FRAMES = 2;
 
 const DEFERRED_RUNTIME_PANE_KINDS: ReadonlySet<RightDockPaneKind> = new Set<RightDockPaneKind>([
-  "browser",
-  "sidechat",
   "terminal",
 ]);
 

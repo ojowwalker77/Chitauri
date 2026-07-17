@@ -177,27 +177,8 @@ export const AppSettingsSchema = Schema.Struct({
   confirmTerminalTabClose: Schema.Boolean.pipe(withDefaults(() => true)),
   diffWordWrap: Schema.Boolean.pipe(withDefaults(() => false)),
   taskListDisplayMode: TaskListDisplayMode.pipe(withDefaults(() => DEFAULT_TASK_LIST_DISPLAY_MODE)),
-  // Local-only UI preferences for hiding sidebar surfaces a user doesn't want.
-  // `showChatsSection` controls the standalone "Chats" list in the sidebar footer
-  // (rootless chats not tied to a project). `showWorkspaceSection` controls the optional tab
-  // in the section switcher.
+  // Local-only UI preference for the standalone Chats list in the sidebar footer.
   showChatsSection: Schema.Boolean.pipe(withDefaults(() => true)),
-  showWorkspaceSection: Schema.Boolean.pipe(withDefaults(() => false)),
-  // Local-only UI preferences: which optional sections of the chat Environment panel are
-  // shown. The git block (Changes/Worktree/branch/Commit and Push) is always visible; these
-  // toggle the sections beneath it via the panel header's gear menu.
-  // `showEnvironmentPanel` is the master switch: when false the whole side dock is hidden
-  // and the per-section flags below have no effect.
-  showEnvironmentPanel: Schema.Boolean.pipe(withDefaults(() => true)),
-  showEnvironmentUsage: Schema.Boolean.pipe(withDefaults(() => true)),
-  showEnvironmentRepository: Schema.Boolean.pipe(withDefaults(() => true)),
-  showEnvironmentPullRequest: Schema.Boolean.pipe(withDefaults(() => true)),
-  showEnvironmentEditor: Schema.Boolean.pipe(withDefaults(() => true)),
-  showEnvironmentRecap: Schema.Boolean.pipe(withDefaults(() => true)),
-  showEnvironmentPinned: Schema.Boolean.pipe(withDefaults(() => true)),
-  showEnvironmentMarkers: Schema.Boolean.pipe(withDefaults(() => true)),
-  showEnvironmentInstructions: Schema.Boolean.pipe(withDefaults(() => true)),
-  showEnvironmentNotepad: Schema.Boolean.pipe(withDefaults(() => true)),
   enableAssistantStreaming: Schema.Boolean.pipe(withDefaults(() => true)),
   enableProviderUpdateChecks: Schema.Boolean.pipe(withDefaults(() => true)),
   enableNativeFontSmoothing: Schema.Boolean.pipe(withDefaults(getDefaultNativeFontSmoothing)),

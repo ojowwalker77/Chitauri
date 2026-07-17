@@ -36,20 +36,16 @@ function ChatIndexRouteView() {
     }
     return draftThreadIds;
   }, [draftThreadsByThreadId]);
-  const resolveRestoreRoute = useCallback<RestoreRouteResolver>(
-    ({ availableSplitViewIds }) => {
-      const availableThreadIds = new Set<string>(threadIds);
-      for (const draftThreadId of draftThreadIds) {
-        availableThreadIds.add(draftThreadId);
-      }
-      return resolveRestorableThreadRoute({
-        lastThreadRoute: readSidebarUiState().lastThreadRoute,
-        availableThreadIds,
-        availableSplitViewIds,
-      });
-    },
-    [draftThreadIds, threadIds],
-  );
+  const resolveRestoreRoute = useCallback<RestoreRouteResolver>(() => {
+    const availableThreadIds = new Set<string>(threadIds);
+    for (const draftThreadId of draftThreadIds) {
+      availableThreadIds.add(draftThreadId);
+    }
+    return resolveRestorableThreadRoute({
+      lastThreadRoute: readSidebarUiState().lastThreadRoute,
+      availableThreadIds,
+    });
+  }, [draftThreadIds, threadIds]);
 
   return (
     <RestoreOrCreateChatRoute

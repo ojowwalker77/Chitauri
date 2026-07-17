@@ -80,7 +80,6 @@ interface ChatTranscriptPaneProps {
   onOpenAgentActivity?: ComponentProps<typeof MessagesTimeline>["onOpenAgentActivity"];
   onOpenTurnDiff: (turnId: TurnId, filePath?: string) => void;
   onOpenThread: (threadId: ThreadId) => void;
-  onOpenAutomation?: ComponentProps<typeof MessagesTimeline>["onOpenAutomation"];
   onRevertUserMessage: (messageId: MessageId) => void;
   onEditUserMessage?: (messageId: MessageId, text: string) => boolean | Promise<boolean>;
   onScrollToBottom: () => void;
@@ -137,7 +136,6 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
   onOpenAgentActivity,
   onOpenTurnDiff,
   onOpenThread,
-  onOpenAutomation,
   onRevertUserMessage,
   onEditUserMessage,
   onScrollToBottom,
@@ -220,7 +218,6 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
             turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}
             onOpenTurnDiff={onOpenTurnDiff}
             onOpenThread={onOpenThread}
-            {...(onOpenAutomation ? { onOpenAutomation } : {})}
             revertTurnCountByUserMessageId={revertTurnCountByUserMessageId}
             onRevertUserMessage={onRevertUserMessage}
             {...(onEditUserMessage ? { onEditUserMessage } : {})}

@@ -1,5 +1,5 @@
 // FILE: RightDock.tsx
-// Purpose: Tabbed multi-pane right sidebar shell (browser, diff, terminal, sidechat, git).
+// Purpose: Tabbed right sidebar shell for project exploration, diffs, and terminals.
 // Layer: Chat right-dock UI
 // Depends on: ui/sidebar primitive, right-dock pane metadata, and a caller-provided pane renderer.
 
@@ -262,11 +262,6 @@ export function RightDock(props: RightDockProps) {
                     isActive ? undefined : "invisible pointer-events-none",
                   )}
                   aria-hidden={isActive ? undefined : true}
-                  data-native-browser-surface={
-                    pane.kind === "browser" && isActive && runtimeMode === "live"
-                      ? "true"
-                      : undefined
-                  }
                 >
                   {props.renderPane(pane, { runtimeMode, isActive })}
                 </div>

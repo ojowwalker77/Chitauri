@@ -34,7 +34,6 @@ import {
   deriveTimelineEntries,
   formatClockElapsed,
   isFileChangeWorkLogEntry,
-  type WorkLogEntry,
 } from "../../session-logic";
 import {
   type TurnDiffSummary,
@@ -72,7 +71,6 @@ import {
 } from "~/lib/icons";
 import { pinActionLabel } from "~/lib/pin";
 import { Button } from "../ui/button";
-import { AutomationCreatedCard } from "./AutomationCreatedCard";
 import { buildExpandedImagePreview, ExpandedImagePreview } from "./ExpandedImagePreview";
 import { ProposedPlanCard } from "./ProposedPlanCard";
 import { ToolCallDetailsContent, ToolCallDetailsDialog } from "./ToolCallDetailsDialog";
@@ -436,8 +434,6 @@ interface MessagesTimelineProps {
   onOpenAgentActivity?: (activityId: string) => void;
   onOpenTurnDiff: (turnId: TurnId, filePath?: string) => void;
   onOpenThread?: (threadId: ThreadId) => void;
-  /** Open an automation's detail page from a "created automation" transcript card. */
-  onOpenAutomation?: (automationId: string) => void;
   revertTurnCountByUserMessageId: Map<MessageId, number>;
   onRevertUserMessage: (messageId: MessageId) => void;
   onEditUserMessage?: (messageId: MessageId, text: string) => boolean | Promise<boolean>;
@@ -494,7 +490,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   onOpenAgentActivity,
   onOpenTurnDiff,
   onOpenThread,
-  onOpenAutomation,
   revertTurnCountByUserMessageId,
   onRevertUserMessage,
   onEditUserMessage,
@@ -1046,7 +1041,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     onOpenToolDetails={openToolDetails}
                     {...(onOpenAgentActivity ? { onOpenAgentActivity } : {})}
                     {...(onOpenThread ? { onOpenThread } : {})}
-                    {...(onOpenAutomation ? { onOpenAutomation } : {})}
                   />
                 )}
               />
@@ -1381,7 +1375,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               onOpenToolDetails={openToolDetails}
               {...(onOpenAgentActivity ? { onOpenAgentActivity } : {})}
               {...(onOpenThread ? { onOpenThread } : {})}
-              {...(onOpenAutomation ? { onOpenAutomation } : {})}
               {...(turnSummary?.turnId ? { turnId: turnSummary.turnId } : {})}
             />
           );
@@ -2813,28 +2806,6 @@ function isGitHubMcpToolCall(workEntry: TimelineWorkEntry): boolean {
   return Boolean(toolName?.startsWith("mcp__codex_apps__github"));
 }
 
-// Render command, agent-task, file-change, and file-read rows at the tighter
-// compact density so every tool-call line shares one height regardless of whether
-// it carries a disclosure chevron.
-function prefersCompactWorkEntryRow(workEntry: TimelineWorkEntry): boolean {
-  // Commands stay compact even when surfaced with a non-terminal icon (read-only
-  // inspections like `cat` now use the file-read search icon).
-  if (workEntry.itemType === "command_execution" || workEntry.command || workEntry.rawCommand) {
-    return true;
-  }
-  const EntryIcon = workEntryIcon(workEntry);
-  return (
-    EntryIcon === TerminalIcon ||
-    EntryIcon === HammerIcon ||
-    EntryIcon === AgentTaskIcon ||
-    EntryIcon === PencilIcon ||
-    EntryIcon === SkillCubeIcon ||
-    // File-read / inspect rows (e.g. `Read …`) surface the search icon and have no
-    // disclosure chevron; keep them at the same compact height as command rows.
-    EntryIcon === SearchIcon
-  );
-}
-
 function capitalizePhrase(value: string): string {
   const trimmed = value.trim();
   if (trimmed.length === 0) {
@@ -3100,7 +3071,6 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
   onOpenToolDetails?: (workEntry: TimelineWorkEntry) => void;
   onOpenAgentActivity?: (activityId: string) => void;
   onOpenThread?: (threadId: ThreadId) => void;
-  onOpenAutomation?: (automationId: string) => void;
 }) {
   const {
     workEntry,
@@ -3115,7 +3085,6 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
     onOpenToolDetails,
     onOpenAgentActivity,
     onOpenThread,
-    onOpenAutomation,
   } = props;
   const compact = density === "compact";
   const EntryIcon = workEntryIcon(workEntry);
@@ -3172,23 +3141,6 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
         : EMPTY_FILE_DIFF_STATS,
     [workEntry],
   );
-
-  // A created-automation row renders as its own card instead of a tool-call line.
-  // Kept after the hooks above so the early return never changes hook order.
-  const automation = workEntry.automation;
-  if (automation) {
-    return (
-      <div className={cn(compact ? "py-0.5" : "py-1")}>
-        <AutomationCreatedCard
-          name={automation.name}
-          cadenceLabel={automation.cadenceLabel}
-          textFontSizePx={textFontSizePx}
-          metaFontSizePx={chatMetaFontSizePx}
-          {...(onOpenAutomation ? { onOpen: () => onOpenAutomation(automation.id) } : {})}
-        />
-      </div>
-    );
-  }
 
   const readFilePath =
     opener !== null &&

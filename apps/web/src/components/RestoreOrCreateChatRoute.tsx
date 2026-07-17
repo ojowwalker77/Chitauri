@@ -8,7 +8,7 @@
 
 import { ThreadId } from "@t3tools/contracts";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { SplashScreen } from "./SplashScreen";
 import {
@@ -24,14 +24,9 @@ import {
 } from "../chatRouteRecovery";
 import type { StartContainerChatResult } from "../lib/startContainerChat";
 import { readNativeApi } from "../nativeApi";
-import { useSplitViewStore } from "../splitViewStore";
 import { EMPTY_THREAD_IDS, useStore } from "../store";
 
-export type RestoreRouteResolverInput = {
-  // Split views currently known to the client. Callers that support split-view restore should
-  // filter their resolved route's `splitViewId` against this set.
-  readonly availableSplitViewIds: ReadonlySet<string>;
-};
+export type RestoreRouteResolverInput = Record<string, never>;
 
 // Resolves which thread route (if any) this surface should restore to. Returning `null` defers
 // to `createFreshChat` (e.g. because there is a draft to reopen instead of an existing thread).
@@ -49,12 +44,6 @@ export function RestoreOrCreateChatRoute({
   const navigate = useNavigate();
   const threadsHydrated = useStore((store) => store.threadsHydrated);
   const threadIds = useStore((state) => state.threadIds ?? EMPTY_THREAD_IDS);
-  const splitViewsHydrated = useSplitViewStore((state) => state.hasHydrated);
-  const splitViewsById = useSplitViewStore((state) => state.splitViewsById);
-  const splitViewIds = useMemo(
-    () => Object.keys(splitViewsById).filter((splitViewId) => splitViewsById[splitViewId]),
-    [splitViewsById],
-  );
   const [attempt, setAttempt] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [emptyRestoreRecoveryState, setEmptyRestoreRecoveryState] =
@@ -79,7 +68,7 @@ export function RestoreOrCreateChatRoute({
   }, [emptyRestoreRecoveryState, threadIds.length]);
 
   useEffect(() => {
-    if (!threadsHydrated || !splitViewsHydrated) {
+    if (!threadsHydrated) {
       return;
     }
 
@@ -117,9 +106,7 @@ export function RestoreOrCreateChatRoute({
         return;
       }
 
-      const restorableRoute = resolveRestoreRoute({
-        availableSplitViewIds: new Set(splitViewIds),
-      });
+      const restorableRoute = resolveRestoreRoute({});
       if (restorableRoute) {
         if (cancelled) {
           return;
@@ -128,9 +115,6 @@ export function RestoreOrCreateChatRoute({
           to: "/$threadId",
           params: { threadId: ThreadId.makeUnsafe(restorableRoute.threadId) },
           replace: true,
-          search: () => ({
-            splitViewId: restorableRoute.splitViewId,
-          }),
         });
         return;
       }
@@ -160,8 +144,6 @@ export function RestoreOrCreateChatRoute({
     emptyRestoreRecoveryState,
     navigate,
     resolveRestoreRoute,
-    splitViewIds,
-    splitViewsHydrated,
     threadIds.length,
     threadsHydrated,
   ]);

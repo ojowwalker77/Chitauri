@@ -299,35 +299,6 @@ export function resolvePromptHistoryNavigation(input: {
   };
 }
 
-// Default-open policy for the Environment panel; render-time visibility is resolved separately.
-export function resolveDefaultEnvironmentPanelOpen(input: {
-  environmentEnabled: boolean;
-  isCenteredEmptyLanding: boolean;
-  isTerminalPrimarySurface: boolean;
-  isConstrainedChatLayout: boolean;
-}): boolean {
-  return (
-    input.environmentEnabled &&
-    !input.isCenteredEmptyLanding &&
-    !input.isTerminalPrimarySurface &&
-    !input.isConstrainedChatLayout
-  );
-}
-
-export function resolveEnvironmentPanelOpen(input: {
-  defaultOpen: boolean;
-  userPreferenceOpen: boolean | null;
-}): boolean {
-  return input.userPreferenceOpen ?? input.defaultOpen;
-}
-
-export function resolveEnvironmentPanelVisible(input: {
-  environmentEnabled: boolean;
-  environmentPanelOpen: boolean;
-}): boolean {
-  return input.environmentEnabled && input.environmentPanelOpen;
-}
-
 // The composer live strip prefers the turn's computed diff (the
 // `thread.turn-diff-completed` event) so it can show real per-file +/- stats.
 // Before that lands, it falls back to mid-turn file-edit work-log activity so
@@ -449,17 +420,6 @@ export function resolveActiveThreadTitle(input: {
     return "New Chat";
   }
   return input.title;
-}
-
-// Sidechats carry imported fork history for provider context, but their transcript should start
-// visually clean so only new sidechat turns appear in the pane.
-export function filterSidechatTranscriptMessages(
-  messages: readonly ChatMessage[],
-  isSidechat: boolean,
-): ChatMessage[] {
-  return isSidechat
-    ? messages.filter((message) => message.source !== "fork-import")
-    : [...messages];
 }
 
 export function revokeBlobPreviewUrl(previewUrl: string | undefined): void {

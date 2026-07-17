@@ -7,7 +7,6 @@ import {
   createWorktreeSetupSnapshot,
   derivePromptHistoryFromMessages,
   failWorktreeSetupSnapshot,
-  filterSidechatTranscriptMessages,
   isComposerCursorOnFirstLine,
   isComposerCursorOnLastLine,
   type LocalDispatchSnapshot,
@@ -19,9 +18,6 @@ import {
   resolveActiveThreadTitle,
   resolveActiveTurnLiveDiffState,
   resolveCommittedProviderModel,
-  resolveDefaultEnvironmentPanelOpen,
-  resolveEnvironmentPanelOpen,
-  resolveEnvironmentPanelVisible,
   resolveProjectScriptTerminalTarget,
   resolveQueuedSteerGateTransition,
   resolveRuntimeModeAfterApprovalDecision,
@@ -494,124 +490,6 @@ describe("thread title and transcript helpers", () => {
         isEmpty: false,
       }),
     ).toBe("Reviewer / Fix follow-up");
-  });
-
-  it("hides fork-imported transcript rows only for sidechats", () => {
-    const messages = [
-      {
-        id: "message-imported" as never,
-        role: "assistant",
-        text: "Previous context",
-        turnId: null,
-        streaming: false,
-        source: "fork-import",
-        createdAt: "2026-05-02T10:00:00.000Z",
-        completedAt: "2026-05-02T10:00:00.000Z",
-      },
-      {
-        id: "message-native" as never,
-        role: "user",
-        text: "Fresh side question",
-        turnId: null,
-        streaming: false,
-        source: "native",
-        createdAt: "2026-05-02T10:01:00.000Z",
-        completedAt: "2026-05-02T10:01:00.000Z",
-      },
-    ] as const;
-
-    expect(filterSidechatTranscriptMessages(messages, true).map((message) => message.id)).toEqual([
-      "message-native",
-    ]);
-    expect(filterSidechatTranscriptMessages(messages, false).map((message) => message.id)).toEqual([
-      "message-imported",
-      "message-native",
-    ]);
-  });
-});
-
-describe("environment panel visibility", () => {
-  it("opens normal chat threads by default", () => {
-    expect(
-      resolveDefaultEnvironmentPanelOpen({
-        environmentEnabled: true,
-        isCenteredEmptyLanding: false,
-        isTerminalPrimarySurface: false,
-        isConstrainedChatLayout: false,
-      }),
-    ).toBe(true);
-  });
-
-  it("keeps empty landing, terminal-primary, and constrained layouts closed by default", () => {
-    expect(
-      resolveDefaultEnvironmentPanelOpen({
-        environmentEnabled: true,
-        isCenteredEmptyLanding: true,
-        isTerminalPrimarySurface: false,
-        isConstrainedChatLayout: false,
-      }),
-    ).toBe(false);
-    expect(
-      resolveDefaultEnvironmentPanelOpen({
-        environmentEnabled: true,
-        isCenteredEmptyLanding: false,
-        isTerminalPrimarySurface: true,
-        isConstrainedChatLayout: false,
-      }),
-    ).toBe(false);
-    expect(
-      resolveDefaultEnvironmentPanelOpen({
-        environmentEnabled: true,
-        isCenteredEmptyLanding: false,
-        isTerminalPrimarySurface: false,
-        isConstrainedChatLayout: true,
-      }),
-    ).toBe(false);
-  });
-
-  it("lets a manual preference override the default while switching chats", () => {
-    expect(
-      resolveEnvironmentPanelOpen({
-        defaultOpen: true,
-        userPreferenceOpen: null,
-      }),
-    ).toBe(true);
-    expect(
-      resolveEnvironmentPanelOpen({
-        defaultOpen: true,
-        userPreferenceOpen: false,
-      }),
-    ).toBe(false);
-    expect(
-      resolveEnvironmentPanelOpen({
-        defaultOpen: false,
-        userPreferenceOpen: true,
-      }),
-    ).toBe(true);
-  });
-
-  it("renders the panel when the user toggles it open on empty landing", () => {
-    expect(
-      resolveEnvironmentPanelVisible({
-        environmentEnabled: true,
-        environmentPanelOpen: true,
-      }),
-    ).toBe(true);
-  });
-
-  it("keeps the panel hidden when environment controls are disabled or closed", () => {
-    expect(
-      resolveEnvironmentPanelVisible({
-        environmentEnabled: false,
-        environmentPanelOpen: true,
-      }),
-    ).toBe(false);
-    expect(
-      resolveEnvironmentPanelVisible({
-        environmentEnabled: true,
-        environmentPanelOpen: false,
-      }),
-    ).toBe(false);
   });
 });
 

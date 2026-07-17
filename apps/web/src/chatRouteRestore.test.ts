@@ -14,13 +14,11 @@ describe("resolveRestorableThreadRoute", () => {
       resolveRestorableThreadRoute({
         lastThreadRoute: {
           threadId: "thread-123",
-          splitViewId: "split-456",
         },
         availableThreadIds: new Set(["thread-123", "thread-789"]),
       }),
     ).toEqual({
       threadId: "thread-123",
-      splitViewId: "split-456",
     });
   });
 
@@ -40,10 +38,8 @@ describe("resolveRestorableThreadRoute", () => {
       resolveRestorableThreadRoute({
         lastThreadRoute: {
           threadId: "thread-123",
-          splitViewId: "split-missing",
         },
         availableThreadIds: new Set(["thread-123"]),
-        availableSplitViewIds: new Set(["split-live"]),
       }),
     ).toEqual({
       threadId: "thread-123",

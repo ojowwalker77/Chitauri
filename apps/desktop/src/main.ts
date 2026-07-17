@@ -98,18 +98,6 @@ import {
 } from "./updatePendingCache";
 import { buildGitHubReleasesPageUrl, resolveGitHubUpdateSource } from "./githubUpdateFeed";
 import { isArm64HostRunningIntelBuild, resolveDesktopRuntimeInfo } from "./runtimeArch";
-import { DesktopBrowserManager } from "./browserManager";
-import {
-  BROWSER_IPC_CHANNELS,
-  registerBrowserIpcHandlers,
-  sendBrowserCopyLink,
-  sendBrowserState,
-} from "./browserIpc";
-import {
-  BrowserUsePipeServer,
-  CHITAURI_BROWSER_USE_PIPE_ENV,
-  CHITAURI_BROWSER_USE_PIPE_PATH,
-} from "./browserUsePipeServer";
 import {
   DESKTOP_WS_URL_CHANNEL,
   normalizeDesktopWsUrl,
@@ -183,12 +171,9 @@ const BACKEND_SHUTDOWN_TIMEOUT_MS = 10_000;
 const BACKEND_MAX_OLD_SPACE_ENV_KEY = "CHITAURI_BACKEND_MAX_OLD_SPACE_MB";
 const DESKTOP_UPDATE_CHANNEL = "latest";
 const DESKTOP_UPDATE_ALLOW_PRERELEASE = false;
-const BROWSER_PERF_SAMPLE_INTERVAL_MS = 5_000;
 const DESKTOP_MENU_ZOOM_FACTOR_STEP = 1.1;
 const DESKTOP_MENU_MIN_ZOOM_FACTOR = 0.25;
 const DESKTOP_MENU_MAX_ZOOM_FACTOR = 5;
-const CHITAURI_BROWSER_LABEL = "Chitauri browser";
-const browserPerfLoggingEnabled = process.env.CHITAURI_BROWSER_PERF === "1";
 
 type DesktopUpdateErrorContext = DesktopUpdateState["errorContext"];
 
@@ -215,60 +200,8 @@ let desktopLogSink: RotatingFileSink | null = null;
 let backendLogSink: RotatingFileSink | null = null;
 let restoreStdIoCapture: (() => void) | null = null;
 let unreadBackgroundNotificationCount = 0;
-let browserPerfInterval: ReturnType<typeof setInterval> | null = null;
-const browserManager = new DesktopBrowserManager();
-let browserUsePipeServer: BrowserUsePipeServer | null = null;
 let configuredGitHubUpdateSource: ReturnType<typeof resolveGitHubUpdateSource> = null;
 let configuredUpdaterCacheDirName: string | null = null;
-
-browserManager.subscribe((state) => {
-  sendBrowserState(mainWindow?.webContents, state);
-});
-
-browserManager.subscribeCopyLink((event) => {
-  sendBrowserCopyLink(mainWindow?.webContents, event);
-});
-
-function startBrowserPerformanceLogging(): void {
-  if (browserPerfInterval || !browserPerfLoggingEnabled) {
-    return;
-  }
-
-  browserPerfInterval = setInterval(() => {
-    const snapshot = browserManager.getPerformanceSnapshot();
-    const trackedProcessIds = new Set(snapshot.trackedProcessIds);
-    const processMetrics = app
-      .getAppMetrics()
-      .filter((metric) => trackedProcessIds.has(metric.pid))
-      .map((metric) => ({
-        pid: metric.pid,
-        type: metric.type,
-        cpu: Number(metric.cpu.percentCPUUsage.toFixed(1)),
-        memMb: Math.round(metric.memory.workingSetSize / 1024),
-        name: metric.name,
-      }));
-
-    console.info(`[${CHITAURI_BROWSER_LABEL} perf]`, {
-      ...snapshot.counters,
-      trackedProcessIds: snapshot.trackedProcessIds,
-      processes: processMetrics,
-    });
-  }, BROWSER_PERF_SAMPLE_INTERVAL_MS);
-  browserPerfInterval.unref();
-}
-
-async function ensureBrowserUsePipeServer(): Promise<void> {
-  if (browserUsePipeServer) {
-    return;
-  }
-  const server = new BrowserUsePipeServer(browserManager, {
-    requestOpenPanel: () => {
-      mainWindow?.webContents.send(BROWSER_IPC_CHANNELS.requestOpenPanel);
-    },
-  });
-  await server.start();
-  browserUsePipeServer = server;
-}
 
 let destructiveMenuIconCache: Electron.NativeImage | null | undefined;
 const desktopRuntimeInfo = resolveDesktopRuntimeInfo({
@@ -1092,11 +1025,6 @@ function configureApplicationMenu(): void {
           label: "Toggle Sidebar",
           ...acceleratorProps("CmdOrCtrl+B"),
           click: () => dispatchMenuAction("toggle-sidebar"),
-        },
-        {
-          label: "Toggle Browser",
-          ...acceleratorProps("CmdOrCtrl+Shift+B"),
-          click: () => dispatchMenuAction("toggle-browser"),
         },
         { type: "separator" },
         { role: "reload" },
@@ -1939,7 +1867,6 @@ function backendEnv(): NodeJS.ProcessEnv {
     CHITAURI_PORT: String(backendPort),
     CHITAURI_HOME: BASE_DIR,
     CHITAURI_AUTH_TOKEN: backendAuthToken,
-    [CHITAURI_BROWSER_USE_PIPE_ENV]: CHITAURI_BROWSER_USE_PIPE_PATH,
   };
 }
 
@@ -2123,20 +2050,6 @@ async function stopBackendAndWaitForExit(timeoutMs = BACKEND_SHUTDOWN_TIMEOUT_MS
   });
 }
 
-async function disposeBrowserUsePipeServerForShutdown(reason: string): Promise<void> {
-  const pipeServer = browserUsePipeServer;
-  browserUsePipeServer = null;
-  if (!pipeServer) return;
-
-  try {
-    await pipeServer.dispose();
-  } catch (error: unknown) {
-    const message = formatErrorMessage(error);
-    writeDesktopLogHeader(`${reason} browser-use pipe dispose failed message=${message}`);
-    console.warn(`[desktop] Failed to dispose browser-use pipe during ${reason}: ${message}`);
-  }
-}
-
 // Keeps Electron alive long enough for backend finalizers to reap provider child processes.
 async function shutdownDesktopRuntime(reason: string): Promise<void> {
   if (desktopShutdownPromise) {
@@ -2151,9 +2064,7 @@ async function shutdownDesktopRuntime(reason: string): Promise<void> {
       clearUpdateCheckTimeoutTimer();
       clearUpdatePollTimer();
       cancelBackendReadinessWait();
-      await disposeBrowserUsePipeServerForShutdown(reason);
       await stopBackendAndWaitForExit();
-      browserManager.dispose();
       restoreStdIoCapture?.();
       writeDesktopLogHeader(`${reason} shutdown complete`);
     } finally {
@@ -2477,12 +2388,6 @@ function registerIpcHandlers(): void {
         ...(typeof input?.threadId === "string" ? { threadId: input.threadId } : {}),
       }),
   );
-  startBrowserPerformanceLogging();
-  void ensureBrowserUsePipeServer().catch((error) => {
-    console.warn("[Chitauri browser] Failed to start browser-use native pipe", error);
-  });
-
-  registerBrowserIpcHandlers(ipcMain, browserManager);
 }
 
 function getIconOption(): { icon: string } | Record<string, never> {
@@ -2554,7 +2459,6 @@ function createWindow(): BrowserWindow {
       backgroundThrottling: true,
     },
   });
-  browserManager.setWindow(window);
   attachDesktopZoomFactorSync(window);
 
   window.webContents.on("context-menu", (event, params) => {
@@ -2633,7 +2537,6 @@ function createWindow(): BrowserWindow {
     if (mainWindow === window) {
       mainWindow = null;
     }
-    browserManager.setWindow(null);
   });
 
   return window;
