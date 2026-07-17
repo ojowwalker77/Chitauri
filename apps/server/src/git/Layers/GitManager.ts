@@ -24,7 +24,10 @@ import {
   type GitRunStackedActionOptions,
 } from "../Services/GitManager.ts";
 import { GitCore } from "../Services/GitCore.ts";
-import { GitHubCli, type GitHubPullRequestSummary } from "../Services/GitHubCli.ts";
+import {
+  GitHubCli as GitHubWorkflow,
+  type GitHubPullRequestSummary,
+} from "../Services/GitHubCli.ts";
 import { TextGeneration } from "../Services/TextGeneration.ts";
 import { buildGitTextGenerationCallInput } from "../textGenerationSelection.ts";
 import { ServerConfig } from "../../config.ts";
@@ -271,7 +274,7 @@ function matchesBranchHeadContext(
   return true;
 }
 
-// Normalizes `gh pr view/list` service output into the richer internal PR shape.
+// Normalizes direct GitHub API output into the richer internal PR shape.
 function toPullRequestInfo(pullRequest: GitHubPullRequestSummary): PullRequestInfo {
   return {
     ...pullRequest,
@@ -280,7 +283,7 @@ function toPullRequestInfo(pullRequest: GitHubPullRequestSummary): PullRequestIn
   };
 }
 
-// Detects GitHub's duplicate-PR response from `gh pr create`.
+// Detects GitHub's duplicate-PR response.
 function isPullRequestAlreadyExistsError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
@@ -639,18 +642,17 @@ function toPullRequestHeadRemoteInfo(pr: {
   };
 }
 
-// Older gh versions omit the head-repository fields from `pr list` JSON; fall back to what
-// the head selector implies so cross-repo matching still works. Shared by the open-PR and
-// any-state PR lookups.
+// Older/fake payloads can omit head-repository fields; fall back to what the
+// head selector implies so cross-repo matching stays stable.
 function withInferredHeadRemoteInfo(
   pr: PullRequestInfo,
   inferred: PullRequestHeadRemoteInfo,
 ): PullRequestInfo {
-  const reportedByGh =
+  const reportedByGitHub =
     pr.isCrossRepository !== undefined ||
     pr.headRepositoryNameWithOwner !== undefined ||
     pr.headRepositoryOwnerLogin !== undefined;
-  return reportedByGh ? pr : { ...pr, ...toPullRequestHeadRemoteInfo(inferred) };
+  return reportedByGitHub ? pr : { ...pr, ...toPullRequestHeadRemoteInfo(inferred) };
 }
 
 function inferPullRequestHeadRemoteInfoFromSelector(
@@ -702,7 +704,7 @@ function inferPullRequestHeadRemoteInfoFromSelector(
 
 export const makeGitManager = Effect.gen(function* () {
   const gitCore = yield* GitCore;
-  const gitHubCli = yield* GitHubCli;
+  const github = yield* GitHubWorkflow;
   const textGeneration = yield* TextGeneration;
 
   const createProgressEmitter = (
@@ -739,7 +741,7 @@ export const makeGitManager = Effect.gen(function* () {
         return;
       }
 
-      const cloneUrls = yield* gitHubCli.getRepositoryCloneUrls({
+      const cloneUrls = yield* github.getRepositoryCloneUrls({
         cwd,
         repository: repositoryNameWithOwner,
       });
@@ -786,7 +788,7 @@ export const makeGitManager = Effect.gen(function* () {
         return;
       }
 
-      const cloneUrls = yield* gitHubCli.getRepositoryCloneUrls({
+      const cloneUrls = yield* github.getRepositoryCloneUrls({
         cwd,
         repository: repositoryNameWithOwner,
       });
@@ -935,7 +937,7 @@ export const makeGitManager = Effect.gen(function* () {
   ) =>
     Effect.gen(function* () {
       for (const headSelector of headContext.headSelectors) {
-        const pullRequests = yield* gitHubCli.listOpenPullRequests({
+        const pullRequests = yield* github.listOpenPullRequests({
           cwd,
           headSelector,
           limit: OPEN_PR_LOOKUP_LIMIT,
@@ -971,7 +973,7 @@ export const makeGitManager = Effect.gen(function* () {
           headSelector,
           headContext,
         );
-        const pullRequests = yield* gitHubCli.listPullRequests({
+        const pullRequests = yield* github.listPullRequests({
           cwd,
           headSelector,
           limit: PR_LOOKUP_ALL_STATES_LIMIT,
@@ -1010,7 +1012,7 @@ export const makeGitManager = Effect.gen(function* () {
     Effect.gen(function* () {
       const pullRequestUrl = extractPullRequestUrlFromError(error);
       if (pullRequestUrl) {
-        const pullRequest = yield* gitHubCli
+        const pullRequest = yield* github
           .getPullRequest({ cwd, reference: pullRequestUrl })
           .pipe(Effect.catch(() => Effect.succeed(null)));
         if (pullRequest) {
@@ -1021,7 +1023,7 @@ export const makeGitManager = Effect.gen(function* () {
         }
       }
 
-      // `gh pr create` can race with an existing-PR probe. Treat GitHub's
+      // Pull request creation can race with an existing-PR probe. Treat GitHub's
       // create-time duplicate response as success when the PR can be found.
       return yield* findOpenPr(cwd, headContext);
     });
@@ -1043,11 +1045,11 @@ export const makeGitManager = Effect.gen(function* () {
         }
       }
 
-      const defaultFromGh = yield* gitHubCli
+      const defaultFromGitHub = yield* github
         .getDefaultBranch({ cwd })
         .pipe(Effect.catch(() => Effect.succeed(null)));
-      if (defaultFromGh) {
-        return defaultFromGh;
+      if (defaultFromGitHub) {
+        return defaultFromGitHub;
       }
 
       return "main";
@@ -1293,7 +1295,7 @@ export const makeGitManager = Effect.gen(function* () {
             gitManagerError("runPrStep", "Failed to write pull request body temp file.", cause),
           ),
         );
-      const existingAfterCreateConflict = yield* gitHubCli
+      const existingAfterCreateConflict = yield* github
         .createPullRequest({
           cwd,
           baseBranch,
@@ -1410,7 +1412,7 @@ export const makeGitManager = Effect.gen(function* () {
 
   const resolvePullRequest: GitManagerShape["resolvePullRequest"] = Effect.fnUntraced(
     function* (input) {
-      const pullRequest = yield* gitHubCli
+      const pullRequest = yield* github
         .getPullRequest({
           cwd: input.cwd,
           reference: normalizePullRequestReference(input.reference),
@@ -1424,9 +1426,9 @@ export const makeGitManager = Effect.gen(function* () {
   const pullRequestSnapshot: GitManagerShape["pullRequestSnapshot"] = Effect.fnUntraced(
     function* (input) {
       const reference = normalizePullRequestReference(input.reference);
-      // Summary + checks ride one `gh pr view` call: one process/API round trip per poll,
-      // and no separate checks failure mode that could discard an otherwise-usable snapshot.
-      const { summary, checks } = yield* gitHubCli.getPullRequestWithChecks({
+      // Summary + checks ride one GraphQL request per poll, and no separate
+      // checks failure mode can discard an otherwise-usable snapshot.
+      const { summary, checks } = yield* github.getPullRequestWithChecks({
         cwd: input.cwd,
         reference,
       });
@@ -1440,7 +1442,7 @@ export const makeGitManager = Effect.gen(function* () {
         );
       }
 
-      const commentsResult = yield* gitHubCli
+      const commentsResult = yield* github
         .getPullRequestReviewComments({
           cwd: input.cwd,
           host: repository.host,
@@ -1477,14 +1479,14 @@ export const makeGitManager = Effect.gen(function* () {
     function* (input) {
       const normalizedReference = normalizePullRequestReference(input.reference);
       const rootWorktreePath = canonicalizeExistingPath(input.cwd);
-      const pullRequestSummary = yield* gitHubCli.getPullRequest({
+      const pullRequestSummary = yield* github.getPullRequest({
         cwd: input.cwd,
         reference: normalizedReference,
       });
       const pullRequest = toResolvedPullRequest(pullRequestSummary);
 
       if (input.mode === "local") {
-        yield* gitHubCli.checkoutPullRequest({
+        yield* github.checkoutPullRequest({
           cwd: input.cwd,
           reference: normalizedReference,
           force: true,

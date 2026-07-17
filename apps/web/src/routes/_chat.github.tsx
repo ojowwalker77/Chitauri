@@ -605,7 +605,7 @@ function IssueCreationDialog({
         <DialogHeader>
           <DialogTitle>Create issue</DialogTitle>
           <DialogDescription>
-            Create the issue through your authenticated GitHub CLI.
+            Create the issue directly through your authenticated GitHub account.
           </DialogDescription>
         </DialogHeader>
         <DialogPanel className="space-y-3">
@@ -866,10 +866,10 @@ function GitHubWorkbenchRoute() {
               <div className="flex items-start gap-3">
                 <TriangleAlertIcon className="mt-0.5 size-5 text-warning" />
                 <div>
-                  <h2 className="text-sm font-semibold">GitHub CLI needs attention</h2>
+                  <h2 className="text-sm font-semibold">GitHub access needs attention</h2>
                   <p className="mt-1 text-xs text-muted-foreground">{connection.error}</p>
                   <code className="mt-3 block rounded-md bg-muted px-2 py-1.5 text-xs">
-                    {connection.available ? "gh auth login" : "brew install gh"}
+                    Set TEACODE_GITHUB_TOKEN, then restart TeaCode
                   </code>
                 </div>
               </div>
