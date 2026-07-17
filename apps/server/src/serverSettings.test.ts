@@ -1,5 +1,5 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { DEFAULT_MODEL_BY_PROVIDER, DEFAULT_ORCHESTRATOR_ROUTING_POLICY } from "@t3tools/contracts";
+import { DEFAULT_MODEL_BY_PROVIDER } from "@t3tools/contracts";
 import { Effect, FileSystem, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 import { ServerConfig } from "./config";
@@ -28,8 +28,8 @@ describe("ServerSettingsService", () => {
     expect(settings.providers.codex.binaryPath).toBe("codex");
     expect(settings.providers.grok.binaryPath).toBe("grok");
     expect(settings.defaultThreadEnvMode).toBe("local");
+    expect(settings.defaultRuntimeMode).toBe("full-access");
     expect(settings.enableProviderUpdateChecks).toBe(true);
-    expect(settings.orchestrator).toEqual(DEFAULT_ORCHESTRATOR_ROUTING_POLICY);
   });
 
   it("persists updates and reloads them", async () => {
@@ -43,10 +43,6 @@ describe("ServerSettingsService", () => {
         const updated = yield* service.updateSettings({
           enableAssistantStreaming: true,
           enableProviderUpdateChecks: false,
-          orchestrator: {
-            ...DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
-            autoVerifyDiffs: true,
-          },
           providers: {
             codex: {
               binaryPath: "/usr/local/bin/codex",
@@ -62,7 +58,6 @@ describe("ServerSettingsService", () => {
     expect(result.updated.enableAssistantStreaming).toBe(true);
     expect(result.updated.enableProviderUpdateChecks).toBe(false);
     expect(result.updated.providers.codex.binaryPath).toBe("/usr/local/bin/codex");
-    expect(result.updated.orchestrator.autoVerifyDiffs).toBe(true);
     expect(result.parsed).toMatchObject({
       enableAssistantStreaming: true,
       enableProviderUpdateChecks: false,
@@ -71,9 +66,6 @@ describe("ServerSettingsService", () => {
           binaryPath: "/usr/local/bin/codex",
           customModels: ["gpt-custom"],
         },
-      },
-      orchestrator: {
-        autoVerifyDiffs: true,
       },
     });
   });

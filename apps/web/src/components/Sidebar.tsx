@@ -22,7 +22,6 @@ import {
   PlayIcon,
   SettingsIcon,
   StopFilledIcon,
-  TemporaryThreadIcon,
   TerminalIcon,
   Trash2,
   TriangleAlertIcon,
@@ -324,7 +323,6 @@ import {
 } from "../sidebarRowStyles";
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
 import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
-import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useThreadActivationController } from "../hooks/useThreadActivationController";
 import { usePinnedProjectsStore } from "../pinnedProjectsStore";
 import { usePinnedThreadsStore } from "../pinnedThreadsStore";
@@ -599,8 +597,8 @@ type ThreadMetaChip = {
 
 /**
  * Back-to-front order: first = behind, last = in front.
- * Priority lowest -> highest: handoff -> fork -> worktree. Sidechats skip fork/temporary
- * badges because the "Sidechat:" title already identifies them.
+ * Priority lowest -> highest: handoff -> fork -> worktree. Sidechats skip fork badges because the
+ * "Sidechat:" title already identifies them.
  */
 function resolveThreadRowMetaChips(input: {
   thread: Pick<
@@ -1122,8 +1120,6 @@ export default function Sidebar() {
     (store) => store.clearProjectDraftThreadById,
   );
   const draftThreadsByThreadId = useComposerDraftStore((store) => store.draftThreadsByThreadId);
-  const temporaryThreadIds = useTemporaryThreadStore((store) => store.temporaryThreadIds);
-  const clearTemporaryThread = useTemporaryThreadStore((store) => store.clearTemporaryThread);
   const persistedPinnedProjectIds = usePinnedProjectsStore((store) => store.pinnedProjectIds);
   const pinProjectLocally = usePinnedProjectsStore((store) => store.pinProject);
   const unpinProject = usePinnedProjectsStore((store) => store.unpinProject);
@@ -2270,7 +2266,7 @@ export default function Sidebar() {
           projectId: targetProjectId,
           title,
           modelSelection,
-          runtimeMode: "full-access",
+          runtimeMode: appSettings.defaultRuntimeMode,
           interactionMode: "default",
           envMode: resolveSidebarNewThreadEnvMode({
             defaultEnvMode: appSettings.defaultThreadEnvMode,
@@ -2474,7 +2470,6 @@ export default function Sidebar() {
       clearComposerDraftForThread(threadId);
       clearProjectDraftThreadById(thread.projectId, thread.id);
       clearTerminalState(threadId);
-      clearTemporaryThread(threadId);
 
       if (shouldNavigateToFallback) {
         if (fallbackThreadId) {
@@ -2523,7 +2518,6 @@ export default function Sidebar() {
       projectById,
       removeWorktreeMutation,
       routeThreadId,
-      clearTemporaryThread,
       sidebarThreads,
       syncServerShellSnapshot,
       unpinThread,
@@ -4718,27 +4712,38 @@ export default function Sidebar() {
                 terminalCount={terminalCount}
               />
             ) : null}
-            <span
-              className={cn(
-                "min-w-0 flex-1 truncate text-left text-[length:calc(var(--app-font-size-ui,12px)+0.5px)] leading-5",
-                isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
-              )}
-              data-testid={`thread-title-${thread.id}`}
-            >
-              {thread.orchestratorMode ? <span className="sr-only">Orchestrator: </span> : null}
-              {isSubagentThread ? (
-                <SidebarSubagentLabel
-                  threadId={thread.id}
-                  parentThreadId={thread.parentThreadId}
-                  agentId={thread.subagentAgentId}
-                  nickname={thread.subagentNickname}
-                  role={thread.subagentRole}
-                  title={thread.title}
-                />
-              ) : (
-                thread.title
-              )}
-            </span>
+            <div className="grid min-w-0 flex-1 gap-0.5 text-left">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span
+                  className={cn(
+                    "min-w-0 flex-1 truncate text-[length:calc(var(--app-font-size-ui,12px)+0.5px)] leading-5",
+                    isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
+                  )}
+                  data-testid={`thread-title-${thread.id}`}
+                >
+                  {isSubagentThread ? (
+                    <SidebarSubagentLabel
+                      threadId={thread.id}
+                      parentThreadId={thread.parentThreadId}
+                      agentId={thread.subagentAgentId}
+                      nickname={thread.subagentNickname}
+                      role={thread.subagentRole}
+                      title={thread.title}
+                    />
+                  ) : (
+                    thread.title
+                  )}
+                </span>
+              </div>
+              <div className="flex min-w-0 items-center gap-1.5 leading-none">
+                {projectLabel ? (
+                  <span className="min-w-0 truncate text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/38">
+                    {projectLabel}
+                  </span>
+                ) : null}
+                <SidebarTreeBranchChip branch={thread.branch} highlighted={isActive} />
+              </div>
+            </div>
             <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
               {renderThreadRowTrailingCluster({
                 isSubagentThread,
@@ -4788,15 +4793,12 @@ export default function Sidebar() {
       terminalAttentionStatesById: threadTerminalState.terminalAttentionStatesById,
     });
     const terminalCount = threadTerminalState.terminalIds.length;
-    const isTemporaryThread =
-      temporaryThreadIds[thread.id] === true ||
-      draftThreadsByThreadId[thread.id]?.isTemporary === true;
     const secondaryMetaClass = isHighlighted
       ? "text-foreground/54 dark:text-foreground/64"
       : "text-muted-foreground/34";
     const rightMetaChips = resolveThreadRowMetaChips({
       thread,
-      includeHandoffBadge: !isTemporaryThread,
+      includeHandoffBadge: true,
       handoffShownInAvatar:
         threadEntryPoint !== "terminal" &&
         !isGenericChatThreadTitle(thread.title) &&
@@ -4991,7 +4993,6 @@ export default function Sidebar() {
                     isSubagentThread ? "leading-[18px] text-foreground/80" : "leading-5",
                   )}
                 >
-                  {thread.orchestratorMode ? <span className="sr-only">Orchestrator: </span> : null}
                   {isSubagentThread ? (
                     <SidebarSubagentLabel
                       threadId={thread.id}
@@ -5034,18 +5035,6 @@ export default function Sidebar() {
                     <SidebarGlyph icon={ChevronRightIcon} variant="chevron" />
                   )}
                 </button>
-              ) : null}
-              {showCompactMeta && isTemporaryThread && !thread.sidechatSourceThreadId ? (
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <span className="inline-flex shrink-0 items-center text-muted-foreground/55">
-                        <TemporaryThreadIcon />
-                      </span>
-                    }
-                  />
-                  <TooltipPopup side="top">Temporary chat</TooltipPopup>
-                </Tooltip>
               ) : null}
             </div>
             <div className={cn("absolute top-1/2 flex -translate-y-1/2 items-center", "right-1.5")}>

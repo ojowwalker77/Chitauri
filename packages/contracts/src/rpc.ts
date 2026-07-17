@@ -95,6 +95,11 @@ import {
   ResearchReadResult,
 } from "./research";
 import {
+  WorkspaceHandoffThreadInput,
+  WorkspaceProvisionThreadWorktreeInput,
+  WorkspaceThreadOperationResult,
+} from "./workspace";
+import {
   ProviderGetComposerCapabilitiesInput,
   ProviderComposerCapabilities,
   ProviderListAgentsInput,
@@ -148,7 +153,6 @@ import {
   ServerListProviderUsageInput,
   ServerListProviderUsageResult,
   ServerLifecycleStreamEvent,
-  ServerOrchestratorSeatStatusesUpdatedPayload,
   ServerGetSettingsResult,
   ServerListLocalServersResult,
   ServerListWorktreesResult,
@@ -540,6 +544,21 @@ export const WsGitHandoffThreadRpc = Rpc.make(WS_METHODS.gitHandoffThread, {
   error: WsRpcError,
 });
 
+export const WsWorkspaceProvisionThreadWorktreeRpc = Rpc.make(
+  WS_METHODS.workspaceProvisionThreadWorktree,
+  {
+    payload: WorkspaceProvisionThreadWorktreeInput,
+    success: WorkspaceThreadOperationResult,
+    error: WsRpcError,
+  },
+);
+
+export const WsWorkspaceHandoffThreadRpc = Rpc.make(WS_METHODS.workspaceHandoffThread, {
+  payload: WorkspaceHandoffThreadInput,
+  success: WorkspaceThreadOperationResult,
+  error: WsRpcError,
+});
+
 export const WsGitHubConnectionRpc = Rpc.make(WS_METHODS.githubConnection, {
   payload: GitHubConnectionInput,
   success: GitHubConnectionResult,
@@ -764,16 +783,6 @@ export const WsSubscribeServerSettingsRpc = Rpc.make(WS_METHODS.subscribeServerS
   stream: true,
 });
 
-export const WsSubscribeServerOrchestratorSeatStatusesRpc = Rpc.make(
-  WS_METHODS.subscribeServerOrchestratorSeatStatuses,
-  {
-    payload: Schema.Struct({}),
-    success: ServerOrchestratorSeatStatusesUpdatedPayload,
-    error: WsRpcError,
-    stream: true,
-  },
-);
-
 export const WsProviderGetComposerCapabilitiesRpc = Rpc.make(
   WS_METHODS.providerGetComposerCapabilities,
   {
@@ -940,6 +949,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsGitStageFilesRpc,
   WsGitUnstageFilesRpc,
   WsGitHandoffThreadRpc,
+  WsWorkspaceProvisionThreadWorktreeRpc,
+  WsWorkspaceHandoffThreadRpc,
   WsGitHubConnectionRpc,
   WsGitHubListWorkRpc,
   WsGitHubWorkItemDetailRpc,
@@ -975,7 +986,6 @@ export const WsRpcGroup = RpcGroup.make(
   WsSubscribeServerConfigRpc,
   WsSubscribeServerProviderStatusesRpc,
   WsSubscribeServerSettingsRpc,
-  WsSubscribeServerOrchestratorSeatStatusesRpc,
   WsProviderGetComposerCapabilitiesRpc,
   WsProviderCompactThreadRpc,
   WsProviderListCommandsRpc,

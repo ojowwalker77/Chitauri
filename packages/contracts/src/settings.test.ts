@@ -1,46 +1,16 @@
 import { assert, it } from "@effect/vitest";
 import { Schema } from "effect";
 
-import {
-  DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
-  ServerSettings,
-  ServerSettingsPatch,
-} from "./settings";
+import { ServerSettings, ServerSettingsPatch } from "./settings";
 
-it("decodes the default orchestrator routing policy", () => {
+it("defaults new threads to full access", () => {
   const settings = Schema.decodeSync(ServerSettings)({});
-  assert.deepStrictEqual(settings.orchestrator, DEFAULT_ORCHESTRATOR_ROUTING_POLICY);
-  assert.strictEqual(settings.orchestrator.lanes.bulk.modelSelection.model, "gpt-5.6-terra");
-  const ui = settings.orchestrator.lanes.ui.modelSelection;
-  assert.strictEqual(ui.provider, "claudeAgent");
-  assert.strictEqual(ui.provider === "claudeAgent" ? ui.options?.effort : undefined, "high");
+  assert.strictEqual(settings.defaultRuntimeMode, "full-access");
 });
 
-it("accepts an atomic orchestrator routing policy patch", () => {
+it("accepts a default permissions mode patch", () => {
   const patch = Schema.decodeSync(ServerSettingsPatch)({
-    orchestrator: {
-      ...DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
-      autoVerifyDiffs: true,
-    },
+    defaultRuntimeMode: "approval-required",
   });
-  assert.strictEqual(patch.orchestrator?.autoVerifyDiffs, true);
-});
-
-it("rejects orchestrator seats that cannot receive the control-plane MCP", () => {
-  assert.throws(() =>
-    Schema.decodeUnknownSync(ServerSettingsPatch)({
-      orchestrator: {
-        ...DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
-        seatModels: [{ provider: "cursor", model: "unsupported-seat" }],
-      },
-    }),
-  );
-  assert.throws(() =>
-    Schema.decodeSync(ServerSettingsPatch)({
-      orchestrator: {
-        ...DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
-        seatModels: [],
-      },
-    }),
-  );
+  assert.strictEqual(patch.defaultRuntimeMode, "approval-required");
 });

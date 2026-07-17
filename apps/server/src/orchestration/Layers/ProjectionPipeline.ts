@@ -615,6 +615,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             runtimeMode: event.payload.runtimeMode,
             interactionMode: event.payload.interactionMode,
             envMode: event.payload.envMode ?? "local",
+            workspaceId: null,
             branch: event.payload.branch,
             worktreePath: event.payload.worktreePath,
             associatedWorktreePath: event.payload.associatedWorktreePath ?? null,
@@ -622,7 +623,6 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             associatedWorktreeRef: event.payload.associatedWorktreeRef ?? null,
             createBranchFlowCompleted: event.payload.createBranchFlowCompleted ?? false,
             isPinned: event.payload.isPinned ?? false,
-            orchestratorMode: event.payload.orchestratorMode ?? false,
             parentThreadId: event.payload.parentThreadId ?? null,
             subagentAgentId: event.payload.subagentAgentId ?? null,
             subagentNickname: event.payload.subagentNickname ?? null,
@@ -684,9 +684,6 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
               ? { createBranchFlowCompleted: nextCreateBranchFlowCompleted }
               : {}),
             ...(event.payload.isPinned !== undefined ? { isPinned: event.payload.isPinned } : {}),
-            ...(event.payload.orchestratorMode !== undefined
-              ? { orchestratorMode: event.payload.orchestratorMode }
-              : {}),
             ...(event.payload.parentThreadId !== undefined
               ? { parentThreadId: event.payload.parentThreadId }
               : {}),

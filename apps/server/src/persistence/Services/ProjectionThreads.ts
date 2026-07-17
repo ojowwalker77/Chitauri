@@ -21,6 +21,7 @@ import {
   ThreadEnvironmentMode,
   ThreadId,
   TurnId,
+  WorkspaceId,
 } from "@t3tools/contracts";
 import { Option, Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
@@ -35,6 +36,11 @@ export const ProjectionThread = Schema.Struct({
   runtimeMode: RuntimeMode,
   interactionMode: ProviderInteractionMode,
   envMode: ThreadEnvironmentMode,
+  // Compatibility link. The legacy path/branch fields below remain populated
+  // while callers roll over to the durable workspace record.
+  workspaceId: Schema.optional(Schema.NullOr(WorkspaceId)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
   branch: Schema.NullOr(Schema.String),
   worktreePath: Schema.NullOr(Schema.String),
   associatedWorktreePath: Schema.NullOr(Schema.String),
@@ -42,7 +48,6 @@ export const ProjectionThread = Schema.Struct({
   associatedWorktreeRef: Schema.NullOr(Schema.String),
   createBranchFlowCompleted: Schema.Boolean,
   isPinned: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => false)),
-  orchestratorMode: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => false)),
   parentThreadId: Schema.optional(Schema.NullOr(ThreadId)),
   subagentAgentId: Schema.optional(Schema.NullOr(Schema.String)),
   subagentNickname: Schema.optional(Schema.NullOr(Schema.String)),

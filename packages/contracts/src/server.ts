@@ -6,6 +6,7 @@ import {
   ProjectId,
   ThreadId,
   TrimmedNonEmptyString,
+  WorkspaceId,
 } from "./baseSchemas";
 import { KeybindingRule, ResolvedKeybindingsConfig } from "./keybindings";
 import { EditorId } from "./editor";
@@ -13,6 +14,7 @@ import { ModelSelection, ProviderKind, ProviderStartOptions } from "./orchestrat
 import { ServerSettings, ServerSettingsPatch } from "./settings";
 import { ExecutionEnvironmentDescriptor } from "./environment";
 import { AutomationCompletionPolicy, AutomationMode, AutomationSchedule } from "./automation";
+import { WorkspaceInventoryStatus, WorkspaceKind, WorkspaceState } from "./workspace";
 
 const KeybindingsMalformedConfigIssue = Schema.Struct({
   kind: Schema.Literal("keybindings.malformed-config"),
@@ -97,6 +99,10 @@ export type ServerConfig = typeof ServerConfig.Type;
 export const ServerManagedWorktree = Schema.Struct({
   path: TrimmedNonEmptyString,
   workspaceRoot: TrimmedNonEmptyString,
+  workspaceId: Schema.optional(Schema.NullOr(WorkspaceId)),
+  kind: Schema.optional(WorkspaceKind),
+  state: Schema.optional(WorkspaceState),
+  inventoryStatus: Schema.optional(WorkspaceInventoryStatus),
 });
 export type ServerManagedWorktree = typeof ServerManagedWorktree.Type;
 
@@ -332,20 +338,6 @@ export const ServerSettingsUpdatedPayload = Schema.Struct({
   settings: ServerSettings,
 });
 export type ServerSettingsUpdatedPayload = typeof ServerSettingsUpdatedPayload.Type;
-
-export const OrchestratorSeatRuntimeStatus = Schema.Struct({
-  threadId: ThreadId,
-  status: Schema.Literals(["pending", "connected", "degraded"]),
-  reason: Schema.NullOr(Schema.String),
-  updatedAt: IsoDateTime,
-});
-export type OrchestratorSeatRuntimeStatus = typeof OrchestratorSeatRuntimeStatus.Type;
-
-export const ServerOrchestratorSeatStatusesUpdatedPayload = Schema.Struct({
-  seats: Schema.Array(OrchestratorSeatRuntimeStatus),
-});
-export type ServerOrchestratorSeatStatusesUpdatedPayload =
-  typeof ServerOrchestratorSeatStatusesUpdatedPayload.Type;
 
 export const ServerLifecycleWelcomePayload = Schema.Struct({
   cwd: TrimmedNonEmptyString,

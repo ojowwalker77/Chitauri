@@ -103,11 +103,6 @@ interface ChatHeaderProps {
   handoffActionTargetProviders: ReadonlyArray<ProviderKind>;
   handoffBadgeSourceProvider: ProviderKind | null;
   handoffBadgeTargetProvider: ProviderKind | null;
-  orchestratorSeat?: {
-    readonly status: "pending" | "connected" | "degraded";
-    readonly reason: string | null;
-    readonly onOpen: () => void;
-  } | null;
   gitCwd: string | null;
   diffTotals: RepoDiffTotals;
   showGitActions?: boolean;
@@ -503,7 +498,6 @@ export const ChatHeader = memo(function ChatHeader({
   handoffActionTargetProviders,
   handoffBadgeSourceProvider,
   handoffBadgeTargetProvider,
-  orchestratorSeat = null,
   gitCwd,
   diffTotals,
   showGitActions = true,
@@ -820,42 +814,6 @@ export const ChatHeader = memo(function ChatHeader({
                     }
                   />
                   <TooltipPopup side="bottom">{handoffBadgeLabel}</TooltipPopup>
-                </Tooltip>
-              ) : null}
-              {orchestratorSeat ? (
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <button
-                        type="button"
-                        className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-selected px-2 text-[11px] font-medium text-muted-foreground transition-[background-color,color,scale] duration-press ease-out hover:bg-hover hover:text-foreground active:scale-[0.96] motion-reduce:active:scale-100"
-                        onClick={orchestratorSeat.onOpen}
-                      >
-                        <span
-                          aria-hidden
-                          className={cn(
-                            "size-1.5 shrink-0 rounded-full",
-                            orchestratorSeat.status === "connected"
-                              ? "bg-success"
-                              : orchestratorSeat.status === "degraded"
-                                ? "bg-gold"
-                                : "bg-muted-foreground/55",
-                          )}
-                        />
-                        <span aria-hidden className="text-[13px] leading-none text-claude">
-                          ⬡
-                        </span>
-                        <span className="hidden sm:inline">Orchestrator seat</span>
-                      </button>
-                    }
-                  />
-                  <TooltipPopup side="bottom">
-                    {orchestratorSeat.status === "connected"
-                      ? "Orchestrator seat connected — delegation tools armed"
-                      : orchestratorSeat.status === "degraded"
-                        ? (orchestratorSeat.reason ?? "Orchestrator seat is degraded")
-                        : "Orchestrator seat is waiting for delegation tools"}
-                  </TooltipPopup>
                 </Tooltip>
               ) : null}
             </div>

@@ -611,7 +611,7 @@ function IssueCreationDialog({
         <DialogHeader>
           <DialogTitle>Create issue</DialogTitle>
           <DialogDescription>
-            Create the issue through your authenticated GitHub CLI.
+            Create the issue directly through your authenticated GitHub account.
           </DialogDescription>
         </DialogHeader>
         <DialogPanel className="space-y-3">
@@ -947,17 +947,19 @@ function GitHubWorkbenchRoute() {
                 <TriangleAlertIcon className="mt-0.5 size-5 text-warning" />
                 <div>
                   <h2 className="text-sm font-semibold">
-                    {connection.repository === null && selectedAttachedProject
+                    {connection.repository === null &&
+                    connection.authenticated &&
+                    selectedAttachedProject
                       ? "No GitHub repository found"
-                      : "GitHub CLI needs attention"}
+                      : "GitHub access needs attention"}
                   </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {connection.error ??
                       "Choose a project with a GitHub remote, or inspect this repository's remotes."}
                   </p>
-                  {!connection.available || !connection.authenticated ? (
+                  {!connection.authenticated ? (
                     <code className="mt-3 block rounded-md bg-muted px-2 py-1.5 text-xs">
-                      {connection.available ? "gh auth login" : "brew install gh"}
+                      Set TEACODE_GITHUB_TOKEN, then restart TeaCode
                     </code>
                   ) : null}
                 </div>

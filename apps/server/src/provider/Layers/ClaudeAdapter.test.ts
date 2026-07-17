@@ -325,29 +325,6 @@ describe("ClaudeAdapterLive", () => {
     );
   });
 
-  it.effect("appends the orchestrator persona to Claude's system prompt", () => {
-    const harness = makeHarness();
-    return Effect.gen(function* () {
-      const adapter = yield* ClaudeAdapter;
-      yield* adapter.startSession({
-        threadId: THREAD_ID,
-        provider: "claudeAgent",
-        runtimeMode: "full-access",
-        orchestratorPersona: "<orchestrator_seat>delegate first</orchestrator_seat>",
-      });
-
-      const systemPrompt = harness.getLastCreateQueryInput()?.options.systemPrompt;
-      if (!systemPrompt || typeof systemPrompt !== "object" || Array.isArray(systemPrompt)) {
-        throw new Error("Expected Claude's preset system prompt.");
-      }
-      assert.equal(systemPrompt?.type, "preset");
-      assert.equal(systemPrompt.append?.endsWith("delegate first</orchestrator_seat>"), true);
-    }).pipe(
-      Effect.provideService(Random.Random, makeDeterministicRandomService()),
-      Effect.provide(harness.layer),
-    );
-  });
-
   it.effect("keeps explicit claude permission mode over runtime-derived defaults", () => {
     const harness = makeHarness();
     return Effect.gen(function* () {
@@ -372,7 +349,7 @@ describe("ClaudeAdapterLive", () => {
     );
   });
 
-  it.effect("maps orchestrator MCP servers to Claude Agent SDK HTTP config", () => {
+  it.effect("maps HTTP MCP servers to Claude Agent SDK config", () => {
     const harness = makeHarness();
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
@@ -382,8 +359,8 @@ describe("ClaudeAdapterLive", () => {
         runtimeMode: "full-access",
         mcpServers: [
           {
-            name: "chitauri_orchestrator",
-            url: "http://127.0.0.1:5173/api/orchestrator/mcp",
+            name: "project_tools",
+            url: "http://127.0.0.1:5173/api/mcp",
             headers: { Authorization: "Bearer seat-token" },
             toolTimeoutMs: 3_600_000,
           },
@@ -391,9 +368,9 @@ describe("ClaudeAdapterLive", () => {
       });
 
       assert.deepEqual(harness.getLastCreateQueryInput()?.options.mcpServers, {
-        chitauri_orchestrator: {
+        project_tools: {
           type: "http",
-          url: "http://127.0.0.1:5173/api/orchestrator/mcp",
+          url: "http://127.0.0.1:5173/api/mcp",
           headers: { Authorization: "Bearer seat-token" },
           timeout: 3_600_000,
           alwaysLoad: true,

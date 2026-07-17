@@ -89,7 +89,8 @@ function ResearchDetailRoute() {
     const api = ensureNativeApi();
     const nextThreadId = newThreadId();
     const createdAt = new Date().toISOString();
-    const runtimeMode = serverThread?.runtimeMode ?? composerDraft?.runtimeMode ?? "full-access";
+    const runtimeMode =
+      serverThread?.runtimeMode ?? composerDraft?.runtimeMode ?? settings.defaultRuntimeMode;
     const envMode =
       serverThread?.envMode ??
       draftThread?.envMode ??

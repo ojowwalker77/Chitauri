@@ -387,7 +387,6 @@ function threadShellsEqual(left: ThreadShell | undefined, right: ThreadShell): b
     (left.archivedAt ?? null) === (right.archivedAt ?? null) &&
     left.updatedAt === right.updatedAt &&
     (left.isPinned ?? false) === (right.isPinned ?? false) &&
-    (left.orchestratorMode ?? false) === (right.orchestratorMode ?? false) &&
     left.envMode === right.envMode &&
     left.branch === right.branch &&
     left.worktreePath === right.worktreePath &&
@@ -436,7 +435,6 @@ function toThreadShell(thread: Thread): ThreadShell {
     archivedAt: thread.archivedAt ?? null,
     updatedAt: thread.updatedAt,
     isPinned: thread.isPinned ?? false,
-    orchestratorMode: thread.orchestratorMode ?? false,
     envMode: thread.envMode,
     branch: thread.branch,
     worktreePath: thread.worktreePath,
@@ -1709,7 +1707,6 @@ function normalizeThreadFromReadModel(
     (previous.archivedAt ?? null) === (incoming.archivedAt ?? null) &&
     previous.updatedAt === incoming.updatedAt &&
     (previous.isPinned ?? false) === (incoming.isPinned ?? false) &&
-    (previous.orchestratorMode ?? false) === (incoming.orchestratorMode ?? false) &&
     previous.latestTurn === latestTurn &&
     previous.pendingSourceProposedPlan === pendingSourceProposedPlan &&
     previous.lastVisitedAt === lastVisitedAt &&
@@ -1757,7 +1754,6 @@ function normalizeThreadFromReadModel(
     archivedAt: incoming.archivedAt ?? null,
     updatedAt: incoming.updatedAt,
     isPinned: incoming.isPinned ?? false,
-    orchestratorMode: incoming.orchestratorMode ?? false,
     latestTurn,
     ...(pendingSourceProposedPlan ? { pendingSourceProposedPlan } : {}),
     lastVisitedAt,
@@ -1854,7 +1850,6 @@ function normalizeThreadShellSnapshot(
     archivedAt: incoming.archivedAt ?? null,
     updatedAt: incoming.updatedAt,
     isPinned: incoming.isPinned ?? false,
-    orchestratorMode: incoming.orchestratorMode ?? false,
     envMode: incoming.envMode ?? "local",
     branch: resolvedBranch,
     worktreePath: nextWorktreePath,
@@ -2157,7 +2152,6 @@ function sidebarThreadSummariesEqual(
     (left.archivedAt ?? null) === (right.archivedAt ?? null) &&
     left.updatedAt === right.updatedAt &&
     (left.isPinned ?? false) === (right.isPinned ?? false) &&
-    (left.orchestratorMode ?? false) === (right.orchestratorMode ?? false) &&
     left.latestTurn === right.latestTurn &&
     left.lastVisitedAt === right.lastVisitedAt &&
     (left.parentThreadId ?? null) === (right.parentThreadId ?? null) &&
@@ -2200,7 +2194,6 @@ function buildSidebarThreadSummary(
     archivedAt: thread.archivedAt ?? null,
     updatedAt: thread.updatedAt,
     isPinned: thread.isPinned ?? false,
-    orchestratorMode: thread.orchestratorMode ?? false,
     latestTurn: thread.latestTurn,
     lastVisitedAt: thread.lastVisitedAt,
     parentThreadId: thread.parentThreadId ?? null,
@@ -3248,8 +3241,6 @@ function applyOrchestrationEvent(
             nextCreateBranchFlowCompleted === (thread.createBranchFlowCompleted ?? false) &&
             (event.payload.isPinned === undefined ||
               event.payload.isPinned === (thread.isPinned ?? false)) &&
-            (event.payload.orchestratorMode === undefined ||
-              event.payload.orchestratorMode === (thread.orchestratorMode ?? false)) &&
             (event.payload.parentThreadId === undefined ||
               (event.payload.parentThreadId ?? null) === (thread.parentThreadId ?? null)) &&
             (event.payload.subagentAgentId === undefined ||
@@ -3284,9 +3275,6 @@ function applyOrchestrationEvent(
             associatedWorktreeRef: nextAssociatedWorktreeRef,
             createBranchFlowCompleted: nextCreateBranchFlowCompleted,
             ...(event.payload.isPinned !== undefined ? { isPinned: event.payload.isPinned } : {}),
-            ...(event.payload.orchestratorMode !== undefined
-              ? { orchestratorMode: event.payload.orchestratorMode }
-              : {}),
             ...(event.payload.parentThreadId !== undefined
               ? { parentThreadId: event.payload.parentThreadId }
               : {}),

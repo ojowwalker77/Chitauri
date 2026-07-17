@@ -33,7 +33,7 @@ export class GitCheckoutDirtyWorktreeError extends Schema.TaggedErrorClass<GitCh
 }
 
 /**
- * GitHubCliError - GitHub CLI execution or authentication failed.
+ * GitHubCliError - compatibility error tag for GitHub API and authentication failures.
  */
 export class GitHubCliError extends Schema.TaggedErrorClass<GitHubCliError>()("GitHubCliError", {
   operation: Schema.String,
@@ -41,7 +41,7 @@ export class GitHubCliError extends Schema.TaggedErrorClass<GitHubCliError>()("G
   cause: Schema.optional(Schema.Defect),
 }) {
   override get message(): string {
-    return `GitHub CLI failed in ${this.operation}: ${this.detail}`;
+    return `GitHub failed in ${this.operation}: ${this.detail}`;
   }
 }
 

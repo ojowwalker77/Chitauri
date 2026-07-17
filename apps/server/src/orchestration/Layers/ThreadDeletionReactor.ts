@@ -5,6 +5,7 @@ import { Cause, Effect, Layer, Stream } from "effect";
 import { ProfileStatsArchive } from "../../profileStatsArchive";
 import { ProviderService } from "../../provider/Services/ProviderService";
 import { TerminalManager } from "../../terminal/Services/Manager";
+import { WorkspaceManager } from "../../workspace/Services/WorkspaceManager";
 import { THREAD_RETENTION_COMMAND_ID_PREFIX } from "../../threadRetention";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine";
 import {
@@ -68,6 +69,7 @@ const make = Effect.gen(function* () {
   const profileStatsArchive = yield* ProfileStatsArchive;
   const providerService = yield* ProviderService;
   const terminalManager = yield* TerminalManager;
+  const workspaceManager = yield* WorkspaceManager;
 
   const refreshCommandReadModelAfterPurge = (threadId: string) =>
     orchestrationEngine.refreshCommandReadModel().pipe(
@@ -153,6 +155,16 @@ const make = Effect.gen(function* () {
 
   const processThreadDeleted = Effect.fn(function* (event: ThreadDeletedEvent) {
     const { threadId } = event.payload;
+    // Retiring is intentionally non-destructive: a later guarded cleanup flow
+    // can remove only records whose lifecycle policy explicitly permits it.
+    yield* workspaceManager.retireForThreadDeletion(threadId).pipe(
+      Effect.catch((error) =>
+        Effect.logWarning("thread deletion cleanup could not retire workspace", {
+          threadId,
+          error: error.detail,
+        }),
+      ),
+    );
     const cleanupSucceeded = yield* cleanupThreadBeforePurge(threadId);
     if (!cleanupSucceeded) {
       yield* Effect.logWarning("thread deletion cleanup deferred stats archive purge", {

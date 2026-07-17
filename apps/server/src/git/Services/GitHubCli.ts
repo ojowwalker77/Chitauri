@@ -1,7 +1,8 @@
 /**
- * GitHubCli - Effect service contract for `gh` process interactions.
+ * GitHub workflow service contract.
  *
- * Provides thin command execution helpers used by Git workflow orchestration.
+ * The historical service name is retained for downstream compatibility. Live
+ * runtime methods use the direct GitHub API.
  *
  * @module GitHubCli
  */
@@ -13,8 +14,7 @@ import type { ProcessRunResult } from "../../processRunner";
 import type { GitHubCliError } from "../Errors.ts";
 
 /**
- * Field list for `gh pr view/list --json` calls that decode into
- * {@link GitHubPullRequestSummary} — one source so call sites and tests cannot drift.
+ * Historical fixture field list retained by GitManager tests.
  *
  * Note: `mergeable` is computed lazily by GitHub (it answers UNKNOWN while recomputing),
  * so list calls may pay a small extra API cost for it. The remote-status cache bounds
@@ -54,12 +54,10 @@ export interface GitHubPullRequestReviewCommentsResult {
 }
 
 /**
- * GitHubCliShape - Service API for executing GitHub CLI commands.
+ * GitHubCliShape - Service API for GitHub-backed Git workflows.
  */
 export interface GitHubCliShape {
-  /**
-   * Execute a GitHub CLI command and return full process output.
-   */
+  /** @deprecated Arbitrary CLI execution is unavailable in the live API layer. */
   readonly execute: (input: {
     readonly cwd: string;
     readonly args: ReadonlyArray<string>;
@@ -97,8 +95,7 @@ export interface GitHubCliShape {
   }) => Effect.Effect<GitHubPullRequestSummary, GitHubCliError>;
 
   /**
-   * Resolve a pull request together with its CI checks (check runs + commit statuses)
-   * in a single `gh pr view` call, so snapshot polling pays one process/API round trip.
+   * Resolve a pull request together with its CI checks in a single GraphQL request.
    */
   readonly getPullRequestWithChecks: (input: {
     readonly cwd: string;
@@ -161,7 +158,7 @@ export interface GitHubCliShape {
 }
 
 /**
- * GitHubCli - Service tag for GitHub CLI process execution.
+ * Compatibility service tag for direct GitHub workflow operations.
  */
 export class GitHubCli extends ServiceMap.Service<GitHubCli, GitHubCliShape>()(
   "t3/git/Services/GitHubCli",
