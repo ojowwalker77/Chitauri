@@ -443,7 +443,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         yield* runGit(repoDir, [
           "config",
           "remote.fork-seed.url",
-          "git@github.com:jasonLaster/codething-mvp.git",
+          "git@github.com:jasonLaster/widgets.git",
         ]);
 
         const { manager, ghCalls } = yield* makeManager({
@@ -1296,7 +1296,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       yield* runGit(repoDir, [
         "config",
         "remote.fork.url",
-        "git@github.com:octocat/codething-mvp.git",
+        "git@github.com:octocat/widgets.git",
       ]);
       yield* runGit(repoDir, ["config", "remote.fork.pushurl", forkDir]);
       fs.writeFileSync(path.join(repoDir, "cross-repo-pr.txt"), "fork main change\n");
@@ -1377,12 +1377,12 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
               {
                 number: 201,
                 title: "Wrong repo PR",
-                url: "https://github.com/someone-else/codething-mvp/pull/201",
+                url: "https://github.com/someone-else/widgets/pull/201",
                 baseRefName: "main",
                 headRefName: "feature/collision",
                 isCrossRepository: true,
                 headRepository: {
-                  nameWithOwner: "someone-else/codething-mvp",
+                  nameWithOwner: "someone-else/widgets",
                 },
                 headRepositoryOwner: {
                   login: "someone-else",
@@ -1401,7 +1401,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
                   nameWithOwner: "acme/widgets",
                 },
                 headRepositoryOwner: {
-                  login: "pingdotgg",
+                  login: "acme",
                 },
               },
             ]),
@@ -1437,7 +1437,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         yield* runGit(repoDir, [
           "config",
           "remote.fork-seed.url",
-          "git@github.com:octocat/codething-mvp.git",
+          "git@github.com:octocat/widgets.git",
         ]);
 
         const { manager, ghCalls } = yield* makeManager({
@@ -1489,7 +1489,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         yield* runGit(repoDir, [
           "config",
           "remote.fork-seed.url",
-          "git@github.com:octocat/codething-mvp.git",
+          "git@github.com:octocat/widgets.git",
         ]);
 
         const { manager, ghCalls } = yield* makeManager({
@@ -1551,7 +1551,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         yield* runGit(repoDir, [
           "config",
           "remote.fork-seed.url",
-          "git@github.com:octocat/codething-mvp.git",
+          "git@github.com:octocat/widgets.git",
         ]);
 
         const { manager, ghCalls } = yield* makeManager({
@@ -1696,7 +1696,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       yield* runGit(repoDir, [
         "config",
         "remote.fork-seed.url",
-        "git@github.com:octocat/codething-mvp.git",
+        "git@github.com:octocat/widgets.git",
       ]);
 
       const { manager, ghCalls } = yield* makeManager({
@@ -2082,11 +2082,11 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
             headRefName: "feature/pr-fork",
             state: "open",
             isCrossRepository: true,
-            headRepositoryNameWithOwner: "octocat/codething-mvp",
+            headRepositoryNameWithOwner: "octocat/widgets",
             headRepositoryOwnerLogin: "octocat",
           },
           repositoryCloneUrls: {
-            "octocat/codething-mvp": {
+            "octocat/widgets": {
               url: forkDir,
               sshUrl: forkDir,
             },
@@ -2145,11 +2145,11 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
             headRefName: "feature/pr-local-fork",
             state: "open",
             isCrossRepository: true,
-            headRepositoryNameWithOwner: "octocat/codething-mvp",
+            headRepositoryNameWithOwner: "octocat/widgets",
             headRepositoryOwnerLogin: "octocat",
           },
           repositoryCloneUrls: {
-            "octocat/codething-mvp": {
+            "octocat/widgets": {
               url: forkDir,
               sshUrl: forkDir,
             },
@@ -2206,7 +2206,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
             headRepositoryOwnerLogin: "binbandit",
           },
           repositoryCloneUrls: {
-            "binbandit/t3code": {
+            "binbandit/widgets": {
               url: forkDir,
               sshUrl: forkDir,
             },
@@ -2295,11 +2295,11 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
               headRefName: "main",
               state: "open",
               isCrossRepository: true,
-              headRepositoryNameWithOwner: "octocat/codething-mvp",
+              headRepositoryNameWithOwner: "octocat/widgets",
               headRepositoryOwnerLogin: "octocat",
             },
             repositoryCloneUrls: {
-              "octocat/codething-mvp": {
+              "octocat/widgets": {
                 url: forkDir,
                 sshUrl: forkDir,
               },
@@ -2356,11 +2356,11 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
               headRefName: "main",
               state: "open",
               isCrossRepository: true,
-              headRepositoryNameWithOwner: "octocat/codething-mvp",
+              headRepositoryNameWithOwner: "octocat/widgets",
               headRepositoryOwnerLogin: "octocat",
             },
             repositoryCloneUrls: {
-              "octocat/codething-mvp": {
+              "octocat/widgets": {
                 url: forkDir,
                 sshUrl: forkDir,
               },
@@ -2415,11 +2415,11 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
             headRefName: "feature/pr-reused-fork",
             state: "open",
             isCrossRepository: true,
-            headRepositoryNameWithOwner: "octocat/codething-mvp",
+            headRepositoryNameWithOwner: "octocat/widgets",
             headRepositoryOwnerLogin: "octocat",
           },
           repositoryCloneUrls: {
-            "octocat/codething-mvp": {
+            "octocat/widgets": {
               url: forkDir,
               sshUrl: forkDir,
             },

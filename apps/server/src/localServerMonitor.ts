@@ -72,6 +72,7 @@ const EXCLUDED_PROCESS_COMMANDS = new Set([
   "electron",
   "electron helper",
   "electron helper (renderer)",
+  "teacode",
   "chitauri",
   "synara",
 ]);

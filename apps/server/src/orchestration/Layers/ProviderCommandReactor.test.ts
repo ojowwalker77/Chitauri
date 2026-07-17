@@ -1630,20 +1630,20 @@ describe("ProviderCommandReactor", () => {
         (entry) => entry.id === ThreadId.makeUnsafe("thread-1"),
       );
       return (
-        thread?.branch === "chitauri/app-startup-crash" &&
-        thread.associatedWorktreeBranch === "chitauri/app-startup-crash" &&
-        thread.associatedWorktreeRef === "chitauri/app-startup-crash"
+        thread?.branch === "teacode/app-startup-crash" &&
+        thread.associatedWorktreeBranch === "teacode/app-startup-crash" &&
+        thread.associatedWorktreeRef === "teacode/app-startup-crash"
       );
     });
 
     const readModel = await Effect.runPromise(harness.engine.getReadModel());
     const thread = readModel.threads.find((entry) => entry.id === ThreadId.makeUnsafe("thread-1"));
     expect(thread).toMatchObject({
-      branch: "chitauri/app-startup-crash",
+      branch: "teacode/app-startup-crash",
       worktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
       associatedWorktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
-      associatedWorktreeBranch: "chitauri/app-startup-crash",
-      associatedWorktreeRef: "chitauri/app-startup-crash",
+      associatedWorktreeBranch: "teacode/app-startup-crash",
+      associatedWorktreeRef: "teacode/app-startup-crash",
     });
   });
 
@@ -1690,7 +1690,7 @@ describe("ProviderCommandReactor", () => {
     expect(harness.generateBranchName).not.toHaveBeenCalled();
     expect(harness.renameBranch.mock.calls[0]?.[0]).toMatchObject({
       oldBranch: "dpcode/cb661f0d",
-      newBranch: "chitauri/fix-provider-startup-timeouts",
+      newBranch: "teacode/fix-provider-startup-timeouts",
     });
 
     await waitFor(async () => {
@@ -1698,7 +1698,7 @@ describe("ProviderCommandReactor", () => {
       const thread = readModel.threads.find(
         (entry) => entry.id === ThreadId.makeUnsafe("thread-1"),
       );
-      return thread?.branch === "chitauri/fix-provider-startup-timeouts";
+      return thread?.branch === "teacode/fix-provider-startup-timeouts";
     });
   });
 
