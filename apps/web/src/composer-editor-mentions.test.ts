@@ -56,26 +56,8 @@ describe("matchComposerLinkToken", () => {
 });
 
 describe("matchComposerSlashCommandChipToken", () => {
-  it("matches /automation only after a delimiter while typing", () => {
-    expect(matchComposerSlashCommandChipToken("/automation")).toBeNull();
-    expect(matchComposerSlashCommandChipToken("/automation ")).toEqual({
-      command: "automation",
-      start: 0,
-      end: "/automation".length,
-    });
-    expect(matchComposerSlashCommandChipToken("/Automation ")).toEqual({
-      command: "automation",
-      start: 0,
-      end: "/automation".length,
-    });
-    expect(matchComposerSlashCommandChipToken("please /automation now")).toEqual({
-      command: "automation",
-      start: "please ".length,
-      end: "please /automation".length,
-    });
-  });
-
-  it("does not match other built-in slash commands as composer chips", () => {
+  it("does not match built-in or removed slash commands as composer chips", () => {
+    expect(matchComposerSlashCommandChipToken("/automation ")).toBeNull();
     expect(matchComposerSlashCommandChipToken("/plan ")).toBeNull();
     expect(matchComposerSlashCommandChipToken("/model spark")).toBeNull();
   });
@@ -145,9 +127,9 @@ describe("splitPromptIntoComposerSegments", () => {
     ]);
   });
 
-  it("converts completed /automation into an app slash-command segment", () => {
+  it("treats removed /automation as a regular slash skill token", () => {
     expect(splitPromptIntoComposerSegments("/automation fra 15 secondi scrivi qui")).toEqual([
-      { type: "slash-command", command: "automation" },
+      { type: "skill", name: "automation", prefix: "/" },
       { type: "text", text: " fra 15 secondi scrivi qui" },
     ]);
   });

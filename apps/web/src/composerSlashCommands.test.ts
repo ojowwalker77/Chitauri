@@ -5,7 +5,6 @@ import {
   buildSubagentsPrompt,
   canOfferForkSlashCommand,
   canOfferReviewSlashCommand,
-  canOfferSideSlashCommand,
   filterComposerSlashCommands,
   getAvailableComposerSlashCommands,
   hasProviderNativeSlashCommand,
@@ -21,7 +20,7 @@ describe("composerSlashCommands", () => {
   it("recognizes built-in slash commands", () => {
     expect(isBuiltInComposerSlashCommand("review")).toBe(true);
     expect(isBuiltInComposerSlashCommand("fast")).toBe(true);
-    expect(isBuiltInComposerSlashCommand("automation")).toBe(true);
+    expect(isBuiltInComposerSlashCommand("automation")).toBe(false);
     expect(isBuiltInComposerSlashCommand("export")).toBe(true);
     expect(isBuiltInComposerSlashCommand("unknown")).toBe(false);
   });
@@ -29,9 +28,7 @@ describe("composerSlashCommands", () => {
   it("filters slash commands by query", () => {
     expect(filterComposerSlashCommands("rev").map((entry) => entry.command)).toEqual(["review"]);
     expect(filterComposerSlashCommands("fast").map((entry) => entry.command)).toEqual(["fast"]);
-    expect(filterComposerSlashCommands("auto").map((entry) => entry.command)).toEqual([
-      "automation",
-    ]);
+    expect(filterComposerSlashCommands("auto")).toEqual([]);
   });
 
   it("ranks slash command name matches before description-only matches", () => {
@@ -51,14 +48,8 @@ describe("composerSlashCommands", () => {
       command: "fast",
       args: "",
     });
-    expect(parseComposerSlashInvocation("/side is this safe?")).toEqual({
-      command: "side",
-      args: "is this safe?",
-    });
-    expect(parseComposerSlashInvocation("/automation every 6h check the page")).toEqual({
-      command: "automation",
-      args: "every 6h check the page",
-    });
+    expect(parseComposerSlashInvocation("/side is this safe?")).toBeNull();
+    expect(parseComposerSlashInvocation("/automation every 6h check the page")).toBeNull();
     expect(parseComposerSlashInvocation("review")).toBeNull();
   });
 
@@ -137,32 +128,6 @@ describe("composerSlashCommands", () => {
     ).toBe(false);
   });
 
-  it("only offers /side for a main-thread empty default composer", () => {
-    expect(
-      canOfferSideSlashCommand({
-        prompt: "",
-        imageCount: 0,
-        terminalContextCount: 0,
-        selectedSkillCount: 0,
-        selectedMentionCount: 0,
-        interactionMode: "default",
-        isSidechat: false,
-      }),
-    ).toBe(true);
-
-    expect(
-      canOfferSideSlashCommand({
-        prompt: "",
-        imageCount: 0,
-        terminalContextCount: 0,
-        selectedSkillCount: 0,
-        selectedMentionCount: 0,
-        interactionMode: "default",
-        isSidechat: true,
-      }),
-    ).toBe(false);
-  });
-
   it("only offers /review for an otherwise empty composer", () => {
     expect(
       canOfferReviewSlashCommand({
@@ -228,7 +193,7 @@ describe("composerSlashCommands", () => {
     expect(shouldHideProviderNativeCommandFromComposerMenu("codex", "status")).toBe(false);
   });
 
-  it("keeps app-level /automation available even if a provider exposes a native collision", () => {
+  it("does not reserve removed /automation against provider-native commands", () => {
     const availableCommands = getAvailableComposerSlashCommands({
       provider: "grok",
       supportsFastSlashCommand: false,
@@ -240,11 +205,11 @@ describe("composerSlashCommands", () => {
       providerNativeCommandNames: ["automation"],
     });
 
-    expect(availableCommands).toContain("automation");
-    expect(shouldHideProviderNativeCommandFromComposerMenu("grok", "automation")).toBe(true);
+    expect(availableCommands).not.toContain("automation");
+    expect(shouldHideProviderNativeCommandFromComposerMenu("grok", "automation")).toBe(false);
   });
 
-  it("only exposes the app-level /side and /export commands for claude", () => {
+  it("only exposes the app-level /export command for claude", () => {
     expect(
       getAvailableComposerSlashCommands({
         provider: "claudeAgent",
@@ -255,7 +220,7 @@ describe("composerSlashCommands", () => {
         canOfferSideCommand: true,
         canOfferExportCommand: true,
       }),
-    ).toEqual(["side", "export", "automation"]);
+    ).toEqual(["export"]);
   });
 
   it("offers the app-level /export command on every provider", () => {
@@ -362,11 +327,9 @@ describe("composerSlashCommands", () => {
       "default",
       "review",
       "fork",
-      "side",
       "status",
       "subagents",
       "export",
-      "automation",
     ]);
   });
 
