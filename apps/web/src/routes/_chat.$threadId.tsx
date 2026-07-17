@@ -24,7 +24,7 @@ import {
   useState,
 } from "react";
 import ChatView from "../components/ChatView";
-import { ProjectSurfaceFrame } from "../components/ProjectSurfaceHeader";
+import { ProjectSurfaceFrame } from "../components/ProjectSurfaceFrame";
 import { EditorWorkspaceView } from "../components/EditorWorkspaceView";
 import { DiffWorkerPoolProvider } from "../components/DiffWorkerPoolProvider";
 import {
@@ -329,7 +329,11 @@ function SingleChatSurface(props: {
     void navigate({
       to: "/$threadId",
       params: { threadId: props.threadId },
-      search: (previous) => stripEditorViewSearchParams(stripDiffSearchParams(previous)),
+      search: (previous) => ({
+        ...stripEditorViewSearchParams(stripDiffSearchParams(previous)),
+        view: undefined,
+        editorFilePath: undefined,
+      }),
     });
   }, [navigate, props.threadId]);
 
@@ -678,9 +682,6 @@ function SingleChatSurface(props: {
     },
     [dockState.panes, props.threadId, requestImmediateDockHydration, setActivePane],
   );
-  const projectSurfaceThread =
-    threadSummaries.find((thread) => thread.id === props.threadId) ?? null;
-
   // The editor file path arrives via the URL, so an attacker-crafted link can
   // carry traversal segments ("../../etc"). Treat unsafe values as no selection
   // so neither the ancestor prefetch nor the preview ever queries them.
@@ -801,20 +802,7 @@ function SingleChatSurface(props: {
         </div>
       </WorkspaceFileOpenerContext.Provider>
     );
-    return projectSurfaceThread ? (
-      <ProjectSurfaceFrame
-        activeSurface="chat"
-        middleThreadId={props.threadId}
-        middleThreadTitle={projectSurfaceThread.title}
-        projectId={props.projectId}
-        projectName={activeProject?.name ?? null}
-        routeThreadId={props.threadId}
-      >
-        {editorSurface}
-      </ProjectSurfaceFrame>
-    ) : (
-      editorSurface
-    );
+    return <ProjectSurfaceFrame>{editorSurface}</ProjectSurfaceFrame>;
   }
 
   const chatSurface = (
@@ -856,20 +844,7 @@ function SingleChatSurface(props: {
       </div>
     </WorkspaceFileOpenerContext.Provider>
   );
-  return projectSurfaceThread ? (
-    <ProjectSurfaceFrame
-      activeSurface="chat"
-      middleThreadId={props.threadId}
-      middleThreadTitle={projectSurfaceThread.title}
-      projectId={props.projectId}
-      projectName={activeProject?.name ?? null}
-      routeThreadId={props.threadId}
-    >
-      {chatSurface}
-    </ProjectSurfaceFrame>
-  ) : (
-    chatSurface
-  );
+  return <ProjectSurfaceFrame>{chatSurface}</ProjectSurfaceFrame>;
 }
 
 function ChatThreadRouteView() {

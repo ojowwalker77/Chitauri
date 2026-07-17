@@ -24,6 +24,7 @@ import {
   type ThreadTerminalPresentationMode,
 } from "../types";
 import { cn } from "~/lib/utils";
+import { PANEL_SURFACE_CLASS_NAME } from "./ui/surface";
 import {
   type TerminalChromeActionItem,
   TerminalSidebar,
@@ -649,10 +650,11 @@ export default function ThreadTerminalDrawer({
   return (
     <aside
       className={cn(
-        "thread-terminal-drawer relative flex min-w-0 flex-col overflow-hidden bg-panel",
+        PANEL_SURFACE_CLASS_NAME,
+        "thread-terminal-drawer relative flex min-w-0 flex-col",
         isWorkspaceMode
-          ? "m-3 h-[calc(100%_-_1.5rem)] min-h-0 w-[calc(100%_-_1.5rem)] rounded-xl border border-panel-border"
-          : "w-full shrink-0 border-t border-panel-border",
+          ? "m-3 h-[calc(100%_-_1.5rem)] min-h-0 w-[calc(100%_-_1.5rem)]"
+          : "mx-3 mb-3 w-[calc(100%_-_1.5rem)] shrink-0",
       )}
       style={isWorkspaceMode ? undefined : { height: `${drawerHeight}px` }}
     >

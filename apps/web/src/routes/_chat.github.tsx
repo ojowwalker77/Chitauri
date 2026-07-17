@@ -5,14 +5,15 @@ import type {
   GitHubWorkItemSummary,
   GitHubWorkListView,
 } from "@t3tools/contracts";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import ChatMarkdown from "~/components/ChatMarkdown";
 import { DiffPanelPatchViewport } from "~/components/DiffPanelPatchViewport";
 import { RouteInsetSurface } from "~/components/RouteInsetSurface";
-import { ProjectSurfaceFrame } from "~/components/ProjectSurfaceHeader";
+import { ProjectSurfaceFrame } from "~/components/ProjectSurfaceFrame";
+import { RepositoryProjectFilter } from "~/components/RepositoryProjectFilter";
 import { SidebarHeaderNavigationControls } from "~/components/SidebarHeaderNavigationControls";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
@@ -37,11 +38,11 @@ import {
   DEFAULT_GITHUB_VIEW,
   GITHUB_WORK_VIEWS,
   buildGitHubAgentPrompt,
+  findProjectForGitHubItem,
   groupGitHubItemsByRepository,
 } from "~/githubWorkbench.logic";
 import { useHandleNewThread } from "~/hooks/useHandleNewThread";
 import { useLatestProjectStore } from "~/latestProjectStore";
-import { useProjectActiveThreadStore } from "~/projectActiveThreadStore";
 import { useTheme } from "~/hooks/useTheme";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import {
@@ -70,12 +71,19 @@ import {
   TriangleAlertIcon,
 } from "~/lib/icons";
 import { getRenderablePatch, sortFileDiffsByPath } from "~/lib/diffRendering";
+import {
+  ALL_PROJECTS_FILTER,
+  parseProjectFilterSearch,
+  projectFilterValue,
+  resolveProjectFilter,
+} from "~/lib/projectFilter";
 import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
 import { toastManager } from "~/components/ui/toast";
 
 export const Route = createFileRoute("/_chat/github")({
+  validateSearch: (search) => parseProjectFilterSearch(search),
   component: GitHubWorkbenchRoute,
 });
 
@@ -93,7 +101,7 @@ function StatusDot({ status }: { status: GitHubCheckStatus | null }) {
       className={cn(
         "size-2 shrink-0 rounded-full border",
         status === "success" && "border-success/60 bg-success",
-        status === "failure" && "border-red-500/60 bg-red-500",
+        status === "failure" && "border-destructive/60 bg-destructive",
         status === "pending" && "border-gold/60 bg-gold",
         status === "cancelled" && "border-faint/60 bg-faint",
         (status === "neutral" || status === "skipped" || status === null) &&
@@ -112,7 +120,7 @@ function ItemGlyph({ item }: { item: GitHubWorkItemSummary }) {
         item.state === "open"
           ? "text-success"
           : item.state === "merged"
-            ? "text-violet-500"
+            ? "text-success"
             : "text-muted-foreground",
       )}
     />
@@ -133,10 +141,8 @@ function WorkListRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        "group flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring/60",
-        selected
-          ? "bg-[var(--color-background-elevated-secondary)]"
-          : "hover:bg-[var(--color-background-elevated-secondary)]/70",
+        "group flex w-full items-start gap-2.5 rounded-[10px] px-2.5 py-2 text-left outline-none transition-[background-color,scale] duration-press ease-out focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.96] motion-reduce:active:scale-100",
+        selected ? "bg-selected" : "hover:bg-hover",
       )}
     >
       <ItemGlyph item={item} />
@@ -230,9 +236,9 @@ function DetailHeader({
             type="button"
             onClick={() => onTabChange(entry.value)}
             className={cn(
-              "h-8 rounded-[10px] border px-3 text-xs transition-colors",
+              "h-8 rounded-[10px] border px-3 text-xs transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
               tab === entry.value
-                ? "border-panel-border bg-panel text-foreground"
+                ? "border-transparent bg-selected text-foreground"
                 : "border-transparent text-muted-foreground hover:bg-hover hover:text-foreground",
             )}
           >
@@ -260,7 +266,7 @@ function Stat({
         className={cn(
           "min-w-0 truncate text-right text-foreground",
           tone === "success" && "text-success",
-          tone === "danger" && "text-red-500",
+          tone === "danger" && "text-destructive",
         )}
       >
         {value}
@@ -645,40 +651,31 @@ function IssueCreationDialog({
 }
 
 function GitHubWorkbenchRoute() {
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const latestProjectId = useLatestProjectStore((state) => state.latestProjectId);
   const queryClient = useQueryClient();
+  const projectsHydrated = useStore((state) => state.threadsHydrated);
   const projects = useStore((state) => state.projects);
   const { handleNewThread } = useHandleNewThread();
   const attachedProjects = useMemo(
     () => projects.filter((project) => project.kind === "project"),
     [projects],
   );
-  const selectedAttachedProject =
-    attachedProjects.find((project) => project.id === latestProjectId) ??
-    attachedProjects[0] ??
-    null;
-  const rememberedThreadId = useProjectActiveThreadStore((state) =>
-    selectedAttachedProject
-      ? (state.activeThreadByProjectId[selectedAttachedProject.id] ?? null)
-      : null,
-  );
-  const rememberedThread = useStore((state) =>
-    rememberedThreadId ? (state.sidebarThreadSummaryById[rememberedThreadId] ?? null) : null,
-  );
-  const fallbackThread = useStore((state) =>
-    selectedAttachedProject
-      ? ((state.threadIds ?? [])
-          .map((threadId) => state.sidebarThreadSummaryById[threadId])
-          .find(
-            (thread) =>
-              thread?.projectId === selectedAttachedProject.id &&
-              !thread.parentThreadId &&
-              thread.archivedAt == null,
-          ) ?? null)
-      : null,
-  );
-  const surfaceThread =
-    rememberedThread?.projectId === selectedAttachedProject?.id ? rememberedThread : fallbackThread;
+  const selectedAttachedProject = resolveProjectFilter({
+    projects: attachedProjects,
+    searchProject: search.project,
+    latestProjectId,
+  });
+  const canonicalProjectFilter = projectFilterValue(selectedAttachedProject);
+  useEffect(() => {
+    if (!projectsHydrated) return;
+    if (search.project === canonicalProjectFilter) return;
+    void navigate({
+      replace: true,
+      search: (previous) => ({ ...previous, project: canonicalProjectFilter }),
+    });
+  }, [canonicalProjectFilter, navigate, projectsHydrated, search.project]);
   const selectedProjectCwd = selectedAttachedProject?.cwd ?? null;
   const [view, setView] = useState<GitHubWorkListView>(DEFAULT_GITHUB_VIEW);
   const [query, setQuery] = useState("");
@@ -687,32 +684,72 @@ function GitHubWorkbenchRoute() {
   const [composerMode, setComposerMode] = useState<ComposerMode>(null);
   const [createIssueOpen, setCreateIssueOpen] = useState(false);
 
-  const connectionQuery = useQuery(githubConnectionQueryOptions(selectedProjectCwd));
-  const attachedRepository = connectionQuery.data?.repository?.nameWithOwner ?? null;
-  const listInputBase = useMemo(
-    () => ({
-      cwd: selectedProjectCwd,
-      view,
-      query: query.trim() || null,
-      repository: attachedRepository,
-      limit: 75,
-    }),
-    [attachedRepository, query, selectedProjectCwd, view],
+  const connectionQueries = useQueries({
+    queries: attachedProjects.map((project) => githubConnectionQueryOptions(project.cwd)),
+  });
+  const repositoryScopes = attachedProjects.flatMap((project, index) => {
+    const connection = connectionQueries[index]?.data;
+    if (!connection?.available || !connection.authenticated || !connection.repository) return [];
+    return [
+      {
+        connection,
+        project,
+        repository: connection.repository.nameWithOwner,
+      },
+    ];
+  });
+  const uniqueRepositoryScopes = repositoryScopes.filter(
+    (scope, index, scopes) =>
+      scopes.findIndex(
+        (candidate) => candidate.repository.toLowerCase() === scope.repository.toLowerCase(),
+      ) === index,
   );
-  const pullRequestListQuery = useQuery(
-    githubWorkListQueryOptions({ ...listInputBase, kind: "pull_request" }),
-  );
-  const issueListQuery = useQuery(githubWorkListQueryOptions({ ...listInputBase, kind: "issue" }));
-  const listLoading = pullRequestListQuery.isPending || issueListQuery.isPending;
-  const listError = pullRequestListQuery.error ?? issueListQuery.error;
-  const listSyncedAt = pullRequestListQuery.data?.syncedAt ?? issueListQuery.data?.syncedAt ?? null;
-  const repositoryGroups = useMemo(
-    () =>
-      groupGitHubItemsByRepository([
-        pullRequestListQuery.data?.items ?? [],
-        issueListQuery.data?.items ?? [],
-      ]),
-    [issueListQuery.data?.items, pullRequestListQuery.data?.items],
+  const selectedProjectIndex = selectedAttachedProject
+    ? attachedProjects.findIndex((project) => project.id === selectedAttachedProject.id)
+    : -1;
+  const selectedConnectionQuery =
+    selectedProjectIndex >= 0 ? connectionQueries[selectedProjectIndex] : null;
+  const selectedRepositoryScope = selectedAttachedProject
+    ? (repositoryScopes.find((scope) => scope.project.id === selectedAttachedProject.id) ?? null)
+    : null;
+  const visibleRepositoryScopes = selectedAttachedProject
+    ? selectedRepositoryScope
+      ? [selectedRepositoryScope]
+      : []
+    : uniqueRepositoryScopes;
+  const relevantConnectionQueries = selectedConnectionQuery
+    ? [selectedConnectionQuery]
+    : connectionQueries;
+  const workListQueries = useQueries({
+    queries: visibleRepositoryScopes.flatMap((scope) =>
+      (["pull_request", "issue"] as const).map((kind) =>
+        githubWorkListQueryOptions({
+          cwd: scope.project.cwd,
+          kind,
+          view,
+          query: query.trim() || null,
+          repository: scope.repository,
+          limit: 75,
+        }),
+      ),
+    ),
+  });
+  const listLoading =
+    !projectsHydrated ||
+    relevantConnectionQueries.some((connectionQuery) => connectionQuery.isPending) ||
+    workListQueries.some((workListQuery) => workListQuery.isPending);
+  const listError =
+    relevantConnectionQueries.find((connectionQuery) => connectionQuery.error)?.error ??
+    workListQueries.find((workListQuery) => workListQuery.error)?.error ??
+    null;
+  const listSyncedAt =
+    workListQueries
+      .map((workListQuery) => workListQuery.data?.syncedAt)
+      .filter((syncedAt): syncedAt is string => typeof syncedAt === "string")
+      .sort()
+      .at(-1) ?? null;
+  const repositoryGroups = groupGitHubItemsByRepository(
+    workListQueries.map((workListQuery) => workListQuery.data?.items ?? []),
   );
   const visibleItems = useMemo(
     () => repositoryGroups.flatMap((group) => group.items),
@@ -730,10 +767,20 @@ function GitHubWorkbenchRoute() {
     }
   }, [selectedId, visibleItems]);
   const selectedItem = visibleItems.find((item) => item.id === selectedId) ?? null;
-  const selectedProject = selectedItem ? selectedAttachedProject : null;
+  const selectedItemRepositoryScope = selectedItem
+    ? (repositoryScopes.find(
+        (scope) =>
+          scope.repository.toLowerCase() === selectedItem.repository.nameWithOwner.toLowerCase(),
+      ) ?? null)
+    : null;
+  const selectedProject = selectedItem
+    ? (selectedItemRepositoryScope?.project ??
+      findProjectForGitHubItem(attachedProjects, selectedItem))
+    : null;
+  const selectedItemConnection = selectedItemRepositoryScope?.connection ?? null;
   const detailInput = selectedItem
     ? {
-        cwd: selectedProjectCwd,
+        cwd: selectedProject?.cwd ?? selectedProjectCwd,
         kind: selectedItem.kind,
         repository: selectedItem.repository.nameWithOwner,
         number: selectedItem.number,
@@ -814,17 +861,34 @@ function GitHubWorkbenchRoute() {
     }
   };
 
-  const connection = connectionQuery.data;
-  const connectionBlocked = connection && (!connection.available || !connection.authenticated);
+  const connection =
+    selectedAttachedProject !== null
+      ? selectedConnectionQuery?.data
+      : (repositoryScopes[0]?.connection ??
+        connectionQueries.find((connectionQuery) => connectionQuery.data?.authenticated)?.data);
+  const attachedRepository = selectedRepositoryScope?.repository ?? null;
+  const connectionBlocked =
+    selectedAttachedProject !== null &&
+    connection &&
+    (!connection.available || !connection.authenticated || connection.repository === null);
+
+  const updateProjectFilter = (value: string) => {
+    if (value !== ALL_PROJECTS_FILTER) {
+      const nextProject = attachedProjects.find((project) => project.id === value);
+      if (!nextProject) return;
+      useLatestProjectStore.getState().setLatestProjectId(nextProject.id);
+    }
+    setSelectedId(null);
+    setDetailTab("summary");
+    setComposerMode(null);
+    setCreateIssueOpen(false);
+    void navigate({
+      search: (previous) => ({ ...previous, project: value }),
+    });
+  };
 
   return (
-    <ProjectSurfaceFrame
-      activeSurface="github"
-      middleThreadId={surfaceThread?.id ?? null}
-      middleThreadTitle={surfaceThread?.title ?? null}
-      projectId={selectedAttachedProject?.id ?? null}
-      projectName={selectedAttachedProject?.name ?? null}
-    >
+    <ProjectSurfaceFrame>
       <RouteInsetSurface>
         <div className="flex h-full min-h-0 flex-col">
           <header
@@ -836,8 +900,14 @@ function GitHubWorkbenchRoute() {
             )}
           >
             <SidebarHeaderNavigationControls />
-            <GitHubIcon className="size-4" />
-            <span className="text-sm font-semibold">GitHub</span>
+            <GitHubIcon className="size-4 text-claude" />
+            <span className="text-[14px] font-[590] tracking-[-0.005em]">GitHub</span>
+            <RepositoryProjectFilter
+              ariaLabel="GitHub repository"
+              projects={attachedProjects}
+              selectedProject={selectedAttachedProject}
+              onValueChange={updateProjectFilter}
+            />
             {connection?.account ? (
               <span className="hidden text-xs text-muted-foreground sm:inline">
                 {connection.account}
@@ -855,7 +925,15 @@ function GitHubWorkbenchRoute() {
               >
                 <RefreshCwIcon />
               </Button>
-              <Button size="xs" variant="outline" onClick={() => setCreateIssueOpen(true)}>
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={!attachedRepository}
+                title={
+                  attachedRepository ? "Create issue" : "Choose a repository to create an issue"
+                }
+                onClick={() => setCreateIssueOpen(true)}
+              >
                 <PlusIcon /> Issue
               </Button>
             </div>
@@ -866,11 +944,22 @@ function GitHubWorkbenchRoute() {
               <div className="flex items-start gap-3">
                 <TriangleAlertIcon className="mt-0.5 size-5 text-warning" />
                 <div>
-                  <h2 className="text-sm font-semibold">GitHub access needs attention</h2>
-                  <p className="mt-1 text-xs text-muted-foreground">{connection.error}</p>
-                  <code className="mt-3 block rounded-md bg-muted px-2 py-1.5 text-xs">
-                    Set TEACODE_GITHUB_TOKEN, then restart TeaCode
-                  </code>
+                  <h2 className="text-sm font-semibold">
+                    {connection.repository === null &&
+                    connection.authenticated &&
+                    selectedAttachedProject
+                      ? "No GitHub repository found"
+                      : "GitHub access needs attention"}
+                  </h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {connection.error ??
+                      "Choose a project with a GitHub remote, or inspect this repository's remotes."}
+                  </p>
+                  {!connection.authenticated ? (
+                    <code className="mt-3 block rounded-md bg-muted px-2 py-1.5 text-xs">
+                      Set TEACODE_GITHUB_TOKEN, then restart TeaCode
+                    </code>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -890,17 +979,17 @@ function GitHubWorkbenchRoute() {
                         type="button"
                         onClick={() => changeView(option.value)}
                         className={cn(
-                          "shrink-0 rounded-full px-2 py-1 text-[11px]",
+                          "h-8 shrink-0 rounded-[9px] px-2.5 text-[12px] transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
                           view === option.value
-                            ? "bg-foreground text-background"
-                            : "bg-muted text-muted-foreground hover:text-foreground",
+                            ? "bg-selected text-foreground"
+                            : "text-muted-foreground hover:bg-hover hover:text-foreground",
                         )}
                       >
                         {option.label}
                       </button>
                     ))}
                   </div>
-                  <div className="mt-2 flex items-center rounded-lg border border-border bg-background/60 px-2">
+                  <div className="mt-2 flex items-center rounded-[10px] border border-panel-border bg-[var(--well)] px-2">
                     <SearchIcon className="size-3.5 text-muted-foreground" />
                     <Input
                       unstyled
@@ -916,7 +1005,7 @@ function GitHubWorkbenchRoute() {
                   {repositoryGroups.length > 0 ? (
                     repositoryGroups.map((group) => (
                       <section key={group.repository.nameWithOwner} className="mb-2">
-                        <h2 className="sticky top-0 z-10 bg-[var(--color-background-elevated)] px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground">
+                        <h2 className="sticky top-0 z-10 bg-background/95 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground">
                           {group.repository.nameWithOwner}
                         </h2>
                         {group.items.map((item) => (
@@ -1021,13 +1110,13 @@ function GitHubWorkbenchRoute() {
                               action: "assign_self",
                               ...target,
                               assigned: !detail.item.assignees.some(
-                                (actor) => actor.login === connection?.account,
+                                (actor) => actor.login === selectedItemConnection?.account,
                               ),
                             })
                           }
                         >
                           {detail.item.assignees.some(
-                            (actor) => actor.login === connection?.account,
+                            (actor) => actor.login === selectedItemConnection?.account,
                           )
                             ? "Unassign me"
                             : "Assign me"}
@@ -1130,14 +1219,19 @@ function GitHubWorkbenchRoute() {
                       ) : detailTab === "timeline" ? (
                         <TimelineView detail={detail} cwd={selectedProject?.cwd ?? null} />
                       ) : (
-                        <CodeView detail={detail} cwd={selectedProjectCwd} />
+                        <CodeView
+                          detail={detail}
+                          cwd={selectedProject?.cwd ?? selectedProjectCwd}
+                        />
                       )}
                     </div>
                     {composerMode ? (
                       <ActionComposer
                         mode={composerMode}
                         pending={actionMutation.isPending}
-                        canSubmitDecision={detail.item.author?.login !== connection?.account}
+                        canSubmitDecision={
+                          detail.item.author?.login !== selectedItemConnection?.account
+                        }
                         onCancel={() => setComposerMode(null)}
                         onSubmit={(body, verdict) => {
                           if (!target) return;

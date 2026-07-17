@@ -79,30 +79,30 @@ it.layer(
   );
 });
 
-it.layer(
-  makeLayer((call) =>
-    call.kind === "json"
-      ? {
-          total_count: 1,
-          items: [
-            {
-              number: 42,
-              title: "Review me",
-              html_url: "https://github.com/acme/widgets/pull/42",
-              repository_url: "https://api.github.com/repos/acme/widgets",
-              state: "open",
-              updated_at: "2026-07-15T12:00:00Z",
-              created_at: "2026-07-15T10:00:00Z",
-              user: { login: "octocat", type: "User" },
-              labels: [{ name: "feature", color: "00ff00", description: "Feature" }],
-              assignees: [],
-              comments: 2,
-            },
-          ],
-        }
-      : {},
-  ).layer,
-)("GitHubWorkbench list", (it) => {
+const listFixture = makeLayer((call) =>
+  call.kind === "json"
+    ? {
+        total_count: 1,
+        items: [
+          {
+            number: 42,
+            title: "Review me",
+            html_url: "https://github.com/acme/widgets/pull/42",
+            repository_url: "https://api.github.com/repos/acme/widgets",
+            state: "open",
+            updated_at: "2026-07-15T12:00:00Z",
+            created_at: "2026-07-15T10:00:00Z",
+            user: { login: "octocat", type: "User" },
+            labels: [{ name: "feature", color: "00ff00", description: "Feature" }],
+            assignees: [],
+            comments: 2,
+          },
+        ],
+      }
+    : {},
+);
+
+it.layer(listFixture.layer)("GitHubWorkbench list", (it) => {
   it.effect("lists review requests with normalized repository context", () =>
     Effect.gen(function* () {
       const workbench = yield* GitHubWorkbench;
@@ -111,12 +111,33 @@ it.layer(
         kind: "pull_request",
         view: "reviewing",
         query: null,
-        repository: null,
+        repository: "acme/widgets",
         limit: 50,
       });
       assert.equal(result.items.length, 1);
       assert.equal(result.items[0]?.repository.nameWithOwner, "acme/widgets");
       assert.equal(result.items[0]?.commentsCount, 2);
+    }),
+  );
+
+  it.effect("keeps user search text out of API repository qualifiers", () =>
+    Effect.gen(function* () {
+      const workbench = yield* GitHubWorkbench;
+      yield* workbench.listWork({
+        cwd: "/repo",
+        kind: "pull_request",
+        view: "all",
+        query: "--repo=outside/not-attached",
+        repository: "acme/widgets",
+        limit: 50,
+      });
+
+      const request = listFixture.calls.at(-1);
+      assert.equal(request?.kind, "json");
+      if (!request || request.kind !== "json") return;
+      const apiQuery = String(request.input.query?.q ?? "");
+      expect(apiQuery).toContain("repo:acme/widgets");
+      expect(apiQuery).not.toContain("outside/not-attached");
     }),
   );
 });

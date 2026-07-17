@@ -18,7 +18,7 @@ const Tooltip = TooltipPrimitive.Root;
  * looks without forking the component. Add a new style here (and a key) to make it
  * available everywhere.
  *
- * - `default`: the frosted sidebar hover-card surface, shared with the
+ * - `default`: the opaque sidebar hover-card surface, shared with the
  *   project/thread cards so plain tooltips and the cards read as one system.
  * - `picker`: the composer picker chrome (tighter radius + soft shadow) for
  *   tooltips that sit next to picker menus and should match them.
@@ -76,7 +76,7 @@ function TooltipPopup({
         <TooltipPrimitive.Popup
           className={cn(
             // Structure + type are shared by every tooltip; the variant supplies the
-            // surface chrome (frosted card, picker, …) and `className` adds per-tooltip
+            // surface chrome (panel card, picker, …) and `className` adds per-tooltip
             // tweaks like max-width or wrapping.
             "flex h-(--popup-height,auto) w-(--popup-width,auto) origin-(--transform-origin) text-balance text-[length:var(--app-font-size-ui-sm,13px)] transition-[width,height,scale,opacity] duration-tooltip ease-out data-ending-style:scale-98 data-starting-style:scale-98 data-ending-style:opacity-0 data-starting-style:opacity-0 data-instant:duration-0",
             TOOLTIP_SURFACE_BY_VARIANT[variant],

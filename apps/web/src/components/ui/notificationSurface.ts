@@ -3,6 +3,8 @@
 // Layer: UI styling helper
 // Exports: notification surface class names used by toast and status banners.
 
+import { OVERLAY_SURFACE_CLASS_NAME } from "~/components/ui/surface";
+
 // `--notification-fg` keeps the text/icon/control color readable against the
 // accent-tinted surface. It tracks the theme's own foreground token, so it is
 // near-black in light themes and near-white in dark themes automatically —
@@ -16,8 +18,8 @@ const NOTIFICATION_FOREGROUND_CLASS_NAME =
 // notably the dismiss "X") clickable in the desktop app. Toasts render at the
 // top edge over Electron's draggable titlebar region; without this the OS
 // captures clicks in that band for window dragging and the X stops working.
-export const COMPACT_NOTIFICATION_SURFACE_CLASS_NAME = `w-max max-w-[min(calc(100vw-2rem),28rem)] rounded-[11px] border border-panel-border bg-panel dark:bg-[#262626] ${NOTIFICATION_FOREGROUND_CLASS_NAME} shadow-[0_16px_44px_rgba(0,0,0,0.5)] before:hidden [-webkit-app-region:no-drag]`;
+export const COMPACT_NOTIFICATION_SURFACE_CLASS_NAME = `${OVERLAY_SURFACE_CLASS_NAME} w-max max-w-[min(calc(100vw-2rem),28rem)] rounded-[11px] dark:bg-[#262626] ${NOTIFICATION_FOREGROUND_CLASS_NAME} before:hidden [-webkit-app-region:no-drag]`;
 
-export const EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME = `w-full rounded-[11px] border border-panel-border bg-panel dark:bg-[#262626] ${NOTIFICATION_FOREGROUND_CLASS_NAME} shadow-[0_16px_44px_rgba(0,0,0,0.5)] before:hidden [-webkit-app-region:no-drag]`;
+export const EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME = `${OVERLAY_SURFACE_CLASS_NAME} w-full rounded-[11px] dark:bg-[#262626] ${NOTIFICATION_FOREGROUND_CLASS_NAME} before:hidden [-webkit-app-region:no-drag]`;
 
 export const NOTIFICATION_ICON_CLASS_NAME = "text-muted-foreground";

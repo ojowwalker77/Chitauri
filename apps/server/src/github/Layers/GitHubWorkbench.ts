@@ -486,9 +486,8 @@ function normalizeDetailNode(node: JsonRecord, kind: GitHubWorkItemKind): JsonRe
   };
 }
 
-function searchQuery(input: GitHubWorkListInput): string {
+function searchQuery(input: GitHubWorkListInput, repository: GitHubRepositoryRef): string {
   const qualifiers = [
-    input.query?.trim() ?? "",
     input.kind === "pull_request" ? "is:pr" : "is:issue",
     "is:open",
     "archived:false",
@@ -512,7 +511,7 @@ function searchQuery(input: GitHubWorkListInput): string {
     case "all":
       break;
   }
-  if (input.repository) qualifiers.push(`repo:${input.repository}`);
+  qualifiers.push(`repo:${repository.owner}/${repository.repo}`);
   return qualifiers.filter(Boolean).join(" ");
 }
 
@@ -531,8 +530,8 @@ export const GitHubWorkbenchLive = Layer.effect(
         : Effect.succeed(null);
 
     const requireRepository = (nameWithOwner: string, cwd: string | null) => {
-      const repository = parseGitHubRepositoryName(nameWithOwner);
-      if (!repository) {
+      const requestedRepository = parseGitHubRepositoryName(nameWithOwner);
+      if (!requestedRepository) {
         return Effect.fail(
           new GitHubCliError({
             operation: "repository",
@@ -541,11 +540,26 @@ export const GitHubWorkbenchLive = Layer.effect(
         );
       }
       return repositoryForCwd(cwd).pipe(
-        Effect.map((local) =>
-          local && `${local.owner}/${local.repo}`.toLowerCase() === nameWithOwner.toLowerCase()
-            ? local
-            : repository,
-        ),
+        Effect.flatMap((localRepository) => {
+          if (!localRepository) {
+            return Effect.fail(
+              new GitHubCliError({
+                operation: "repository",
+                detail: "GitHub work requires a repository attached inside TeaCode.",
+              }),
+            );
+          }
+          const localName = `${localRepository.owner}/${localRepository.repo}`;
+          if (localName.toLowerCase() !== nameWithOwner.toLowerCase()) {
+            return Effect.fail(
+              new GitHubCliError({
+                operation: "repository",
+                detail: `Repository '${nameWithOwner}' does not match attached repository '${localName}'.`,
+              }),
+            );
+          }
+          return Effect.succeed(localRepository);
+        }),
       );
     };
 
@@ -623,17 +637,16 @@ export const GitHubWorkbenchLive = Layer.effect(
 
     const listWork: GitHubWorkbenchShape["listWork"] = (input) =>
       Effect.gen(function* () {
-        const localRepository = yield* repositoryForCwd(input.cwd);
-        const fallbackRepository = input.repository
-          ? parseGitHubRepositoryName(input.repository)
-          : localRepository;
-        const host = localRepository?.host ?? fallbackRepository?.host ?? "github.com";
+        const repository = yield* requireRepository(input.repository, input.cwd);
+        const repositoryName = `${repository.owner}/${repository.repo}`;
         const raw = asRecord(
           yield* api.requestJson({
-            host,
+            host: repository.host,
             path: "/search/issues",
             query: {
-              q: searchQuery(input),
+              // User text is filtered locally so GitHub qualifiers cannot escape
+              // the repository attached to this TeaCode project.
+              q: searchQuery(input, repository),
               per_page: input.limit,
               sort: "updated",
               order: "desc",
@@ -641,13 +654,25 @@ export const GitHubWorkbenchLive = Layer.effect(
             cacheTtlMs: 60_000,
           }),
         );
-        const items = arrayValue(raw.items).flatMap((entry) => {
-          const item = summaryFromSearch(restSearchEntry(entry, fallbackRepository), input.kind);
-          return item ? [item] : [];
-        });
+        const normalizedQuery = input.query?.trim().toLowerCase();
+        const items = arrayValue(raw.items)
+          .flatMap((entry) => {
+            const item = summaryFromSearch(restSearchEntry(entry, repository), input.kind);
+            return item ? [item] : [];
+          })
+          .filter(
+            (item) => item.repository.nameWithOwner.toLowerCase() === repositoryName.toLowerCase(),
+          )
+          .filter(
+            (item) =>
+              !normalizedQuery ||
+              `${item.repository.nameWithOwner} ${item.title} #${item.number}`
+                .toLowerCase()
+                .includes(normalizedQuery),
+          );
         return {
           items,
-          totalCount: numberValue(raw.total_count) ?? items.length,
+          totalCount: items.length,
           syncedAt: new Date().toISOString(),
         };
       });

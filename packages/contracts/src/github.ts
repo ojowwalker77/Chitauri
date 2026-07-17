@@ -76,7 +76,7 @@ export const GitHubWorkListInput = Schema.Struct({
   kind: GitHubWorkItemKind,
   view: GitHubWorkListView,
   query: SearchText,
-  repository: Schema.NullOr(RepositoryName),
+  repository: RepositoryName,
   limit: PositiveInt.check(Schema.isLessThanOrEqualTo(100)),
 });
 export type GitHubWorkListInput = typeof GitHubWorkListInput.Type;

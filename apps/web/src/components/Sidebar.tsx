@@ -4,6 +4,7 @@
 
 import {
   ArchiveIcon,
+  BrainIcon,
   CheckCircle2Icon,
   ChevronDownIcon,
   ChevronRightIcon,
@@ -12,6 +13,7 @@ import {
   FolderIcon,
   FolderOpenIcon,
   GitMergedSimpleIcon,
+  GitHubIcon,
   GitPullRequestIcon,
   type LucideIcon,
   NewThreadIcon,
@@ -167,7 +169,7 @@ import { SidebarLeadingIcon } from "./SidebarLeadingIcon";
 import { SidebarMetaChipStack } from "./SidebarMetaChip";
 import { SidebarRowHoverActions } from "./SidebarRowHoverActions";
 import { SidebarSectionToolbar } from "./SidebarSectionToolbar";
-import { SidebarTreeBranchChip, SidebarTreeStatusPill } from "./SidebarTreeMap";
+import { SidebarTreeStatusPill } from "./SidebarTreeMap";
 import { SidebarGlyph, sidebarGlyphClass, SIDEBAR_TRAILING_ICON_CLASS } from "./sidebarGlyphs";
 import { ThreadPinToggleButton } from "./ThreadPinToggleButton";
 import { ThreadRunningSpinner } from "./ThreadRunningSpinner";
@@ -1130,9 +1132,10 @@ export default function Sidebar() {
   const chatWorkspaceRoot = useWorkspaceStore((store) => store.chatWorkspaceRoot);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const isOnSettings = useLocation({
-    select: (loc) => loc.pathname === "/settings",
-  });
+  const routePathname = useLocation({ select: (location) => location.pathname });
+  const isOnSettings = routePathname === "/settings";
+  const isOnResearch = routePathname.startsWith("/research");
+  const isOnGitHub = routePathname === "/github";
   const { settings: appSettings, updateSettings } = useAppSettings();
   // Rootless chats can be hidden independently from the project thread list.
   const chatsSectionVisible = appSettings.showChatsSection;
@@ -1143,8 +1146,8 @@ export default function Sidebar() {
     strict: false,
     select: (params) => (params.threadId ? ThreadId.makeUnsafe(params.threadId) : null),
   });
-  const settingsSectionSearch = useSearch({ strict: false }) as Record<string, unknown>;
-  const activeSettingsSection = normalizeSettingsSection(settingsSectionSearch.section);
+  const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
+  const activeSettingsSection = normalizeSettingsSection(routeSearch.section);
 
   useEffect(() => {
     const api = readNativeApi();
@@ -2125,6 +2128,35 @@ export default function Sidebar() {
   const currentProjectShortcutTargetId = useMemo(
     () => resolveCurrentProjectTargetId(projects, focusedProjectId),
     [focusedProjectId, projects],
+  );
+
+  const navigateToProjectSurface = useCallback(
+    (surface: "research" | "github") => {
+      const rawRouteProjectFilter =
+        (isOnResearch || isOnGitHub) && typeof routeSearch.project === "string"
+          ? routeSearch.project
+          : null;
+      const routeProjectFilter =
+        rawRouteProjectFilter === "all" ||
+        projects.some(
+          (project) => project.kind === "project" && project.id === rawRouteProjectFilter,
+        )
+          ? rawRouteProjectFilter
+          : null;
+      const project = routeProjectFilter ?? currentProjectShortcutTargetId ?? "all";
+      void navigate({
+        to: surface === "research" ? "/research" : "/github",
+        search: { project },
+      });
+    },
+    [
+      currentProjectShortcutTargetId,
+      isOnGitHub,
+      isOnResearch,
+      navigate,
+      projects,
+      routeSearch.project,
+    ],
   );
 
   const handlePrimaryNewThread = useCallback(() => {
@@ -4364,13 +4396,6 @@ export default function Sidebar() {
     };
   }, [activeSidebarThreadId, visibleSidebarThreadIds]);
 
-  // Pinned rows should show the user-facing project label, not the raw folder basename.
-  function resolvePinnedThreadProjectLabel(projectId: ProjectId): string | null {
-    const project = projectById.get(projectId);
-    if (!project) return null;
-    return project.name ?? project.folderName ?? null;
-  }
-
   // Keep hover actions in the same trailing slot used by the timestamp they replace.
   function renderThreadArchiveAction(
     threadId: ThreadId,
@@ -4492,7 +4517,7 @@ export default function Sidebar() {
       <div className="group/project-header relative my-1">
         <div
           className={cn(
-            "flex min-h-7 w-full min-w-0 items-center justify-between gap-2 px-2 py-1 pr-[4.75rem]",
+            "flex min-h-7 w-full min-w-0 items-center px-2 py-1 pr-[4.75rem]",
             SIDEBAR_SECTION_LABEL_CLASS_NAME,
           )}
         >
@@ -4510,21 +4535,11 @@ export default function Sidebar() {
     }
     return (
       <div className="mb-3" data-sidebar-tree-section="pinned">
-        <div className="my-1 flex min-h-7 items-center justify-between px-2 py-1">
+        <div className="my-1 flex min-h-7 items-center px-2 py-1">
           <span className={SIDEBAR_SECTION_LABEL_CLASS_NAME}>Pinned</span>
-          <span className="font-system-ui text-[11px] font-normal tabular-nums text-muted-foreground/44">
-            {pinnedThreads.length}
-          </span>
         </div>
-        <div className="relative ml-2 flex flex-col gap-0.5 border-l border-foreground/[0.08] pl-2">
-          {pinnedThreads.map((thread) => (
-            <div
-              key={thread.id}
-              className="relative before:absolute before:top-5 before:-left-2 before:h-px before:w-2 before:bg-foreground/[0.08]"
-            >
-              {renderPinnedThreadRow(thread)}
-            </div>
-          ))}
+        <div className="flex flex-col gap-0.5">
+          {pinnedThreads.map((thread) => renderPinnedThreadRow(thread))}
         </div>
       </div>
     );
@@ -4595,7 +4610,6 @@ export default function Sidebar() {
     });
     const terminalCount = threadTerminalState.terminalIds.length;
     const isActive = visualActiveSidebarThreadId === thread.id;
-    const projectLabel = resolvePinnedThreadProjectLabel(thread.projectId);
     const rightMetaChips = resolveThreadRowMetaChips({
       thread,
       includeHandoffBadge: true,
@@ -4654,10 +4668,10 @@ export default function Sidebar() {
               // space, with a trailing reserve that grows only for the badges actually
               // present — instead of a rigid grid that permanently fenced off a
               // timestamp-era column and squeezed the title/project even when wide.
-              "relative h-auto min-h-10 gap-1.5 py-1 transition-colors",
+              "relative h-auto min-h-10 gap-1.5 py-1 transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
               leadingPrStatus && "pl-8",
               resolveThreadRowTrailingReserveClass({
-                metaChipCount: rightMetaChips.length,
+                metaChipCount: isActive ? rightMetaChips.length : 0,
                 hasTrailingGlyph: hasTrailingStatusGlyph,
                 hasStatusLabel: showStatusLabel,
               }),
@@ -4721,21 +4735,13 @@ export default function Sidebar() {
                   )}
                 </span>
               </div>
-              <div className="flex min-w-0 items-center gap-1.5 leading-none">
-                {projectLabel ? (
-                  <span className="min-w-0 truncate text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/38">
-                    {projectLabel}
-                  </span>
-                ) : null}
-                <SidebarTreeBranchChip branch={thread.branch} highlighted={isActive} />
-              </div>
             </div>
             <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
               {renderThreadRowTrailingCluster({
                 isSubagentThread,
                 threadJumpLabel,
                 threadJumpLabelParts,
-                rightMetaChips,
+                rightMetaChips: isActive ? rightMetaChips : [],
                 threadStatus,
                 statusPresentation: showStatusLabel ? "label" : "glyph",
                 timestampToneClassName: "text-muted-foreground/38",
@@ -4811,7 +4817,7 @@ export default function Sidebar() {
       : null;
     const canToggleSubagents = childCount > 0;
     const subagentIndentPx = Math.max(0, Math.min(depth - 1, 3) * 10);
-    const showCompactMeta = !isSubagentThread;
+    const showCompactMeta = isHighlighted && !isSubagentThread;
     const threadJumpLabel = visibleThreadJumpLabelByThreadId.get(thread.id) ?? null;
     const threadJumpLabelParts =
       visibleThreadJumpLabelPartsByThreadId.get(thread.id) ?? EMPTY_SHORTCUT_PARTS;
@@ -4935,7 +4941,7 @@ export default function Sidebar() {
               </span>
             ) : threadEntryPoint === "terminal" ? (
               isProjectTreeThread ? (
-                <span className="inline-flex size-[26px] shrink-0 items-center justify-center rounded-full bg-muted/35 text-muted-foreground/85">
+                <span className="inline-flex size-[26px] shrink-0 items-center justify-center text-muted-foreground/85">
                   <SidebarGlyph icon={TerminalIcon} variant="chrome" />
                 </span>
               ) : (
@@ -4943,7 +4949,7 @@ export default function Sidebar() {
               )
             ) : showThreadProviderAvatar ? (
               isProjectTreeThread ? (
-                <span className="inline-flex size-[26px] shrink-0 items-center justify-center rounded-full bg-muted/35 text-muted-foreground/85">
+                <span className="inline-flex size-[26px] shrink-0 items-center justify-center text-muted-foreground/85">
                   <ProviderAvatarWithTerminal
                     provider={thread.session?.provider ?? thread.modelSelection.provider}
                     handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
@@ -5094,6 +5100,7 @@ export default function Sidebar() {
     // name container itself is not focusable — the row's button is.
     const projectToolbarReserveClassName =
       "group-hover/project-header:pr-[4.75rem] group-has-[:focus-visible]/project-header:pr-[4.75rem]";
+    const showProjectThreadCount = focusedProjectId === project.id && allProjectThreadCount > 0;
 
     return (
       <div className="group/collapsible" data-sidebar-tree-project={project.id}>
@@ -5150,7 +5157,7 @@ export default function Sidebar() {
                   {project.name}
                 </span>
               </div>
-              {allProjectThreadCount > 0 || isProjectRunning || projectActivityRollup ? (
+              {showProjectThreadCount || isProjectRunning || projectActivityRollup ? (
                 <span
                   aria-label={projectActivityRollup?.status.label}
                   className={cn(
@@ -5158,7 +5165,7 @@ export default function Sidebar() {
                     sidebarHoverRevealHideClassName("project-header"),
                   )}
                 >
-                  {allProjectThreadCount > 0 ? (
+                  {showProjectThreadCount ? (
                     <span className="text-[11px] leading-none tabular-nums text-muted-foreground/58">
                       {allProjectThreadCount}
                     </span>
@@ -6063,6 +6070,50 @@ export default function Sidebar() {
         ) : (
           <>
             <SidebarGroup className="px-1.5 py-1.5" data-sidebar-tree-section="projects">
+              <SidebarMenu className="mb-2 gap-0.5" aria-label="Project tools">
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    size="sm"
+                    aria-current={isOnResearch ? "page" : undefined}
+                    className={cn(
+                      SIDEBAR_HEADER_ROW_CLASS_NAME,
+                      isOnResearch
+                        ? SIDEBAR_ROW_ACTIVE_CLASS_NAME
+                        : cn(SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME, SIDEBAR_ROW_HOVER_CLASS_NAME),
+                    )}
+                    onClick={() => navigateToProjectSurface("research")}
+                  >
+                    <SidebarLeadingIcon
+                      size="sm"
+                      tone={isOnResearch ? "text-claude" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME}
+                    >
+                      <SidebarGlyph icon={BrainIcon} variant="leading" />
+                    </SidebarLeadingIcon>
+                    <span className="truncate">Research</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    size="sm"
+                    aria-current={isOnGitHub ? "page" : undefined}
+                    className={cn(
+                      SIDEBAR_HEADER_ROW_CLASS_NAME,
+                      isOnGitHub
+                        ? SIDEBAR_ROW_ACTIVE_CLASS_NAME
+                        : cn(SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME, SIDEBAR_ROW_HOVER_CLASS_NAME),
+                    )}
+                    onClick={() => navigateToProjectSurface("github")}
+                  >
+                    <SidebarLeadingIcon
+                      size="sm"
+                      tone={isOnGitHub ? "text-claude" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME}
+                    >
+                      <SidebarGlyph icon={GitHubIcon} variant="leading" />
+                    </SidebarLeadingIcon>
+                    <span className="truncate">GitHub</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
               {renderPinnedThreadsSection()}
               {renderListSectionHeader(
                 "Projects",

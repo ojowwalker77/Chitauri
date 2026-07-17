@@ -10,6 +10,7 @@ import { type KeyboardEvent } from "react";
 import { XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { TeaCodeLogo } from "~/components/TeaCodeLogo";
+import { OVERLAY_SURFACE_CLASS_NAME } from "~/components/ui/surface";
 
 import type { WhatsNewEntry } from "./logic";
 
@@ -52,19 +53,9 @@ export function WhatsNewPopoutCard({
     <div
       className={cn(
         "fixed bottom-3 left-3 z-50 w-56 max-w-[calc(100vw-1.5rem)] select-none",
-        "animate-[popout-in_200ms_ease-out]",
         className,
       )}
-      style={{
-        // Inline @keyframes so the popout doesn't need a tailwind plugin or
-        // global stylesheet just for one 200ms fade-in.
-        animationName: "whats-new-popout-in",
-      }}
     >
-      <style>{`@keyframes whats-new-popout-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}`}</style>
       <div
         role="button"
         tabIndex={0}
@@ -72,15 +63,9 @@ export function WhatsNewPopoutCard({
         onClick={onOpen}
         onKeyDown={onKeyDown}
         className={cn(
-          "group relative flex cursor-pointer flex-col overflow-hidden rounded-[14px]",
-          "border border-panel-border bg-panel text-popover-foreground",
-          // `transform` AND `scale` are both listed: the hover lift is a real `transform`
-          // (arbitrary `[transform:…]`), while the press is Tailwind's `scale-*`, which
-          // compiles to the standalone `scale:` property. They're independent properties,
-          // so a press while hovering composes (lifted + pushed in) instead of fighting.
-          "transition-[transform,scale,border-color] duration-press ease-out motion-reduce:transition-none",
-          "hover:border-claude/40 hover:[transform:translateY(-1px)]",
-          "active:scale-[0.98] motion-reduce:active:scale-100",
+          OVERLAY_SURFACE_CLASS_NAME,
+          "group relative flex cursor-pointer flex-col transition-[scale,border-color] duration-press ease-out motion-reduce:transition-none",
+          "active:scale-[0.96] motion-reduce:active:scale-100",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         )}
       >

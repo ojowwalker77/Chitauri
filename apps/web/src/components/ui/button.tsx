@@ -50,7 +50,7 @@ const headerButtonDarkBorderClassName =
 // silently drops the press tween. Prefer a variant over a call-site transition override.
 const buttonVariants = cva(
   extendButtonIconChildSelectors(
-    "[&_svg]:-mx-0.5 relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-medium text-[length:var(--app-font-size-ui,14px)] outline-none transition-[color,background-color,border-color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100 pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11 focus-visible:ring-2 focus-visible:ring-ring/65 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-64 sm:text-[length:var(--app-font-size-ui,14px)] [&_svg:not([class*='opacity-'])]:opacity-80 [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+    "[&_svg]:-mx-0.5 relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-medium text-[length:var(--app-font-size-ui,14px)] outline-none transition-[color,background-color,border-color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100 pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-64 sm:text-[length:var(--app-font-size-ui,14px)] [&_svg:not([class*='opacity-'])]:opacity-80 [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   ),
   {
     defaultVariants: {
@@ -86,37 +86,37 @@ const buttonVariants = cva(
       },
       variant: {
         chrome:
-          "border-transparent bg-transparent text-[var(--color-text-foreground-secondary)] focus-visible:ring-[color:var(--color-border-focus)]/60 [:hover,[data-pressed]]:bg-hover [:hover,[data-pressed]]:text-[var(--color-text-foreground)] data-pressed:bg-selected data-pressed:text-[var(--color-text-foreground)]",
+          "border-transparent bg-transparent text-[var(--color-text-foreground-secondary)] hover:bg-hover hover:text-[var(--color-text-foreground)] data-pressed:bg-selected data-pressed:text-[var(--color-text-foreground)]",
         "chrome-outline": extendButtonIconChildSelectors(
-          "border-transparent bg-selected text-[var(--color-text-foreground)] focus-visible:ring-ring/60 [:hover,[data-pressed]]:bg-[color-mix(in_srgb,var(--foreground)_12%,transparent)] [&_svg]:mx-0",
+          "border-panel-border bg-transparent text-[var(--color-text-foreground)] hover:bg-hover data-pressed:bg-selected [&_svg]:mx-0",
         ),
         default:
-          "border-transparent bg-selected text-foreground [:hover,[data-pressed]]:bg-[color-mix(in_srgb,var(--foreground)_12%,transparent)]",
+          "border-transparent bg-selected text-foreground hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)] data-pressed:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]",
         destructive:
-          "border-destructive bg-destructive text-white [:hover,[data-pressed]]:bg-destructive/90",
+          "border-destructive bg-destructive text-white hover:bg-destructive/90 data-pressed:bg-destructive/90",
         "destructive-outline":
-          "border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] text-destructive [:hover,[data-pressed]]:border-destructive/32 [:hover,[data-pressed]]:bg-destructive/4 [:hover,[data-pressed]]:text-destructive",
+          "border-transparent bg-transparent text-destructive hover:bg-hover hover:text-destructive data-pressed:bg-hover data-pressed:text-destructive",
         ghost:
-          "border-transparent bg-transparent text-[var(--color-text-foreground-secondary)] focus-visible:ring-[color:var(--color-border-focus)]/60 [:hover,[data-pressed]]:bg-hover [:hover,[data-pressed]]:text-[var(--color-text-foreground)] data-pressed:bg-selected data-pressed:text-[var(--color-text-foreground)]",
+          "border-transparent bg-transparent text-[var(--color-text-foreground-secondary)] hover:bg-hover hover:text-[var(--color-text-foreground)] data-pressed:bg-selected data-pressed:text-[var(--color-text-foreground)]",
         // Renders as inline text rather than a button surface, so it takes the underline
         // as its press/hover answer and opts out of the base squash.
-        link: "border-transparent underline-offset-4 active:scale-100 [:hover,[data-pressed]]:underline",
+        link: "border-transparent underline-offset-4 active:scale-100 hover:underline data-pressed:underline",
         outline:
-          "border-[color:var(--color-border)] bg-transparent text-[var(--color-text-foreground)] focus-visible:ring-[color:var(--color-border-focus)]/60 [:hover,[data-pressed]]:bg-[var(--color-background-elevated-secondary)] dark:[:hover,[data-pressed]]:bg-[var(--color-background-elevated-secondary)]",
+          "border-panel-border bg-transparent text-[var(--color-text-foreground)] hover:bg-hover data-pressed:bg-hover",
         "primary-outline":
-          "border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] text-primary [:hover,[data-pressed]]:border-primary/32 [:hover,[data-pressed]]:bg-primary/4",
+          "border-panel-border bg-transparent text-[var(--color-text-foreground)] hover:bg-hover data-pressed:bg-hover",
         // Lifts on hover, so its press has to read from BOTH rest (1.0) and hover (1.05):
         // landing under rest is what still registers as "pushed" on a touchscreen, where
         // the hover lift never happens.
         prominent:
           "rounded-full border-transparent bg-foreground text-[#141414] transition-[background-color,scale,opacity] duration-press ease-out hover:bg-white active:scale-[0.96] disabled:opacity-20 disabled:active:scale-100",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground [:active,[data-pressed]]:bg-secondary/80 [:hover,[data-pressed]]:bg-secondary/90",
+          "border-transparent bg-hover text-secondary-foreground hover:bg-selected data-pressed:bg-selected",
         "secondary-outline":
-          "border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] text-[var(--color-text-foreground)] [:hover,[data-pressed]]:bg-secondary/12",
+          "border-panel-border bg-transparent text-[var(--color-text-foreground)] hover:bg-hover data-pressed:bg-hover",
         subtle:
-          "border-transparent bg-selected text-[var(--color-text-foreground)] focus-visible:ring-[color:var(--color-border-focus)]/60 [:hover,[data-pressed]]:bg-[color-mix(in_srgb,var(--foreground)_12%,transparent)]",
-        gold: "border-transparent bg-[color-mix(in_srgb,var(--gold)_12%,transparent)] text-gold [:hover,[data-pressed]]:bg-[color-mix(in_srgb,var(--gold)_18%,transparent)]",
+          "border-transparent bg-selected text-[var(--color-text-foreground)] hover:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)] data-pressed:bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]",
+        gold: "border-transparent bg-[color-mix(in_srgb,var(--gold)_12%,transparent)] text-gold hover:bg-[color-mix(in_srgb,var(--gold)_18%,transparent)] data-pressed:bg-[color-mix(in_srgb,var(--gold)_18%,transparent)]",
       },
     },
     compoundVariants: [

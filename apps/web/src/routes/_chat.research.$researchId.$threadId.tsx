@@ -13,7 +13,7 @@ import {
 } from "~/appSettings";
 import ChatView from "~/components/ChatView";
 import { RouteInsetSurface } from "~/components/RouteInsetSurface";
-import { ProjectSurfaceFrame } from "~/components/ProjectSurfaceHeader";
+import { ProjectSurfaceFrame } from "~/components/ProjectSurfaceFrame";
 import { ResearchDocumentView } from "~/components/research/ResearchDocumentView";
 import { Button } from "~/components/ui/button";
 import { toastManager } from "~/components/ui/toast";
@@ -184,14 +184,7 @@ function ResearchDetailRoute() {
   );
 
   return (
-    <ProjectSurfaceFrame
-      activeSurface="research"
-      middleThreadId={threadId}
-      middleThreadTitle={serverThread?.title ?? null}
-      projectId={projectId}
-      projectName={project?.name ?? null}
-      routeThreadId={threadId}
-    >
+    <ProjectSurfaceFrame>
       <RouteInsetSurface>
         <ChatView
           threadId={threadId}

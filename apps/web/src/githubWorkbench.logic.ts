@@ -56,20 +56,25 @@ export function findProjectForGitHubItem(
 ): Project | null {
   const ownerRepo = item.repository.nameWithOwner.toLowerCase();
   const repoName = item.repository.name.toLowerCase();
-  return (
-    projects.find((project) => {
-      const candidates = [
-        project.name,
-        project.remoteName,
-        project.localName,
-        project.folderName,
-        project.cwd.split("/").at(-1),
-      ]
-        .filter((candidate): candidate is string => typeof candidate === "string")
-        .map((candidate) => candidate.toLowerCase());
-      return candidates.includes(ownerRepo) || candidates.includes(repoName);
-    }) ?? null
-  );
+  const projectNames = (project: Project) =>
+    [
+      project.name,
+      project.remoteName,
+      project.localName,
+      project.folderName,
+      project.cwd.split("/").at(-1),
+    ]
+      .filter((candidate): candidate is string => typeof candidate === "string")
+      .map((candidate) => candidate.toLowerCase());
+
+  const exactOwnerMatch = projects.find((project) => projectNames(project).includes(ownerRepo));
+  if (exactOwnerMatch) return exactOwnerMatch;
+
+  // A basename is only safe when it identifies one attached checkout. If two
+  // owners expose the same repo name, failing closed is better than launching
+  // agent work in the wrong repository.
+  const basenameMatches = projects.filter((project) => projectNames(project).includes(repoName));
+  return basenameMatches.length === 1 ? basenameMatches[0]! : null;
 }
 
 export function buildGitHubAgentPrompt(

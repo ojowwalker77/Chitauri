@@ -1,6 +1,7 @@
 import { PreviewCard as PreviewCardPrimitive } from "@base-ui/react/preview-card";
 
 import { cn } from "~/lib/utils";
+import { OVERLAY_SURFACE_CLASS_NAME } from "./surface";
 
 // Hover-triggered, interactive card (Base UI PreviewCard). Unlike a Tooltip it
 // stays open while the pointer moves into the popup, so its content can hold
@@ -44,7 +45,8 @@ function PreviewCardPopup({
       >
         <PreviewCardPrimitive.Popup
           className={cn(
-            "origin-(--transform-origin) overflow-hidden rounded-xl border border-panel-border bg-panel text-foreground shadow-[0_16px_44px_rgba(0,0,0,0.5)] transition-[transform,scale,opacity] duration-menu ease-out data-ending-style:scale-98 data-starting-style:scale-98 data-ending-style:opacity-0 data-starting-style:opacity-0",
+            OVERLAY_SURFACE_CLASS_NAME,
+            "origin-(--transform-origin) transition-[transform,scale,opacity] duration-menu ease-out data-ending-style:scale-98 data-starting-style:scale-98 data-ending-style:opacity-0 data-starting-style:opacity-0",
             className,
           )}
           data-slot="preview-card-popup"
