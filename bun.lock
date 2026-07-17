@@ -5,7 +5,6 @@
     "": {
       "name": "@t3tools/monorepo",
       "devDependencies": {
-        "@t3tools/shared": "workspace:*",
         "@types/node": "catalog:",
         "oxfmt": "^0.40.0",
         "oxlint": "^1.55.0",

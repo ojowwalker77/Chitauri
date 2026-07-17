@@ -4,7 +4,9 @@
 // Layer: Release/build script
 // Depends on: apps/desktop package metadata, electron-builder, and GitHub release config.
 
-import "@t3tools/shared/teacodeEnvironmentBootstrap";
+await import(
+  new URL("../packages/shared/src/teacodeEnvironmentBootstrap.ts", import.meta.url).href
+);
 
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
