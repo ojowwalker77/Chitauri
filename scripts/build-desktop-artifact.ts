@@ -31,8 +31,15 @@ import {
 
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { Config, Data, Effect, FileSystem, Layer, Logger, Option, Path, Schema } from "effect";
-import { Command, Flag } from "effect/unstable/cli";
-import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
+import type * as EffectProcess from "effect/unstable/process";
+
+const effectRootUrl = import.meta.resolve("effect");
+const { Command, Flag } = (await import(
+  new URL("./unstable/cli/index.js", effectRootUrl).href
+)) as typeof import("effect/unstable/cli");
+const { ChildProcess, ChildProcessSpawner } = (await import(
+  new URL("./unstable/process/index.js", effectRootUrl).href
+)) as typeof import("effect/unstable/process");
 
 const BuildPlatform = Schema.Literals(["mac", "linux", "win"]);
 const BuildArch = Schema.Literals(["arm64", "x64", "universal"]);
@@ -325,7 +332,7 @@ const commandOutputOptions = (verbose: boolean) =>
     stderr: "inherit",
   }) as const;
 
-const runCommand = Effect.fn("runCommand")(function* (command: ChildProcess.Command) {
+const runCommand = Effect.fn("runCommand")(function* (command: EffectProcess.ChildProcess.Command) {
   const commandSpawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   const child = yield* commandSpawner.spawn(command);
   const exitCode = yield* child.exitCode;
