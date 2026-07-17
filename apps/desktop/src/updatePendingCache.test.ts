@@ -12,10 +12,10 @@ import {
 
 describe("resolveElectronUpdaterCacheDirName", () => {
   it("matches electron-updater's cache directory fallback", () => {
-    expect(resolveElectronUpdaterCacheDirName(null, "Chitauri")).toBe("Chitauri");
+    expect(resolveElectronUpdaterCacheDirName(null, "TeaCode")).toBe("TeaCode");
     expect(
-      resolveElectronUpdaterCacheDirName({ updaterCacheDirName: "Chitauri-updater" }, "Chitauri"),
-    ).toBe("Chitauri-updater");
+      resolveElectronUpdaterCacheDirName({ updaterCacheDirName: "TeaCode-updater" }, "TeaCode"),
+    ).toBe("TeaCode-updater");
   });
 });
 
@@ -23,55 +23,55 @@ describe("resolveElectronUpdaterPendingCacheDir", () => {
   it("matches electron-updater's pending cache path on macOS", () => {
     expect(
       resolveElectronUpdaterPendingCacheDir({
-        cacheDirName: "Chitauri-updater",
+        cacheDirName: "TeaCode-updater",
         platform: "darwin",
         homeDir: "/Users/test",
       }),
-    ).toBe("/Users/test/Library/Caches/Chitauri-updater/pending");
+    ).toBe("/Users/test/Library/Caches/TeaCode-updater/pending");
   });
 
   it("matches electron-updater's pending cache path on Windows", () => {
     expect(
       resolveElectronUpdaterPendingCacheDir({
-        cacheDirName: "Chitauri-updater",
+        cacheDirName: "TeaCode-updater",
         platform: "win32",
         homeDir: "C:\\Users\\test",
         localAppData: "C:\\Users\\test\\AppData\\Local",
       }),
-    ).toBe("C:\\Users\\test\\AppData\\Local\\Chitauri-updater\\pending");
+    ).toBe("C:\\Users\\test\\AppData\\Local\\TeaCode-updater\\pending");
   });
 
   it("falls back from an empty Windows cache env var like electron-updater", () => {
     expect(
       resolveElectronUpdaterPendingCacheDir({
-        cacheDirName: "Chitauri-updater",
+        cacheDirName: "TeaCode-updater",
         platform: "win32",
         homeDir: "C:\\Users\\test",
         localAppData: "",
       }),
-    ).toBe("C:\\Users\\test\\AppData\\Local\\Chitauri-updater\\pending");
+    ).toBe("C:\\Users\\test\\AppData\\Local\\TeaCode-updater\\pending");
   });
 
   it("matches electron-updater's pending cache path on Linux", () => {
     expect(
       resolveElectronUpdaterPendingCacheDir({
-        cacheDirName: "Chitauri-updater",
+        cacheDirName: "TeaCode-updater",
         platform: "linux",
         homeDir: "/home/test",
         xdgCacheHome: "/tmp/cache",
       }),
-    ).toBe("/tmp/cache/Chitauri-updater/pending");
+    ).toBe("/tmp/cache/TeaCode-updater/pending");
   });
 
   it("falls back from an empty Linux cache env var like electron-updater", () => {
     expect(
       resolveElectronUpdaterPendingCacheDir({
-        cacheDirName: "Chitauri-updater",
+        cacheDirName: "TeaCode-updater",
         platform: "linux",
         homeDir: "/home/test",
         xdgCacheHome: "",
       }),
-    ).toBe("/home/test/.cache/Chitauri-updater/pending");
+    ).toBe("/home/test/.cache/TeaCode-updater/pending");
   });
 
   it("returns null when no cache dir is configured", () => {

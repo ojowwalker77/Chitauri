@@ -3,13 +3,15 @@
 // Layer: Marketing util
 // Exports: repo/release URLs plus the latest-release fetch helper.
 
-const REPO = "ojowwalker77/Chitauri";
+// Keep the current repository as the safe fallback until the post-merge GitHub
+// rename. Deployments can switch immediately with PUBLIC_GITHUB_REPOSITORY.
+const REPO = import.meta.env.PUBLIC_GITHUB_REPOSITORY || "ojowwalker77/Chitauri";
 export const REPO_URL = `https://github.com/${REPO}`;
 
 export const RELEASES_URL = `https://github.com/${REPO}/releases`;
 
 const API_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
-const CACHE_KEY = "chitauri-latest-release";
+const CACHE_KEY = "teacode-latest-release";
 
 export interface ReleaseAsset {
   name: string;

@@ -1,16 +1,24 @@
 // FILE: trustedOrigins.ts
 // Purpose: Shared origin checks for browser-facing HTTP/WS routes that expose
-//          local machine data only to Chitauri's own app surfaces.
+//          local machine data only to TeaCode's own app surfaces.
 // Layer: Server HTTP/security utility
 // Exports: normalizeCorsOrigin, isTrustedAppOrigin,
 //          shouldRejectUntrustedRequestOrigin
 
-import { DESKTOP_APP_CORS_ORIGIN } from "@t3tools/shared/desktopAppOrigin";
+import {
+  DESKTOP_APP_CORS_ORIGIN,
+  LEGACY_DESKTOP_APP_CORS_ORIGIN,
+} from "@t3tools/shared/desktopAppOrigin";
 
 import type { ServerConfigShape } from "./config";
 import { isLoopbackHost, isWildcardHost } from "./startupAccess";
 
-export { DESKTOP_APP_CORS_ORIGIN };
+export { DESKTOP_APP_CORS_ORIGIN, LEGACY_DESKTOP_APP_CORS_ORIGIN };
+
+const TRUSTED_DESKTOP_APP_ORIGINS = new Set([
+  DESKTOP_APP_CORS_ORIGIN,
+  LEGACY_DESKTOP_APP_CORS_ORIGIN,
+]);
 
 export function normalizeCorsOrigin(rawOrigin: string | ReadonlyArray<string> | undefined) {
   const value = Array.isArray(rawOrigin) ? rawOrigin[0] : rawOrigin;
@@ -18,8 +26,9 @@ export function normalizeCorsOrigin(rawOrigin: string | ReadonlyArray<string> | 
   if (!trimmed || trimmed === "null") {
     return null;
   }
-  if (trimmed.replace(/\/+$/, "") === DESKTOP_APP_CORS_ORIGIN) {
-    return DESKTOP_APP_CORS_ORIGIN;
+  const withoutTrailingSlash = trimmed.replace(/\/+$/, "");
+  if (TRUSTED_DESKTOP_APP_ORIGINS.has(withoutTrailingSlash)) {
+    return withoutTrailingSlash;
   }
   try {
     const origin = new URL(trimmed).origin;
@@ -66,7 +75,7 @@ export function isTrustedAppOrigin(input: {
     (input.origin === input.requestOrigin &&
       isTrustedRequestOriginHost(input.requestOrigin, input.config)) ||
     input.origin === input.config.devUrl?.origin ||
-    input.origin === DESKTOP_APP_CORS_ORIGIN
+    TRUSTED_DESKTOP_APP_ORIGINS.has(input.origin)
   );
 }
 

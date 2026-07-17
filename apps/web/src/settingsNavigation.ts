@@ -53,7 +53,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   label: string;
 }> = [
   { id: "app", label: "App" },
-  { id: "chitauri", label: "Chitauri" },
+  { id: "chitauri", label: "TeaCode" },
 ] as const;
 
 export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
@@ -101,7 +101,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     id: "shortcuts",
     group: "app",
     label: "Keyboard Shortcuts",
-    description: "Every keyboard shortcut available in Chitauri, grouped by context.",
+    description: "Every keyboard shortcut available in TeaCode, grouped by context.",
     icon: "shortcut",
     eyebrow: "Key bindings",
   },
@@ -109,7 +109,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     id: "worktrees",
     group: "app",
     label: "Worktrees",
-    description: "Review and clean up the worktrees created by Chitauri.",
+    description: "Review and clean up the worktrees created by TeaCode.",
     icon: "branch-simple",
     eyebrow: "Workspace management",
   },

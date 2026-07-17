@@ -1,5 +1,5 @@
 // FILE: _chat.research.$researchId.$threadId.tsx
-// Purpose: Research reader backed by a real Chitauri thread and composer.
+// Purpose: Research reader backed by a real TeaCode thread and composer.
 
 import { ThreadId, type ProjectId } from "@t3tools/contracts";
 import { useQuery } from "@tanstack/react-query";

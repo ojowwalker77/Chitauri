@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   WORKTREE_BRANCH_PREFIX,
-  buildChitauriBranchName,
+  buildTeaCodeBranchName,
   buildTemporaryWorktreeBranchName,
   isTemporaryWorktreeBranch,
-  resolveUniqueChitauriBranchName,
+  resolveUniqueTeaCodeBranchName,
   resolveThreadBranchRegressionGuard,
 } from "./git";
 
@@ -20,6 +20,7 @@ describe("isTemporaryWorktreeBranch", () => {
   });
 
   it("keeps recognizing legacy temporary worktree branches", () => {
+    expect(isTemporaryWorktreeBranch("chitauri/deadbeef")).toBe(true);
     expect(isTemporaryWorktreeBranch("dpcode/deadbeef")).toBe(true);
     expect(isTemporaryWorktreeBranch("t3code/deadbeef")).toBe(true);
   });
@@ -59,38 +60,38 @@ describe("resolveThreadBranchRegressionGuard", () => {
   });
 });
 
-describe("buildChitauriBranchName", () => {
-  it("uses synara as the branch namespace", () => {
-    expect(buildChitauriBranchName("fix toast copy")).toBe("chitauri/fix-toast-copy");
+describe("buildTeaCodeBranchName", () => {
+  it("uses teacode as the branch namespace", () => {
+    expect(buildTeaCodeBranchName("fix toast copy")).toBe("teacode/fix-toast-copy");
   });
 
-  it("keeps non-Chitauri namespaces inside the Chitauri branch", () => {
-    expect(buildChitauriBranchName("feature/refine-toolbar-actions")).toBe(
-      "chitauri/feature/refine-toolbar-actions",
+  it("keeps non-TeaCode namespaces inside the TeaCode branch", () => {
+    expect(buildTeaCodeBranchName("feature/refine-toolbar-actions")).toBe(
+      "teacode/feature/refine-toolbar-actions",
     );
   });
 
   it("normalizes legacy prefixes before rebuilding the branch", () => {
-    expect(buildChitauriBranchName("t3code/refine toolbar actions")).toBe(
-      "chitauri/refine-toolbar-actions",
+    expect(buildTeaCodeBranchName("t3code/refine toolbar actions")).toBe(
+      "teacode/refine-toolbar-actions",
     );
-    expect(buildChitauriBranchName("dpcode/refine toolbar actions")).toBe(
-      "chitauri/refine-toolbar-actions",
+    expect(buildTeaCodeBranchName("dpcode/refine toolbar actions")).toBe(
+      "teacode/refine-toolbar-actions",
     );
   });
 
-  it("falls back to chitauri/update when no preferred name is provided", () => {
-    expect(buildChitauriBranchName()).toBe("chitauri/update");
+  it("falls back to teacode/update when no preferred name is provided", () => {
+    expect(buildTeaCodeBranchName()).toBe("teacode/update");
   });
 });
 
-describe("resolveUniqueChitauriBranchName", () => {
-  it("increments suffix when the Chitauri branch already exists", () => {
+describe("resolveUniqueTeaCodeBranchName", () => {
+  it("increments suffix when the TeaCode branch already exists", () => {
     expect(
-      resolveUniqueChitauriBranchName(
-        ["main", "chitauri/fix-toast-copy", "chitauri/fix-toast-copy-2"],
+      resolveUniqueTeaCodeBranchName(
+        ["main", "teacode/fix-toast-copy", "teacode/fix-toast-copy-2"],
         "fix toast copy",
       ),
-    ).toBe("chitauri/fix-toast-copy-3");
+    ).toBe("teacode/fix-toast-copy-3");
   });
 });

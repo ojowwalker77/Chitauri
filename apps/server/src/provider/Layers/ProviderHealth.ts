@@ -109,7 +109,7 @@ const KILO_PROVIDER = "kilo" as const;
 const OPENCODE_PROVIDER = "opencode" as const;
 const PI_PROVIDER = "pi" as const;
 type ProviderStatuses = ReadonlyArray<ServerProviderStatus>;
-const DISABLED_PROVIDER_STATUS_MESSAGE = "Provider is disabled in Chitauri settings.";
+const DISABLED_PROVIDER_STATUS_MESSAGE = "Provider is disabled in TeaCode settings.";
 
 const PROVIDERS = [
   CODEX_PROVIDER,
@@ -710,7 +710,7 @@ function parseCursorAuthStatusFromOutput(result: CommandResult): {
     return {
       status: "warning",
       authStatus: "unknown",
-      message: "Cursor Agent is installed, but Chitauri could not verify authentication status.",
+      message: "Cursor Agent is installed, but TeaCode could not verify authentication status.",
     };
   }
 
@@ -1335,7 +1335,7 @@ export const checkPiProviderStatus = (
       Effect.result,
     );
 
-    // Pi itself is SDK-backed in Chitauri. Keep this CLI probe advisory so health
+    // Pi itself is SDK-backed in TeaCode. Keep this CLI probe advisory so health
     // refreshes do not import the SDK and initialize its native clipboard module.
     if (Result.isFailure(versionProbe)) {
       const error = versionProbe.failure;
@@ -1346,7 +1346,7 @@ export const checkPiProviderStatus = (
         authStatus: "unknown" as const,
         checkedAt,
         message: isCommandMissingCause(error)
-          ? "Pi SDK is bundled, but the Pi CLI (`pi`) is not on PATH, so Chitauri could not verify the installed CLI version."
+          ? "Pi SDK is bundled, but the Pi CLI (`pi`) is not on PATH, so TeaCode could not verify the installed CLI version."
           : `Pi SDK is bundled, but the CLI health check failed: ${error instanceof Error ? error.message : String(error)}.`,
       } satisfies ServerProviderStatus;
     }
@@ -1359,7 +1359,7 @@ export const checkPiProviderStatus = (
         authStatus: "unknown" as const,
         checkedAt,
         message:
-          "Pi SDK is bundled, but the CLI health check timed out before Chitauri could verify the installed version.",
+          "Pi SDK is bundled, but the CLI health check timed out before TeaCode could verify the installed version.",
       } satisfies ServerProviderStatus;
     }
 
@@ -1388,7 +1388,7 @@ export const checkPiProviderStatus = (
       version: parsedVersion,
       checkedAt,
       message: configuredAgentDir
-        ? `Pi CLI is installed. Chitauri will use Pi agent dir ${configuredAgentDir}.`
+        ? `Pi CLI is installed. TeaCode will use Pi agent dir ${configuredAgentDir}.`
         : "Pi CLI is installed. Configure provider credentials inside Pi as needed.",
     } satisfies ServerProviderStatus;
   });
@@ -1526,7 +1526,7 @@ export const makeCheckCursorProviderStatus = (
         version: parsedVersion,
         checkedAt,
         message:
-          "Cursor Agent is authenticated, but model discovery timed out before Chitauri could verify available models.",
+          "Cursor Agent is authenticated, but model discovery timed out before TeaCode could verify available models.",
       } satisfies ServerProviderStatus;
     }
 
@@ -2238,7 +2238,7 @@ export const ProviderHealthLive = Layer.effect(
       if (!isProviderEnabledForSettings(provider, settings)) {
         return yield* new ServerProviderUpdateError({
           provider,
-          reason: "Provider is disabled in Chitauri settings.",
+          reason: "Provider is disabled in TeaCode settings.",
         });
       }
       const capabilities = yield* getProviderMaintenanceCapabilities(provider).pipe(
@@ -2317,7 +2317,7 @@ export const ProviderHealthLive = Layer.effect(
             startedAt,
             finishedAt,
             message: stillOutdated
-              ? "Update command completed, but Chitauri still detects an outdated provider version."
+              ? "Update command completed, but TeaCode still detects an outdated provider version."
               : "Provider updated.",
             output: output ? output.slice(0, UPDATE_OUTPUT_MAX_BYTES) : null,
           }),

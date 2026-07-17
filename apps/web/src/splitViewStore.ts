@@ -116,7 +116,7 @@ interface SplitViewStore {
 // `t3code:*` and `dpcode:*` keys are copied over by
 // `storageKeyMigration` before this store hydrates, so older payloads still
 // flow through the v1 -> v2 schema migration below.
-const SPLIT_VIEW_STORAGE_KEY = "chitauri:split-view-state:v1";
+const SPLIT_VIEW_STORAGE_KEY = "teacode:split-view-state:v1";
 const SPLIT_VIEW_STORAGE_VERSION = 2;
 const DEFAULT_RATIO = 0.5;
 const MIN_RATIO = 0.25;

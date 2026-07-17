@@ -4,6 +4,8 @@
 // Layer: Release/build script
 // Depends on: apps/desktop package metadata, electron-builder, and GitHub release config.
 
+import "@t3tools/shared/teacodeEnvironmentBootstrap";
+
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -42,10 +44,10 @@ const ProductionMacIconSource = Effect.zipWith(
   Effect.service(Path.Path),
   (repoRoot, path) => path.join(repoRoot, BRAND_ASSET_PATHS.productionMacIconPng),
 );
-const ProductionMacLegacyIconSource = Effect.zipWith(
+const ProductionMacIconIcnsSource = Effect.zipWith(
   RepoRoot,
   Effect.service(Path.Path),
-  (repoRoot, path) => path.join(repoRoot, BRAND_ASSET_PATHS.productionMacLegacyIconPng),
+  (repoRoot, path) => path.join(repoRoot, BRAND_ASSET_PATHS.productionMacIconIcns),
 );
 const ProductionLinuxIconSource = Effect.zipWith(
   RepoRoot,
@@ -222,17 +224,17 @@ const AzureTrustedSigningOptionsConfig = Config.all({
 });
 
 const BuildEnvConfig = Config.all({
-  platform: Config.schema(BuildPlatform, "CHITAURI_DESKTOP_PLATFORM").pipe(Config.option),
-  target: Config.string("CHITAURI_DESKTOP_TARGET").pipe(Config.option),
-  arch: Config.schema(BuildArch, "CHITAURI_DESKTOP_ARCH").pipe(Config.option),
-  version: Config.string("CHITAURI_DESKTOP_VERSION").pipe(Config.option),
-  outputDir: Config.string("CHITAURI_DESKTOP_OUTPUT_DIR").pipe(Config.option),
-  skipBuild: Config.string("CHITAURI_DESKTOP_SKIP_BUILD").pipe(Config.option),
-  keepStage: Config.string("CHITAURI_DESKTOP_KEEP_STAGE").pipe(Config.option),
-  signed: Config.string("CHITAURI_DESKTOP_SIGNED").pipe(Config.option),
-  verbose: Config.string("CHITAURI_DESKTOP_VERBOSE").pipe(Config.option),
-  mockUpdates: Config.string("CHITAURI_DESKTOP_MOCK_UPDATES").pipe(Config.option),
-  mockUpdateServerPort: Config.string("CHITAURI_DESKTOP_MOCK_UPDATE_SERVER_PORT").pipe(
+  platform: Config.schema(BuildPlatform, "TEACODE_DESKTOP_PLATFORM").pipe(Config.option),
+  target: Config.string("TEACODE_DESKTOP_TARGET").pipe(Config.option),
+  arch: Config.schema(BuildArch, "TEACODE_DESKTOP_ARCH").pipe(Config.option),
+  version: Config.string("TEACODE_DESKTOP_VERSION").pipe(Config.option),
+  outputDir: Config.string("TEACODE_DESKTOP_OUTPUT_DIR").pipe(Config.option),
+  skipBuild: Config.string("TEACODE_DESKTOP_SKIP_BUILD").pipe(Config.option),
+  keepStage: Config.string("TEACODE_DESKTOP_KEEP_STAGE").pipe(Config.option),
+  signed: Config.string("TEACODE_DESKTOP_SIGNED").pipe(Config.option),
+  verbose: Config.string("TEACODE_DESKTOP_VERBOSE").pipe(Config.option),
+  mockUpdates: Config.string("TEACODE_DESKTOP_MOCK_UPDATES").pipe(Config.option),
+  mockUpdateServerPort: Config.string("TEACODE_DESKTOP_MOCK_UPDATE_SERVER_PORT").pipe(
     Config.option,
   ),
 });
@@ -277,11 +279,11 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
   const target = mergeOptions(input.target, env.target, PLATFORM_CONFIG[platform].defaultTarget);
   const arch = mergeOptions(input.arch, env.arch, getDefaultArch(platform));
   const version = mergeOptions(input.buildVersion, env.version, undefined);
-  const envSkipBuild = yield* resolveBooleanEnv("CHITAURI_DESKTOP_SKIP_BUILD", env.skipBuild);
-  const envKeepStage = yield* resolveBooleanEnv("CHITAURI_DESKTOP_KEEP_STAGE", env.keepStage);
-  const envSigned = yield* resolveBooleanEnv("CHITAURI_DESKTOP_SIGNED", env.signed);
-  const envVerbose = yield* resolveBooleanEnv("CHITAURI_DESKTOP_VERBOSE", env.verbose);
-  const envMockUpdates = yield* resolveBooleanEnv("CHITAURI_DESKTOP_MOCK_UPDATES", env.mockUpdates);
+  const envSkipBuild = yield* resolveBooleanEnv("TEACODE_DESKTOP_SKIP_BUILD", env.skipBuild);
+  const envKeepStage = yield* resolveBooleanEnv("TEACODE_DESKTOP_KEEP_STAGE", env.keepStage);
+  const envSigned = yield* resolveBooleanEnv("TEACODE_DESKTOP_SIGNED", env.signed);
+  const envVerbose = yield* resolveBooleanEnv("TEACODE_DESKTOP_VERBOSE", env.verbose);
+  const envMockUpdates = yield* resolveBooleanEnv("TEACODE_DESKTOP_MOCK_UPDATES", env.mockUpdates);
   const releaseDir = resolveBooleanFlag(input.mockUpdates, envMockUpdates)
     ? "release-mock"
     : "release";
@@ -334,42 +336,6 @@ const runCommand = Effect.fn("runCommand")(function* (command: ChildProcess.Comm
   }
 });
 
-function generateMacIconSet(
-  sourcePng: string,
-  targetIcns: string,
-  tmpRoot: string,
-  path: Path.Path,
-  verbose: boolean,
-) {
-  return Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const iconsetDir = path.join(tmpRoot, "icon.iconset");
-    yield* fs.makeDirectory(iconsetDir, { recursive: true });
-
-    const iconSizes = [16, 32, 128, 256, 512] as const;
-    for (const size of iconSizes) {
-      yield* runCommand(
-        ChildProcess.make({
-          ...commandOutputOptions(verbose),
-        })`sips -z ${size} ${size} ${sourcePng} --out ${path.join(iconsetDir, `icon_${size}x${size}.png`)}`,
-      );
-
-      const retinaSize = size * 2;
-      yield* runCommand(
-        ChildProcess.make({
-          ...commandOutputOptions(verbose),
-        })`sips -z ${retinaSize} ${retinaSize} ${sourcePng} --out ${path.join(iconsetDir, `icon_${size}x${size}@2x.png`)}`,
-      );
-    }
-
-    yield* runCommand(
-      ChildProcess.make({
-        ...commandOutputOptions(verbose),
-      })`iconutil -c icns ${iconsetDir} -o ${targetIcns}`,
-    );
-  });
-}
-
 function stageMacIcons(stageResourcesDir: string, verbose: boolean) {
   return Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -380,16 +346,12 @@ function stageMacIcons(stageResourcesDir: string, verbose: boolean) {
         message: `Production macOS icon source is missing at ${modernIconSource}`,
       });
     }
-    const legacyIconSource = yield* ProductionMacLegacyIconSource;
-    if (!(yield* fs.exists(legacyIconSource))) {
+    const iconIcnsSource = yield* ProductionMacIconIcnsSource;
+    if (!(yield* fs.exists(iconIcnsSource))) {
       return yield* new BuildScriptError({
-        message: `Production legacy macOS icon source is missing at ${legacyIconSource}`,
+        message: `Production macOS ICNS source is missing at ${iconIcnsSource}`,
       });
     }
-
-    const tmpRoot = yield* fs.makeTempDirectoryScoped({
-      prefix: "t3code-icon-build-",
-    });
 
     const iconPngPath = path.join(stageResourcesDir, "icon.png");
     const iconIcnsPath = path.join(stageResourcesDir, "icon.icns");
@@ -401,14 +363,9 @@ function stageMacIcons(stageResourcesDir: string, verbose: boolean) {
       })`sips -z 512 512 ${modernIconSource} --out ${iconPngPath}`,
     );
 
-    // The solid ICNS is the bundle icon on every macOS release; Icon Composer glass alters the mark.
-    yield* runCommand(
-      ChildProcess.make({
-        ...commandOutputOptions(verbose),
-      })`sips -z 1024 1024 ${legacyIconSource} --out ${dockIconPngPath}`,
-    );
-
-    yield* generateMacIconSet(legacyIconSource, iconIcnsPath, tmpRoot, path, verbose);
+    yield* fs.copyFile(modernIconSource, dockIconPngPath);
+    // Keep the validated production ICNS byte-for-byte instead of redrawing its mask.
+    yield* fs.copyFile(iconIcnsSource, iconIcnsPath);
   });
 }
 
@@ -505,7 +462,7 @@ function resolveGitHubPublishConfig():
     }
   | undefined {
   const rawRepo =
-    process.env.CHITAURI_DESKTOP_UPDATE_REPOSITORY?.trim() ||
+    process.env.TEACODE_DESKTOP_UPDATE_REPOSITORY?.trim() ||
     process.env.GITHUB_REPOSITORY?.trim() ||
     "";
   if (!rawRepo) return undefined;
@@ -532,7 +489,7 @@ const verifyStagedNodePty = Effect.fn("verifyStagedNodePty")(function* (
       cwd: stageAppDir,
       env: {
         ...process.env,
-        CHITAURI_NODE_PTY_SMOKE_REQUIRE_ROOT: stageAppDir,
+        TEACODE_NODE_PTY_SMOKE_REQUIRE_ROOT: stageAppDir,
       },
       ...commandOutputOptions(verbose),
       shell: process.platform === "win32",
@@ -549,9 +506,9 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
   mockUpdateServerPort: string | undefined,
 ) {
   const buildConfig: Record<string, unknown> = {
-    appId: "com.ojowwalker77.chitauri",
+    appId: "dev.jow.TeaCode",
     productName,
-    artifactName: "Chitauri-${version}-${arch}.${ext}",
+    artifactName: "TeaCode-${version}-${arch}.${ext}",
     directories: {
       buildResources: "apps/desktop/resources",
     },
@@ -737,18 +694,18 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   yield* fs.copy(stageResourcesDir, path.join(stageAppDir, "apps/desktop/prod-resources"));
 
   const stagePackageJson: StagePackageJson = {
-    name: "chitauri-desktop",
+    name: "teacode-desktop",
     version: appVersion,
     buildVersion: appVersion,
     t3codeCommitHash: commitHash,
     private: true,
-    description: "Chitauri desktop build",
+    description: "TeaCode desktop build",
     author: "Jonatas Walker",
     main: "apps/desktop/dist-electron/main.js",
     build: yield* createBuildConfig(
       options.platform,
       options.target,
-      desktopPackageJson.productName ?? "Chitauri",
+      desktopPackageJson.productName ?? "TeaCode",
       options.signed,
       options.mockUpdates,
       options.mockUpdateServerPort,
@@ -879,61 +836,59 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
 
 const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
   platform: Flag.choice("platform", BuildPlatform.literals).pipe(
-    Flag.withDescription("Build platform (env: CHITAURI_DESKTOP_PLATFORM)."),
+    Flag.withDescription("Build platform (env: TEACODE_DESKTOP_PLATFORM)."),
     Flag.optional,
   ),
   target: Flag.string("target").pipe(
     Flag.withDescription(
-      "Artifact target, for example dmg/AppImage/nsis (env: CHITAURI_DESKTOP_TARGET).",
+      "Artifact target, for example dmg/AppImage/nsis (env: TEACODE_DESKTOP_TARGET).",
     ),
     Flag.optional,
   ),
   arch: Flag.choice("arch", BuildArch.literals).pipe(
     Flag.withDescription(
-      "Build arch, for example arm64/x64/universal (env: CHITAURI_DESKTOP_ARCH).",
+      "Build arch, for example arm64/x64/universal (env: TEACODE_DESKTOP_ARCH).",
     ),
     Flag.optional,
   ),
   buildVersion: Flag.string("build-version").pipe(
-    Flag.withDescription("Artifact version metadata (env: CHITAURI_DESKTOP_VERSION)."),
+    Flag.withDescription("Artifact version metadata (env: TEACODE_DESKTOP_VERSION)."),
     Flag.optional,
   ),
   outputDir: Flag.string("output-dir").pipe(
-    Flag.withDescription("Output directory for artifacts (env: CHITAURI_DESKTOP_OUTPUT_DIR)."),
+    Flag.withDescription("Output directory for artifacts (env: TEACODE_DESKTOP_OUTPUT_DIR)."),
     Flag.optional,
   ),
   skipBuild: Flag.boolean("skip-build").pipe(
     Flag.withDescription(
-      "Skip `bun run build:desktop` and use existing dist artifacts (env: CHITAURI_DESKTOP_SKIP_BUILD).",
+      "Skip `bun run build:desktop` and use existing dist artifacts (env: TEACODE_DESKTOP_SKIP_BUILD).",
     ),
     Flag.optional,
   ),
   keepStage: Flag.boolean("keep-stage").pipe(
-    Flag.withDescription("Keep temporary staging files (env: CHITAURI_DESKTOP_KEEP_STAGE)."),
+    Flag.withDescription("Keep temporary staging files (env: TEACODE_DESKTOP_KEEP_STAGE)."),
     Flag.optional,
   ),
   signed: Flag.boolean("signed").pipe(
     Flag.withDescription(
-      "Enable signing/notarization discovery; Windows uses Azure Trusted Signing (env: CHITAURI_DESKTOP_SIGNED).",
+      "Enable signing/notarization discovery; Windows uses Azure Trusted Signing (env: TEACODE_DESKTOP_SIGNED).",
     ),
     Flag.optional,
   ),
   verbose: Flag.boolean("verbose").pipe(
-    Flag.withDescription("Stream subprocess stdout (env: CHITAURI_DESKTOP_VERBOSE)."),
+    Flag.withDescription("Stream subprocess stdout (env: TEACODE_DESKTOP_VERBOSE)."),
     Flag.optional,
   ),
   mockUpdates: Flag.boolean("mock-updates").pipe(
-    Flag.withDescription("Enable mock updates (env: CHITAURI_DESKTOP_MOCK_UPDATES)."),
+    Flag.withDescription("Enable mock updates (env: TEACODE_DESKTOP_MOCK_UPDATES)."),
     Flag.optional,
   ),
   mockUpdateServerPort: Flag.string("mock-update-server-port").pipe(
-    Flag.withDescription(
-      "Mock update server port (env: CHITAURI_DESKTOP_MOCK_UPDATE_SERVER_PORT).",
-    ),
+    Flag.withDescription("Mock update server port (env: TEACODE_DESKTOP_MOCK_UPDATE_SERVER_PORT)."),
     Flag.optional,
   ),
 }).pipe(
-  Command.withDescription("Build a desktop artifact for Chitauri."),
+  Command.withDescription("Build a desktop artifact for TeaCode."),
   Command.withHandler((input) => Effect.flatMap(resolveBuildOptions(input), buildDesktopArtifact)),
 );
 

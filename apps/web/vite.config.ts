@@ -14,7 +14,9 @@ import { defineConfig } from "vitest/config";
 import pkg from "./package.json" with { type: "json" };
 
 const port = Number(process.env.PORT ?? 5733);
-const sourcemapEnv = process.env.CHITAURI_WEB_SOURCEMAP?.trim().toLowerCase();
+const sourcemapEnv = (process.env.TEACODE_WEB_SOURCEMAP ?? process.env.CHITAURI_WEB_SOURCEMAP)
+  ?.trim()
+  .toLowerCase();
 
 const buildSourcemap =
   sourcemapEnv === "1" || sourcemapEnv === "true"

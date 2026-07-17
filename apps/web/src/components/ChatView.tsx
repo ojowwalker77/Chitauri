@@ -252,7 +252,7 @@ import { useComposerCommandMenuItems } from "../hooks/useComposerCommandMenuItem
 import { useThreadHandoff } from "../hooks/useThreadHandoff";
 import { useTurnDiffSummaries } from "../hooks/useTurnDiffSummaries";
 import BranchToolbar, { RuntimeUsageControls } from "./BranchToolbar";
-import { ChitauriLogo } from "./ChitauriLogo";
+import { TeaCodeLogo } from "./TeaCodeLogo";
 import { ThreadWorktreeHandoffDialog } from "./ThreadWorktreeHandoffDialog";
 import {
   formatShortcutLabel,
@@ -947,7 +947,7 @@ interface ChatViewProps {
   } | null;
   onChangeThreadInSplitPane?: () => void;
   onCloseThreadPane?: () => void;
-  /** Replaces the transcript while preserving Chitauri's real composer and thread runtime. */
+  /** Replaces the transcript while preserving TeaCode's real composer and thread runtime. */
   transcriptContent?: ReactNode;
   /** Gives a non-chat surface a meaningful title without changing its backing thread title. */
   surfaceTitle?: string;
@@ -983,7 +983,7 @@ function composerPromptStillMatchesRestoredQueuedDraft(
 
 // Builds an ephemeral transcript bubble for the conversational automation-setup
 // exchange. These never reach a provider and are not persisted; they render the
-// back-and-forth (user request, Chitauri's clarifying questions) inline like Codex.
+// back-and-forth (user request, TeaCode's clarifying questions) inline like Codex.
 function makeAutomationSetupBubble(role: "user" | "assistant", text: string): ChatMessage {
   return {
     id: newMessageId(),
@@ -1689,7 +1689,7 @@ export default function ChatView({
   const [automationDraftOpen, setAutomationDraftOpen] = useState(false);
   const [isAutomationDraftSubmitting, setIsAutomationDraftSubmitting] = useState(false);
   const automationDraftSubmittingRef = useRef(false);
-  // While set, Chitauri is mid-conversation gathering an automation's missing details.
+  // While set, TeaCode is mid-conversation gathering an automation's missing details.
   // `accumulatedMessage` carries everything said so far so the next reply re-resolves
   // against the full request (not the bare answer); `bubbles` is the ephemeral
   // in-thread exchange rendered in the transcript until the automation resolves or
@@ -5061,7 +5061,7 @@ export default function ChatView({
         toastManager.add({
           type: "warning",
           title: "Select a unique phrase to mark it.",
-          description: "Try including a few more words so Chitauri can find the exact place.",
+          description: "Try including a few more words so TeaCode can find the exact place.",
         });
         return;
       }
@@ -6321,7 +6321,7 @@ export default function ChatView({
                 type: "warning",
                 title: "Thread note not added",
                 description:
-                  "The automation was created, but Chitauri could not add the activity note.",
+                  "The automation was created, but TeaCode could not add the activity note.",
               });
             }
           })();
@@ -6340,7 +6340,7 @@ export default function ChatView({
           type: "error",
           title: "Could not create automation",
           description:
-            error instanceof Error ? error.message : "Chitauri could not save the automation.",
+            error instanceof Error ? error.message : "TeaCode could not save the automation.",
         });
         return false;
       } finally {
@@ -6409,7 +6409,7 @@ export default function ChatView({
           toastManager.add({
             type: "error",
             title: "Could not create chat",
-            description: "Chitauri could not promote this draft before saving the automation.",
+            description: "TeaCode could not promote this draft before saving the automation.",
           });
           return null;
         }
@@ -6432,7 +6432,7 @@ export default function ChatView({
           description:
             error instanceof Error
               ? error.message
-              : "Chitauri could not promote this draft before saving the automation.",
+              : "TeaCode could not promote this draft before saving the automation.",
         });
         return null;
       }
@@ -10694,7 +10694,7 @@ export default function ChatView({
                       CHAT_COLUMN_FRAME_CLASS_NAME,
                     )}
                   >
-                    <ChitauriLogo aria-label="Chitauri logo" className="size-10" />
+                    <TeaCodeLogo aria-label="TeaCode logo" className="size-10" />
                     <h2
                       data-testid="empty-landing-heading"
                       className="text-[26px] font-normal leading-[1.15] tracking-[-0.015em] text-foreground/95 sm:text-[30px]"

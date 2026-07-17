@@ -4,7 +4,7 @@
 // Depends on: Desktop packaging policy and electron-builder config shape.
 
 export const MICROPHONE_USAGE_DESCRIPTION =
-  "Chitauri needs microphone access so you can record voice notes and transcribe them into the chat composer.";
+  "TeaCode needs microphone access so you can record voice notes and transcribe them into the chat composer.";
 export const MAC_ENTITLEMENTS_PATH = "apps/desktop/resources/entitlements.mac.plist";
 export const MAC_INHERITED_ENTITLEMENTS_PATH =
   "apps/desktop/resources/entitlements.mac.inherit.plist";
@@ -71,12 +71,12 @@ export function createDesktopPlatformBuildConfig(
       ...nativePackaging,
       linux: {
         target: [input.target],
-        executableName: "chitauri",
+        executableName: "teacode",
         icon: "icon.png",
         category: "Development",
         desktop: {
           entry: {
-            StartupWMClass: "chitauri",
+            StartupWMClass: "teacode",
           },
         },
       },

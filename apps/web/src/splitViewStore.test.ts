@@ -104,7 +104,7 @@ describe("splitViewStore", () => {
     expect(splitView.focusedPaneId).toBe(root.first.id);
   });
 
-  it("keeps writing split views to the DPCode v1 storage key so persisted state can migrate", async () => {
+  it("writes split views to the TeaCode v1 storage key", async () => {
     vi.resetModules();
     globalThis.localStorage = createMemoryStorage();
     const { useSplitViewStore: freshSplitViewStore } = await import("./splitViewStore");
@@ -114,9 +114,9 @@ describe("splitViewStore", () => {
       ownerProjectId: PROJECT_ID,
     });
 
-    const persisted = globalThis.localStorage.getItem("chitauri:split-view-state:v1");
+    const persisted = globalThis.localStorage.getItem("teacode:split-view-state:v1");
     expect(persisted).not.toBeNull();
-    expect(globalThis.localStorage.getItem("chitauri:split-view-state:v2")).toBeNull();
+    expect(globalThis.localStorage.getItem("teacode:split-view-state:v2")).toBeNull();
     expect(JSON.parse(persisted ?? "{}")).toMatchObject({ version: 2 });
   });
 
@@ -149,7 +149,7 @@ describe("splitViewStore", () => {
     vi.resetModules();
     globalThis.localStorage = createMemoryStorage();
     globalThis.localStorage.setItem(
-      "chitauri:split-view-state:v1",
+      "teacode:split-view-state:v1",
       JSON.stringify({
         state: {
           splitViewsById: {

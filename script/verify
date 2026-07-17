@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+./script/check
+node scripts/node-pty-smoke.mjs
+bun run build:desktop
+test -f apps/desktop/dist-electron/preload.js
+bun run test:desktop-smoke
+bun run release:smoke

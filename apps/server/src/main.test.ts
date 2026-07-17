@@ -40,7 +40,7 @@ const serverStart = Effect.acquireRelease(
   () => Effect.sync(() => stop()),
 );
 const findAvailablePort = vi.fn((preferred: number) => Effect.succeed(preferred));
-let defaultChitauriHome = "";
+let defaultTeaCodeHome = "";
 const tempHomes = new Set<string>();
 
 function makeTempHome(prefix = "synara-main-test-"): string {
@@ -81,8 +81,8 @@ const runCli = (args: ReadonlyArray<string>, env: Record<string, string> = {}) =
       ConfigProvider.layer(
         ConfigProvider.fromEnv({
           env: {
-            CHITAURI_HOME: defaultChitauriHome,
-            CHITAURI_NO_BROWSER: "true",
+            TEACODE_HOME: defaultTeaCodeHome,
+            TEACODE_NO_BROWSER: "true",
             ...env,
           },
         }),
@@ -94,7 +94,7 @@ const runCli = (args: ReadonlyArray<string>, env: Record<string, string> = {}) =
 
 beforeEach(() => {
   vi.clearAllMocks();
-  defaultChitauriHome = makeTempHome();
+  defaultTeaCodeHome = makeTempHome();
   resolvedConfig = null;
   start.mockImplementation(() => undefined);
   stop.mockImplementation(() => undefined);
@@ -159,13 +159,13 @@ it.layer(testLayer)("server CLI command", (it) => {
       const envHome = makeTempHome("synara-main-env-");
 
       yield* runCli([], {
-        CHITAURI_MODE: "desktop",
-        CHITAURI_PORT: "4999",
-        CHITAURI_HOST: "100.88.10.4",
-        CHITAURI_HOME: envHome,
+        TEACODE_MODE: "desktop",
+        TEACODE_PORT: "4999",
+        TEACODE_HOST: "100.88.10.4",
+        TEACODE_HOME: envHome,
         VITE_DEV_SERVER_URL: "http://localhost:5173",
-        CHITAURI_NO_BROWSER: "true",
-        CHITAURI_AUTH_TOKEN: "env-token",
+        TEACODE_NO_BROWSER: "true",
+        TEACODE_AUTH_TOKEN: "env-token",
       });
 
       assert.equal(start.mock.calls.length, 1);
@@ -184,12 +184,12 @@ it.layer(testLayer)("server CLI command", (it) => {
     }),
   );
 
-  it.effect("prefers --mode over CHITAURI_MODE", () =>
+  it.effect("prefers --mode over TEACODE_MODE", () =>
     Effect.gen(function* () {
       findAvailablePort.mockImplementation((_preferred: number) => Effect.succeed(4666));
       yield* runCli(["--mode", "web"], {
-        CHITAURI_MODE: "desktop",
-        CHITAURI_NO_BROWSER: "true",
+        TEACODE_MODE: "desktop",
+        TEACODE_NO_BROWSER: "true",
       });
 
       assert.deepStrictEqual(findAvailablePort.mock.calls, [[3773]]);
@@ -200,10 +200,10 @@ it.layer(testLayer)("server CLI command", (it) => {
     }),
   );
 
-  it.effect("prefers --no-browser over CHITAURI_NO_BROWSER", () =>
+  it.effect("prefers --no-browser over TEACODE_NO_BROWSER", () =>
     Effect.gen(function* () {
       yield* runCli(["--no-browser"], {
-        CHITAURI_NO_BROWSER: "false",
+        TEACODE_NO_BROWSER: "false",
       });
 
       assert.equal(start.mock.calls.length, 1);
@@ -226,8 +226,8 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("uses fixed localhost defaults in desktop mode", () =>
     Effect.gen(function* () {
       yield* runCli([], {
-        CHITAURI_MODE: "desktop",
-        CHITAURI_NO_BROWSER: "true",
+        TEACODE_MODE: "desktop",
+        TEACODE_NO_BROWSER: "true",
       });
 
       assert.equal(findAvailablePort.mock.calls.length, 0);
@@ -241,8 +241,8 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("allows overriding desktop host with --host", () =>
     Effect.gen(function* () {
       yield* runCli(["--host", "0.0.0.0"], {
-        CHITAURI_MODE: "desktop",
-        CHITAURI_NO_BROWSER: "true",
+        TEACODE_MODE: "desktop",
+        TEACODE_NO_BROWSER: "true",
       });
 
       assert.equal(start.mock.calls.length, 1);
@@ -254,11 +254,11 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("supports CLI and env for bootstrap/provider-log/websocket toggles", () =>
     Effect.gen(function* () {
       yield* runCli(["--auto-bootstrap-project-from-cwd"], {
-        CHITAURI_MODE: "desktop",
-        CHITAURI_LOG_PROVIDER_EVENTS: "true",
-        CHITAURI_LOG_WS_EVENTS: "false",
-        CHITAURI_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
-        CHITAURI_NO_BROWSER: "true",
+        TEACODE_MODE: "desktop",
+        TEACODE_LOG_PROVIDER_EVENTS: "true",
+        TEACODE_LOG_WS_EVENTS: "false",
+        TEACODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
+        TEACODE_NO_BROWSER: "true",
       });
 
       assert.equal(start.mock.calls.length, 1);

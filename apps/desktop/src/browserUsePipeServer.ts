@@ -18,8 +18,11 @@ const BROWSER_USE_INITIAL_URL = "about:blank";
 const BROWSER_USE_PANEL_READY_TIMEOUT_MS = 2_000;
 const BROWSER_USE_PANEL_READY_POLL_MS = 50;
 const BROWSER_USE_PIPE_DIR = "codex-browser-use";
-const BROWSER_USE_PIPE_NAME_PREFIX = "chitauri-iab";
-export const CHITAURI_BROWSER_USE_PIPE_ENV = "CHITAURI_BROWSER_USE_PIPE_PATH";
+const BROWSER_USE_PIPE_NAME_PREFIX = "teacode-iab";
+export const TEACODE_BROWSER_USE_PIPE_ENV = "TEACODE_BROWSER_USE_PIPE_PATH";
+export const LEGACY_CHITAURI_BROWSER_USE_PIPE_ENV = "CHITAURI_BROWSER_USE_PIPE_PATH";
+/** @deprecated Use TEACODE_BROWSER_USE_PIPE_ENV. */
+export const CHITAURI_BROWSER_USE_PIPE_ENV = LEGACY_CHITAURI_BROWSER_USE_PIPE_ENV;
 
 type BrowserUseRpcId = string | number;
 
@@ -55,11 +58,14 @@ export function resolveConfiguredBrowserUsePipePath(
   env: NodeJS.ProcessEnv = process.env,
   platform = process.platform,
 ): string {
-  const configured = env[CHITAURI_BROWSER_USE_PIPE_ENV]?.trim();
+  const configured =
+    env[TEACODE_BROWSER_USE_PIPE_ENV]?.trim() || env[LEGACY_CHITAURI_BROWSER_USE_PIPE_ENV]?.trim();
   return configured || resolveDefaultBrowserUsePipePath(platform);
 }
 
-export const CHITAURI_BROWSER_USE_PIPE_PATH = resolveConfiguredBrowserUsePipePath();
+export const TEACODE_BROWSER_USE_PIPE_PATH = resolveConfiguredBrowserUsePipePath();
+/** @deprecated Use TEACODE_BROWSER_USE_PIPE_PATH. */
+export const CHITAURI_BROWSER_USE_PIPE_PATH = TEACODE_BROWSER_USE_PIPE_PATH;
 
 function asObject(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -156,10 +162,10 @@ export class BrowserUsePipeServer {
 
   constructor(
     private readonly browserManager: DesktopBrowserManager,
-    options: BrowserUsePipeServerOptions | string = CHITAURI_BROWSER_USE_PIPE_PATH,
+    options: BrowserUsePipeServerOptions | string = TEACODE_BROWSER_USE_PIPE_PATH,
   ) {
     this.pipePath =
-      typeof options === "string" ? options : (options.pipePath ?? CHITAURI_BROWSER_USE_PIPE_PATH);
+      typeof options === "string" ? options : (options.pipePath ?? TEACODE_BROWSER_USE_PIPE_PATH);
     this.requestOpenPanel = typeof options === "string" ? undefined : options.requestOpenPanel;
     this.server = Net.createServer((socket) => this.handleSocketConnection(socket));
   }
@@ -265,7 +271,7 @@ export class BrowserUsePipeServer {
       case "getInfo":
         const sessionId = asString(asObject(params)?.session_id);
         return {
-          name: "Chitauri In-app Browser",
+          name: "TeaCode In-app Browser",
           version: "0.1.0",
           type: "iab",
           ...(sessionId ? { metadata: { codexSessionId: sessionId } } : {}),
@@ -372,7 +378,7 @@ export class BrowserUsePipeServer {
   }> {
     const snapshot = await this.waitForActiveBrowserHostState();
     if (!snapshot) {
-      throw new Error("No active Chitauri browser pane available");
+      throw new Error("No active TeaCode browser pane available");
     }
     const nextState = this.browserManager.newTab({
       threadId: snapshot.threadId,

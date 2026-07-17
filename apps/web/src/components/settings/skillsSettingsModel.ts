@@ -61,7 +61,7 @@ export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
   switch (scope) {
     case "chitauri":
     case "synara":
-      return { label: "Chitauri", provider: null };
+      return { label: "TeaCode", provider: null };
     case "codex":
       return { label: PROVIDER_DISPLAY_NAMES.codex, provider: "codex" };
     case "claude":

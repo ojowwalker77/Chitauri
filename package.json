@@ -24,6 +24,10 @@
   "type": "module",
   "scripts": {
     "prepare": "git config core.hooksPath .githooks || true",
+    "bootstrap": "./script/bootstrap",
+    "check": "./script/check",
+    "verify": "./script/verify",
+    "release:preflight": "./script/release-preflight",
     "dev": "node scripts/dev-runner.ts dev",
     "dev:server": "node scripts/dev-runner.ts dev:server",
     "dev:web": "node scripts/dev-runner.ts dev:web",

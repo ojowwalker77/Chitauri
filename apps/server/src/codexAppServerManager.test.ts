@@ -450,7 +450,7 @@ describe("buildCodexProcessEnv", () => {
     ).toBe("/tmp/codex-browser-use/t3.sock");
   });
 
-  it("disables the local dpcode-browser plugin in Chitauri's Codex home overlay", () => {
+  it("disables the local dpcode-browser plugin in TeaCode's Codex home overlay", () => {
     const tempDir = mkdtempSync(path.join(os.tmpdir(), "t3-codex-env-"));
     const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "t3-runtime-home-"));
     try {
@@ -486,7 +486,7 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("repairs stale real files in Chitauri's Codex home overlay", () => {
+  it("repairs stale real files in TeaCode's Codex home overlay", () => {
     const tempDir = mkdtempSync(path.join(os.tmpdir(), "t3-codex-env-"));
     const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "t3-runtime-home-"));
     try {
@@ -514,7 +514,7 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("repairs stale auth.json files in Chitauri's Codex home overlay", () => {
+  it("repairs stale auth.json files in TeaCode's Codex home overlay", () => {
     const tempDir = mkdtempSync(path.join(os.tmpdir(), "t3-codex-env-"));
     const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "t3-runtime-home-"));
     try {
@@ -543,7 +543,7 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("preserves real generated image directories in Chitauri's Codex home overlay", () => {
+  it("preserves real generated image directories in TeaCode's Codex home overlay", () => {
     const tempDir = mkdtempSync(path.join(os.tmpdir(), "t3-codex-env-"));
     const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "t3-runtime-home-"));
     try {
@@ -704,7 +704,7 @@ describe("startSession", () => {
     expect(buildCodexInitializeParams()).toEqual({
       clientInfo: {
         name: "chitauri_desktop",
-        title: "Chitauri Desktop",
+        title: "TeaCode Desktop",
         version: "0.1.0",
       },
       capabilities: {
@@ -764,7 +764,7 @@ describe("startSession", () => {
       )
       .mockImplementation(() => {
         throw new Error(
-          "Codex CLI v0.36.0 is too old for Chitauri. Upgrade to v0.37.0 or newer and restart Chitauri.",
+          "Codex CLI v0.36.0 is too old for TeaCode. Upgrade to v0.37.0 or newer and restart TeaCode.",
         );
       });
 
@@ -776,7 +776,7 @@ describe("startSession", () => {
           runtimeMode: "full-access",
         }),
       ).rejects.toThrow(
-        "Codex CLI v0.36.0 is too old for Chitauri. Upgrade to v0.37.0 or newer and restart Chitauri.",
+        "Codex CLI v0.36.0 is too old for TeaCode. Upgrade to v0.37.0 or newer and restart TeaCode.",
       );
       expect(versionCheck).toHaveBeenCalledTimes(1);
       expect(events).toEqual([
@@ -784,7 +784,7 @@ describe("startSession", () => {
           method: "session/startFailed",
           kind: "error",
           message:
-            "Codex CLI v0.36.0 is too old for Chitauri. Upgrade to v0.37.0 or newer and restart Chitauri.",
+            "Codex CLI v0.36.0 is too old for TeaCode. Upgrade to v0.37.0 or newer and restart TeaCode.",
         },
       ]);
     } finally {

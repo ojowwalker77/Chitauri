@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CHITAURI_BROWSER_USE_PIPE_ENV,
+  TEACODE_BROWSER_USE_PIPE_ENV,
   resolveConfiguredBrowserUsePipePath,
   resolveDefaultBrowserUsePipePath,
 } from "./browserUsePipeServer";
@@ -18,10 +19,22 @@ describe("browser-use pipe path resolution", () => {
     const pipePath = resolveDefaultBrowserUsePipePath("darwin");
 
     expect(dirname(pipePath)).toBe(`${tmpdir()}/codex-browser-use`);
-    expect(basename(pipePath)).toMatch(/^chitauri-iab-\d+\.sock$/);
+    expect(basename(pipePath)).toMatch(/^teacode-iab-\d+\.sock$/);
   });
 
-  it("prefers an explicit Chitauri pipe path from the environment", () => {
+  it("prefers an explicit TeaCode pipe path from the environment", () => {
+    expect(
+      resolveConfiguredBrowserUsePipePath(
+        {
+          [TEACODE_BROWSER_USE_PIPE_ENV]: "/tmp/codex-browser-use/teacode.sock",
+          [CHITAURI_BROWSER_USE_PIPE_ENV]: "/tmp/codex-browser-use/chitauri.sock",
+        },
+        "darwin",
+      ),
+    ).toBe("/tmp/codex-browser-use/teacode.sock");
+  });
+
+  it("accepts the legacy Chitauri pipe path during migration", () => {
     expect(
       resolveConfiguredBrowserUsePipePath(
         {
@@ -36,7 +49,7 @@ describe("browser-use pipe path resolution", () => {
     expect(
       resolveConfiguredBrowserUsePipePath(
         {
-          [CHITAURI_BROWSER_USE_PIPE_ENV]: "   ",
+          [TEACODE_BROWSER_USE_PIPE_ENV]: "   ",
         },
         "darwin",
       ),

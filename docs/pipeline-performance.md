@@ -90,5 +90,5 @@ unset GITHUB_CHECKS_PAT
 ```
 
 Create that token in **GitHub Settings → Developer settings → Personal access
-tokens → Fine-grained tokens**. Limit repository access to `Chitauri`, grant
+tokens → Fine-grained tokens**. Limit repository access to `TeaCode`, grant
 **Checks: Read and write**, use it once, then revoke it.

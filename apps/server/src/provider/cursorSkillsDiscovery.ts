@@ -22,7 +22,7 @@ export async function discoverCursorSkills(
     providerNativeSkillRoots({
       cwd: input.cwd,
       homeDir: input.homeDir,
-      chitauriBaseDir: nodePath.join(input.homeDir, ".chitauri"),
+      chitauriBaseDir: nodePath.join(input.homeDir, ".teacode"),
       provider: "cursor",
     }),
   );
