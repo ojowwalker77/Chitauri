@@ -123,8 +123,20 @@
 }
 
 @layer components {
+  /* Claude Code-style shell: a flat warm canvas with one inset navigation panel.
+     The panel is the only raised surface, so the hierarchy stays legible without
+     gradients, glass, or a second content-card shadow competing for attention. */
+  .chitauri-anthropic-shell {
+    --app-shell-background: #eeece8;
+    --app-content-card-radius: 0px;
+  }
+
+  .dark .chitauri-anthropic-shell {
+    --app-shell-background: #0a0a0a;
+  }
+
   .sidebar-icon-button {
-    @apply items-center justify-center rounded-sm p-0.5 text-muted-foreground/60 transition-colors duration-200 ease-out hover:text-foreground/82 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring;
+    @apply items-center justify-center rounded-lg p-0.5 text-muted-foreground/60 transition-[background-color,color,transform] duration-press ease-out hover:text-foreground/82 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring active:scale-[0.96] motion-reduce:active:scale-100;
     background: transparent;
   }
 
@@ -134,13 +146,107 @@
 
   /* Claude-style persistent sidebar panel: opaque, bordered, and shadowless. */
   .app-sidebar-surface {
+    --app-sidebar-coral: #d97757;
+    --app-sidebar-gold: #a56b26;
+    --app-sidebar-surface: #f7f5f2;
+    --foreground: #262522;
+    --muted-foreground: #77736d;
+    --sidebar-foreground: #262522;
+    --sidebar-accent: rgba(42, 39, 36, 0.045);
+    --sidebar-accent-active: rgba(42, 39, 36, 0.075);
+    --sidebar-accent-foreground: #262522;
+    --sidebar-border: rgba(42, 39, 36, 0.08);
+    --color-border: rgba(42, 39, 36, 0.08);
+    --color-text-foreground: #262522;
+    --color-text-foreground-secondary: #77736d;
+    --color-background-button-secondary-hover: var(--sidebar-accent);
+    --color-background-button-secondary-active: var(--sidebar-accent-active);
+    --color-background-elevated-secondary: rgba(42, 39, 36, 0.035);
+    --app-density-row-height: 2.375rem;
+    --app-density-row-padding-y: 0rem;
+    --app-density-row-gap: 0.5rem;
     overflow: hidden;
-    background: var(--app-sidebar-surface, var(--panel));
-    border: 1px solid var(--panel-border);
-    border-radius: var(--radius-xl);
+    background: var(--app-sidebar-surface);
+    border: 1px solid var(--sidebar-border);
+    border-radius: 14px;
     box-shadow: none;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+  }
+
+  .dark .app-sidebar-surface {
+    --app-sidebar-gold: #cf9d5e;
+    --app-sidebar-surface: #171717;
+    --foreground: #e6e4e1;
+    --muted-foreground: #9c9a96;
+    --sidebar-foreground: #e6e4e1;
+    --sidebar-accent: rgba(255, 255, 255, 0.05);
+    --sidebar-accent-active: rgba(255, 255, 255, 0.08);
+    --sidebar-accent-foreground: #e6e4e1;
+    --sidebar-border: rgba(255, 255, 255, 0.07);
+    --color-border: rgba(255, 255, 255, 0.07);
+    --color-text-foreground: #e6e4e1;
+    --color-text-foreground-secondary: #9c9a96;
+    --color-background-elevated-secondary: rgba(255, 255, 255, 0.035);
+  }
+
+  .app-sidebar-surface [data-slot="sidebar-footer"] {
+    flex: none;
+    border-top: 1px solid var(--sidebar-border);
+    padding: 0.625rem 0.75rem;
+  }
+
+  .app-sidebar-surface [data-slot="sidebar-menu-button"],
+  .app-sidebar-surface [data-slot="sidebar-menu-sub-button"],
+  .app-sidebar-surface [data-thread-item] {
+    border-radius: 10px;
+    transition-duration: 140ms;
+  }
+
+  .app-sidebar-surface .sidebar-section-label {
+    color: color-mix(in srgb, var(--muted-foreground) 88%, transparent);
+    font-size: 0.78125rem;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+
+  .app-sidebar-surface .sidebar-icon-chip {
+    box-shadow: 0 0 0 1px var(--sidebar-border);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .app-sidebar-surface [data-slot="sidebar-menu-button"]:active,
+    .app-sidebar-surface [data-slot="sidebar-menu-sub-button"]:active,
+    .app-sidebar-surface [data-thread-item]:active {
+      transform: scale(0.98);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .app-sidebar-surface [data-slot="sidebar-menu-button"],
+    .app-sidebar-surface [data-slot="sidebar-menu-sub-button"],
+    .app-sidebar-surface [data-thread-item] {
+      transform: none !important;
+      transition-property: background-color, color;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .app-sidebar-surface {
+      border: 0;
+      border-radius: 0;
+    }
+  }
+
+  .chitauri-anthropic-shell .chat-content-card {
+    border-radius: 0;
+    background-color: var(--app-shell-background);
+    box-shadow: none;
+  }
+
+  .chitauri-anthropic-shell .chat-content-card::before,
+  .chitauri-anthropic-shell .chat-content-card-backing::after {
+    display: none;
   }
 
   /* Small icon badges inherit the persistent panel language. */
@@ -2311,29 +2417,6 @@ diffs-container {
 
 .chat-composer-surface [contenteditable="true"] {
   caret-color: var(--claude);
-}
-
-.sidebar-segmented-picker {
-  background: var(--color-background-elevated-secondary) !important;
-  box-shadow: none !important;
-  filter: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-/* macOS-style sliding pill. Light mode matches the composer input fill so the two
-   selected surfaces read identically; dark keeps the secondary-hover token. The soft
-   shadow + hairline border give it the raised, segmented-control look. */
-.sidebar-segmented-thumb {
-  background: var(--composer-surface);
-  border: 1px solid var(--panel-border);
-  box-shadow: none;
-}
-
-.dark .sidebar-segmented-thumb {
-  background: var(--selected);
-  border-color: var(--panel-border);
-  box-shadow: none;
 }
 
 /* Frosted translucent shell shared by floating menus & pickers (dropdown menus,
