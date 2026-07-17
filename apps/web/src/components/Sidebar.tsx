@@ -5290,12 +5290,17 @@ export default function Sidebar() {
       scope: topLevel ? "chat" : "project",
       threadId: thread.id,
     });
+    const useProjectTreeLayout = !topLevel && !isSubagentThread;
 
     return (
       <SidebarMenuSubItem
         key={thread.id}
         data-thread-hover-anchor={hoverAnchorId}
-        className="group/thread-row w-full"
+        className={cn(
+          "group/thread-row w-full",
+          useProjectTreeLayout &&
+            "before:absolute before:left-[1.125rem] before:top-[1.25rem] before:h-px before:w-3 before:bg-border/45",
+        )}
         data-thread-item
       >
         {leadingPrStatus ? (
@@ -5319,6 +5324,8 @@ export default function Sidebar() {
                     isActive,
                     isSelected,
                   }),
+                  useProjectTreeLayout &&
+                    "h-10 min-h-10 items-center gap-2 pl-11 rounded-[10px] text-[length:calc(var(--app-font-size-ui,12px)+1px)]",
                   leadingPrStatus ? "pl-8" : topLevel && !isSubagentThread ? "pl-2" : null,
                   isSubagentThread
                     ? "pr-7.5"
@@ -5396,15 +5403,33 @@ export default function Sidebar() {
                 />
               </span>
             ) : threadEntryPoint === "terminal" ? (
-              <SidebarGlyph icon={TerminalIcon} variant="chrome" />
+              useProjectTreeLayout ? (
+                <span className="inline-flex size-[26px] shrink-0 items-center justify-center rounded-full bg-muted/35 text-muted-foreground/85">
+                  <SidebarGlyph icon={TerminalIcon} variant="chrome" />
+                </span>
+              ) : (
+                <SidebarGlyph icon={TerminalIcon} variant="chrome" />
+              )
             ) : showThreadProviderAvatar ? (
-              <ProviderAvatarWithTerminal
-                provider={thread.session?.provider ?? thread.modelSelection.provider}
-                handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
-                handoffTooltip={handoffBadgeLabel}
-                terminalStatus={terminalStatus}
-                terminalCount={terminalCount}
-              />
+              useProjectTreeLayout ? (
+                <span className="inline-flex size-[26px] shrink-0 items-center justify-center rounded-full bg-muted/35 text-muted-foreground/85">
+                  <ProviderAvatarWithTerminal
+                    provider={thread.session?.provider ?? thread.modelSelection.provider}
+                    handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
+                    handoffTooltip={handoffBadgeLabel}
+                    terminalStatus={terminalStatus}
+                    terminalCount={terminalCount}
+                  />
+                </span>
+              ) : (
+                <ProviderAvatarWithTerminal
+                  provider={thread.session?.provider ?? thread.modelSelection.provider}
+                  handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
+                  handoffTooltip={handoffBadgeLabel}
+                  terminalStatus={terminalStatus}
+                  terminalCount={terminalCount}
+                />
+              )
             ) : null}
             <div
               className={cn(
@@ -5414,7 +5439,10 @@ export default function Sidebar() {
             >
               <span
                 className={cn(
-                  "min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,12px)]",
+                  "min-w-0 flex-1 truncate",
+                  useProjectTreeLayout
+                    ? "text-[length:calc(var(--app-font-size-ui,12px)+1px)]"
+                    : "text-[length:var(--app-font-size-ui,12px)]",
                   // Inactive thread names share the resting label color with
                   // project/folder headers; the active row still pops via its
                   // background + full-foreground color from resolveThreadRowClassName.
@@ -5436,7 +5464,7 @@ export default function Sidebar() {
                   thread.title
                 )}
               </span>
-              {thread.orchestratorMode ? (
+              {thread.orchestratorMode && !useProjectTreeLayout ? (
                 <span
                   className="inline-flex shrink-0 items-center gap-0.5 rounded-sm bg-indigo-500/9 px-1.5 py-0.5 text-[9px] font-medium text-indigo-700 dark:text-indigo-300"
                   title="Orchestrator thread"
@@ -5445,7 +5473,9 @@ export default function Sidebar() {
                   Orchestrator
                 </span>
               ) : null}
-              {!isSubagentThread && threadStatus?.label === "Pending Approval" ? (
+              {!useProjectTreeLayout &&
+              !isSubagentThread &&
+              threadStatus?.label === "Pending Approval" ? (
                 <span
                   aria-label="Pending approval"
                   className={cn("shrink-0 text-[10px] font-medium", threadStatus.colorClass)}
@@ -5494,12 +5524,12 @@ export default function Sidebar() {
                 </Tooltip>
               ) : null}
             </div>
-            <div className={cn("absolute top-1/2 flex -translate-y-1/2 items-center", "right-1.5")}>
+            <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
               {renderThreadRowTrailingCluster({
                 isSubagentThread,
                 threadJumpLabel,
                 threadJumpLabelParts,
-                rightMetaChips: showCompactMeta ? rightMetaChips : [],
+                rightMetaChips: showCompactMeta && !useProjectTreeLayout ? rightMetaChips : [],
                 threadStatus,
                 timestampToneClassName: isSubagentThread
                   ? isHighlighted
@@ -5583,6 +5613,7 @@ export default function Sidebar() {
               size="sm"
               className={cn(
                 SIDEBAR_HEADER_ROW_CLASS_NAME,
+                "h-10 min-h-10 rounded-[10px] text-[length:calc(var(--app-font-size-ui,12px)+1px)]",
                 "hover:bg-[var(--sidebar-accent)] group-hover/project-header:bg-[var(--sidebar-accent)] group-hover/project-header:text-[var(--sidebar-accent-foreground)]",
                 isManualProjectSorting ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
               )}
@@ -5614,7 +5645,7 @@ export default function Sidebar() {
               >
                 <span
                   className={cn(
-                    "truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal",
+                    "truncate font-system-ui text-[length:calc(var(--app-font-size-ui,12px)+1px)] font-normal",
                     SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
                   )}
                 >
@@ -5626,9 +5657,9 @@ export default function Sidebar() {
                   </span>
                 ) : null}
               </div>
-              {/* Closed folders surface child-chat status on the project row; open
-                  folders leave that signal to their visible child thread rows. */}
-              {isProjectRunning || collapsedProjectStatus ? (
+              {/* Claude-style project rows keep the child count visible at rest.
+                  Run/thread status replaces it when there is something actionable. */}
+              {isProjectRunning || collapsedProjectStatus || allProjectThreadCount > 0 ? (
                 <span
                   aria-label={
                     collapsedProjectStatus
@@ -5644,6 +5675,10 @@ export default function Sidebar() {
                   {isProjectRunning ? <ProjectRunIndicatorDot /> : null}
                   {collapsedProjectStatus ? (
                     <SidebarStatusTrailingGlyph status={collapsedProjectStatus} />
+                  ) : allProjectThreadCount > 0 ? (
+                    <span className="text-[11px] tabular-nums text-muted-foreground/45">
+                      {allProjectThreadCount}
+                    </span>
                   ) : null}
                 </span>
               ) : null}
@@ -5725,7 +5760,7 @@ export default function Sidebar() {
           <div className={DISCLOSURE_INNER_CLASS}>
             <SidebarMenuSub
               className={cn(
-                "mx-0 my-0 w-full translate-x-0 border-l-0 px-0 py-0",
+                "relative mx-0 my-0 w-full translate-x-0 border-l-0 px-0 py-0 before:absolute before:top-0 before:bottom-4 before:left-[1.125rem] before:w-px before:bg-border/45",
                 SIDEBAR_NESTED_LIST_GAP_CLASS_NAME,
                 disclosureContentClassName(project.expanded),
               )}
