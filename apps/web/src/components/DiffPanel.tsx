@@ -89,7 +89,7 @@ import {
 } from "./ui/menu";
 import { REPO_DIFF_SCOPE_LABELS } from "../repoDiffScopeStore";
 import { PanelStateMessage } from "./chat/PanelStateMessage";
-import { type SplitViewPanePanelState } from "../splitViewStore";
+import type { ChatPanelState } from "../chatPanelState";
 import { formatShortTimestamp } from "../timestampFormat";
 import type { TurnDiffSummary } from "../types";
 
@@ -347,9 +347,9 @@ function EditorDiffControls(props: {
 interface DiffPanelProps {
   mode?: DiffPanelMode;
   threadId?: ThreadId | null;
-  panelState?: Pick<SplitViewPanePanelState, "panel" | "diffTurnId" | "diffFilePath">;
+  panelState?: Pick<ChatPanelState, "panel" | "diffTurnId" | "diffFilePath">;
   onUpdatePanelState?: (
-    patch: Partial<Pick<SplitViewPanePanelState, "panel" | "diffTurnId" | "diffFilePath">>,
+    patch: Partial<Pick<ChatPanelState, "panel" | "diffTurnId" | "diffFilePath">>,
   ) => void;
   onClosePanel?: () => void;
   liveRefreshEnabled?: boolean;

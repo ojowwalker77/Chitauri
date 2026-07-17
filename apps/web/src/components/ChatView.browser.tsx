@@ -38,7 +38,6 @@ import {
 import { isMacPlatform } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
 import { getRouter } from "../router";
-import { useSplitViewStore } from "../splitViewStore";
 import { useStore } from "../store";
 import {
   createShellSnapshotFromReadModel,
@@ -1574,10 +1573,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
     useTerminalStateStore.setState({
       terminalStateByThreadId: {},
-    });
-    useSplitViewStore.setState({
-      splitViewsById: {},
-      splitViewIdBySourceThreadId: {},
     });
   });
 

@@ -69,7 +69,6 @@ import { useOpenFavoriteEditorShortcut } from "~/hooks/useOpenFavoriteEditorShor
 import type { RepoDiffTotals } from "~/hooks/useRepoDiffTotals";
 import { ProviderIcon } from "../ProviderIcon";
 import { ProviderUsageMenuControl } from "../ProviderUsageMenuControl";
-import { EnvironmentToggle, type EnvironmentToggleState } from "./environment/EnvironmentToggle";
 
 /**
  * Width (px) below which collapsible header controls drop their text labels and
@@ -111,11 +110,6 @@ interface ChatHeaderProps {
   diffOpen: boolean;
   diffDisabledReason?: string | null;
   surfaceMode?: "single" | "split";
-  isSidechat?: boolean;
-  // When provided, the header replaces the Open-in-editor + git-actions controls (and the
-  // usage chip) with one Environment button that drives the Environment panel; otherwise
-  // those controls are available individually. The diff toggle survives either way.
-  environment?: EnvironmentToggleState | null;
   chatLayoutAction?: {
     kind: "split" | "maximize";
     label: string;
@@ -147,7 +141,6 @@ interface ChatHeaderProps {
   onCreateHandoff: (targetProvider: ProviderKind) => void;
   onNavigateToThread: (threadId: ThreadId) => void;
   onRenameThread: () => void;
-  onCloseThreadPane?: () => void;
 }
 
 const EDITOR_CHAT_HISTORY_LIMIT = 30;
@@ -512,8 +505,6 @@ export const ChatHeader = memo(function ChatHeader({
   diffOpen,
   diffDisabledReason = null,
   surfaceMode = "single",
-  isSidechat = false,
-  environment = null,
   chatLayoutAction = null,
   changeThreadAction = null,
   editorChatControls = null,
@@ -525,7 +516,6 @@ export const ChatHeader = memo(function ChatHeader({
   onCreateHandoff,
   onNavigateToThread,
   onRenameThread,
-  onCloseThreadPane,
 }: ChatHeaderProps) {
   const { isMobile, state } = useSidebar();
   const { settings } = useAppSettings();
@@ -538,9 +528,7 @@ export const ChatHeader = memo(function ChatHeader({
     hasChanges: showDiffTotals,
   } = diffTotals;
 
-  // Own the open-favorite editor shortcut here so it survives regardless of which editor UI
-  // is mounted (the legacy Open-in button, the Environment panel's Editor section, or
-  // neither while the panel is closed). The header is always present for a project thread.
+  // The header is always present for a project thread, so it owns the editor shortcut.
   useOpenFavoriteEditorShortcut({
     keybindings,
     availableEditors,
@@ -553,7 +541,6 @@ export const ChatHeader = memo(function ChatHeader({
   // "maximize" affordance for an already-split focused pane.
   const inlineChatLayoutAction = chatLayoutAction?.kind === "maximize" ? chatLayoutAction : null;
   const threadIconKind = resolveChatHeaderThreadIconKind(activeThreadEntryPoint, activeThreadTitle);
-  const showSidechatTitleChip = isSidechat && compact;
 
   useEffect(() => {
     const el = headerRef.current;
@@ -580,7 +567,7 @@ export const ChatHeader = memo(function ChatHeader({
   // user's visibility preference subtracts from this set; it can never add to it.
   const orderedControlIds = useMemo(() => {
     const available = new Set<ChatHeaderControlId>();
-    if (!hideHandoffControls && !environment) {
+    if (!hideHandoffControls) {
       available.add("usage");
     }
     if (!hideHandoffControls) {
@@ -589,13 +576,10 @@ export const ChatHeader = memo(function ChatHeader({
     if (activeProjectScripts) {
       available.add("projectScripts");
     }
-    if (environment) {
-      available.add("environment");
-    }
-    if (!environment && activeProjectName) {
+    if (activeProjectName) {
       available.add("openIn");
     }
-    if (!environment && activeProjectName && showGitActions) {
+    if (activeProjectName && showGitActions) {
       available.add("gitActions");
     }
     if (showDiffToggle) {
@@ -612,7 +596,6 @@ export const ChatHeader = memo(function ChatHeader({
     activeProjectName,
     activeProjectScripts,
     chatHeaderControlOrder,
-    environment,
     hiddenChatHeaderControls,
     hideHandoffControls,
     showDiffToggle,
@@ -670,8 +653,6 @@ export const ChatHeader = memo(function ChatHeader({
             onDeleteScript={onDeleteProjectScript}
           />
         ) : null;
-      case "environment":
-        return environment ? <EnvironmentToggle environment={environment} /> : null;
       case "openIn":
         return (
           <OpenInPicker
@@ -772,13 +753,7 @@ export const ChatHeader = memo(function ChatHeader({
               </div>
             ) : null}
             <div className={cn("flex min-w-0 items-center gap-2", editorChatControls && "h-full")}>
-              <div
-                className={cn(
-                  "flex min-w-0 items-center gap-2",
-                  showSidechatTitleChip &&
-                    "rounded-lg bg-secondary py-1 pl-2 pr-1 text-secondary-foreground",
-                )}
-              >
+              <div className="flex min-w-0 items-center gap-2">
                 {threadIconKind === "none" ? null : (
                   <span
                     className="inline-flex size-3.5 shrink-0 items-center justify-center"
@@ -802,22 +777,6 @@ export const ChatHeader = memo(function ChatHeader({
                 >
                   {activeThreadTitle}
                 </h2>
-                {showSidechatTitleChip && onCloseThreadPane ? (
-                  <IconButton
-                    variant="chrome"
-                    size="icon-xs"
-                    label="Close selected Side"
-                    tooltip="Close selected Side"
-                    tooltipSide="bottom"
-                    className="size-5 rounded-lg [-webkit-app-region:no-drag] [&_svg]:size-3"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onCloseThreadPane();
-                    }}
-                  >
-                    <XIcon />
-                  </IconButton>
-                ) : null}
               </div>
               {editorChatControls ? (
                 <EditorRailTabs

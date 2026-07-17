@@ -1,6 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { DesktopBridge } from "@t3tools/contracts";
-import { BROWSER_IPC_CHANNELS } from "./browserIpc";
 import {
   DESKTOP_WS_URL_CHANNEL,
   normalizeDesktopWsUrl,
@@ -117,57 +116,5 @@ contextBridge.exposeInMainWorld("desktopBridge", {
   notifications: {
     isSupported: () => ipcRenderer.invoke(NOTIFICATIONS_IS_SUPPORTED_CHANNEL),
     show: (input) => ipcRenderer.invoke(NOTIFICATIONS_SHOW_CHANNEL, input),
-  },
-  browser: {
-    open: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.open, input),
-    close: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.close, input),
-    hide: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.hide, input),
-    getState: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.getState, input),
-    setPanelBounds: async (input) => {
-      ipcRenderer.send(BROWSER_IPC_CHANNELS.setBounds, input);
-    },
-    attachWebview: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.attachWebview, input),
-    detachWebview: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.detachWebview, input),
-    copyLink: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.requestCopyLink, input),
-    copyScreenshotToClipboard: (input) =>
-      ipcRenderer.invoke(BROWSER_IPC_CHANNELS.copyScreenshotToClipboard, input),
-    captureScreenshot: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.captureScreenshot, input),
-    executeCdp: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.executeCdp, input),
-    navigate: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.navigate, input),
-    reload: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.reload, input),
-    goBack: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.goBack, input),
-    goForward: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.goForward, input),
-    newTab: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.newTab, input),
-    closeTab: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.closeTab, input),
-    selectTab: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.selectTab, input),
-    openDevTools: (input) => ipcRenderer.invoke(BROWSER_IPC_CHANNELS.openDevTools, input),
-    onState: (listener) => {
-      const wrappedListener = (_event: Electron.IpcRendererEvent, state: unknown) => {
-        if (typeof state !== "object" || state === null) return;
-        listener(state as Parameters<typeof listener>[0]);
-      };
-
-      ipcRenderer.on(BROWSER_IPC_CHANNELS.state, wrappedListener);
-      return () => {
-        ipcRenderer.removeListener(BROWSER_IPC_CHANNELS.state, wrappedListener);
-      };
-    },
-    onBrowserUseOpenPanelRequest: (listener) => {
-      const wrappedListener = () => listener();
-      ipcRenderer.on(BROWSER_IPC_CHANNELS.requestOpenPanel, wrappedListener);
-      return () => {
-        ipcRenderer.removeListener(BROWSER_IPC_CHANNELS.requestOpenPanel, wrappedListener);
-      };
-    },
-    onBrowserCopyLink: (listener) => {
-      const wrappedListener = (_event: Electron.IpcRendererEvent, payload: unknown) => {
-        if (typeof payload !== "object" || payload === null) return;
-        listener(payload as Parameters<typeof listener>[0]);
-      };
-      ipcRenderer.on(BROWSER_IPC_CHANNELS.copyLink, wrappedListener);
-      return () => {
-        ipcRenderer.removeListener(BROWSER_IPC_CHANNELS.copyLink, wrappedListener);
-      };
-    },
   },
 } satisfies DesktopBridge);

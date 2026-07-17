@@ -1,38 +1,20 @@
 // FILE: settingsNavigation.ts
-// Purpose: Share the settings topic taxonomy between the main sidebar and the settings screen.
-// Layer: Route/UI support
-// Exports: section ids, nav items, and search normalization helper
+// Purpose: Share the compact settings taxonomy between navigation, search, and panels.
 
 export const SETTINGS_SECTION_IDS = [
   "general",
   "profile",
   "appearance",
-  "notifications",
-  "behavior",
-  "shortcuts",
-  "worktrees",
-  "archived",
-  "models",
-  "orchestrator",
-  "providers",
-  "skills",
-  "usage",
+  "agents",
   "advanced",
 ] as const;
 
 export type SettingsSectionId = (typeof SETTINGS_SECTION_IDS)[number];
-export type SettingsNavGroupId = "app" | "chitauri";
+export type SettingsNavGroupId = "app";
 
-/**
- * Deep-link scroll targets inside a settings panel. Each id is shared by the element that owns
- * it (its `id` + scroll ref), the panel effect that scrolls it into view, and any caller that
- * navigates to it via `?target=…`. Centralizing them keeps the anchor and its links from
- * silently drifting apart.
- */
 export const SETTINGS_TARGETS = {
   providerUpdates: "provider-updates",
   providerInstalls: "provider-installs",
-  environmentPanel: "environment-panel",
   chatHeaderControls: "chat-header-controls",
 } as const;
 
@@ -43,33 +25,26 @@ export type SettingsNavItem = {
   group: SettingsNavGroupId;
   label: string;
   description: string;
-  /** Basename of a SVG under `/central-icons-reversed`. */
   icon: string;
   eyebrow: string;
 };
 
-export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
-  id: SettingsNavGroupId;
-  label: string;
-}> = [
-  { id: "app", label: "App" },
-  { id: "chitauri", label: "TeaCode" },
-] as const;
+export const SETTINGS_NAV_GROUPS = [{ id: "app", label: "Settings" }] as const;
 
 export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   {
     id: "general",
     group: "app",
     label: "General",
-    description: "Default provider, thread mode, and sidebar organization.",
+    description: "Workflow defaults, behavior, and notifications.",
     icon: "settings-gear-1",
-    eyebrow: "Workflow defaults",
+    eyebrow: "App defaults",
   },
   {
     id: "profile",
     group: "app",
     label: "Profile",
-    description: "Your local activity, streaks, and a shareable stats card.",
+    description: "Your local activity, streaks, and shareable stats.",
     icon: "user",
     eyebrow: "Your stats",
   },
@@ -77,106 +52,28 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     id: "appearance",
     group: "app",
     label: "Appearance",
-    description: "Theme, typography, and timestamp formatting.",
+    description: "Theme, typography, and chat presentation.",
     icon: "color-palette",
     eyebrow: "Visual language",
   },
   {
-    id: "notifications",
+    id: "agents",
     group: "app",
-    label: "Notifications",
-    description: "In-app toasts and desktop alerts.",
-    icon: "bell",
-    eyebrow: "Alerts",
-  },
-  {
-    id: "behavior",
-    group: "app",
-    label: "Behavior",
-    description: "Task layout, streaming, diff handling, and destructive confirmations.",
-    icon: "settings-slider-hor",
-    eyebrow: "Interaction rules",
-  },
-  {
-    id: "shortcuts",
-    group: "app",
-    label: "Keyboard Shortcuts",
-    description: "Every keyboard shortcut available in TeaCode, grouped by context.",
-    icon: "shortcut",
-    eyebrow: "Key bindings",
-  },
-  {
-    id: "worktrees",
-    group: "app",
-    label: "Worktrees",
-    description: "Review and clean up the worktrees created by TeaCode.",
-    icon: "branch-simple",
-    eyebrow: "Workspace management",
-  },
-  {
-    id: "archived",
-    group: "app",
-    label: "Archived",
-    description: "View and restore archived threads.",
-    icon: "archive",
-    eyebrow: "Thread management",
-  },
-  {
-    id: "models",
-    group: "chitauri",
-    label: "Models",
-    description: "Git writing defaults and custom model slugs.",
-    icon: "brain",
-    eyebrow: "AI configuration",
-  },
-  {
-    id: "orchestrator",
-    group: "chitauri",
-    label: "Orchestrator",
-    description: "Seat models and per-lane routing for delegated work.",
+    label: "Agents",
+    description: "Models, providers, orchestration, skills, and usage.",
     icon: "agent-network",
-    eyebrow: "Delegation",
-  },
-  {
-    id: "providers",
-    group: "chitauri",
-    label: "Providers",
-    description: "Choose visible providers, review CLI installs, and update provider tools.",
-    icon: "puzzle",
-    eyebrow: "Picker visibility",
-  },
-  {
-    id: "skills",
-    group: "chitauri",
-    label: "Skills",
-    description: "Every skill found across providers, with toggles to control availability.",
-    icon: "building-blocks",
-    eyebrow: "Agent skills",
-  },
-  {
-    id: "usage",
-    group: "chitauri",
-    label: "Usage",
-    description: "Remaining quota and credits for each signed-in provider.",
-    icon: "gauge",
-    eyebrow: "Limits & credits",
+    eyebrow: "Agent configuration",
   },
   {
     id: "advanced",
-    group: "chitauri",
+    group: "app",
     label: "Advanced",
-    description: "Keybindings, recovery, and version info.",
+    description: "Shortcuts, recovery tools, and version information.",
     icon: "toolbox",
     eyebrow: "System tools",
   },
 ] as const;
 
-/**
- * Stable DOM id for a settings row, derived from its (string) title. Shared by the row that
- * renders the anchor and by the search index that deep-links to it via `?target=…`, so the
- * two can't drift. Panels mount one section at a time, so the slug only needs to be unique
- * within a section.
- */
 export function settingRowAnchorId(title: string): string {
   const slug = title
     .toLowerCase()
@@ -189,5 +86,17 @@ export function normalizeSettingsSection(value: unknown): SettingsSectionId {
   if (typeof value !== "string") {
     return "general";
   }
-  return SETTINGS_SECTION_IDS.find((candidate) => candidate === value) ?? "general";
+  if (SETTINGS_SECTION_IDS.some((candidate) => candidate === value)) {
+    return value as SettingsSectionId;
+  }
+  if (["models", "orchestrator", "providers", "skills", "usage"].includes(value)) {
+    return "agents";
+  }
+  if (["shortcuts", "worktrees", "archived"].includes(value)) {
+    return "advanced";
+  }
+  if (["notifications", "behavior"].includes(value)) {
+    return "general";
+  }
+  return "general";
 }

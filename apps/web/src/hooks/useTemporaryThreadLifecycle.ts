@@ -10,7 +10,6 @@ import { reconcileDeletedThreadFromClient } from "../lib/deletedThreadClientReco
 import { resolveTemporaryThreadIdToDelete } from "../lib/temporaryThread";
 import { newCommandId } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
-import { useSplitViewStore } from "../splitViewStore";
 import { useStore } from "../store";
 import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useTerminalStateStore } from "../terminalStateStore";
@@ -19,7 +18,6 @@ import { getThreadFromState } from "../threadDerivation";
 export function useTemporaryThreadLifecycle(activeThreadId: ThreadId | null): void {
   const clearDraftThread = useComposerDraftStore((store) => store.clearDraftThread);
   const clearTerminalState = useTerminalStateStore((store) => store.clearTerminalState);
-  const removeThreadFromSplitViews = useSplitViewStore((store) => store.removeThreadFromSplitViews);
   const temporaryThreadIds = useTemporaryThreadStore((store) => store.temporaryThreadIds);
   const clearTemporaryThread = useTemporaryThreadStore((store) => store.clearTemporaryThread);
   const initialDraftThread =
@@ -102,7 +100,6 @@ export function useTemporaryThreadLifecycle(activeThreadId: ThreadId | null): vo
 
         clearDraftThread(temporaryThreadId);
         clearTerminalState(temporaryThreadId);
-        removeThreadFromSplitViews(temporaryThreadId);
         clearTemporaryThread(temporaryThreadId);
       } finally {
         disposingThreadIdsRef.current.delete(temporaryThreadId);
@@ -113,7 +110,6 @@ export function useTemporaryThreadLifecycle(activeThreadId: ThreadId | null): vo
     clearDraftThread,
     clearTerminalState,
     clearTemporaryThread,
-    removeThreadFromSplitViews,
     temporaryThreadIds,
   ]);
 }

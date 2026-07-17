@@ -420,10 +420,8 @@ const SLASH_COMMAND_ICONS: Record<string, LucideIcon> = {
   default: MessageCircleIcon,
   review: BugIcon,
   fork: GitForkIcon,
-  side: TemporaryThreadIcon,
   status: InfoIcon,
   subagents: BotIcon,
-  automation: ClockIcon,
 };
 
 function commandMenuSlashGlyph(command: string, fallback: LucideIcon): ReactNode {

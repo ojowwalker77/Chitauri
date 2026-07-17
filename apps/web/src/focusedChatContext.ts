@@ -1,54 +1,38 @@
 // FILE: focusedChatContext.ts
-// Purpose: Resolves the currently focused chat context across single and split chat surfaces.
-// Layer: Route-aware UI helpers
-// Exports: pure resolver and hook used by shortcut, discovery, and thread creation flows
+// Purpose: Resolves the active single-chat route into its thread and project context.
 
 import { ThreadId, type ThreadId as ThreadIdType } from "@t3tools/contracts";
 import { useParams } from "@tanstack/react-router";
 import { useMemo } from "react";
+
 import { type DraftThreadState, useComposerDraftStore } from "./composerDraftStore";
-import { useDiffRouteSearch } from "./hooks/useDiffRouteSearch";
-import {
-  resolveSplitViewFocusedPaneThreadId,
-  selectSplitView,
-  type SplitView,
-  useSplitViewStore,
-} from "./splitViewStore";
 import { useStore } from "./store";
 import { createProjectSelector, createThreadSelector } from "./storeSelectors";
 import type { Project, Thread } from "./types";
 
 export interface FocusedChatContext {
   routeThreadId: ThreadIdType | null;
-  splitView: SplitView | null;
   focusedThreadId: ThreadIdType | null;
   activeThread: Thread | null;
   activeDraftThread: DraftThreadState | null;
-  activeProject: Project | null;
   activeProjectId: Project["id"] | null;
+  activeProject: Project | null;
 }
 
 export function resolveFocusedChatContext(input: {
   routeThreadId: ThreadIdType | null;
-  splitView: SplitView | null;
   threads: readonly Thread[];
   projects: readonly Project[];
   draftThreadsByThreadId: Record<string, DraftThreadState | undefined>;
 }): FocusedChatContext {
-  const focusedThreadId = input.splitView
-    ? resolveSplitViewFocusedPaneThreadId(input.splitView)
-    : input.routeThreadId;
+  const focusedThreadId = input.routeThreadId;
   const activeThread =
     focusedThreadId !== null
       ? (input.threads.find((thread) => thread.id === focusedThreadId) ?? null)
       : null;
   const activeDraftThread =
     focusedThreadId !== null ? (input.draftThreadsByThreadId[focusedThreadId] ?? null) : null;
-  const activeProjectId =
-    activeDraftThread?.projectId ??
-    activeThread?.projectId ??
-    input.splitView?.ownerProjectId ??
-    null;
+  const activeProjectId = activeDraftThread?.projectId ?? activeThread?.projectId ?? null;
   const activeProject =
     activeProjectId !== null
       ? (input.projects.find((project) => project.id === activeProjectId) ?? null)
@@ -56,12 +40,11 @@ export function resolveFocusedChatContext(input: {
 
   return {
     routeThreadId: input.routeThreadId,
-    splitView: input.splitView,
     focusedThreadId,
     activeThread,
     activeDraftThread,
-    activeProject,
     activeProjectId,
+    activeProject,
   };
 }
 
@@ -71,22 +54,12 @@ export function useFocusedChatContext(): FocusedChatContext {
     strict: false,
     select: (params) => (params.threadId ? ThreadId.makeUnsafe(params.threadId) : null),
   });
-  const routeSearch = useDiffRouteSearch();
-  const activeSplitView = useSplitViewStore(selectSplitView(routeSearch.splitViewId ?? null));
-  const focusedThreadId = useMemo(
-    () => (activeSplitView ? resolveSplitViewFocusedPaneThreadId(activeSplitView) : routeThreadId),
-    [activeSplitView, routeThreadId],
-  );
   const activeThread = useStore(
-    useMemo(() => createThreadSelector(focusedThreadId), [focusedThreadId]),
+    useMemo(() => createThreadSelector(routeThreadId), [routeThreadId]),
   );
   const activeDraftThread =
-    focusedThreadId !== null ? (draftThreadsByThreadId[focusedThreadId] ?? null) : null;
-  const activeProjectId =
-    activeDraftThread?.projectId ??
-    activeThread?.projectId ??
-    activeSplitView?.ownerProjectId ??
-    null;
+    routeThreadId !== null ? (draftThreadsByThreadId[routeThreadId] ?? null) : null;
+  const activeProjectId = activeDraftThread?.projectId ?? activeThread?.projectId ?? null;
   const activeProject = useStore(
     useMemo(() => createProjectSelector(activeProjectId), [activeProjectId]),
   );
@@ -94,21 +67,12 @@ export function useFocusedChatContext(): FocusedChatContext {
   return useMemo(
     () => ({
       routeThreadId,
-      splitView: activeSplitView,
-      focusedThreadId,
+      focusedThreadId: routeThreadId,
       activeThread: activeThread ?? null,
       activeDraftThread,
+      activeProjectId,
       activeProject: activeProject ?? null,
-      activeProjectId,
     }),
-    [
-      activeDraftThread,
-      activeProject,
-      activeProjectId,
-      activeSplitView,
-      activeThread,
-      focusedThreadId,
-      routeThreadId,
-    ],
+    [activeDraftThread, activeProject, activeProjectId, activeThread, routeThreadId],
   );
 }

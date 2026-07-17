@@ -79,27 +79,22 @@ describe("parseDiffRouteSearch", () => {
     });
   });
 
-  it("preserves browser panel mode without diff state", () => {
+  it("drops removed browser panel state", () => {
     const parsed = parseDiffRouteSearch({
       panel: "browser",
       diffTurnId: "turn-1",
     });
 
-    expect(parsed).toEqual({
-      panel: "browser",
-    });
+    expect(parsed).toEqual({});
   });
 
-  it("preserves split route state while normalizing unrelated values", () => {
+  it("drops removed browser and split route state", () => {
     const parsed = parseDiffRouteSearch({
       panel: "browser",
       diffTurnId: "turn-1",
       splitViewId: " split-1 ",
     });
 
-    expect(parsed).toEqual({
-      panel: "browser",
-      splitViewId: "split-1",
-    });
+    expect(parsed).toEqual({});
   });
 });

@@ -844,7 +844,6 @@ function SettingsRouteView() {
   const [openKeybindingsError, setOpenKeybindingsError] = useState<string | null>(null);
   const providerUpdatesRef = useRef<HTMLDivElement | null>(null);
   const providerInstallsRef = useRef<HTMLDivElement | null>(null);
-  const environmentPanelRef = useRef<HTMLDivElement | null>(null);
   const chatHeaderControlsRef = useRef<HTMLDivElement | null>(null);
   const [openInstallProviders, setOpenInstallProviders] = useState<Record<ProviderKind, boolean>>({
     codex: Boolean(settings.codexBinaryPath || settings.codexHomePath),
@@ -971,15 +970,9 @@ function SettingsRouteView() {
   );
   const outdatedProviderCount = outdatedProviderStatuses.length;
   useSettingsTargetScroll(
-    activeSection === "providers" && settingsTarget === SETTINGS_TARGETS.providerUpdates,
+    activeSection === "agents" && settingsTarget === SETTINGS_TARGETS.providerUpdates,
     providerUpdatesRef,
     serverConfigQuery.data?.providers,
-  );
-
-  // Deep-link target for the chat Environment panel's gear button (see EnvironmentPanel).
-  useSettingsTargetScroll(
-    activeSection === "general" && settingsTarget === SETTINGS_TARGETS.environmentPanel,
-    environmentPanelRef,
   );
 
   useSettingsTargetScroll(
@@ -1061,7 +1054,7 @@ function SettingsRouteView() {
   });
   const { modelOptionsByProvider: gitWritingCatalogOptionsByProvider } = useProviderModelCatalog({
     selectedProvider: currentGitTextGenerationProvider,
-    discoveryEnabled: activeSection === "models",
+    discoveryEnabled: activeSection === "agents",
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider: gitWritingModelHintByProvider,
   });
@@ -1161,9 +1154,6 @@ function SettingsRouteView() {
       ? ["Thread sort order"]
       : []),
     ...(settings.showChatsSection !== defaults.showChatsSection ? ["Chats section"] : []),
-    ...(settings.showWorkspaceSection !== defaults.showWorkspaceSection
-      ? ["Workspace section"]
-      : []),
     ...(settings.uiDensity !== defaults.uiDensity ? ["UI density"] : []),
     ...(settings.highlightColor !== defaults.highlightColor ? ["Highlight color"] : []),
     ...(settings.chatFontSizePx !== defaults.chatFontSizePx ? ["Base font size"] : []),
@@ -1904,105 +1894,7 @@ function SettingsRouteView() {
           resetLabel: "chats section",
           ariaLabel: "Show the Chats section in the sidebar",
         })}
-
-        {renderBooleanSettingRow({
-          settingKey: "showWorkspaceSection",
-          title: "Workspace",
-          description:
-            "Show the Workspace tab in the sidebar switcher. The Threads tab always stays visible.",
-          resetLabel: "workspace section",
-          ariaLabel: "Show the Workspace section in the sidebar",
-        })}
       </SettingsSection>
-
-      <div ref={environmentPanelRef} id={SETTINGS_TARGETS.environmentPanel}>
-        <SettingsSection title="Environment panel">
-          {renderBooleanSettingRow({
-            settingKey: "showEnvironmentPanel",
-            title: "Environment panel",
-            description:
-              "Show the Environment panel — the side dock with git status, usage, notes, and more. When off, the panel is hidden and the section toggles below have no effect.",
-            resetLabel: "environment panel",
-            ariaLabel: "Show the Environment panel",
-          })}
-
-          {renderBooleanSettingRow({
-            settingKey: "showEnvironmentUsage",
-            title: "Usage",
-            description: "Show the provider usage row in the chat Environment panel.",
-            resetLabel: "usage section",
-            ariaLabel: "Show the Usage section in the Environment panel",
-          })}
-
-          {renderBooleanSettingRow({
-            settingKey: "showEnvironmentRepository",
-            title: "Repository",
-            description:
-              "Show the GitHub repository link in the chat Environment panel. The git block (Changes, Worktree, branch, Commit and Push) always stays visible.",
-            resetLabel: "repository section",
-            ariaLabel: "Show the Repository section in the Environment panel",
-          })}
-
-          {renderBooleanSettingRow({
-            settingKey: "showEnvironmentPullRequest",
-            title: "Pull request",
-            description:
-              "Show the open pull request (CI checks and review comments) for the current branch in the chat Environment panel.",
-            resetLabel: "pull request section",
-            ariaLabel: "Show the Pull request section in the Environment panel",
-          })}
-
-          {renderBooleanSettingRow({
-            settingKey: "showEnvironmentEditor",
-            title: "Editor",
-            description:
-              "Show the Editor section (in-app editor view and Open in editor picker) in the chat Environment panel.",
-            resetLabel: "editor section",
-            ariaLabel: "Show the Editor section in the Environment panel",
-          })}
-
-          {renderBooleanSettingRow({
-            settingKey: "showEnvironmentRecap",
-            title: "Recap",
-            description: "Show the auto-generated chat recap in the Environment panel.",
-            resetLabel: "recap section",
-            ariaLabel: "Show the Recap section in the Environment panel",
-          })}
-
-          {renderBooleanSettingRow({
-            settingKey: "showEnvironmentPinned",
-            title: "Pinned messages",
-            description: "Show the pinned-messages checklist in the Environment panel.",
-            resetLabel: "pinned messages section",
-            ariaLabel: "Show the Pinned messages section in the Environment panel",
-          })}
-
-          {renderBooleanSettingRow({
-            settingKey: "showEnvironmentMarkers",
-            title: "Text markers",
-            description:
-              "Show highlighted and underlined transcript text in the Environment panel.",
-            resetLabel: "text markers section",
-            ariaLabel: "Show the Text markers section in the Environment panel",
-          })}
-
-          {renderBooleanSettingRow({
-            settingKey: "showEnvironmentInstructions",
-            title: "Project instructions",
-            description: "Show project-level instructions in the Environment panel.",
-            resetLabel: "project instructions section",
-            ariaLabel: "Show the Project instructions section in the Environment panel",
-          })}
-
-          {renderBooleanSettingRow({
-            settingKey: "showEnvironmentNotepad",
-            title: "Notepad",
-            description: "Show the per-thread notepad in the Environment panel.",
-            resetLabel: "notepad section",
-            ariaLabel: "Show the Notepad section in the Environment panel",
-          })}
-        </SettingsSection>
-      </div>
     </div>
   );
 
@@ -3864,35 +3756,41 @@ function SettingsRouteView() {
   const renderActivePanel = () => {
     switch (activeSection) {
       case "general":
-        return renderGeneralPanel();
+        return (
+          <>
+            {renderGeneralPanel()}
+            {renderNotificationsPanel()}
+            {renderBehaviorPanel()}
+          </>
+        );
       case "appearance":
         return renderAppearancePanel();
-      case "notifications":
-        return renderNotificationsPanel();
-      case "behavior":
-        return renderBehaviorPanel();
-      case "shortcuts":
-        return <KeyboardShortcutsSettingsPanel />;
-      case "worktrees":
-        return renderWorktreesPanel();
-      case "archived":
-        return renderArchivedPanel();
-      case "models":
-        return renderModelsPanel();
-      case "orchestrator":
-        return renderOrchestratorPanel();
-      case "providers":
-        return renderProvidersPanel();
       case "profile":
         return <ProfileSettingsPanel />;
-      case "skills":
-        return <SkillsSettingsPanel />;
-      case "usage":
-        return <ProviderUsageSettingsPanel />;
+      case "agents":
+        return (
+          <>
+            {renderModelsPanel()}
+            {renderOrchestratorPanel()}
+            {renderProvidersPanel()}
+            <SkillsSettingsPanel />
+            <ProviderUsageSettingsPanel />
+          </>
+        );
       case "advanced":
-        return renderAdvancedPanel();
-      default:
-        return null;
+        return (
+          <>
+            <KeyboardShortcutsSettingsPanel />
+            <section className="space-y-6" aria-labelledby="operational-managers-title">
+              <h2 id="operational-managers-title" className={SETTINGS_SECTION_LABEL_CLASS_NAME}>
+                Operational managers
+              </h2>
+              {renderWorktreesPanel()}
+              {renderArchivedPanel()}
+            </section>
+            {renderAdvancedPanel()}
+          </>
+        );
     }
   };
 

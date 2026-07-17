@@ -4,10 +4,9 @@
 
 import { TurnId } from "@t3tools/contracts";
 
-export type ChatRightPanel = "browser" | "diff";
+export type ChatRightPanel = "diff";
 
 export interface DiffRouteSearch {
-  splitViewId?: string | undefined;
   view?: "editor" | undefined;
   editorFilePath?: string | undefined;
   panel?: ChatRightPanel | undefined;
@@ -42,13 +41,11 @@ export function stripDiffSearchParams<T extends Record<string, unknown>>(
 }
 
 export function parseDiffRouteSearch(search: Record<string, unknown>): DiffRouteSearch {
-  const splitViewId = normalizeSearchString(search.splitViewId);
   const viewRaw = normalizeSearchString(search.view);
   const view = viewRaw === "editor" ? "editor" : undefined;
   const editorFilePath = view ? normalizeSearchString(search.editorFilePath) : undefined;
   const panelRaw = normalizeSearchString(search.panel);
-  const panel: ChatRightPanel | undefined =
-    panelRaw === "browser" ? "browser" : panelRaw === "diff" ? "diff" : undefined;
+  const panel: ChatRightPanel | undefined = panelRaw === "diff" ? "diff" : undefined;
   const diff = panel === "diff" || isDiffOpenValue(search.diff) ? "1" : undefined;
   const resolvedPanel = panel ?? (diff ? "diff" : undefined);
   const diffTurnIdRaw = diff ? normalizeSearchString(search.diffTurnId) : undefined;
@@ -56,7 +53,6 @@ export function parseDiffRouteSearch(search: Record<string, unknown>): DiffRoute
   const diffFilePath = diff ? normalizeSearchString(search.diffFilePath) : undefined;
 
   return {
-    ...(splitViewId ? { splitViewId } : {}),
     ...(view ? { view } : {}),
     ...(editorFilePath ? { editorFilePath } : {}),
     ...(resolvedPanel ? { panel: resolvedPanel } : {}),

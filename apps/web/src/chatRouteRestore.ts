@@ -5,7 +5,6 @@
 
 export type LastThreadRoute = {
   threadId: string;
-  splitViewId?: string | undefined;
 };
 
 export type EmptyRouteRestoreRecoveryState = "idle" | "pending" | "done";
@@ -15,23 +14,14 @@ export const EMPTY_ROUTE_RESTORE_FALLBACK_DELAY_MS = 1_800;
 export function resolveRestorableThreadRoute(input: {
   lastThreadRoute: LastThreadRoute | null;
   availableThreadIds: ReadonlySet<string>;
-  availableSplitViewIds?: ReadonlySet<string>;
 }): LastThreadRoute | null {
-  const { lastThreadRoute, availableThreadIds, availableSplitViewIds } = input;
+  const { lastThreadRoute, availableThreadIds } = input;
   if (!lastThreadRoute) {
     return null;
   }
 
   if (!availableThreadIds.has(lastThreadRoute.threadId)) {
     return null;
-  }
-
-  if (
-    lastThreadRoute.splitViewId &&
-    availableSplitViewIds &&
-    !availableSplitViewIds.has(lastThreadRoute.splitViewId)
-  ) {
-    return { threadId: lastThreadRoute.threadId };
   }
 
   return lastThreadRoute;

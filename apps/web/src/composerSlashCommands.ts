@@ -72,11 +72,7 @@ function shouldKeepBuiltInSlashCommandDespiteNativeCollision(
   provider: ProviderKind,
   command: ComposerSlashCommand,
 ): boolean {
-  return (
-    command === "automation" ||
-    command === "export" ||
-    (provider === "codex" && command === "review")
-  );
+  return command === "export" || (provider === "codex" && command === "review");
 }
 
 export function shouldHideProviderNativeCommandFromComposerMenu(
@@ -87,7 +83,6 @@ export function shouldHideProviderNativeCommandFromComposerMenu(
   const normalizedCommand = normalizeComposerSlashCommandName(command);
   const appCommandIsAvailable = options.availableAppCommands?.has(normalizedCommand) ?? true;
   return (
-    normalizedCommand === "automation" ||
     (normalizedCommand === "export" && appCommandIsAvailable) ||
     (provider === "codex" && normalizedCommand === "review")
   );
@@ -147,12 +142,6 @@ const COMPOSER_SLASH_COMMAND_DEFINITIONS: Record<
     description: "Fork this thread into local or a new worktree",
     source: "app",
   },
-  side: {
-    command: "side",
-    label: "/side",
-    description: "Open a guarded Side from this thread",
-    source: "app",
-  },
   status: {
     command: "status",
     label: "/status",
@@ -175,12 +164,6 @@ const COMPOSER_SLASH_COMMAND_DEFINITIONS: Record<
     command: "export",
     label: "/export",
     description: "Download this thread as a ZIP archive (thread.json + transcript.md)",
-    source: "app",
-  },
-  automation: {
-    command: "automation",
-    label: "/automation",
-    description: "Create a scheduled automation from this prompt",
     source: "app",
   },
 };
@@ -379,20 +362,16 @@ export function getAvailableComposerSlashCommands(input: {
           "default",
           ...(input.canOfferReviewCommand ? (["review"] as const) : []),
           ...(input.canOfferForkCommand ? (["fork"] as const) : []),
-          ...(input.canOfferSideCommand ? (["side"] as const) : []),
           "status",
           "subagents",
           ...(input.canOfferExportCommand ? (["export"] as const) : []),
-          "automation",
         ]
       : [
           // Claude owns most slash-command UX natively; sidechat remains app-level because it
           // creates a TeaCode split/context clone before the provider sees the first turn.
           // /export is app-level too — TeaCode owns the thread transcript, so the download
           // happens in the app rather than being forwarded to Claude's native /export.
-          ...(input.canOfferSideCommand ? (["side"] as const) : []),
           ...(input.canOfferExportCommand ? (["export"] as const) : []),
-          "automation",
         ];
   return availableCommands.filter((command) => !collidingNativeCommandNames.has(command));
 }

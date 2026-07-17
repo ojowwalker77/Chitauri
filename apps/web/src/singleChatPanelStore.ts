@@ -31,7 +31,7 @@ export function createDefaultSingleChatPanelState(): SingleChatPanelState {
     diffTurnId: null,
     diffFilePath: null,
     hasOpenedPanel: false,
-    lastOpenPanel: "browser",
+    lastOpenPanel: "diff",
   };
 }
 
@@ -42,7 +42,7 @@ function getDefaultSingleChatPanelState(): SingleChatPanelState {
 }
 
 function isChatRightPanel(value: unknown): value is ChatRightPanel {
-  return value === "browser" || value === "diff";
+  return value === "diff";
 }
 
 function sanitizeSingleChatPanelState(rawState: unknown): SingleChatPanelState | null {
@@ -55,7 +55,7 @@ function sanitizeSingleChatPanelState(rawState: unknown): SingleChatPanelState |
     diffTurnId: typeof diffTurnId === "string" ? (diffTurnId as TurnId) : null,
     diffFilePath: typeof diffFilePath === "string" ? diffFilePath : null,
     hasOpenedPanel: hasOpenedPanel === true,
-    lastOpenPanel: isChatRightPanel(lastOpenPanel) ? lastOpenPanel : "browser",
+    lastOpenPanel: isChatRightPanel(lastOpenPanel) ? lastOpenPanel : "diff",
   };
 }
 

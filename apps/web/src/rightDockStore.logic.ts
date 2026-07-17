@@ -3,21 +3,13 @@
 // Layer: UI state helpers
 // Exports: dock pane types, default-state factory, and immutable open/close/activate helpers.
 
-import type { ThreadId, TurnId } from "@t3tools/contracts";
+import type { TurnId } from "@t3tools/contracts";
 import { isPlainObject, sanitizeStringKeyedRecord } from "./persistedRecord";
 
 // Single source of truth for the dock pane kinds. The union type, the runtime
 // validator, the per-kind metadata map, and the add-menu order are all derived
 // from this list so they can never drift apart.
-export const RIGHT_DOCK_PANE_KINDS = [
-  "browser",
-  "diff",
-  "explorer",
-  "file",
-  "terminal",
-  "sidechat",
-  "git",
-] as const;
+export const RIGHT_DOCK_PANE_KINDS = ["diff", "explorer", "terminal"] as const;
 
 export type RightDockPaneKind = (typeof RIGHT_DOCK_PANE_KINDS)[number];
 
@@ -26,12 +18,10 @@ const RIGHT_DOCK_PANE_KIND_SET: ReadonlySet<string> = new Set(RIGHT_DOCK_PANE_KI
 export interface RightDockPane {
   id: string;
   kind: RightDockPaneKind;
-  // sidechat panes point at the embedded thread.
-  threadId: ThreadId | null;
   // diff panes remember which turn/file they were opened on.
   diffTurnId: TurnId | null;
   diffFilePath: string | null;
-  // file panes preview one workspace-relative file.
+  // Explorer panes remember the file selected from chat or the tree.
   filePath: string | null;
 }
 
@@ -41,15 +31,7 @@ export interface RightDockThreadState {
   activePaneId: string | null;
 }
 
-// Kinds that allow multiple concurrent panes per host thread: sidechat opens
-// one pane per embedded thread, file opens one tab per previewed file.
-const MULTI_INSTANCE_PANE_KINDS: ReadonlySet<RightDockPaneKind> = new Set(["sidechat", "file"]);
-
-// Kinds that can only ever have one instance per host thread, derived as
-// "every kind that is not multi-instance" so the two sets can never drift.
-export const SINGLETON_PANE_KINDS: ReadonlySet<RightDockPaneKind> = new Set(
-  RIGHT_DOCK_PANE_KINDS.filter((kind) => !MULTI_INSTANCE_PANE_KINDS.has(kind)),
-);
+export const SINGLETON_PANE_KINDS: ReadonlySet<RightDockPaneKind> = new Set(RIGHT_DOCK_PANE_KINDS);
 
 export function isSingletonPaneKind(kind: RightDockPaneKind): boolean {
   return SINGLETON_PANE_KINDS.has(kind);
@@ -82,7 +64,6 @@ function sanitizePersistedPane(value: unknown): RightDockPane | null {
   return {
     id: candidate.id,
     kind: candidate.kind,
-    threadId: typeof candidate.threadId === "string" ? (candidate.threadId as ThreadId) : null,
     diffTurnId: typeof candidate.diffTurnId === "string" ? (candidate.diffTurnId as TurnId) : null,
     diffFilePath: typeof candidate.diffFilePath === "string" ? candidate.diffFilePath : null,
     filePath: typeof candidate.filePath === "string" ? candidate.filePath : null,
@@ -122,7 +103,6 @@ export function sanitizeRightDockStateByThreadId(
 export interface OpenPaneInput {
   paneId: string;
   kind: RightDockPaneKind;
-  threadId?: ThreadId | null;
   diffTurnId?: TurnId | null;
   diffFilePath?: string | null;
   filePath?: string | null;
@@ -132,7 +112,6 @@ function createPane(input: OpenPaneInput): RightDockPane {
   return {
     id: input.paneId,
     kind: input.kind,
-    threadId: input.threadId ?? null,
     diffTurnId: input.diffTurnId ?? null,
     diffFilePath: input.diffFilePath ?? null,
     filePath: input.filePath ?? null,
@@ -149,28 +128,10 @@ function singletonPaneReopenPatch(input: OpenPaneInput): Partial<RightDockPane> 
   ) {
     return { diffTurnId: input.diffTurnId ?? null, diffFilePath: input.diffFilePath ?? null };
   }
+  if (input.kind === "explorer" && input.filePath !== undefined) {
+    return { filePath: input.filePath ?? null };
+  }
   return null;
-}
-
-// Multi-instance kinds reuse an existing pane only when it already shows the
-// requested content: sidechat panes match on the embedded thread, file panes
-// on the previewed file (so re-clicking an open file focuses its tab instead
-// of duplicating it, and a bare open reuses an existing empty file pane).
-function findMatchingMultiInstancePane(
-  state: RightDockThreadState,
-  input: OpenPaneInput,
-): RightDockPane | undefined {
-  if (input.kind === "sidechat") {
-    if (!input.threadId) {
-      return undefined;
-    }
-    return state.panes.find((pane) => pane.kind === "sidechat" && pane.threadId === input.threadId);
-  }
-  if (input.kind === "file") {
-    const filePath = input.filePath ?? null;
-    return state.panes.find((pane) => pane.kind === "file" && pane.filePath === filePath);
-  }
-  return undefined;
 }
 
 function findSingletonPane(
@@ -187,20 +148,13 @@ export function openPaneInState(
   state: RightDockThreadState,
   input: OpenPaneInput,
 ): RightDockThreadState {
-  if (isSingletonPaneKind(input.kind)) {
-    const existing = findSingletonPane(state, input.kind);
-    if (existing) {
-      const patch = singletonPaneReopenPatch(input);
-      const nextPanes = patch
-        ? state.panes.map((pane) => (pane.id === existing.id ? { ...pane, ...patch } : pane))
-        : state.panes;
-      return { open: true, panes: nextPanes, activePaneId: existing.id };
-    }
-  } else {
-    const existing = findMatchingMultiInstancePane(state, input);
-    if (existing) {
-      return { open: true, panes: state.panes, activePaneId: existing.id };
-    }
+  const existing = findSingletonPane(state, input.kind);
+  if (existing) {
+    const patch = singletonPaneReopenPatch(input);
+    const nextPanes = patch
+      ? state.panes.map((pane) => (pane.id === existing.id ? { ...pane, ...patch } : pane))
+      : state.panes;
+    return { open: true, panes: nextPanes, activePaneId: existing.id };
   }
 
   const pane = createPane(input);
@@ -275,7 +229,7 @@ export function setDockOpenInState(
 export function updatePaneInState(
   state: RightDockThreadState,
   paneId: string,
-  patch: Partial<Pick<RightDockPane, "diffTurnId" | "diffFilePath" | "filePath" | "threadId">>,
+  patch: Partial<Pick<RightDockPane, "diffTurnId" | "diffFilePath" | "filePath">>,
 ): RightDockThreadState {
   let changed = false;
   const nextPanes = state.panes.map((pane) => {
@@ -286,8 +240,7 @@ export function updatePaneInState(
     if (
       nextPane.diffTurnId !== pane.diffTurnId ||
       nextPane.diffFilePath !== pane.diffFilePath ||
-      nextPane.filePath !== pane.filePath ||
-      nextPane.threadId !== pane.threadId
+      nextPane.filePath !== pane.filePath
     ) {
       changed = true;
       return nextPane;

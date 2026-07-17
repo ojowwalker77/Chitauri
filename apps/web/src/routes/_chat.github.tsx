@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
+import { Select, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { Textarea } from "~/components/ui/textarea";
 import { useComposerDraftStore } from "~/composerDraftStore";
@@ -36,7 +37,6 @@ import {
   DEFAULT_GITHUB_VIEW,
   GITHUB_WORK_VIEWS,
   buildGitHubAgentPrompt,
-  findProjectForGitHubItem,
   groupGitHubItemsByRepository,
 } from "~/githubWorkbench.logic";
 import { useHandleNewThread } from "~/hooks/useHandleNewThread";
@@ -609,11 +609,7 @@ function IssueCreationDialog({
         <DialogPanel className="space-y-3">
           <label className="grid gap-1 text-xs">
             <span className="font-medium">Repository</span>
-            <Input
-              value={repository}
-              onChange={(event) => setRepository(event.target.value)}
-              placeholder="owner/repository"
-            />
+            <Input value={repository} readOnly aria-readonly="true" />
           </label>
           <label className="grid gap-1 text-xs">
             <span className="font-medium">Title</span>
@@ -650,7 +646,16 @@ function GitHubWorkbenchRoute() {
   const queryClient = useQueryClient();
   const projects = useStore((state) => state.projects);
   const { handleNewThread } = useHandleNewThread();
-  const firstProjectCwd = projects[0]?.cwd ?? null;
+  const attachedProjects = useMemo(
+    () => projects.filter((project) => project.kind === "project"),
+    [projects],
+  );
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const selectedAttachedProject =
+    attachedProjects.find((project) => project.id === selectedProjectId) ??
+    attachedProjects[0] ??
+    null;
+  const selectedProjectCwd = selectedAttachedProject?.cwd ?? null;
   const [view, setView] = useState<GitHubWorkListView>(DEFAULT_GITHUB_VIEW);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -658,16 +663,17 @@ function GitHubWorkbenchRoute() {
   const [composerMode, setComposerMode] = useState<ComposerMode>(null);
   const [createIssueOpen, setCreateIssueOpen] = useState(false);
 
-  const connectionQuery = useQuery(githubConnectionQueryOptions(firstProjectCwd));
+  const connectionQuery = useQuery(githubConnectionQueryOptions(selectedProjectCwd));
+  const attachedRepository = connectionQuery.data?.repository?.nameWithOwner ?? null;
   const listInputBase = useMemo(
     () => ({
-      cwd: firstProjectCwd,
+      cwd: selectedProjectCwd,
       view,
       query: query.trim() || null,
-      repository: null,
+      repository: attachedRepository,
       limit: 75,
     }),
-    [firstProjectCwd, query, view],
+    [attachedRepository, query, selectedProjectCwd, view],
   );
   const pullRequestListQuery = useQuery(
     githubWorkListQueryOptions({ ...listInputBase, kind: "pull_request" }),
@@ -700,10 +706,10 @@ function GitHubWorkbenchRoute() {
     }
   }, [selectedId, visibleItems]);
   const selectedItem = visibleItems.find((item) => item.id === selectedId) ?? null;
-  const selectedProject = selectedItem ? findProjectForGitHubItem(projects, selectedItem) : null;
+  const selectedProject = selectedItem ? selectedAttachedProject : null;
   const detailInput = selectedItem
     ? {
-        cwd: selectedProject?.cwd ?? firstProjectCwd,
+        cwd: selectedProjectCwd,
         kind: selectedItem.kind,
         repository: selectedItem.repository.nameWithOwner,
         number: selectedItem.number,
@@ -801,6 +807,24 @@ function GitHubWorkbenchRoute() {
           <SidebarHeaderNavigationControls />
           <GitHubIcon className="size-4" />
           <span className="text-sm font-semibold">GitHub</span>
+          {attachedProjects.length > 0 ? (
+            <Select
+              value={selectedAttachedProject?.id ?? undefined}
+              onValueChange={(value) => {
+                setSelectedProjectId(value);
+                setSelectedId(null);
+              }}
+            >
+              <SelectTrigger size="sm" className="max-w-52">
+                <SelectValue placeholder="Select project" />
+              </SelectTrigger>
+              {attachedProjects.map((project) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.name}
+                </SelectItem>
+              ))}
+            </Select>
+          ) : null}
           {connection?.account ? (
             <span className="hidden text-xs text-muted-foreground sm:inline">
               {connection.account}
@@ -1079,7 +1103,7 @@ function GitHubWorkbenchRoute() {
                     ) : detailTab === "timeline" ? (
                       <TimelineView detail={detail} cwd={selectedProject?.cwd ?? null} />
                     ) : (
-                      <CodeView detail={detail} cwd={selectedProject?.cwd ?? firstProjectCwd} />
+                      <CodeView detail={detail} cwd={selectedProjectCwd} />
                     )}
                   </div>
                   {composerMode ? (
@@ -1118,7 +1142,7 @@ function GitHubWorkbenchRoute() {
         onCreate={(input) => {
           void runAction({
             action: "create_issue",
-            cwd: firstProjectCwd,
+            cwd: selectedProjectCwd,
             repository: input.repository,
             title: input.title,
             body: input.body,

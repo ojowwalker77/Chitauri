@@ -62,7 +62,7 @@ import { collectActiveTerminalThreadIds } from "../lib/terminalStateCleanup";
 import { useProjectRunStore } from "../projectRunStore";
 import { dockTerminalThreadId } from "../lib/dockTerminalScope";
 import { TaskCompletionNotifications } from "../notifications/taskCompletion";
-import { useWorkspaceStore, workspaceThreadId } from "../workspaceStore";
+import { useWorkspaceStore } from "../workspaceStore";
 import {
   subscribeRetainedThreadDetailIdChanges,
   useRetainedThreadDetailIds,
@@ -76,10 +76,8 @@ import { useTheme } from "../hooks/useTheme";
 import { useNativeFontSmoothing } from "../hooks/useNativeFontSmoothing";
 import { invalidateGitQueries, invalidateGitQueriesForCwds } from "../lib/gitReactQuery";
 import { hasLiveThreadsWithMissingProjects } from "../lib/desktopProjectRecovery";
-import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import { useProviderAuthRefreshOnFocus } from "../hooks/useProviderAuthRefreshOnFocus";
 import { useProviderStatusRefresh } from "../hooks/useProviderStatusRefresh";
-import { resolveSplitViewThreadIds, selectSplitView, useSplitViewStore } from "../splitViewStore";
 import { providerModelDiscoveryInvalidationFingerprint } from "../lib/providerDiscoveryInvalidation";
 import { providerDiscoveryQueryKeys } from "../lib/providerDiscoveryReactQuery";
 import { useAppSettings } from "../appSettings";
@@ -470,7 +468,7 @@ function ProviderUpdateNotifications() {
           }
           void navigate({
             to: "/settings",
-            search: { section: "providers", target: SETTINGS_TARGETS.providerUpdates },
+            search: { section: "agents", target: SETTINGS_TARGETS.providerUpdates },
           });
         },
       },
@@ -783,7 +781,6 @@ function EventRouter() {
     (store) => store.removeOrphanedTerminalStates,
   );
   const setServerWorkspacePaths = useWorkspaceStore((store) => store.setServerWorkspacePaths);
-  const workspacePages = useWorkspaceStore((store) => store.workspacePages);
   const serverThreads = useStore((store) => store.threads);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -792,14 +789,7 @@ function EventRouter() {
     strict: false,
     select: (params) => (params.threadId ? ThreadId.makeUnsafe(params.threadId) : null),
   });
-  const routeSearch = useDiffRouteSearch();
-  const activeSplitView = useSplitViewStore(selectSplitView(routeSearch.splitViewId ?? null));
-  const visibleThreadIds = useMemo(() => {
-    if (activeSplitView) {
-      return resolveSplitViewThreadIds(activeSplitView);
-    }
-    return routeThreadId ? [routeThreadId] : [];
-  }, [activeSplitView, routeThreadId]);
+  const visibleThreadIds = useMemo(() => (routeThreadId ? [routeThreadId] : []), [routeThreadId]);
   const retainedThreadIds = useRetainedThreadDetailIds();
   const serverThreadIds = useMemo(
     () => new Set(serverThreads.map((thread) => thread.id)),
@@ -820,7 +810,6 @@ function EventRouter() {
     }
     return [...nextThreadIds];
   }, [retainedThreadIds, serverThreadIds, visibleThreadIds]);
-  const workspacePagesRef = useRef(workspacePages);
   const pathnameRef = useRef(pathname);
   const handledBootstrapThreadIdRef = useRef<string | null>(null);
   const routeVisibleThreadIdsRef = useRef(visibleThreadIds);
@@ -829,7 +818,6 @@ function EventRouter() {
     ((threadIds: readonly ThreadId[]) => Promise<void>) | null
   >(null);
 
-  workspacePagesRef.current = workspacePages;
   pathnameRef.current = pathname;
   routeVisibleThreadIdsRef.current = visibleThreadIds;
   visibleThreadIdsRef.current = subscribedThreadIds;
@@ -999,9 +987,7 @@ function EventRouter() {
           archivedAt: thread.archivedAt ?? null,
         })),
         draftThreadIds,
-        retainedThreadIds: workspacePagesRef.current.map((workspace) =>
-          workspaceThreadId(workspace.id),
-        ),
+        retainedThreadIds: [],
       });
       // Right-dock terminals live under a synthetic scope derived from each active
       // thread; retain those scopes so docked terminals are not pruned mid-session.

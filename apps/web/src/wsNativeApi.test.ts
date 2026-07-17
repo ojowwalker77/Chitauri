@@ -5,8 +5,6 @@
 
 import {
   ApprovalRequestId,
-  AutomationId,
-  AutomationRunId,
   CommandId,
   type ContextMenuItem,
   DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
@@ -397,54 +395,6 @@ describe("wsNativeApi", () => {
     });
   });
 
-  it("forwards automation requests and events", async () => {
-    requestMock.mockResolvedValue({ definitions: [], runs: [] });
-    const { createWsNativeApi } = await import("./wsNativeApi");
-
-    const api = createWsNativeApi();
-    const onAutomationEvent = vi.fn();
-    const unsubscribe = api.automation.onEvent(onAutomationEvent);
-
-    await api.automation.list({ projectId: ProjectId.makeUnsafe("project-1") });
-    await api.automation.runNow({ automationId: AutomationId.makeUnsafe("automation-1") });
-    await api.automation.markRunRead({
-      runId: AutomationRunId.makeUnsafe("automation-run-1"),
-      unread: false,
-    });
-    await api.automation.archiveRun({
-      runId: AutomationRunId.makeUnsafe("automation-run-1"),
-      archived: true,
-    });
-
-    const event = {
-      type: "definition-deleted",
-      automationId: AutomationId.makeUnsafe("automation-1"),
-    } as const;
-    emitPush(WS_CHANNELS.automationEvent, event);
-    unsubscribe();
-    emitPush(WS_CHANNELS.automationEvent, {
-      type: "definition-deleted",
-      automationId: AutomationId.makeUnsafe("automation-2"),
-    });
-
-    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.automationList, {
-      projectId: "project-1",
-    });
-    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.automationRunNow, {
-      automationId: "automation-1",
-    });
-    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.automationMarkRunRead, {
-      runId: "automation-run-1",
-      unread: false,
-    });
-    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.automationArchiveRun, {
-      runId: "automation-run-1",
-      archived: true,
-    });
-    expect(onAutomationEvent).toHaveBeenCalledTimes(1);
-    expect(onAutomationEvent).toHaveBeenCalledWith(event);
-  });
-
   it("wraps orchestration dispatch commands in the command envelope", async () => {
     requestMock.mockResolvedValue(undefined);
     const { createWsNativeApi } = await import("./wsNativeApi");
@@ -688,47 +638,6 @@ describe("wsNativeApi", () => {
       threadId: "thread-1",
       toTurnCount: 1,
     });
-  });
-
-  it("forwards browser webview detach requests to the desktop bridge", async () => {
-    const detachWebview = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(getWindowForTest(), "desktopBridge", {
-      configurable: true,
-      writable: true,
-      value: {
-        browser: {
-          detachWebview,
-        },
-      },
-    });
-
-    const { createWsNativeApi } = await import("./wsNativeApi");
-    const api = createWsNativeApi();
-    const input = {
-      threadId: ThreadId.makeUnsafe("thread-1"),
-      tabId: "tab-1",
-      webContentsId: 42,
-    };
-    await api.browser.detachWebview(input);
-
-    expect(detachWebview).toHaveBeenCalledWith(input);
-    expect(requestMock).not.toHaveBeenCalled();
-  });
-
-  it("keeps a blank fallback browser tab after closing the last tab", async () => {
-    const { createWsNativeApi } = await import("./wsNativeApi");
-    const api = createWsNativeApi();
-    const threadId = ThreadId.makeUnsafe("thread-1");
-    const opened = await api.browser.open({ threadId });
-    const tabId = opened.activeTabId;
-
-    expect(tabId).toBeTruthy();
-    const nextState = await api.browser.closeTab({ threadId, tabId: tabId ?? "" });
-
-    expect(nextState.open).toBe(true);
-    expect(nextState.tabs).toHaveLength(1);
-    expect(nextState.activeTabId).toBe(nextState.tabs[0]?.id);
-    expect(nextState.tabs[0]?.url).toBe("about:blank");
   });
 
   it("forwards context menu metadata to desktop bridge", async () => {
