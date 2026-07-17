@@ -4,9 +4,7 @@
 // Layer: Release/build script
 // Depends on: apps/desktop package metadata, electron-builder, and GitHub release config.
 
-await import(
-  new URL("../packages/shared/src/teacodeEnvironmentBootstrap.ts", import.meta.url).href
-);
+import "@t3tools/shared/teacodeEnvironmentBootstrap";
 
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -29,24 +27,11 @@ import {
   resolveCatalogDependencies,
 } from "./lib/resolve-catalog.ts";
 
+import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
+import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Config, Data, Effect, FileSystem, Layer, Logger, Option, Path, Schema } from "effect";
-import type * as EffectProcess from "effect/unstable/process";
-
-const platformNodeRootUrl = import.meta.resolve("@effect/platform-node");
-const NodeRuntime = (await import(
-  new URL("./NodeRuntime.js", platformNodeRootUrl).href
-)) as typeof import("@effect/platform-node/NodeRuntime");
-const NodeServices = (await import(
-  new URL("./NodeServices.js", platformNodeRootUrl).href
-)) as typeof import("@effect/platform-node/NodeServices");
-
-const effectRootUrl = import.meta.resolve("effect");
-const { Command, Flag } = (await import(
-  new URL("./unstable/cli/index.js", effectRootUrl).href
-)) as typeof import("effect/unstable/cli");
-const { ChildProcess, ChildProcessSpawner } = (await import(
-  new URL("./unstable/process/index.js", effectRootUrl).href
-)) as typeof import("effect/unstable/process");
+import { Command, Flag } from "effect/unstable/cli";
+import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
 const BuildPlatform = Schema.Literals(["mac", "linux", "win"]);
 const BuildArch = Schema.Literals(["arm64", "x64", "universal"]);
@@ -339,7 +324,7 @@ const commandOutputOptions = (verbose: boolean) =>
     stderr: "inherit",
   }) as const;
 
-const runCommand = Effect.fn("runCommand")(function* (command: EffectProcess.ChildProcess.Command) {
+const runCommand = Effect.fn("runCommand")(function* (command: ChildProcess.Command) {
   const commandSpawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   const child = yield* commandSpawner.spawn(command);
   const exitCode = yield* child.exitCode;

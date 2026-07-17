@@ -207,6 +207,7 @@ jobs:
       - name: Install dependencies
         # The quality job runs the full lifecycle-script install plus lint,
         # typecheck, and tests. Artifact jobs only need dependencies available.
+        shell: bash
         run: ./script/bootstrap --ignore-scripts
 
       - name: Build desktop artifact
