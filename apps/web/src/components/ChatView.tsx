@@ -24,7 +24,6 @@ import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   type ResolvedKeybindingsConfig,
   type ServerProviderStatus,
-  type OrchestratorSeatRuntimeStatus,
   ThreadId,
   ThreadMarkerId,
   type ThreadMarker,
@@ -216,7 +215,6 @@ import {
 import { truncateTitle } from "../truncateTitle";
 import {
   DEFAULT_INTERACTION_MODE,
-  DEFAULT_RUNTIME_MODE,
   DEFAULT_THREAD_TERMINAL_ID,
   MAX_TERMINALS_PER_GROUP,
   type ChatMessage,
@@ -227,7 +225,7 @@ import { useThreadWorkspaceHandoff } from "../hooks/useThreadWorkspaceHandoff";
 import { useComposerCommandMenuItems } from "../hooks/useComposerCommandMenuItems";
 import { useThreadHandoff } from "../hooks/useThreadHandoff";
 import { useTurnDiffSummaries } from "../hooks/useTurnDiffSummaries";
-import BranchToolbar, { RuntimeUsageControls } from "./BranchToolbar";
+import BranchToolbar from "./BranchToolbar";
 import { ThreadWorktreeHandoffDialog } from "./ThreadWorktreeHandoffDialog";
 import {
   formatShortcutLabel,
@@ -243,9 +241,7 @@ import {
   ChevronRightIcon,
   ComposerSendArrowIcon,
   LayoutSidebarIcon,
-  LockIcon,
   RefreshCwIcon,
-  TemporaryThreadIcon,
   XIcon,
 } from "~/lib/icons";
 import { ComposerQueuedHeader } from "./chat/ComposerQueuedHeader";
@@ -270,7 +266,6 @@ import {
 import { runProjectCommandInTerminal } from "~/projectTerminalRunner";
 import { newCommandId, newMessageId, newProjectId, newThreadId } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
-import { onServerOrchestratorSeatStatusesUpdated } from "~/wsNativeApi";
 import {
   confirmTerminalTabClose,
   resolveTerminalCloseTitle,
@@ -288,12 +283,6 @@ import {
 } from "../appSettings";
 import { resolveTerminalNewAction } from "../lib/terminalNewAction";
 import { isTerminalFocused } from "../lib/terminalFocus";
-import {
-  composerThreadModeFromOrchestratorFlag,
-  orchestratorFlagFromComposerThreadMode,
-  resolveOrchestratorSeatModel,
-  type ComposerThreadMode,
-} from "../lib/orchestratorComposerMode";
 import { compareProvidersByOrder } from "../providerOrdering";
 import {
   type ComposerFileAttachment,
@@ -310,7 +299,6 @@ import {
   useComposerThreadDraft,
   useEffectiveComposerModelState,
 } from "../composerDraftStore";
-import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useComposerFocusRequestStore } from "../composerFocusRequestStore";
 import { appendComposerPromptText } from "../lib/chatReferences";
 import {
@@ -403,8 +391,6 @@ import { ComposerReferenceAttachments } from "./chat/ComposerReferenceAttachment
 import { TranscriptSelectionActionLayer } from "./chat/TranscriptSelectionActionLayer";
 import { ComposerActiveTaskListCard } from "./chat/ComposerActiveTaskListCard";
 import { ComposerBackgroundAgentsCard } from "./chat/ComposerBackgroundAgentsCard";
-import { OrchestratorDelegationPanel } from "./chat/OrchestratorDelegationPanel";
-import { ComposerThreadModePicker } from "./chat/ComposerThreadModePicker";
 import { ComposerColumnFrame } from "./chat/ComposerColumnFrame";
 import { useTranscriptAssistantSelectionAction } from "./chat/useTranscriptAssistantSelectionAction";
 import { resolveTranscriptMarkerRange } from "./chat/chatSelectionActions";
@@ -976,12 +962,6 @@ export default function ChatView({
   const setComposerDraftInteractionMode = useComposerDraftStore(
     (store) => store.setInteractionMode,
   );
-  const setComposerDraftOrchestratorMode = useComposerDraftStore(
-    (store) => store.setOrchestratorMode,
-  );
-  const copyTransferableComposerState = useComposerDraftStore(
-    (store) => store.copyTransferableComposerState,
-  );
   const enqueueQueuedComposerTurn = useComposerDraftStore((store) => store.enqueueQueuedTurn);
   const insertQueuedComposerTurn = useComposerDraftStore((store) => store.insertQueuedTurn);
   const removeQueuedComposerTurnFromDraft = useComposerDraftStore(
@@ -1042,11 +1022,6 @@ export default function ChatView({
   const draftThread = useComposerDraftStore(
     (store) => store.draftThreadsByThreadId[threadId] ?? null,
   );
-  const hasTemporaryThreadMarker = useTemporaryThreadStore((store) =>
-    threadId ? store.temporaryThreadIds[threadId] === true : false,
-  );
-  const markTemporaryThread = useTemporaryThreadStore((store) => store.markTemporaryThread);
-  const clearTemporaryThread = useTemporaryThreadStore((store) => store.clearTemporaryThread);
   const serverThread = useStore(useMemo(() => createThreadSelector(threadId), [threadId]));
   const fallbackDraftProjectId = draftThread?.projectId ?? null;
   const fallbackDraftProject = useStore(
@@ -1054,11 +1029,6 @@ export default function ChatView({
   );
   const promptRef = useRef(prompt);
   const [isDragOverComposer, setIsDragOverComposer] = useState(false);
-  const [orchestratorSeatStatusesByThreadId, setOrchestratorSeatStatusesByThreadId] = useState<
-    ReadonlyMap<ThreadId, OrchestratorSeatRuntimeStatus>
-  >(() => new Map());
-  const [orchestratorPanelOpen, setOrchestratorPanelOpen] = useState(true);
-  const orchestratorPanelRef = useRef<HTMLDivElement>(null);
   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
   const [optimisticUserMessages, setOptimisticUserMessages] = useState<ChatMessage[]>([]);
   const optimisticUserMessagesRef = useRef(optimisticUserMessages);
@@ -1179,7 +1149,6 @@ export default function ChatView({
   );
   const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
   const [isTraitsPickerOpen, setIsTraitsPickerOpen] = useState(false);
-  const threadModeTransitionInFlightRef = useRef(false);
   const legendListRef = useRef<LegendListRef | null>(null);
   const timelineControllerRef = useRef<MessagesTimelineController | null>(null);
   const isAtEndRef = useRef(true);
@@ -1197,26 +1166,6 @@ export default function ChatView({
     setComposerCommandPicker(null);
     setIsModelPickerOpen(false);
     setIsTraitsPickerOpen(false);
-  }, [threadId]);
-  useEffect(
-    () =>
-      onServerOrchestratorSeatStatusesUpdated(({ seats }) => {
-        setOrchestratorSeatStatusesByThreadId((current) => {
-          const next = new Map(current);
-          for (const seat of seats) {
-            const existing = next.get(seat.threadId);
-            if (existing && existing.updatedAt > seat.updatedAt) {
-              continue;
-            }
-            next.set(seat.threadId, seat);
-          }
-          return next;
-        });
-      }),
-    [],
-  );
-  useEffect(() => {
-    setOrchestratorPanelOpen(true);
   }, [threadId]);
   useEffect(() => {
     const scrollDebouncer = showScrollDebouncer.current;
@@ -1500,52 +1449,11 @@ export default function ChatView({
   );
   const activeThread = serverThread ?? localDraftThread;
   const runtimeMode =
-    composerDraft.runtimeMode ?? activeThread?.runtimeMode ?? DEFAULT_RUNTIME_MODE;
+    composerDraft.runtimeMode ?? activeThread?.runtimeMode ?? settings.defaultRuntimeMode;
   const interactionMode =
     composerDraft.interactionMode ?? activeThread?.interactionMode ?? DEFAULT_INTERACTION_MODE;
   const isServerThread = serverThread !== undefined;
   const isLocalDraftThread = !isServerThread && localDraftThread !== undefined;
-  const preferredOrchestratorProvider =
-    composerDraft.activeProvider ??
-    activeThread?.modelSelection.provider ??
-    fallbackDraftProject?.defaultModelSelection?.provider ??
-    settings.defaultProvider;
-  const configuredOrchestratorSeatModel = resolveOrchestratorSeatModel(
-    settings.orchestratorRoutingPolicy.seatModels,
-    preferredOrchestratorProvider,
-  );
-  const requestedOrchestratorMode = isServerThread
-    ? activeThread?.orchestratorMode === true
-    : (composerDraft.orchestratorMode ?? true);
-  const orchestratorSeatModelCandidate =
-    isServerThread && activeThread?.orchestratorMode
-      ? activeThread.modelSelection
-      : configuredOrchestratorSeatModel;
-  const isComposerOrchestratorMode =
-    requestedOrchestratorMode && orchestratorSeatModelCandidate !== null;
-  const activeOrchestratorSeatStatus =
-    activeThread?.orchestratorMode === true
-      ? (orchestratorSeatStatusesByThreadId.get(activeThread.id) ?? null)
-      : null;
-  const orchestratorLaneRoutes = useMemo(
-    () =>
-      (["bulk", "ui", "explore", "verify"] as const).map((lane) => {
-        const selection = settings.orchestratorRoutingPolicy.lanes[lane].modelSelection;
-        return { lane, model: `${selection.provider}:${selection.model}` };
-      }),
-    [settings.orchestratorRoutingPolicy.lanes],
-  );
-  const openOrchestratorPanel = useCallback(() => {
-    setOrchestratorPanelOpen(true);
-    requestAnimationFrame(() => {
-      orchestratorPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }, []);
-  const orchestratorSeatModel: ModelSelection = orchestratorSeatModelCandidate ?? {
-    provider: "codex",
-    model: DEFAULT_MODEL_BY_PROVIDER.codex,
-  };
-  const composerThreadMode = composerThreadModeFromOrchestratorFlag(isComposerOrchestratorMode);
   const canCheckoutPullRequestIntoThread = isLocalDraftThread;
   const diffOpen = rawSearch.panel === "diff";
   const resolvedDiffOpen = panelState ? panelState.panel === "diff" : diffOpen;
@@ -1721,7 +1629,7 @@ export default function ChatView({
       setProjectDraftThreadId(activeProject.id, nextThreadId, {
         ...draftThreadContext,
         createdAt: new Date().toISOString(),
-        runtimeMode: DEFAULT_RUNTIME_MODE,
+        runtimeMode: settings.defaultRuntimeMode,
         interactionMode: DEFAULT_INTERACTION_MODE,
       });
       await navigate({
@@ -1738,6 +1646,7 @@ export default function ChatView({
       navigate,
       setDraftThreadContext,
       setProjectDraftThreadId,
+      settings.defaultRuntimeMode,
       threadId,
     ],
   );
@@ -1786,11 +1695,9 @@ export default function ChatView({
       activeThread.messages.length > 0 ||
       activeThread.session !== null),
   );
-  const lockedProvider: ProviderKind | null = isComposerOrchestratorMode
-    ? orchestratorSeatModel.provider
-    : hasThreadStarted
-      ? (sessionProvider ?? threadProvider ?? selectedProviderByThreadId ?? null)
-      : null;
+  const lockedProvider: ProviderKind | null = hasThreadStarted
+    ? (sessionProvider ?? threadProvider ?? selectedProviderByThreadId ?? null)
+    : null;
   const selectedProvider: ProviderKind =
     lockedProvider ?? selectedProviderByThreadId ?? threadProvider ?? settings.defaultProvider;
   const previousSelectedProviderRef = useRef<{
@@ -2029,16 +1936,12 @@ export default function ChatView({
     useEffectiveComposerModelState({
       threadId,
       selectedProvider,
-      threadModelSelection: isComposerOrchestratorMode
-        ? orchestratorSeatModel
-        : activeThread?.modelSelection,
+      threadModelSelection: activeThread?.modelSelection,
       projectModelSelection: activeProject?.defaultModelSelection,
       customModelsByProvider,
       availableModelOptionsByProvider: modelOptionsByProvider,
     });
-  const selectedModel = isComposerOrchestratorMode
-    ? orchestratorSeatModel.model
-    : resolvedComposerModel;
+  const selectedModel = resolvedComposerModel;
   const runtimeModelsByProvider = useMemo(
     () => ({
       claudeAgent: claudeDynamicModelsQuery.data?.models ?? [],
@@ -2093,9 +1996,6 @@ export default function ChatView({
   const draftModelSelectionForSelectedProvider =
     composerDraft.modelSelectionByProvider[selectedProvider] ?? null;
   const selectedModelSelection = useMemo<ModelSelection>(() => {
-    if (isComposerOrchestratorMode) {
-      return orchestratorSeatModel;
-    }
     if (selectedProvider === "pi" && draftModelSelectionForSelectedProvider?.provider === "pi") {
       return buildModelSelection(
         selectedProvider,
@@ -2106,8 +2006,6 @@ export default function ChatView({
     return buildModelSelection(selectedProvider, selectedModel, selectedModelOptionsForDispatch);
   }, [
     draftModelSelectionForSelectedProvider,
-    isComposerOrchestratorMode,
-    orchestratorSeatModel,
     selectedModel,
     selectedModelOptionsForDispatch,
     selectedProvider,
@@ -2251,17 +2149,6 @@ export default function ChatView({
       [activeThread?.id, hasWorkLogSubagents, rawWorkLogEntries],
     ),
   );
-  const orchestratorDelegations = useStore(
-    useMemo(
-      () =>
-        createRelevantWorkLogThreadsSelector({
-          workEntries: [],
-          parentThreadId: activeThread?.id ?? null,
-          enabled: isComposerOrchestratorMode,
-        }),
-      [activeThread?.id, isComposerOrchestratorMode],
-    ),
-  ).filter((thread) => thread.parentThreadId === activeThread?.id);
   const workLogEntries = useMemo(
     () =>
       hasWorkLogSubagents
@@ -4324,47 +4211,6 @@ export default function ChatView({
     [activeProject, persistProjectScripts],
   );
 
-  const handleRuntimeModeChange = useCallback(
-    (mode: RuntimeMode) => {
-      if (mode === runtimeMode) return;
-      setComposerDraftRuntimeMode(threadId, mode);
-      if (isLocalDraftThread) {
-        setDraftThreadContext(threadId, { runtimeMode: mode });
-      }
-      if (serverThread) {
-        const api = readNativeApi();
-        if (api) {
-          void api.orchestration
-            .dispatchCommand({
-              type: "thread.runtime-mode.set",
-              commandId: newCommandId(),
-              threadId,
-              runtimeMode: mode,
-              createdAt: new Date().toISOString(),
-            })
-            .catch((error) => {
-              toastManager.add({
-                type: "error",
-                title: "Could not update access mode",
-                description:
-                  error instanceof Error ? error.message : "An unexpected error occurred.",
-              });
-            });
-        }
-      }
-      scheduleComposerFocus();
-    },
-    [
-      isLocalDraftThread,
-      runtimeMode,
-      scheduleComposerFocus,
-      serverThread,
-      setComposerDraftRuntimeMode,
-      setDraftThreadContext,
-      threadId,
-    ],
-  );
-
   const handleInteractionModeChange = useCallback(
     (mode: ProviderInteractionMode) => {
       if (mode === interactionMode) return;
@@ -4402,79 +4248,6 @@ export default function ChatView({
       serverThread,
       setComposerDraftInteractionMode,
       setDraftThreadContext,
-      threadId,
-    ],
-  );
-  const handleComposerThreadModeChange = useCallback(
-    async (mode: ComposerThreadMode) => {
-      const nextOrchestratorMode = orchestratorFlagFromComposerThreadMode(mode);
-      if (nextOrchestratorMode && !configuredOrchestratorSeatModel) {
-        toastManager.add({
-          type: "warning",
-          title: "Orchestrator needs a seat model",
-          description: "Add an allowed model in Settings → Orchestrator, then try again.",
-        });
-        return;
-      }
-
-      if (isLocalDraftThread && !draftThread?.promotedTo) {
-        setComposerDraftOrchestratorMode(threadId, nextOrchestratorMode);
-        scheduleComposerFocus();
-        return;
-      }
-      if (!activeProject) return;
-      if (threadModeTransitionInFlightRef.current) return;
-
-      const sourceThreadId = threadId;
-      const nextProvider = nextOrchestratorMode
-        ? configuredOrchestratorSeatModel?.provider
-        : selectedProvider;
-      threadModeTransitionInFlightRef.current = true;
-      try {
-        const nextThreadId = await handleNewThread(activeProject.id, {
-          entryPoint: "chat",
-          fresh: true,
-          branch: activeThread?.branch ?? null,
-          worktreePath: activeThread?.worktreePath ?? null,
-          envMode: resolveThreadEnvironmentMode({
-            envMode: activeThread?.envMode,
-            worktreePath: activeThread?.worktreePath ?? null,
-          }),
-          runtimeMode,
-          interactionMode,
-          lastKnownPr: activeThread?.lastKnownPr ?? null,
-          ...(nextProvider ? { provider: nextProvider } : {}),
-        });
-        copyTransferableComposerState(sourceThreadId, nextThreadId);
-        setComposerDraftOrchestratorMode(nextThreadId, nextOrchestratorMode);
-        toastManager.add({
-          type: "success",
-          title: `${mode === "orchestrator" ? "Orchestrator" : "Single Agent"} thread ready`,
-          description: "Your unsent draft moved with you. The thread is created when you send.",
-        });
-      } catch (error) {
-        toastManager.add({
-          type: "error",
-          title: "Could not change thread mode",
-          description: error instanceof Error ? error.message : "An unexpected error occurred.",
-        });
-      } finally {
-        threadModeTransitionInFlightRef.current = false;
-      }
-    },
-    [
-      activeProject,
-      activeThread,
-      configuredOrchestratorSeatModel,
-      copyTransferableComposerState,
-      handleNewThread,
-      draftThread?.promotedTo,
-      interactionMode,
-      isLocalDraftThread,
-      runtimeMode,
-      scheduleComposerFocus,
-      selectedProvider,
-      setComposerDraftOrchestratorMode,
       threadId,
     ],
   );
@@ -6605,7 +6378,6 @@ export default function ChatView({
             branch: nextThreadBranch,
             worktreePath: nextThreadWorktreePath,
             lastKnownPr: activeThread.lastKnownPr ?? null,
-            orchestratorMode: isComposerOrchestratorMode,
             createdAt: activeThread.createdAt,
           },
           api,
@@ -7654,19 +7426,7 @@ export default function ChatView({
     },
     [handleModelPickerOpenChange],
   );
-  const composerPickerControls = isComposerOrchestratorMode ? (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      className="h-7 max-w-52 gap-1.5 px-2 text-[var(--color-text-foreground-secondary)]"
-      disabled
-      title="Orchestrator seat model — configure allowed models in Settings → Orchestrator"
-    >
-      <LockIcon className="size-3.5" aria-hidden />
-      <span className="truncate">{orchestratorSeatModel.model}</span>
-    </Button>
-  ) : showComposerModelBootstrapSkeleton ? (
+  const composerPickerControls = showComposerModelBootstrapSkeleton ? (
     useSplitComposerPickerControls ? (
       <>
         {selectedProviderRuntimeModelDiscoveryPending ? (
@@ -8865,7 +8625,6 @@ export default function ChatView({
             ...(activeThread.lastKnownPr !== undefined
               ? { lastKnownPr: activeThread.lastKnownPr }
               : {}),
-            orchestratorMode: isComposerOrchestratorMode,
             createdAt: activeThread.createdAt,
           }
         : undefined,
@@ -8890,20 +8649,11 @@ export default function ChatView({
     }
   };
 
-  const runtimeUsageControlsProps = {
-    runtimeMode,
-    onRuntimeModeChange: handleRuntimeModeChange,
-    contextWindow: runtimeUsageContextWindow,
-    cumulativeCostUsd: activeCumulativeCostUsd,
-    activeContextWindowLabel: contextWindowSelectionStatus.activeLabel,
-    pendingContextWindowLabel: contextWindowSelectionStatus.pendingSelectedLabel,
-  };
-  // The composer's leading controls (extras "+" menu, access-rules/runtime
-  // indicator). At the narrowest footer tier they relocate from the footer to
+  // The composer's leading controls. At the narrowest footer tier they relocate from the footer to
   // the branch-toolbar row below the input instead of getting clipped; the
   // relocated variant is icon-only since relocation means space is minimal.
   const relocateComposerLeadingControls = composerFooterControlsPlan.relocateLeadingControls;
-  const renderComposerLeadingControls = (options: { iconOnly: boolean }) => (
+  const renderComposerLeadingControls = () => (
     <>
       <ComposerExtrasMenu
         interactionMode={interactionMode}
@@ -8912,17 +8662,6 @@ export default function ChatView({
         onAddPhotos={addComposerImages}
         onToggleFastMode={toggleFastMode}
         onSetPlanMode={setPlanMode}
-      />
-      <ComposerThreadModePicker
-        value={composerThreadMode}
-        onValueChange={(mode) => void handleComposerThreadModeChange(mode)}
-        hideLabel={options.iconOnly || isEditorRail}
-        orchestratorAvailable={orchestratorSeatModelCandidate !== null}
-      />
-      <RuntimeUsageControls
-        {...runtimeUsageControlsProps}
-        className="shrink-0"
-        hideLabel={options.iconOnly}
       />
     </>
   );
@@ -8940,18 +8679,6 @@ export default function ChatView({
   };
   const showEmptyLandingBranchToolbar =
     isCenteredEmptyLanding && activeProject?.kind === "project" && !isHomeChatContainer;
-  // Temporary is chosen while starting a chat. Draft metadata covers local reloads;
-  // the in-memory marker keeps the badge + auto-delete alive through promotion.
-  const isThreadTemporary = draftThread?.isTemporary === true || hasTemporaryThreadMarker;
-  const toggleDraftTemporary = () => {
-    const next = !isThreadTemporary;
-    setDraftThreadContext(threadId, { isTemporary: next });
-    if (next) {
-      markTemporaryThread(threadId);
-    } else {
-      clearTemporaryThread(threadId);
-    }
-  };
   const showEmptyLandingProjectPicker =
     isCenteredEmptyLanding && isLocalDraftThread && activeProject?.kind === "project";
   const emptyLandingProjectChip =
@@ -9026,30 +8753,6 @@ export default function ChatView({
           />
         ) : null}
       </div>
-      {showEmptyLandingBranchToolbar ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          aria-pressed={isThreadTemporary}
-          onClick={toggleDraftTemporary}
-          title={
-            isThreadTemporary
-              ? "Temporary chat — deleted when you leave. Click to keep it."
-              : "Make this a temporary chat (deleted when you leave)"
-          }
-          aria-label="Temporary chat"
-          className={cn(
-            "ml-auto shrink-0 gap-1.5 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,13px)] font-normal transition-colors sm:px-2.5",
-            isThreadTemporary
-              ? "text-[var(--color-text-accent)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-accent)]"
-              : "text-[var(--color-text-foreground-secondary)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)]",
-          )}
-        >
-          <TemporaryThreadIcon className="size-3.5" />
-          <span className="sr-only sm:not-sr-only">Temporary</span>
-        </Button>
-      ) : null}
     </div>
   ) : null;
 
@@ -9310,9 +9013,7 @@ export default function ChatView({
                           : "min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:min-w-max sm:overflow-visible",
                       )}
                     >
-                      {relocateComposerLeadingControls
-                        ? null
-                        : renderComposerLeadingControls({ iconOnly: false })}
+                      {relocateComposerLeadingControls ? null : renderComposerLeadingControls()}
 
                       <>
                         {interactionMode === "plan" ? (
@@ -9582,15 +9283,6 @@ export default function ChatView({
           handoffActionTargetProviders={handoffTargetProviders}
           handoffBadgeSourceProvider={handoffBadgeSourceProvider}
           handoffBadgeTargetProvider={handoffBadgeTargetProvider}
-          orchestratorSeat={
-            activeThread.orchestratorMode
-              ? {
-                  status: activeOrchestratorSeatStatus?.status ?? "pending",
-                  reason: activeOrchestratorSeatStatus?.reason ?? null,
-                  onOpen: openOrchestratorPanel,
-                }
-              : null
-          }
           gitCwd={threadWorkspaceCwd}
           diffTotals={repoDiffTotals}
           showGitActions={showGitActions && !isEditorRail}
@@ -9701,7 +9393,7 @@ export default function ChatView({
                       <div className="flex w-full items-center gap-1">
                         {relocateComposerLeadingControls ? (
                           <div className="flex shrink-0 items-center gap-1 pl-1">
-                            {renderComposerLeadingControls({ iconOnly: true })}
+                            {renderComposerLeadingControls()}
                           </div>
                         ) : null}
                         {isGitRepo && !isCenteredEmptyLanding ? (
@@ -9717,20 +9409,6 @@ export default function ChatView({
             {shouldRenderChatPaneContent && !isCenteredEmptyLanding ? (
               <div className="flex min-h-0 flex-1 flex-col">
                 <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-                  {isComposerOrchestratorMode ? (
-                    <OrchestratorDelegationPanel
-                      threads={orchestratorDelegations}
-                      onOpenThread={onNavigateToThread}
-                      showOnboarding={timelineEntries.length === 0}
-                      seatModel={orchestratorSeatModel.model}
-                      seatStatus={activeOrchestratorSeatStatus?.status ?? "pending"}
-                      seatStatusReason={activeOrchestratorSeatStatus?.reason ?? null}
-                      laneRoutes={orchestratorLaneRoutes}
-                      open={orchestratorPanelOpen}
-                      onOpenChange={setOrchestratorPanelOpen}
-                      panelRef={orchestratorPanelRef}
-                    />
-                  ) : null}
                   {transcriptContent ?? (
                     <ChatTranscriptPane
                       activeThreadId={activeThread.id}
@@ -9812,7 +9490,7 @@ export default function ChatView({
                       <div className="flex w-full items-center gap-1">
                         {relocateComposerLeadingControls ? (
                           <div className="flex shrink-0 items-center gap-1 pl-1">
-                            {renderComposerLeadingControls({ iconOnly: true })}
+                            {renderComposerLeadingControls()}
                           </div>
                         ) : null}
                         {isGitRepo ? (

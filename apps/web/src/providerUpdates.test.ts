@@ -4,7 +4,6 @@
 // Exports: Vitest suites for providerUpdates.ts
 
 import type { ProviderKind, ServerProviderStatus, ServerSettings } from "@t3tools/contracts";
-import { DEFAULT_ORCHESTRATOR_ROUTING_POLICY } from "@t3tools/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -49,6 +48,7 @@ function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): S
     enableAssistantStreaming: false,
     enableProviderUpdateChecks: true,
     defaultThreadEnvMode: "local",
+    defaultRuntimeMode: "full-access",
     addProjectBaseDirectory: "",
     textGenerationModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
     providers: {
@@ -68,7 +68,6 @@ function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): S
       ...overrides,
     },
     skills: { disabled: [] },
-    orchestrator: DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
   };
 }
 

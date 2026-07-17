@@ -33,7 +33,6 @@ import { ServerRuntimeStartupLive } from "./serverRuntimeStartup";
 import { ServerSettingsLive } from "./serverSettings";
 import { WorkspaceLayerLive } from "./workspace/runtimeLayer";
 import { ProjectFaviconResolverLive } from "./project/Layers/ProjectFaviconResolver";
-import { OrchestratorControlPlaneLive } from "./orchestrator/Layers/OrchestratorControlPlane";
 import { ServerEnvironmentLive } from "./environment/Layers/ServerEnvironment";
 import { AutomationRepositoryLive } from "./persistence/Layers/AutomationRepository";
 import { ProjectionTurnRepositoryLive } from "./persistence/Layers/ProjectionTurns";
@@ -57,17 +56,11 @@ export function makeServerRuntimeServicesLayer() {
   const runtimeIngestionLayer = ProviderRuntimeIngestionLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
   );
-  const orchestratorControlPlaneLayer = OrchestratorControlPlaneLive.pipe(
-    Layer.provideMerge(runtimeServicesLayer),
-    Layer.provideMerge(GitCoreLive),
-    Layer.provideMerge(ServerSettingsLive),
-  );
   const providerCommandReactorLayer = ProviderCommandReactorLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
     Layer.provideMerge(GitCoreLive),
     Layer.provideMerge(TextGenerationLayerLive),
     Layer.provideMerge(ServerSettingsLive),
-    Layer.provideMerge(orchestratorControlPlaneLayer),
   );
   const checkpointReactorLayer = CheckpointReactorLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
@@ -129,7 +122,6 @@ export function makeServerRuntimeServicesLayer() {
     automationSchedulerLayer,
     automationRunReactorLayer,
     AutomationRepositoryLive,
-    orchestratorControlPlaneLayer,
     orchestrationReactorLayer,
     threadDeletionReactorLayer,
     devServerManagerLayer,

@@ -65,7 +65,6 @@ function makeComposerDraftState(
     activeProvider: "claudeAgent",
     runtimeMode: null,
     interactionMode: null,
-    orchestratorMode: null,
     ...partial,
   };
 }
@@ -254,28 +253,6 @@ describe("threadBootstrap", () => {
       interactionMode: "plan",
       lastKnownPr: null,
       entryPoint: "terminal",
-    });
-  });
-
-  it("marks fresh draft seeds as temporary when requested", () => {
-    expect(
-      createFreshDraftThreadSeed({
-        createdAt: "2026-04-05T10:00:00.000Z",
-        entryPoint: "chat",
-        options: {
-          temporary: true,
-        },
-      }),
-    ).toEqual({
-      createdAt: "2026-04-05T10:00:00.000Z",
-      branch: null,
-      worktreePath: null,
-      envMode: "local",
-      runtimeMode: "full-access",
-      interactionMode: "default",
-      lastKnownPr: null,
-      entryPoint: "chat",
-      isTemporary: true,
     });
   });
 

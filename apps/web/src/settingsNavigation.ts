@@ -89,7 +89,7 @@ export function normalizeSettingsSection(value: unknown): SettingsSectionId {
   if (SETTINGS_SECTION_IDS.some((candidate) => candidate === value)) {
     return value as SettingsSectionId;
   }
-  if (["models", "orchestrator", "providers", "skills", "usage"].includes(value)) {
+  if (["models", "providers", "skills", "usage"].includes(value)) {
     return "agents";
   }
   if (["shortcuts", "worktrees", "archived"].includes(value)) {

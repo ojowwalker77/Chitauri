@@ -73,6 +73,7 @@ export type SettingsSegmentedOption<T extends string> = {
   value: T;
   label: string;
   icon?: ReactNode;
+  activeClassName?: string;
 };
 
 /** Inline row of toggle buttons used in place of a select when there are only a
@@ -107,6 +108,7 @@ export function SettingsSegmentedControl<T extends string>({
             className={cn(
               SETTINGS_CONTROL_RADIUS_CLASS_NAME,
               "flex-1 sm:flex-none",
+              isActive && option.activeClassName,
               !isActive && "text-muted-foreground",
             )}
             onClick={() => onValueChange(option.value)}

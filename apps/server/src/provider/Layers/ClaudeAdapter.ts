@@ -3331,9 +3331,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           systemPrompt: {
             type: "preset",
             preset: "claude_code",
-            append: input.orchestratorPersona
-              ? `${EMBEDDED_CLAUDE_SYSTEM_PROMPT_APPEND}\n\n${input.orchestratorPersona}`
-              : EMBEDDED_CLAUDE_SYSTEM_PROMPT_APPEND,
+            append: EMBEDDED_CLAUDE_SYSTEM_PROMPT_APPEND,
           },
           ...(Object.keys(claudeSubagents).length > 0 ? { agents: claudeSubagents } : {}),
           // Keep the runtime value explicit so Opus 4.7 can pass xhigh through to the SDK.
