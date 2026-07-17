@@ -62,7 +62,13 @@ it("authenticates a seat and exposes only the control-plane tools", async () => 
       Effect.provideService(ServerSettingsService, settings),
     ),
   );
-  const mcp = await Effect.runPromise(controlPlane.getMcpServerForSeat(SEAT_THREAD_ID));
+  const statusUpdates: Array<{ readonly status: string }> = [];
+  const unsubscribeSeatStatus = controlPlane.subscribeSeatStatus((status) => {
+    statusUpdates.push(status);
+  });
+  const seatStart = await Effect.runPromise(controlPlane.getSeatStartConfig(SEAT_THREAD_ID));
+  const mcp = seatStart.mcpServer;
+  assert.strictEqual(statusUpdates.at(-1)?.status, "pending");
 
   const unauthorized = await Effect.runPromise(
     controlPlane.handleHttpRequest(
@@ -91,8 +97,10 @@ it("authenticates a seat and exposes only the control-plane tools", async () => 
       "result",
       "status",
     ]);
+    assert.strictEqual(statusUpdates.at(-1)?.status, "connected");
   } finally {
     await client.close();
+    unsubscribeSeatStatus();
   }
 });
 
@@ -130,7 +138,8 @@ it("accepts a replacement MCP client after the provider runtime restarts", async
       Effect.provideService(ServerSettingsService, settings),
     ),
   );
-  const mcp = await Effect.runPromise(controlPlane.getMcpServerForSeat(SEAT_THREAD_ID));
+  const seatStart = await Effect.runPromise(controlPlane.getSeatStartConfig(SEAT_THREAD_ID));
+  const mcp = seatStart.mcpServer;
   assert.strictEqual(mcp.url, "http://[::1]:3773/api/orchestrator/mcp");
   const makeClient = () => {
     const transport = new StreamableHTTPClientTransport(new URL(mcp.url), {
@@ -255,7 +264,8 @@ it("delegates through the normal thread path in an isolated worktree", async () 
       Effect.provideService(ServerSettingsService, settings),
     ),
   );
-  const mcp = await Effect.runPromise(controlPlane.getMcpServerForSeat(SEAT_THREAD_ID));
+  const seatStart = await Effect.runPromise(controlPlane.getSeatStartConfig(SEAT_THREAD_ID));
+  const mcp = seatStart.mcpServer;
   const transport = new StreamableHTTPClientTransport(new URL(mcp.url), {
     requestInit: { headers: mcp.headers },
     fetch: ((input: Request | string, init?: RequestInit) => {

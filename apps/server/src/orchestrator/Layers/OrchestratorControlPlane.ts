@@ -17,13 +17,16 @@ import { z } from "zod";
 
 import { ServerConfig } from "../../config.ts";
 import { GitCore } from "../../git/Services/GitCore.ts";
+import { createLogger } from "../../logger";
 import { OrchestrationEngineService } from "../../orchestration/Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../../orchestration/Services/ProjectionSnapshotQuery.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
+import { formatSeatPersona } from "../seatPersona.ts";
 import {
   OrchestratorControlPlane,
   type OrchestratorBrief,
   type OrchestratorControlPlaneShape,
+  type OrchestratorSeatRuntimeStatus,
   type OrchestratorTaskResult,
   type OrchestratorTaskStatus,
 } from "../Services/OrchestratorControlPlane.ts";
@@ -35,6 +38,9 @@ const DELEGATION_TIMEOUT_MS = 55 * 60 * 1_000;
 const MAX_RETAINED_TASKS = 200;
 const MAX_ACTIVE_TASKS = 8;
 const MAX_ACTIVE_TASKS_PER_SEAT = 4;
+const SEAT_HANDSHAKE_TIMEOUT_MS = 30_000;
+
+const log = createLogger("orchestrator-seat");
 
 type TaskRecord = {
   readonly taskId: string;
@@ -99,6 +105,15 @@ function formatRoutingInstructions(policy: OrchestratorRoutingPolicy): string {
   ].join("\n");
 }
 
+function isToolsListRequest(input: unknown): boolean {
+  return (
+    typeof input === "object" &&
+    input !== null &&
+    "method" in input &&
+    input.method === "tools/list"
+  );
+}
+
 function taskStatus(record: TaskRecord): OrchestratorTaskStatus {
   return {
     taskId: record.taskId,
@@ -129,6 +144,58 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
   const seatsByToken = new Map<string, SeatSession>();
   const mcpSessionsById = new Map<string, McpTransportSession>();
   const tasks = new Map<string, TaskRecord>();
+  const seatStatusByThreadId = new Map<ThreadId, OrchestratorSeatRuntimeStatus>();
+  const seatStatusListeners = new Set<(status: OrchestratorSeatRuntimeStatus) => void>();
+  const seatHandshakeTimers = new Map<ThreadId, ReturnType<typeof setTimeout>>();
+
+  const setSeatStatus = (
+    threadId: ThreadId,
+    status: OrchestratorSeatRuntimeStatus["status"],
+    reason: string | null,
+  ) => {
+    const previous = seatStatusByThreadId.get(threadId);
+    if (previous?.status === status && previous.reason === reason) {
+      return;
+    }
+    const next: OrchestratorSeatRuntimeStatus = {
+      threadId,
+      status,
+      reason,
+      updatedAt: new Date().toISOString(),
+    };
+    seatStatusByThreadId.set(threadId, next);
+    log.info("seat status changed", { threadId, status, reason });
+    for (const listener of seatStatusListeners) {
+      listener(next);
+    }
+  };
+
+  const armSeatHandshakeTimer = (threadId: ThreadId) => {
+    const existing = seatHandshakeTimers.get(threadId);
+    if (existing) {
+      clearTimeout(existing);
+    }
+    const timer = setTimeout(() => {
+      seatHandshakeTimers.delete(threadId);
+      if (seatStatusByThreadId.get(threadId)?.status === "pending") {
+        setSeatStatus(
+          threadId,
+          "degraded",
+          "The provider runtime never connected to the delegation control plane (handshake timeout).",
+        );
+      }
+    }, SEAT_HANDSHAKE_TIMEOUT_MS);
+    timer.unref?.();
+    seatHandshakeTimers.set(threadId, timer);
+  };
+
+  const clearSeatHandshakeTimer = (threadId: ThreadId) => {
+    const timer = seatHandshakeTimers.get(threadId);
+    if (timer) {
+      clearTimeout(timer);
+      seatHandshakeTimers.delete(threadId);
+    }
+  };
 
   const requireSeat = (seatThreadId: ThreadId) =>
     Effect.gen(function* () {
@@ -473,9 +540,23 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
             status: "running",
             result: null,
           });
+          log.info("delegate started", {
+            seatThreadId,
+            taskId,
+            lane,
+            model: `${modelSelection.provider}:${modelSelection.model}`,
+          });
           const result = await Effect.runPromise(
             runDelegation({ taskId, seatThreadId, lane, brief }),
           );
+          log.info("delegate finished", {
+            seatThreadId,
+            taskId,
+            lane,
+            status: result.status,
+            childThreadId: result.childThreadId,
+            error: result.error,
+          });
           return {
             content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
           };
@@ -552,15 +633,38 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
     });
 
   return {
-    getMcpServerForSeat: (seatThreadId) =>
-      createSeatSession(seatThreadId).pipe(
-        Effect.map((session) => ({
-          name: MCP_SERVER_NAME,
-          url: `http://${mcpHost(config.host)}:${config.port}${MCP_ROUTE_PATH}`,
-          headers: { Authorization: `Bearer ${session.token}` },
-          toolTimeoutMs: MCP_TOOL_TIMEOUT_MS,
-        })),
-      ),
+    getSeatStartConfig: (seatThreadId) =>
+      Effect.gen(function* () {
+        const session = yield* createSeatSession(seatThreadId);
+        const settings = yield* serverSettings.getSettings;
+        // The provider runtime connects during session start; until the MCP
+        // initialize arrives the seat is pending, and a silent no-show flips
+        // it to degraded so a broken seat is never invisible again.
+        setSeatStatus(seatThreadId, "pending", null);
+        armSeatHandshakeTimer(seatThreadId);
+        log.info("seat start config issued", { seatThreadId });
+        return {
+          mcpServer: {
+            name: MCP_SERVER_NAME,
+            url: `http://${mcpHost(config.host)}:${config.port}${MCP_ROUTE_PATH}`,
+            headers: { Authorization: `Bearer ${session.token}` },
+            toolTimeoutMs: MCP_TOOL_TIMEOUT_MS,
+          },
+          persona: formatSeatPersona(settings.orchestrator),
+        };
+      }),
+    markSeatDegraded: (seatThreadId, reason) =>
+      Effect.sync(() => {
+        clearSeatHandshakeTimer(seatThreadId);
+        setSeatStatus(seatThreadId, "degraded", reason);
+      }),
+    getSeatRuntimeStatuses: Effect.sync(() => [...seatStatusByThreadId.values()]),
+    subscribeSeatStatus: (listener) => {
+      seatStatusListeners.add(listener);
+      return () => {
+        seatStatusListeners.delete(listener);
+      };
+    },
     handleHttpRequest: (request) =>
       Effect.gen(function* () {
         const authorization = request.headers.get("authorization");
@@ -576,7 +680,17 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
           if (!mcpSession || mcpSession.seatThreadId !== session.seatThreadId) {
             return new Response("MCP session not found", { status: 404 });
           }
-          return yield* Effect.promise(() => mcpSession.transport.handleRequest(request));
+          const parsedBody = yield* Effect.tryPromise({
+            try: () => request.clone().json(),
+            catch: () => new Error("Invalid MCP JSON payload."),
+          }).pipe(Effect.catch(() => Effect.succeed(null)));
+          const response = yield* Effect.promise(() => mcpSession.transport.handleRequest(request));
+          if (response.ok && isToolsListRequest(parsedBody)) {
+            clearSeatHandshakeTimer(session.seatThreadId);
+            setSeatStatus(session.seatThreadId, "connected", null);
+            log.info("seat MCP tools listed", { seatThreadId: session.seatThreadId });
+          }
+          return response;
         }
 
         if (request.method !== "POST") {
@@ -606,9 +720,13 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
         );
 
         const mcpSession = yield* createMcpTransportSession(session.seatThreadId);
-        return yield* Effect.promise(() =>
+        const response = yield* Effect.promise(() =>
           mcpSession.transport.handleRequest(request, { parsedBody }),
         );
+        if (response.ok) {
+          log.info("seat MCP session initialized", { seatThreadId: session.seatThreadId });
+        }
+        return response;
       }),
     getTaskStatus: (seatThreadId, taskId) =>
       requireTask(seatThreadId, taskId).pipe(

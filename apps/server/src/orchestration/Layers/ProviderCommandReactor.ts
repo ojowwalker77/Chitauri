@@ -708,8 +708,22 @@ const make = Effect.gen(function* () {
       readonly provider?: ProviderKind;
     }) =>
       Effect.gen(function* () {
-        const orchestratorMcpServer = thread.orchestratorMode
-          ? yield* orchestratorControlPlane.getMcpServerForSeat(threadId)
+        // Seat wiring must never take the user's turn down with it: on any
+        // control-plane failure the session starts without delegation tools
+        // and the seat is marked degraded for the UI instead.
+        const seatStartConfig = thread.orchestratorMode
+          ? yield* orchestratorControlPlane.getSeatStartConfig(threadId).pipe(
+              Effect.catch((cause) => {
+                const detail = cause instanceof Error ? cause.message : String(cause);
+                return Effect.logWarning(
+                  "orchestrator seat start config unavailable; starting session without delegation tools",
+                  { threadId, detail },
+                ).pipe(
+                  Effect.andThen(orchestratorControlPlane.markSeatDegraded(threadId, detail)),
+                  Effect.as(undefined),
+                );
+              }),
+            )
           : undefined;
         return yield* providerService.startSession(threadId, {
           threadId,
@@ -719,7 +733,12 @@ const make = Effect.gen(function* () {
           ...(options?.providerOptions !== undefined
             ? { providerOptions: options.providerOptions }
             : {}),
-          ...(orchestratorMcpServer ? { mcpServers: [orchestratorMcpServer] } : {}),
+          ...(seatStartConfig
+            ? {
+                mcpServers: [seatStartConfig.mcpServer],
+                orchestratorPersona: seatStartConfig.persona,
+              }
+            : {}),
           ...(input?.resumeCursor !== undefined ? { resumeCursor: input.resumeCursor } : {}),
           runtimeMode: desiredRuntimeMode,
         });

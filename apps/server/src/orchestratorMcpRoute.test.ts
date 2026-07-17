@@ -57,7 +57,10 @@ it("preserves MCP response headers across the Web-to-Effect HTTP bridge", async 
   const unexpectedControlPlaneCall = (method: string) =>
     Effect.die(new Error(`Unexpected OrchestratorControlPlane.${method} call`));
   const controlPlane: OrchestratorControlPlaneShape = {
-    getMcpServerForSeat: () => unexpectedControlPlaneCall("getMcpServerForSeat"),
+    getSeatStartConfig: () => unexpectedControlPlaneCall("getSeatStartConfig"),
+    markSeatDegraded: () => unexpectedControlPlaneCall("markSeatDegraded"),
+    getSeatRuntimeStatuses: unexpectedControlPlaneCall("getSeatRuntimeStatuses"),
+    subscribeSeatStatus: () => () => undefined,
     handleHttpRequest: () =>
       Effect.succeed(
         new Response(JSON.stringify(initializeResult), {

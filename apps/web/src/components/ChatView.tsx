@@ -24,6 +24,7 @@ import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   type ResolvedKeybindingsConfig,
   type ServerProviderStatus,
+  type OrchestratorSeatRuntimeStatus,
   ThreadId,
   ThreadMarkerId,
   type ThreadMarker,
@@ -270,6 +271,7 @@ import {
 import { runProjectCommandInTerminal } from "~/projectTerminalRunner";
 import { newCommandId, newMessageId, newProjectId, newThreadId } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
+import { onServerOrchestratorSeatStatusesUpdated } from "~/wsNativeApi";
 import {
   confirmTerminalTabClose,
   resolveTerminalCloseTitle,
@@ -1055,6 +1057,11 @@ export default function ChatView({
   );
   const promptRef = useRef(prompt);
   const [isDragOverComposer, setIsDragOverComposer] = useState(false);
+  const [orchestratorSeatStatusesByThreadId, setOrchestratorSeatStatusesByThreadId] = useState<
+    ReadonlyMap<ThreadId, OrchestratorSeatRuntimeStatus>
+  >(() => new Map());
+  const [orchestratorPanelOpen, setOrchestratorPanelOpen] = useState(true);
+  const orchestratorPanelRef = useRef<HTMLDivElement>(null);
   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
   const [optimisticUserMessages, setOptimisticUserMessages] = useState<ChatMessage[]>([]);
   const optimisticUserMessagesRef = useRef(optimisticUserMessages);
@@ -1193,6 +1200,26 @@ export default function ChatView({
     setComposerCommandPicker(null);
     setIsModelPickerOpen(false);
     setIsTraitsPickerOpen(false);
+  }, [threadId]);
+  useEffect(
+    () =>
+      onServerOrchestratorSeatStatusesUpdated(({ seats }) => {
+        setOrchestratorSeatStatusesByThreadId((current) => {
+          const next = new Map(current);
+          for (const seat of seats) {
+            const existing = next.get(seat.threadId);
+            if (existing && existing.updatedAt > seat.updatedAt) {
+              continue;
+            }
+            next.set(seat.threadId, seat);
+          }
+          return next;
+        });
+      }),
+    [],
+  );
+  useEffect(() => {
+    setOrchestratorPanelOpen(true);
   }, [threadId]);
   useEffect(() => {
     const scrollDebouncer = showScrollDebouncer.current;
@@ -1499,6 +1526,24 @@ export default function ChatView({
       : configuredOrchestratorSeatModel;
   const isComposerOrchestratorMode =
     requestedOrchestratorMode && orchestratorSeatModelCandidate !== null;
+  const activeOrchestratorSeatStatus =
+    activeThread?.orchestratorMode === true
+      ? (orchestratorSeatStatusesByThreadId.get(activeThread.id) ?? null)
+      : null;
+  const orchestratorLaneRoutes = useMemo(
+    () =>
+      (["bulk", "ui", "explore", "verify"] as const).map((lane) => {
+        const selection = settings.orchestratorRoutingPolicy.lanes[lane].modelSelection;
+        return { lane, model: `${selection.provider}:${selection.model}` };
+      }),
+    [settings.orchestratorRoutingPolicy.lanes],
+  );
+  const openOrchestratorPanel = useCallback(() => {
+    setOrchestratorPanelOpen(true);
+    requestAnimationFrame(() => {
+      orchestratorPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, []);
   const orchestratorSeatModel: ModelSelection = orchestratorSeatModelCandidate ?? {
     provider: "codex",
     model: DEFAULT_MODEL_BY_PROVIDER.codex,
@@ -9540,6 +9585,15 @@ export default function ChatView({
           handoffActionTargetProviders={handoffTargetProviders}
           handoffBadgeSourceProvider={handoffBadgeSourceProvider}
           handoffBadgeTargetProvider={handoffBadgeTargetProvider}
+          orchestratorSeat={
+            activeThread.orchestratorMode
+              ? {
+                  status: activeOrchestratorSeatStatus?.status ?? "pending",
+                  reason: activeOrchestratorSeatStatus?.reason ?? null,
+                  onOpen: openOrchestratorPanel,
+                }
+              : null
+          }
           gitCwd={threadWorkspaceCwd}
           diffTotals={repoDiffTotals}
           showGitActions={showGitActions && !isEditorRail}
@@ -9685,6 +9739,12 @@ export default function ChatView({
                       onOpenThread={onNavigateToThread}
                       showOnboarding
                       seatModel={orchestratorSeatModel.model}
+                      seatStatus={activeOrchestratorSeatStatus?.status ?? "pending"}
+                      seatStatusReason={activeOrchestratorSeatStatus?.reason ?? null}
+                      laneRoutes={orchestratorLaneRoutes}
+                      open={orchestratorPanelOpen}
+                      onOpenChange={setOrchestratorPanelOpen}
+                      panelRef={orchestratorPanelRef}
                     />
                   ) : null}
                   {composerSection}
@@ -9709,12 +9769,18 @@ export default function ChatView({
             {shouldRenderChatPaneContent && !isCenteredEmptyLanding ? (
               <div className="flex min-h-0 flex-1 flex-col">
                 <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-                  {isComposerOrchestratorMode && transcriptContent === undefined ? (
+                  {isComposerOrchestratorMode ? (
                     <OrchestratorDelegationPanel
                       threads={orchestratorDelegations}
                       onOpenThread={onNavigateToThread}
                       showOnboarding={timelineEntries.length === 0}
                       seatModel={orchestratorSeatModel.model}
+                      seatStatus={activeOrchestratorSeatStatus?.status ?? "pending"}
+                      seatStatusReason={activeOrchestratorSeatStatus?.reason ?? null}
+                      laneRoutes={orchestratorLaneRoutes}
+                      open={orchestratorPanelOpen}
+                      onOpenChange={setOrchestratorPanelOpen}
+                      panelRef={orchestratorPanelRef}
                     />
                   ) : null}
                   {transcriptContent ?? (

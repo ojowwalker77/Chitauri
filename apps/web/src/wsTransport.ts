@@ -17,6 +17,7 @@ import {
   type ProjectDevServerEvent,
   type ServerConfigStreamEvent,
   type ServerLifecycleStreamEvent,
+  type ServerOrchestratorSeatStatusesUpdatedPayload,
   type ServerProviderStatusesUpdatedPayload,
   type ServerSettingsUpdatedPayload,
   type TerminalEvent,
@@ -411,6 +412,14 @@ export class WsTransport {
               this.emit(WS_CHANNELS.serverSettingsUpdated, payload),
             restartChannel,
           );
+        } else if (channel === WS_CHANNELS.serverOrchestratorSeatStatusesUpdated) {
+          this.startStream(
+            "server.orchestrator-seat-statuses",
+            client[WS_METHODS.subscribeServerOrchestratorSeatStatuses]({}),
+            (payload: ServerOrchestratorSeatStatusesUpdatedPayload) =>
+              this.emit(WS_CHANNELS.serverOrchestratorSeatStatusesUpdated, payload),
+            restartChannel,
+          );
         } else if (channel === WS_CHANNELS.terminalEvent) {
           this.startStream(
             "terminal.events",
@@ -449,6 +458,8 @@ export class WsTransport {
     else if (channel === WS_CHANNELS.serverProviderStatusesUpdated)
       this.stopStream("server.providers");
     else if (channel === WS_CHANNELS.serverSettingsUpdated) this.stopStream("server.settings");
+    else if (channel === WS_CHANNELS.serverOrchestratorSeatStatusesUpdated)
+      this.stopStream("server.orchestrator-seat-statuses");
     else if (channel === WS_CHANNELS.terminalEvent) this.stopStream("terminal.events");
     else if (channel === WS_CHANNELS.projectDevServerEvent) this.stopStream("project.devServers");
     else if (channel === ORCHESTRATION_WS_CHANNELS.domainEvent)

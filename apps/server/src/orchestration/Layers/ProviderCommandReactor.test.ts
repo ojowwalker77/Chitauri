@@ -306,7 +306,10 @@ describe("ProviderCommandReactor", () => {
 
     const unsupported = () => Effect.die(new Error("Unsupported provider call in test")) as never;
     const orchestratorControlPlane: OrchestratorControlPlaneShape = {
-      getMcpServerForSeat: unsupported,
+      getSeatStartConfig: unsupported,
+      markSeatDegraded: unsupported,
+      getSeatRuntimeStatuses: unsupported(),
+      subscribeSeatStatus: () => () => undefined,
       handleHttpRequest: unsupported,
       getTaskStatus: unsupported,
       getTaskResult: unsupported,
