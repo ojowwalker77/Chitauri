@@ -4,6 +4,7 @@
 // Exports: MessagesTimeline
 
 import {
+  PROVIDER_DISPLAY_NAMES,
   type MessageId,
   type ProviderKind,
   type ProviderMentionReference,
@@ -42,7 +43,6 @@ import {
 } from "../../types";
 import ChatMarkdown from "../ChatMarkdown";
 import { InlineLinkChip } from "../InlineLinkChip";
-import { ProviderIcon } from "../ProviderIcon";
 import {
   ArrowUpCircleIcon,
   BotIcon,
@@ -153,11 +153,10 @@ import { formatSubagentModelLabel } from "../../lib/subagentPresentation";
 import { SubagentCardList, subagentPrimaryLabel } from "./SubagentCardList";
 import { deriveUserMessagePreviewState } from "./userMessagePreview";
 import {
-  groupWorkLedgerEntries,
-  sequenceWorkLedgerEntries,
-  summarizeWorkLedger,
-  type SequencedWorkLedgerEntry,
-} from "./workLedger";
+  sequenceWorkTrailEntries,
+  summarizeWorkTrail,
+  type SequencedWorkTrailEntry,
+} from "./workTrail";
 import {
   resolveActiveTrailSnapshot,
   type ActiveTrailSnapshot,
@@ -253,6 +252,41 @@ function UserDispatchModeChip({
     >
       <Icon className="size-3 shrink-0 text-muted-foreground/75" />
       <span>{label}</span>
+    </div>
+  );
+}
+
+function AssistantMessageHeader(props: {
+  provider: ProviderKind | undefined;
+  streaming: boolean;
+  timestamp: string | null;
+}) {
+  const providerLabel = props.provider ? PROVIDER_DISPLAY_NAMES[props.provider] : "Agent";
+
+  return (
+    <div
+      className="mb-2.5 flex items-center gap-2 font-system-ui text-[12px] text-muted-foreground"
+      data-assistant-provider={props.provider ?? "unknown"}
+    >
+      <span
+        aria-hidden="true"
+        className="flex size-5 shrink-0 items-center justify-center text-[16px] font-semibold leading-none text-claude"
+      >
+        ✳
+      </span>
+      <span className="font-medium text-foreground/92">{providerLabel}</span>
+      <span aria-hidden="true" className="text-muted-foreground/45">
+        ·
+      </span>
+      <span>{props.streaming ? "Working" : "Updated"}</span>
+      {props.timestamp ? (
+        <>
+          <span aria-hidden="true" className="text-muted-foreground/45">
+            ·
+          </span>
+          <span className="tabular-nums text-muted-foreground/72">{props.timestamp}</span>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -972,13 +1006,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               : groupedEntries;
           const hiddenCount = groupedEntries.length - visibleEntries.length;
           const showOverflowToggle = hasOverflow;
-          const summary = summarizeWorkLedger(groupedEntries);
-          const visibleLedgerEntries = sequenceWorkLedgerEntries(groupedEntries).slice(
+          const summary = summarizeWorkTrail(groupedEntries);
+          const visibleTrailEntries = sequenceWorkTrailEntries(groupedEntries).slice(
             groupedEntries.length - visibleEntries.length,
           );
-          const ledgerLabel = row.activeTurnStartedAt ? (
+          const trailLabel = row.activeTurnStartedAt ? (
             <>
-              Working for{" "}
+              Working ·{" "}
               {nowIso ? (
                 (formatWorkingTimer(row.activeTurnStartedAt, nowIso) ?? "0s")
               ) : (
@@ -986,20 +1020,20 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               )}
             </>
           ) : (
-            "Activity"
+            "Tool activity"
           );
 
           return (
-            <WorkLedgerFrame>
-              <WorkLedgerHeaderContent
+            <WorkTrailFrame>
+              <WorkTrailHeaderContent
                 status={row.activeTurnStartedAt ? "active" : "neutral"}
-                label={ledgerLabel}
+                label={trailLabel}
                 operationCount={summary.operationCount}
                 changedFileCount={summary.changedFileCount}
                 chatMetaFontSizePx={appTypographyScale.uiSmPx}
               />
-              <WorkLedgerSections
-                entries={visibleLedgerEntries}
+              <WorkTrailEntries
+                entries={visibleTrailEntries}
                 renderEntry={({ entry: workEntry }) => (
                   <SimpleWorkEntryRow
                     key={`work-row:${workEntry.id}`}
@@ -1017,7 +1051,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 )}
               />
               {showOverflowToggle ? (
-                <WorkLedgerOverflowToggle
+                <WorkTrailOverflowToggle
                   hiddenCount={hiddenCount}
                   expanded={isExpanded}
                   earlier
@@ -1025,7 +1059,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                   onToggle={() => handleToggleWorkGroup(groupId)}
                 />
               ) : null}
-            </WorkLedgerFrame>
+            </WorkTrailFrame>
           );
         })()}
 
@@ -1268,7 +1302,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           const workGroupId = row.leadingWorkGroupId ?? row.inlineWorkGroupId ?? null;
           const workExpanded =
             workGroupId !== null ? (expandedWorkGroupsState[workGroupId] ?? false) : false;
-          const sequencedWorkEntries = sequenceWorkLedgerEntries(workEntries);
+          const sequencedWorkEntries = sequenceWorkTrailEntries(workEntries);
           const visibleSequencedWorkEntries =
             workExpanded || workEntries.length <= MAX_VISIBLE_INLINE_TOOL_ENTRIES
               ? sequencedWorkEntries
@@ -1321,13 +1355,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           // fragments. `showAssistantCopyButton` is exactly the terminal-message
           // signal (see deriveTerminalAssistantMessageIds).
           const isTerminalAssistantMessage = row.showAssistantCopyButton;
-          const assistantMeta = [
-            isTerminalAssistantMessage
-              ? formatShortTimestamp(row.message.createdAt, timestampFormat)
-              : null,
-          ]
-            .filter((value): value is string => Boolean(value))
-            .join(" • ");
+          const assistantTimestamp = isTerminalAssistantMessage
+            ? formatShortTimestamp(row.message.createdAt, timestampFormat)
+            : null;
           const collapsedTurnItems = row.collapsedTurnItems;
           const hasCollapsedWork = Boolean(collapsedTurnItems && collapsedTurnItems.length > 0);
           const isCollapsedWorkExpanded = hasCollapsedWork
@@ -1337,9 +1367,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             ? undefined
             : settledTurnCollapseTransitions[row.message.id];
           const isTailContentRow = row.id === tailContentRowId;
-          const renderLedgerWorkEntry = ({ entry: workEntry }: SequencedWorkLedgerEntry) => (
+          const renderTrailWorkEntry = ({ entry: workEntry }: SequencedWorkTrailEntry) => (
             <SimpleWorkEntryRow
-              key={`ledger-work-row:${row.message.id}:${workEntry.id}`}
+              key={`trail-work-row:${row.message.id}:${workEntry.id}`}
               workEntry={workEntry}
               chatMetaFontSizePx={appTypographyScale.uiSmPx}
               textFontSizePx={appTypographyScale.uiSmPx}
@@ -1355,7 +1385,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               {...(turnSummary?.turnId ? { turnId: turnSummary.turnId } : {})}
             />
           );
-          const renderCollapsedLedgerBody = (
+          const renderCollapsedTrailBody = (
             items: ReadonlyArray<CollapsedTurnItem>,
             keyPrefix: string,
           ) => {
@@ -1365,7 +1395,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             const collapsedHasGenericFileChange = collapsedWorkEntries.some(
               (entry) => isFileChangeWorkEntry(entry) && (entry.changedFiles?.length ?? 0) === 0,
             );
-            const collapsedLedgerEntries = sequenceWorkLedgerEntries(collapsedWorkEntries).filter(
+            const collapsedTrailEntries = sequenceWorkTrailEntries(collapsedWorkEntries).filter(
               ({ entry }) =>
                 !(
                   collapsedHasGenericFileChange &&
@@ -1380,12 +1410,12 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             );
             return (
               <div key={keyPrefix}>
-                <WorkLedgerSections
-                  entries={collapsedLedgerEntries}
-                  renderEntry={renderLedgerWorkEntry}
+                <WorkTrailEntries
+                  entries={collapsedTrailEntries}
+                  renderEntry={renderTrailWorkEntry}
                 />
                 {collapsedHasGenericFileChange && turnSummary ? (
-                  <WorkLedgerEditedFilesSection
+                  <WorkTrailEditedFiles
                     files={turnSummary.files}
                     startSequence={Math.max(collapsedWorkEntries.length, 1)}
                     fontSizePx={appTypographyScale.uiSmPx}
@@ -1393,7 +1423,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                   />
                 ) : null}
                 {narrationItems.length > 0 ? (
-                  <section className="pt-1.5" data-ledger-section="notes">
+                  <section className="pt-1.5" data-work-trail-notes="true">
                     <div className="mb-1.5 font-system-ui text-[10px] font-medium text-muted-foreground/48">
                       Agent notes · {narrationItems.length}
                     </div>
@@ -1417,7 +1447,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           const collapsedWorkEntries = collapsedTurnItems?.flatMap((item) =>
             item.kind === "work" ? [item.entry] : [],
           );
-          const collapsedSummary = summarizeWorkLedger(collapsedWorkEntries ?? []);
+          const collapsedSummary = summarizeWorkTrail(collapsedWorkEntries ?? []);
           const collapsedChangedFileCount =
             turnSummary &&
             (collapsedWorkEntries?.some((entry) => isFileChangeWorkEntry(entry)) ?? false)
@@ -1426,19 +1456,19 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                   ...turnSummary.files.map((file) => file.path),
                 ]).size
               : collapsedSummary.changedFileCount;
-          const activeSummary = summarizeWorkLedger(workEntries);
+          const activeSummary = summarizeWorkTrail(workEntries);
           const activeChangedFileCount = new Set([
             ...workEntries.flatMap((entry) => entry.changedFiles ?? []),
             ...inlineEditedFilesFromTurnSummary.map((file) => file.path),
           ]).size;
-          const hasActiveLedger =
+          const hasActiveTrail =
             !hasCollapsedWork &&
             (visibleRenderableWorkEntries.length > 0 ||
               inlineEditedFilesFromTurnSummary.length > 0 ||
               Boolean(row.activeTurnStartedAt));
-          const activeLedgerLabel = row.activeTurnStartedAt ? (
+          const activeTrailLabel = row.activeTurnStartedAt ? (
             <>
-              Working for{" "}
+              Working ·{" "}
               {nowIso ? (
                 (formatWorkingTimer(row.activeTurnStartedAt, nowIso) ?? "0s")
               ) : (
@@ -1446,112 +1476,16 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               )}
             </>
           ) : (
-            "Activity"
+            "Tool activity"
           );
           return (
             <>
-              {settledCollapseTransition && (
-                <div
-                  aria-hidden="true"
-                  inert
-                  // The clone is visual-only for the entire close transition; keep it inert
-                  // even while the inner DisclosureRegion starts open for its first frame.
-                  className="pointer-events-none mb-3 select-none"
-                  data-settled-turn-collapse-transition="true"
-                >
-                  <WorkLedgerFrame>
-                    <DisclosureRegion open={settledCollapseTransition.open}>
-                      {renderCollapsedLedgerBody(
-                        settledCollapseTransition.items,
-                        "settling-turn-close",
-                      )}
-                    </DisclosureRegion>
-                  </WorkLedgerFrame>
-                </div>
-              )}
-              {hasCollapsedWork && (
-                <WorkLedgerFrame className="mb-3">
-                  <Collapsible
-                    className="group/collapsed-work"
-                    open={isCollapsedWorkExpanded}
-                    onOpenChange={(open) => {
-                      setCollapsedWorkExpanded(row.message.id, open);
-                    }}
-                  >
-                    <CollapsibleTrigger
-                      // ChatView's click anchor preserves this trigger's screen position
-                      // while the disclosure height animates, so opening it should not tail-scroll.
-                      className="block w-full text-left transition-colors duration-150 ease-out hover:bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)]"
-                    >
-                      <WorkLedgerHeaderContent
-                        status="settled"
-                        label={
-                          row.collapsedWorkElapsed
-                            ? `Worked for ${row.collapsedWorkElapsed}`
-                            : "Activity"
-                        }
-                        operationCount={collapsedSummary.operationCount}
-                        changedFileCount={collapsedChangedFileCount}
-                        expanded={isCollapsedWorkExpanded}
-                        chatMetaFontSizePx={appTypographyScale.uiSmPx}
-                      />
-                    </CollapsibleTrigger>
-                    <CollapsiblePanel>
-                      <div
-                        className={disclosureContentClassName(isCollapsedWorkExpanded, "min-w-0")}
-                      >
-                        {renderCollapsedLedgerBody(collapsedTurnItems!, "collapsed-panel")}
-                      </div>
-                    </CollapsiblePanel>
-                  </Collapsible>
-                </WorkLedgerFrame>
-              )}
               <div className="group min-w-0 py-0.5">
-                <div
-                  className="mb-2.5 flex items-center gap-2 font-system-ui text-[11px] text-muted-foreground"
-                  data-assistant-provider={assistantProvider ?? "unknown"}
-                >
-                  <span aria-hidden="true" className="flex size-4 items-center justify-center">
-                    <ProviderIcon
-                      provider={assistantProvider}
-                      fallback={<BotIcon className="size-3.5 text-muted-foreground" />}
-                      className="size-3.5"
-                    />
-                  </span>
-                  <span>{row.message.streaming ? "Working" : "Agent"}</span>
-                </div>
-                {hasActiveLedger ? (
-                  <WorkLedgerFrame className="mb-3">
-                    <WorkLedgerHeaderContent
-                      status={row.activeTurnStartedAt ? "active" : "neutral"}
-                      label={activeLedgerLabel}
-                      operationCount={activeSummary.operationCount}
-                      changedFileCount={activeChangedFileCount}
-                      chatMetaFontSizePx={appTypographyScale.uiSmPx}
-                    />
-                    <WorkLedgerSections
-                      entries={visibleRenderableWorkEntries}
-                      renderEntry={renderLedgerWorkEntry}
-                    />
-                    {inlineEditedFilesFromTurnSummary.length > 0 && turnSummary ? (
-                      <WorkLedgerEditedFilesSection
-                        files={inlineEditedFilesFromTurnSummary}
-                        startSequence={Math.max(workEntries.length, 1)}
-                        fontSizePx={appTypographyScale.uiSmPx}
-                        onOpen={(filePath) => onOpenTurnDiff(turnSummary.turnId, filePath)}
-                      />
-                    ) : null}
-                    {workGroupId && workEntries.length > MAX_VISIBLE_INLINE_TOOL_ENTRIES ? (
-                      <WorkLedgerOverflowToggle
-                        hiddenCount={hiddenWorkCount}
-                        expanded={workExpanded}
-                        earlier={activeTurnInProgress}
-                        chatMetaFontSizePx={appTypographyScale.uiSmPx}
-                        onToggle={() => handleToggleWorkGroup(workGroupId)}
-                      />
-                    ) : null}
-                  </WorkLedgerFrame>
-                ) : null}
+                <AssistantMessageHeader
+                  provider={assistantProvider}
+                  streaming={Boolean(row.message.streaming)}
+                  timestamp={assistantTimestamp}
+                />
                 <div data-assistant-message-id={row.message.id}>
                   <ChatMarkdown
                     text={messageText}
@@ -1562,7 +1496,95 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     markers={messageMarkers}
                   />
                 </div>
-                {(showPinToggle || assistantCopyState.visible || assistantMeta.length > 0) && (
+                {settledCollapseTransition && (
+                  <div
+                    aria-hidden="true"
+                    inert
+                    // The clone is visual-only for the entire close transition; keep it inert
+                    // even while the inner DisclosureRegion starts open for its first frame.
+                    className="pointer-events-none mt-3 select-none"
+                    data-settled-turn-collapse-transition="true"
+                  >
+                    <WorkTrailFrame>
+                      <DisclosureRegion open={settledCollapseTransition.open}>
+                        {renderCollapsedTrailBody(
+                          settledCollapseTransition.items,
+                          "settling-turn-close",
+                        )}
+                      </DisclosureRegion>
+                    </WorkTrailFrame>
+                  </div>
+                )}
+                {hasCollapsedWork && (
+                  <WorkTrailFrame className="mt-3">
+                    <Collapsible
+                      className="group/collapsed-work"
+                      open={isCollapsedWorkExpanded}
+                      onOpenChange={(open) => {
+                        setCollapsedWorkExpanded(row.message.id, open);
+                      }}
+                    >
+                      <CollapsibleTrigger
+                        // ChatView's click anchor preserves this trigger's screen position
+                        // while the disclosure height animates, so opening it should not tail-scroll.
+                        className="block w-full text-left transition-colors duration-150 ease-out hover:bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)]"
+                      >
+                        <WorkTrailHeaderContent
+                          status="settled"
+                          label={
+                            row.collapsedWorkElapsed
+                              ? `Worked for ${row.collapsedWorkElapsed}`
+                              : "Worked"
+                          }
+                          operationCount={collapsedSummary.operationCount}
+                          changedFileCount={collapsedChangedFileCount}
+                          expanded={isCollapsedWorkExpanded}
+                          chatMetaFontSizePx={appTypographyScale.uiSmPx}
+                        />
+                      </CollapsibleTrigger>
+                      <CollapsiblePanel>
+                        <div
+                          className={disclosureContentClassName(isCollapsedWorkExpanded, "min-w-0")}
+                        >
+                          {renderCollapsedTrailBody(collapsedTurnItems!, "collapsed-panel")}
+                        </div>
+                      </CollapsiblePanel>
+                    </Collapsible>
+                  </WorkTrailFrame>
+                )}
+                {hasActiveTrail ? (
+                  <WorkTrailFrame className="mt-3">
+                    <WorkTrailHeaderContent
+                      status={row.activeTurnStartedAt ? "active" : "neutral"}
+                      label={activeTrailLabel}
+                      operationCount={activeSummary.operationCount}
+                      changedFileCount={activeChangedFileCount}
+                      chatMetaFontSizePx={appTypographyScale.uiSmPx}
+                    />
+                    <WorkTrailEntries
+                      entries={visibleRenderableWorkEntries}
+                      renderEntry={renderTrailWorkEntry}
+                    />
+                    {inlineEditedFilesFromTurnSummary.length > 0 && turnSummary ? (
+                      <WorkTrailEditedFiles
+                        files={inlineEditedFilesFromTurnSummary}
+                        startSequence={Math.max(workEntries.length, 1)}
+                        fontSizePx={appTypographyScale.uiSmPx}
+                        onOpen={(filePath) => onOpenTurnDiff(turnSummary.turnId, filePath)}
+                      />
+                    ) : null}
+                    {workGroupId && workEntries.length > MAX_VISIBLE_INLINE_TOOL_ENTRIES ? (
+                      <WorkTrailOverflowToggle
+                        hiddenCount={hiddenWorkCount}
+                        expanded={workExpanded}
+                        earlier={activeTurnInProgress}
+                        chatMetaFontSizePx={appTypographyScale.uiSmPx}
+                        onToggle={() => handleToggleWorkGroup(workGroupId)}
+                      />
+                    ) : null}
+                  </WorkTrailFrame>
+                ) : null}
+                {(showPinToggle || assistantCopyState.visible) && (
                   <div
                     className="mt-0.5 flex items-center gap-2 font-system-ui font-normal text-muted-foreground/45"
                     style={chatMessageFooterStyle}
@@ -1591,11 +1613,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                         text={assistantCopyState.text ?? ""}
                         className={MESSAGE_HOVER_REVEAL_CLASS_NAME}
                       />
-                    ) : null}
-                    {assistantMeta.length > 0 ? (
-                      <p className={cn("tabular-nums", MESSAGE_HOVER_REVEAL_CLASS_NAME)}>
-                        {assistantMeta}
-                      </p>
                     ) : null}
                   </div>
                 )}
@@ -1791,12 +1808,12 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       )}
 
       {row.kind === "working-header" && (
-        <WorkLedgerFrame>
-          <WorkLedgerHeaderContent
+        <WorkTrailFrame>
+          <WorkTrailHeaderContent
             status="active"
             label={
               <>
-                Working for{" "}
+                Working ·{" "}
                 {nowIso ? (
                   (formatWorkingTimer(row.createdAt, nowIso) ?? "0s")
                 ) : (
@@ -1808,7 +1825,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             changedFileCount={0}
             chatMetaFontSizePx={appTypographyScale.uiSmPx}
           />
-        </WorkLedgerFrame>
+        </WorkTrailFrame>
       )}
 
       {row.kind === "working" && (
@@ -2917,18 +2934,18 @@ function ToolRowTooltip(props: { content: ReactNode; children: ReactElement }) {
   );
 }
 
-function WorkLedgerFrame(props: { children: ReactNode; className?: string }) {
+function WorkTrailFrame(props: { children: ReactNode; className?: string }) {
   return (
     <div
       className={cn("border-l border-foreground/9 pl-3", props.className)}
-      data-work-ledger="true"
+      data-work-trail="true"
     >
       {props.children}
     </div>
   );
 }
 
-function WorkLedgerHeaderContent(props: {
+function WorkTrailHeaderContent(props: {
   status: "active" | "settled" | "neutral";
   label: ReactNode;
   operationCount: number;
@@ -2948,28 +2965,33 @@ function WorkLedgerHeaderContent(props: {
   ].filter((part): part is string => Boolean(part));
 
   return (
-    <span className="grid min-h-10 w-full grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-2 text-left">
+    <span className="grid min-h-8 w-full grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-2 text-left">
       <span
         className={cn(
           "flex size-4 items-center justify-center",
           props.status === "active"
-            ? "text-foreground/68"
+            ? "text-claude"
             : props.status === "settled"
               ? "text-emerald-600/80 dark:text-emerald-400/70"
               : "text-muted-foreground/55",
         )}
       >
-        <StatusIcon className={cn("size-3", props.status === "active" && "animate-spin")} />
+        <StatusIcon
+          className={cn(
+            "size-3",
+            props.status === "active" && "animate-spin motion-reduce:animate-none",
+          )}
+        />
       </span>
       <span
-        className="min-w-0 truncate font-system-ui font-medium text-foreground/78"
+        className="min-w-0 truncate font-system-ui font-normal text-foreground/78"
         style={{ fontSize: `${props.chatMetaFontSizePx}px` }}
       >
         {props.label}
       </span>
       <span className="flex min-w-0 items-center gap-1.5">
         {summaryParts.length > 0 ? (
-          <span className="font-system-ui truncate text-[10px] tabular-nums text-muted-foreground/48">
+          <span className="font-system-ui truncate text-[11px] tabular-nums text-muted-foreground/55">
             {summaryParts.join(" · ")}
           </span>
         ) : null}
@@ -2981,45 +3003,31 @@ function WorkLedgerHeaderContent(props: {
   );
 }
 
-function WorkLedgerSections(props: {
-  entries: ReadonlyArray<SequencedWorkLedgerEntry>;
-  renderEntry: (entry: SequencedWorkLedgerEntry) => ReactNode;
+function WorkTrailEntries(props: {
+  entries: ReadonlyArray<SequencedWorkTrailEntry>;
+  renderEntry: (entry: SequencedWorkTrailEntry) => ReactNode;
 }) {
-  const sections = groupWorkLedgerEntries(props.entries);
-  if (sections.length === 0) {
+  if (props.entries.length === 0) {
     return null;
   }
 
   return (
-    <div className="space-y-1 pb-1.5">
-      {sections.map((section) => (
-        <section key={section.kind} className="py-1" data-ledger-section={section.kind}>
-          <div className="flex items-center gap-2 pb-0.5 font-system-ui text-[10px] font-medium text-muted-foreground/45">
-            <span>{section.label}</span>
-            <span className="tabular-nums">{section.entries.length}</span>
-          </div>
-          <div>
-            {section.entries.map((entry) => (
-              <div
-                key={entry.entry.id}
-                className="grid min-w-0 grid-cols-[1.55rem_minmax(0,1fr)] items-start"
-                data-ledger-sequence={entry.sequence}
-                data-work-ledger-entry-id={entry.entry.id}
-              >
-                <span className="font-chat-code pt-0.5 text-[9px] leading-5 tabular-nums text-muted-foreground/28">
-                  {String(entry.sequence).padStart(2, "0")}
-                </span>
-                <div className="min-w-0">{props.renderEntry(entry)}</div>
-              </div>
-            ))}
-          </div>
-        </section>
+    <div className="space-y-0.5 pb-1.5">
+      {props.entries.map((entry) => (
+        <div
+          key={entry.entry.id}
+          className="min-w-0"
+          data-work-trail-sequence={entry.sequence}
+          data-work-trail-entry-id={entry.entry.id}
+        >
+          {props.renderEntry(entry)}
+        </div>
       ))}
     </div>
   );
 }
 
-function WorkLedgerEditedFilesSection(props: {
+function WorkTrailEditedFiles(props: {
   files: ReadonlyArray<TurnDiffSummary["files"][number]>;
   startSequence: number;
   fontSizePx: number;
@@ -3030,41 +3038,30 @@ function WorkLedgerEditedFilesSection(props: {
   }
 
   return (
-    <section className="py-1.5" data-ledger-section="modify">
-      <div className="flex items-center gap-2 pb-0.5 font-system-ui text-[10px] font-medium text-muted-foreground/45">
-        <span>Modify</span>
-        <span className="tabular-nums">{props.files.length}</span>
-      </div>
+    <div className="space-y-0.5 py-0.5">
       {props.files.map((file, index) => (
-        <div
+        <button
           key={file.path}
-          className="grid min-w-0 grid-cols-[1.55rem_minmax(0,1fr)] items-center"
-          data-ledger-sequence={props.startSequence + index}
+          type="button"
+          className="group/file-row flex min-h-7 w-full min-w-0 items-center gap-1.5 text-left transition-[color,scale] duration-150 ease-out focus-visible:outline-none active:scale-[0.97] motion-reduce:active:scale-100"
+          data-work-trail-sequence={props.startSequence + index}
+          title={file.path}
+          onClick={() => props.onOpen(file.path)}
         >
-          <span className="font-chat-code text-[9px] leading-5 tabular-nums text-muted-foreground/28">
-            {String(props.startSequence + index).padStart(2, "0")}
-          </span>
-          <button
-            type="button"
-            className="group/file-row flex min-h-7 w-full min-w-0 items-center gap-1.5 text-left transition-[color,scale] duration-150 ease-out focus-visible:outline-none active:scale-[0.96]"
-            title={file.path}
-            onClick={() => props.onOpen(file.path)}
-          >
-            <EditedFileRowContent
-              filePath={file.path}
-              additions={file.additions}
-              deletions={file.deletions}
-              fontSizePx={props.fontSizePx}
-              compact
-            />
-          </button>
-        </div>
+          <EditedFileRowContent
+            filePath={file.path}
+            additions={file.additions}
+            deletions={file.deletions}
+            fontSizePx={props.fontSizePx}
+            compact
+          />
+        </button>
       ))}
-    </section>
+    </div>
   );
 }
 
-function WorkLedgerOverflowToggle(props: {
+function WorkTrailOverflowToggle(props: {
   hiddenCount: number;
   expanded: boolean;
   earlier: boolean;
@@ -3078,13 +3075,13 @@ function WorkLedgerOverflowToggle(props: {
     <div>
       <button
         type="button"
-        className="min-h-10 font-system-ui text-muted-foreground/52 transition-[color,scale] duration-150 ease-out hover:text-foreground/75 active:scale-[0.96]"
+        className="min-h-8 font-system-ui text-muted-foreground/52 transition-[color,scale] duration-150 ease-out hover:text-foreground/75 active:scale-[0.97] motion-reduce:active:scale-100"
         style={{ fontSize: `${props.chatMetaFontSizePx}px` }}
         onClick={props.onToggle}
       >
         {props.expanded
           ? "Show less"
-          : `${props.hiddenCount} ${props.earlier ? "earlier" : "more"} ${pluralize(props.hiddenCount, "operation")}`}
+          : `${props.hiddenCount} ${props.earlier ? "earlier" : "more"} ${pluralize(props.hiddenCount, "call")}`}
       </button>
     </div>
   );

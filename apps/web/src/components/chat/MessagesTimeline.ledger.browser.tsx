@@ -1,5 +1,5 @@
 // FILE: MessagesTimeline.ledger.browser.tsx
-// Purpose: Browser regression for the compact technical ledger used by live tool activity.
+// Purpose: Browser regression for the compact Claude-style trail used by live tool activity.
 // Layer: Vitest browser tests
 
 import "../../index.css";
@@ -52,12 +52,12 @@ const timelineEntries: TimelineEntries = [
   },
 ];
 
-describe("MessagesTimeline technical ledger", () => {
+describe("MessagesTimeline activity trail", () => {
   afterEach(() => {
     document.body.innerHTML = "";
   });
 
-  it("renders live work as one inspectable, semantically grouped ledger", async () => {
+  it("renders live work as one quiet chronological trail", async () => {
     const screen = await render(
       <div style={{ height: 420 }}>
         <MessagesTimeline
@@ -84,17 +84,13 @@ describe("MessagesTimeline technical ledger", () => {
     );
 
     try {
-      await expect
-        .poll(() => document.querySelectorAll('[data-work-ledger="true"]').length)
-        .toBe(1);
+      await expect.poll(() => document.querySelectorAll('[data-work-trail="true"]').length).toBe(1);
 
-      expect(document.body.textContent ?? "").toContain("Working for 5s");
+      expect(document.body.textContent ?? "").toContain("Working · 5s");
       expect(document.body.textContent ?? "").toContain("3 calls · 1 file");
-      expect(document.querySelector('[data-ledger-section="explore"]')).not.toBeNull();
-      expect(document.querySelector('[data-ledger-section="modify"]')).not.toBeNull();
-      expect(document.querySelector('[data-ledger-section="status"]')).not.toBeNull();
-      expect(document.querySelector('[data-ledger-sequence="1"]')).not.toBeNull();
-      expect(document.querySelector('[data-ledger-sequence="3"]')).not.toBeNull();
+      expect(document.querySelector("[data-ledger-section]")).toBeNull();
+      expect(document.querySelector('[data-work-trail-sequence="1"]')).not.toBeNull();
+      expect(document.querySelector('[data-work-trail-sequence="3"]')).not.toBeNull();
       expect(document.querySelector('[data-timeline-row-kind="working-header"]')).toBeNull();
     } finally {
       await screen.unmount();
