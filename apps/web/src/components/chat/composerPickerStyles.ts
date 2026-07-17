@@ -3,10 +3,7 @@
 // Layer: UI styling helper
 // Exports: surface/option/radius tokens; open panels via ComposerPickerMenuPopup / ComposerPickerSelectPopup
 
-import {
-  OVERLAY_SURFACE_CLASS_NAME,
-  PANEL_SURFACE_CLASS_NAME,
-} from "~/components/ui/surface";
+import { OVERLAY_SURFACE_CLASS_NAME, PANEL_SURFACE_CLASS_NAME } from "~/components/ui/surface";
 
 export { COMPOSER_PICKER_SIZE, type ComposerPickerSize } from "./composerPickerSize";
 
@@ -129,8 +126,7 @@ export const SIDEBAR_SEGMENTED_PICKER_ACTIVE_CLASS_NAME =
   "relative z-[1] text-[var(--color-text-foreground)]";
 
 /** Compatibility base for consumers that add transient elevation separately. */
-export const APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME =
-  `relative ${PANEL_SURFACE_CLASS_NAME} text-popover-foreground`;
+export const APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME = `relative ${PANEL_SURFACE_CLASS_NAME} text-popover-foreground`;
 
 /** Default floating popup shell (dropdown menus, selects, popovers). */
 export const APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME = `relative ${OVERLAY_SURFACE_CLASS_NAME} text-popover-foreground`;
@@ -173,12 +169,10 @@ export const COMPOSER_PICKER_SELECT_OPTION_CLASS_NAME = `${COMPOSER_PICKER_MENU_
 export const COMPOSER_PICKER_TOOLTIP_SURFACE_CLASS_NAME = `${COMPOSER_PICKER_MENU_SURFACE_CLASS_NAME} font-normal text-[var(--color-text-foreground)]`;
 
 /** Opaque floating panel for the slash/mention command menu and @local browser. */
-export const COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME =
-  `relative ${OVERLAY_SURFACE_CLASS_NAME} bg-popover text-popover-foreground`;
+export const COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME = `relative ${OVERLAY_SURFACE_CLASS_NAME} bg-popover text-popover-foreground`;
 
 /** Opaque Environment panel card — same rationale as the command menu (overlays transcript). */
-export const ENVIRONMENT_PANEL_SURFACE_CLASS_NAME =
-  `relative ${PANEL_SURFACE_CLASS_NAME} text-popover-foreground`;
+export const ENVIRONMENT_PANEL_SURFACE_CLASS_NAME = `relative ${PANEL_SURFACE_CLASS_NAME} text-popover-foreground`;
 
 /** Slide + inset timing matched to `SIDEBAR_OFFCANVAS_MOTION_CLASS` (right dock / thread sidebar). */
 // `translate`, not `transform`: the panel slides via `translate-x-*`, which compiles to the

@@ -15,7 +15,12 @@ export function RepositoryProjectFilter(props: {
   align?: "start" | "end";
 }) {
   return (
-    <Select value={projectFilterValue(props.selectedProject)} onValueChange={props.onValueChange}>
+    <Select
+      value={projectFilterValue(props.selectedProject)}
+      onValueChange={(value) => {
+        if (value !== null) props.onValueChange(value);
+      }}
+    >
       <SelectTrigger
         size="sm"
         variant="ghost"

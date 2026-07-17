@@ -4735,14 +4735,6 @@ export default function Sidebar() {
                   )}
                 </span>
               </div>
-              <div className="flex min-w-0 items-center gap-1.5 leading-none">
-                {projectLabel ? (
-                  <span className="min-w-0 truncate text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/38">
-                    {projectLabel}
-                  </span>
-                ) : null}
-                <SidebarTreeBranchChip branch={thread.branch} highlighted={isActive} />
-              </div>
             </div>
             <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
               {renderThreadRowTrailingCluster({

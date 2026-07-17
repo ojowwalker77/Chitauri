@@ -870,9 +870,7 @@ function GitHubWorkbenchRoute() {
   const connectionBlocked =
     selectedAttachedProject !== null &&
     connection &&
-    (!connection.available ||
-      !connection.authenticated ||
-      connection.repository === null);
+    (!connection.available || !connection.authenticated || connection.repository === null);
 
   const updateProjectFilter = (value: string) => {
     if (value !== ALL_PROJECTS_FILTER) {
@@ -1221,7 +1219,10 @@ function GitHubWorkbenchRoute() {
                       ) : detailTab === "timeline" ? (
                         <TimelineView detail={detail} cwd={selectedProject?.cwd ?? null} />
                       ) : (
-                        <CodeView detail={detail} cwd={selectedProject?.cwd ?? selectedProjectCwd} />
+                        <CodeView
+                          detail={detail}
+                          cwd={selectedProject?.cwd ?? selectedProjectCwd}
+                        />
                       )}
                     </div>
                     {composerMode ? (

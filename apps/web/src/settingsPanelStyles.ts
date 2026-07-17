@@ -46,7 +46,6 @@ export const SETTINGS_CARD_ROW_DIVIDER_CLASS_NAME = "border-t border-[color:var(
 export const SETTINGS_INSET_LIST_CLASS_NAME = SETTINGS_CARD_CLASS_NAME;
 
 /** Empty / placeholder blocks. */
-export const SETTINGS_EMPTY_STATE_CLASS_NAME = [
-  PANEL_SURFACE_CLASS_NAME,
-  "border-dashed",
-].join(" ");
+export const SETTINGS_EMPTY_STATE_CLASS_NAME = [PANEL_SURFACE_CLASS_NAME, "border-dashed"].join(
+  " ",
+);

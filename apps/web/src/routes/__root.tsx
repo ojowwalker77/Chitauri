@@ -586,9 +586,7 @@ function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10 text-foreground sm:px-6">
-      <section
-        className={`${OVERLAY_SURFACE_CLASS_NAME} relative w-full max-w-xl p-6 sm:p-8`}
-      >
+      <section className={`${OVERLAY_SURFACE_CLASS_NAME} relative w-full max-w-xl p-6 sm:p-8`}>
         <p className="text-[11px] font-semibold text-muted-foreground">{APP_DISPLAY_NAME}</p>
         <h1 className="mt-3 text-2xl font-semibold sm:text-3xl">Something went wrong.</h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{message}</p>

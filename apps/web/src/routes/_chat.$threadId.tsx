@@ -329,7 +329,11 @@ function SingleChatSurface(props: {
     void navigate({
       to: "/$threadId",
       params: { threadId: props.threadId },
-      search: (previous) => stripEditorViewSearchParams(stripDiffSearchParams(previous)),
+      search: (previous) => ({
+        ...stripEditorViewSearchParams(stripDiffSearchParams(previous)),
+        view: undefined,
+        editorFilePath: undefined,
+      }),
     });
   }, [navigate, props.threadId]);
 

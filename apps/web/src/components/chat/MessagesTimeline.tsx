@@ -338,9 +338,7 @@ function WorktreeSetupStepGlyph({ status }: { status: WorktreeSetupStep["status"
     return <CircleCheckIcon className="size-2.5 text-success" />;
   }
   if (status === "active") {
-    return (
-      <LoaderIcon className="size-2.5 animate-spin text-claude motion-reduce:animate-none" />
-    );
+    return <LoaderIcon className="size-2.5 animate-spin text-claude motion-reduce:animate-none" />;
   }
   if (status === "error") {
     return <CircleAlertIcon className="size-2.5 text-destructive" />;
@@ -372,9 +370,7 @@ function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> 
                   aria-hidden="true"
                   className={cn(
                     "absolute left-[6.5px] top-1/2 h-full w-px",
-                    step.status === "done"
-                      ? "bg-success/70"
-                      : "bg-[color:var(--color-border)]",
+                    step.status === "done" ? "bg-success/70" : "bg-[color:var(--color-border)]",
                   )}
                 />
               )}
@@ -388,9 +384,9 @@ function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> 
                     ? "text-claude"
                     : step.status === "done"
                       ? "text-[var(--color-text-foreground)]"
-                    : step.status === "error"
-                      ? "text-destructive"
-                      : "text-[var(--color-text-foreground-tertiary)] opacity-70",
+                      : step.status === "error"
+                        ? "text-destructive"
+                        : "text-[var(--color-text-foreground-tertiary)] opacity-70",
                 )}
               >
                 {step.label}

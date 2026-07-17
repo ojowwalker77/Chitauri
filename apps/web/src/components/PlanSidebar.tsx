@@ -5,12 +5,7 @@ import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "./ui/collapsi
 import { ScrollArea } from "./ui/scroll-area";
 import { PANEL_SURFACE_CLASS_NAME } from "./ui/surface";
 import ChatMarkdown from "./ChatMarkdown";
-import {
-  CheckIcon,
-  ChevronRightIcon,
-  LoaderIcon,
-  PanelRightCloseIcon,
-} from "~/lib/icons";
+import { CheckIcon, ChevronRightIcon, LoaderIcon, PanelRightCloseIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import type { ActiveTaskListState } from "../session-logic";
 import type { LatestProposedPlanState } from "../session-logic";

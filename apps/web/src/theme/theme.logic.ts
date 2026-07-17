@@ -438,10 +438,7 @@ function haveSameChromePalette(left: ChromeTheme, right: ChromeTheme): boolean {
   );
 }
 
-function migrateLegacyDefaultChromeTheme(
-  theme: ChromeTheme,
-  variant: ThemeVariant,
-): ChromeTheme {
+function migrateLegacyDefaultChromeTheme(theme: ChromeTheme, variant: ThemeVariant): ChromeTheme {
   if (!haveSameChromePalette(theme, LEGACY_DEFAULT_CHROME_THEME_BY_VARIANT[variant])) {
     return theme;
   }
@@ -872,9 +869,7 @@ export function buildThemeCssVariables(
     "--theme-font-code-family": normalizeMonospaceFontFamilyCssValue(pack.theme.fonts.code) ?? "",
     "--theme-font-ui-family": normalizeFontFamilyCssValue(pack.theme.fonts.ui) ?? "",
     "--warning": warningColor,
-    "--warning-foreground": isDefaultTheme
-      ? WARNING_FOREGROUND_BY_VARIANT[variant]
-      : warningColor,
+    "--warning-foreground": isDefaultTheme ? WARNING_FOREGROUND_BY_VARIANT[variant] : warningColor,
     "--claude": pack.theme.accent,
     "--well": composerSurface,
   };
@@ -1150,10 +1145,7 @@ function getRequiredVariable(variables: Record<string, string>, name: string): s
 function buildLightDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
   // Retains the established light-theme derivation while the default seed supplies
   // the warmer Claude palette.
-  const isDefaultTheme = haveSameChromePalette(
-    theme.theme,
-    DEFAULT_CHROME_THEME_BY_VARIANT.light,
-  );
+  const isDefaultTheme = haveSameChromePalette(theme.theme, DEFAULT_CHROME_THEME_BY_VARIANT.light);
   const quietInk = isDefaultTheme ? BLACK : theme.ink;
   const controlBase = mixRgb(theme.surface, WHITE, 0.09 + theme.contrast * 0.04);
   const elevatedSecondaryBase = mixRgb(theme.surface, WHITE, 0.08 + theme.contrast * 0.08);
@@ -1182,18 +1174,9 @@ function buildLightDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
     buttonPrimaryBackgroundHover: formatRgba(theme.ink, 0.05 + theme.contrast * 0.06),
     buttonPrimaryBackgroundInactive: formatRgba(theme.ink, 0.18 + theme.contrast * 0.14),
     buttonSecondaryBackground: formatRgba(quietInk, 0.04),
-    buttonSecondaryBackgroundActive: formatRgba(
-      quietInk,
-      0.03 + theme.contrast * 0.02,
-    ),
-    buttonSecondaryBackgroundHover: formatRgba(
-      quietInk,
-      0.032 + theme.contrast * 0.012,
-    ),
-    buttonSecondaryBackgroundInactive: formatRgba(
-      quietInk,
-      0.01 + theme.contrast * 0.02,
-    ),
+    buttonSecondaryBackgroundActive: formatRgba(quietInk, 0.03 + theme.contrast * 0.02),
+    buttonSecondaryBackgroundHover: formatRgba(quietInk, 0.032 + theme.contrast * 0.012),
+    buttonSecondaryBackgroundInactive: formatRgba(quietInk, 0.01 + theme.contrast * 0.02),
     buttonTertiaryBackground: formatRgba(quietInk, 0),
     buttonTertiaryBackgroundActive: formatRgba(quietInk, 0.16 + theme.contrast * 0.08),
     buttonTertiaryBackgroundHover: formatRgba(quietInk, 0.08 + theme.contrast * 0.04),
@@ -1230,10 +1213,7 @@ function buildLightDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
 
 function buildDarkDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
   // Claude dark chrome uses one restrained panel layer over a flat canvas.
-  const isDefaultTheme = haveSameChromePalette(
-    theme.theme,
-    DEFAULT_CHROME_THEME_BY_VARIANT.dark,
-  );
+  const isDefaultTheme = haveSameChromePalette(theme.theme, DEFAULT_CHROME_THEME_BY_VARIANT.dark);
   const quietInk = isDefaultTheme ? WHITE : theme.ink;
   const controlBase = mixRgb(theme.surface, theme.ink, 0.06 + theme.contrast * 0.05);
   const elevatedPrimaryBase = mixRgb(theme.surface, theme.ink, 0.08 + theme.contrast * 0.08);
@@ -1271,9 +1251,7 @@ function buildDarkDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
     ),
     iconAccent: theme.theme.accent,
     iconPrimary: formatRgba(theme.ink, 0.82 + theme.contrast * 0.14),
-    iconSecondary: isDefaultTheme
-      ? MUTED_COLOR_BY_VARIANT.dark
-      : formatRgba(theme.ink, 0.66),
+    iconSecondary: isDefaultTheme ? MUTED_COLOR_BY_VARIANT.dark : formatRgba(theme.ink, 0.66),
     iconTertiary: isDefaultTheme ? FAINT_COLOR_BY_VARIANT.dark : formatRgba(theme.ink, 0.44),
     simpleScrim: formatRgba(theme.ink, 0.08 + theme.contrast * 0.04),
     textAccent: theme.theme.accent,

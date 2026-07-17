@@ -35,10 +35,7 @@ export function DiffPanelShell(props: {
       className={cn(
         "flex h-full min-w-0 flex-col bg-panel",
         props.mode === "inline"
-          ? cn(
-              PANEL_SURFACE_CLASS_NAME,
-              "m-3 ml-0 w-[42vw] min-w-[360px] max-w-[560px] shrink-0",
-            )
+          ? cn(PANEL_SURFACE_CLASS_NAME, "m-3 ml-0 w-[42vw] min-w-[360px] max-w-[560px] shrink-0")
           : "w-full",
       )}
     >
