@@ -26,6 +26,8 @@ export interface WorkspaceProvisionInput {
   readonly path?: string | null;
   /** Existing branch/ref checked out by a regular worktree. */
   readonly branch?: string | null;
+  /** Base branch used only when materializing a newly named worktree branch. */
+  readonly baseBranch?: string | null;
   /** Commit-ish checked out by a detached worktree. */
   readonly ref?: string | null;
 }
@@ -43,7 +45,7 @@ export interface WorkspaceManagerShape {
   /** Checks persisted records against `git worktree list` without deleting anything. */
   readonly reconcile: () => Effect.Effect<ServerListWorktreesResult, WorkspaceLifecycleError>;
   readonly listInventory: () => Effect.Effect<ServerListWorktreesResult, WorkspaceLifecycleError>;
-  /** Makes a workspace the authoritative identity for a thread and projects legacy fields. */
+  /** Attaches a thread through the durable many-to-one relation and projects legacy fields. */
   readonly attach: (
     input: WorkspaceAttachInput,
   ) => Effect.Effect<WorkspaceRecord, WorkspaceLifecycleError>;

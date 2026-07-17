@@ -110,22 +110,25 @@ export const makeWorkspaceManager = Effect.gen(function* () {
       Effect.mapError((cause) => fail("workspace.updateState", cause)),
     );
 
+  const listLiveWorktrees = (workspaceRoot: string) =>
+    git
+      .execute({
+        operation: "WorkspaceManager.listWorktrees",
+        cwd: workspaceRoot,
+        args: ["worktree", "list", "--porcelain"],
+      })
+      .pipe(
+        Effect.map((result) => (result.code === 0 ? parseGitWorktreePorcelain(result.stdout) : [])),
+        Effect.catch(() => Effect.succeed([] as ReadonlyArray<GitWorktreeEntry>)),
+      );
+
   const listInventory: WorkspaceManagerShape["listInventory"] = () =>
     Effect.gen(function* () {
       const records = yield* getAll();
       const roots = [...new Set(records.map((record) => record.workspaceRoot))];
       const liveByRoot = new Map<string, ReadonlyArray<GitWorktreeEntry>>();
       for (const root of roots) {
-        const live = yield* git
-          .execute({
-            operation: "WorkspaceManager.listInventory",
-            cwd: root,
-            args: ["worktree", "list", "--porcelain"],
-          })
-          .pipe(
-            Effect.map((result) => (result.code === 0 ? parseGitWorktreePorcelain(result.stdout) : [])),
-            Effect.catch(() => Effect.succeed([])),
-          );
+        const live = yield* listLiveWorktrees(root);
         liveByRoot.set(root, live);
       }
 
@@ -176,13 +179,22 @@ export const makeWorkspaceManager = Effect.gen(function* () {
   const provision: WorkspaceManagerShape["provision"] = (input) =>
     Effect.gen(function* () {
       const existing = yield* getById(input.workspaceId);
-      if (existing) return toRecord(existing);
+      if (
+        existing &&
+        (existing.projectId !== input.projectId ||
+          existing.kind !== input.kind ||
+          existing.workspaceRoot !== input.workspaceRoot)
+      ) {
+        return yield* Effect.fail(
+          fail("workspace.provision", new Error("Workspace id belongs to a different workspace identity.")),
+        );
+      }
 
-      if (input.kind === "worktree" || input.kind === "detached") {
+      if (!existing && (input.kind === "worktree" || input.kind === "detached")) {
         const conflicts = yield* sql<{ readonly id: string }>`
           SELECT workspace_id AS id FROM workspaces
           WHERE workspace_root = ${input.workspaceRoot}
-            AND state != 'deleted'
+            AND state IN ('provisioning', 'ready', 'missing')
             AND kind IN ('worktree', 'detached')
             AND (
               (${input.path ?? null} IS NOT NULL AND path = ${input.path ?? null})
@@ -198,45 +210,71 @@ export const makeWorkspaceManager = Effect.gen(function* () {
         }
       }
 
-      const createdAt = now();
-      const basePath = input.path ?? null;
-      yield* sql`
-        INSERT INTO workspaces (
-          workspace_id, project_id, owner_thread_id, kind, state, retention_policy,
-          workspace_root, path, branch, ref, created_at, updated_at, retired_at
-        ) VALUES (
-          ${input.workspaceId}, ${input.projectId}, ${input.ownerThreadId ?? null}, ${input.kind},
-          'provisioning', ${input.retentionPolicy}, ${input.workspaceRoot}, ${basePath},
-          ${input.branch ?? null}, ${input.ref ?? null}, ${createdAt}, ${createdAt}, NULL
-        )
-      `.pipe(Effect.mapError((cause) => fail("workspace.provision.insert", cause)));
+      if (!existing) {
+        const createdAt = now();
+        yield* sql`
+          INSERT INTO workspaces (
+            workspace_id, project_id, owner_thread_id, kind, state, retention_policy,
+            workspace_root, path, branch, ref, created_at, updated_at, retired_at
+          ) VALUES (
+            ${input.workspaceId}, ${input.projectId}, ${input.ownerThreadId ?? null}, ${input.kind},
+            'provisioning', ${input.retentionPolicy}, ${input.workspaceRoot}, ${input.path ?? null},
+            ${input.branch ?? null}, ${input.ref ?? null}, ${createdAt}, ${createdAt}, NULL
+          )
+        `.pipe(Effect.mapError((cause) => fail("workspace.provision.insert", cause)));
+      }
 
-      let materializedPath = basePath;
-      let branch = input.branch ?? null;
-      let ref = input.ref ?? null;
+      // A record is written before filesystem work. On retry, inspect Git/the
+      // filesystem first so a crash after `git worktree add` never creates a
+      // second checkout or branch.
+      let materializedPath = existing?.path ?? input.path ?? null;
+      let branch = existing?.branch ?? input.branch ?? null;
+      let ref = existing?.ref ?? input.ref ?? null;
       if (input.kind === "worktree") {
         if (!branch) {
           return yield* Effect.fail(
             fail("workspace.provision", new Error("A worktree requires a branch.")),
           );
         }
-        const result = yield* git
-          .createWorktree({ cwd: input.workspaceRoot, branch, path: materializedPath })
-          .pipe(Effect.mapError((cause) => fail("workspace.provision.worktree", cause)));
-        materializedPath = result.worktree.path;
-        branch = result.worktree.branch;
+        const live = yield* listLiveWorktrees(input.workspaceRoot);
+        const materialized = live.find(
+          (entry) =>
+            (materializedPath !== null && entry.path === materializedPath) || entry.branch === branch,
+        );
+        if (materialized) {
+          materializedPath = materialized.path;
+          branch = materialized.branch ?? branch;
+        } else {
+          const result = yield* git
+            .createWorktree({
+              cwd: input.workspaceRoot,
+              branch: input.baseBranch ?? branch,
+              ...(input.baseBranch ? { newBranch: branch } : {}),
+              path: materializedPath,
+            })
+            .pipe(Effect.mapError((cause) => fail("workspace.provision.worktree", cause)));
+          materializedPath = result.worktree.path;
+          branch = result.worktree.branch;
+        }
       } else if (input.kind === "detached") {
         if (!ref) {
           return yield* Effect.fail(
             fail("workspace.provision", new Error("A detached workspace requires a ref.")),
           );
         }
-        const result = yield* git
-          .createDetachedWorktree({ cwd: input.workspaceRoot, ref, path: materializedPath })
-          .pipe(Effect.mapError((cause) => fail("workspace.provision.detached", cause)));
-        materializedPath = result.worktree.path;
-        branch = result.worktree.branch;
-        ref = result.worktree.ref;
+        const live = yield* listLiveWorktrees(input.workspaceRoot);
+        const materialized = live.find((entry) => materializedPath !== null && entry.path === materializedPath);
+        if (materialized) {
+          materializedPath = materialized.path;
+          branch = materialized.branch;
+        } else {
+          const result = yield* git
+            .createDetachedWorktree({ cwd: input.workspaceRoot, ref, path: materializedPath })
+            .pipe(Effect.mapError((cause) => fail("workspace.provision.detached", cause)));
+          materializedPath = result.worktree.path;
+          branch = result.worktree.branch;
+          ref = result.worktree.ref;
+        }
       } else if (input.kind === "scratch") {
         materializedPath =
           materializedPath ?? path.join(input.workspaceRoot, ".chitauri", "scratch", randomUUID());
@@ -249,7 +287,8 @@ export const makeWorkspaceManager = Effect.gen(function* () {
       const updatedAt = now();
       yield* sql`
         UPDATE workspaces
-        SET path = ${materializedPath}, branch = ${branch}, ref = ${ref}, state = 'ready', updated_at = ${updatedAt}
+        SET path = ${materializedPath}, branch = ${branch}, ref = ${ref}, state = 'ready',
+            updated_at = ${updatedAt}, retired_at = NULL
         WHERE workspace_id = ${input.workspaceId}
       `.pipe(Effect.mapError((cause) => fail("workspace.provision.ready", cause)));
       if (input.ownerThreadId) yield* attach({ workspaceId: input.workspaceId, threadId: input.ownerThreadId });
@@ -268,23 +307,34 @@ export const makeWorkspaceManager = Effect.gen(function* () {
       if (!record) {
         return yield* Effect.fail(fail("workspace.attach", new Error("Workspace does not exist.")));
       }
-      if (record.ownerThreadId && record.ownerThreadId !== input.threadId) {
-        return yield* Effect.fail(
-          fail("workspace.attach", new Error("Workspace is already attached to another thread.")),
-        );
-      }
-      const owner = yield* sql<{ readonly ownerThreadId: string }>`
-        SELECT owner_thread_id AS ownerThreadId FROM workspaces
-        WHERE owner_thread_id = ${input.threadId} AND workspace_id != ${input.workspaceId} LIMIT 1
+      const existingAttachment = yield* sql<{ readonly workspaceId: string }>`
+        SELECT workspace_id AS workspaceId FROM workspace_attachments
+        WHERE thread_id = ${input.threadId} LIMIT 1
       `.pipe(Effect.mapError((cause) => fail("workspace.attach.owner", cause)));
-      if (owner[0]) {
+      if (existingAttachment[0] && existingAttachment[0].workspaceId !== input.workspaceId) {
         return yield* Effect.fail(
-          fail("workspace.attach", new Error("Thread already owns another workspace.")),
+          fail("workspace.attach", new Error("Thread is already attached to another workspace.")),
         );
       }
       const updatedAt = now();
       yield* sql`
-        UPDATE workspaces SET owner_thread_id = ${input.threadId}, updated_at = ${updatedAt}
+        INSERT OR IGNORE INTO workspace_attachments (workspace_id, thread_id, attached_at)
+        VALUES (${input.workspaceId}, ${input.threadId}, ${updatedAt})
+      `.pipe(Effect.mapError((cause) => fail("workspace.attach.relation", cause)));
+      const persistedAttachment = yield* sql<{ readonly workspaceId: string }>`
+        SELECT workspace_id AS workspaceId FROM workspace_attachments
+        WHERE thread_id = ${input.threadId} LIMIT 1
+      `.pipe(Effect.mapError((cause) => fail("workspace.attach.verify", cause)));
+      if (persistedAttachment[0]?.workspaceId !== input.workspaceId) {
+        return yield* Effect.fail(
+          fail("workspace.attach", new Error("Thread was concurrently attached to another workspace.")),
+        );
+      }
+      // Keep the old single-owner column as a stable primary attachment only.
+      // It is never used to reject additional agents.
+      yield* sql`
+        UPDATE workspaces
+        SET owner_thread_id = COALESCE(owner_thread_id, ${input.threadId}), updated_at = ${updatedAt}
         WHERE workspace_id = ${input.workspaceId}
       `.pipe(Effect.mapError((cause) => fail("workspace.attach.record", cause)));
       // Preserve the old fields as a projection so existing clients and event
@@ -293,10 +343,16 @@ export const makeWorkspaceManager = Effect.gen(function* () {
         UPDATE projection_threads
         SET workspace_id = ${input.workspaceId},
             env_mode = ${record.kind === "local" || record.kind === "scratch" ? "local" : "worktree"},
-            worktree_path = ${record.path},
-            associated_worktree_path = ${record.path},
-            associated_worktree_branch = ${record.branch},
-            associated_worktree_ref = ${record.ref ?? record.branch},
+            worktree_path = ${record.kind === "local" || record.kind === "scratch" ? null : record.path},
+            associated_worktree_path = CASE
+              WHEN ${record.kind} IN ('worktree', 'detached') THEN ${record.path}
+              ELSE associated_worktree_path END,
+            associated_worktree_branch = CASE
+              WHEN ${record.kind} IN ('worktree', 'detached') THEN ${record.branch}
+              ELSE associated_worktree_branch END,
+            associated_worktree_ref = CASE
+              WHEN ${record.kind} IN ('worktree', 'detached') THEN ${record.ref ?? record.branch}
+              ELSE associated_worktree_ref END,
             branch = COALESCE(${record.branch}, branch),
             updated_at = ${updatedAt}
         WHERE thread_id = ${input.threadId}
@@ -314,7 +370,16 @@ export const makeWorkspaceManager = Effect.gen(function* () {
     Effect.gen(function* () {
       const updatedAt = now();
       yield* sql`
-        UPDATE workspaces SET owner_thread_id = NULL, updated_at = ${updatedAt}
+        DELETE FROM workspace_attachments WHERE thread_id = ${threadId}
+      `.pipe(Effect.mapError((cause) => fail("workspace.detach.relation", cause)));
+      yield* sql`
+        UPDATE workspaces
+        SET owner_thread_id = (
+              SELECT thread_id FROM workspace_attachments
+              WHERE workspace_id = workspaces.workspace_id
+              ORDER BY attached_at ASC LIMIT 1
+            ),
+            updated_at = ${updatedAt}
         WHERE owner_thread_id = ${threadId}
       `.pipe(Effect.mapError((cause) => fail("workspace.detach.record", cause)));
       yield* sql`
@@ -346,16 +411,27 @@ export const makeWorkspaceManager = Effect.gen(function* () {
     });
 
   const retireForThreadDeletion: WorkspaceManagerShape["retireForThreadDeletion"] = (threadId) =>
-    sql`
-      UPDATE workspaces
-      SET state = 'retiring', retired_at = COALESCE(retired_at, ${now()}), updated_at = ${now()}
-      WHERE owner_thread_id = ${threadId}
-        AND retention_policy = 'delete-on-thread-delete'
-        AND state NOT IN ('retiring', 'deleted')
-    `.pipe(
-      Effect.asVoid,
-      Effect.mapError((cause) => fail("workspace.retireForThreadDeletion", cause)),
-    );
+    Effect.gen(function* () {
+      const attached = yield* sql<{ readonly workspaceId: string }>`
+        SELECT workspace_id AS workspaceId FROM workspace_attachments WHERE thread_id = ${threadId}
+      `.pipe(Effect.mapError((cause) => fail("workspace.retireForThreadDeletion.lookup", cause)));
+      for (const attachment of attached) {
+        const others = yield* sql<{ readonly count: number }>`
+          SELECT COUNT(*) AS count FROM workspace_attachments
+          WHERE workspace_id = ${attachment.workspaceId} AND thread_id != ${threadId}
+        `.pipe(Effect.mapError((cause) => fail("workspace.retireForThreadDeletion.guard", cause)));
+        if ((others[0]?.count ?? 0) === 0) {
+          yield* sql`
+            UPDATE workspaces
+            SET state = 'retiring', retired_at = COALESCE(retired_at, ${now()}), updated_at = ${now()}
+            WHERE workspace_id = ${attachment.workspaceId}
+              AND retention_policy = 'delete-on-thread-delete'
+              AND state NOT IN ('retiring', 'deleted')
+          `.pipe(Effect.mapError((cause) => fail("workspace.retireForThreadDeletion", cause)));
+        }
+      }
+      yield* detach(threadId);
+    });
 
   return {
     provision,

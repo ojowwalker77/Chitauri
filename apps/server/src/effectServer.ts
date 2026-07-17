@@ -28,6 +28,7 @@ import { ProviderSessionReaper } from "./provider/Services/ProviderSessionReaper
 import { ServerLifecycleEvents } from "./serverLifecycleEvents";
 import { ServerRuntimeStartup } from "./serverRuntimeStartup";
 import { ServerSettingsService } from "./serverSettings";
+import { WorkspaceManager } from "./workspace/Services/WorkspaceManager";
 import { makeServerReadiness } from "./server/readiness";
 import { websocketRpcRouteLayer } from "./wsRpc";
 
@@ -51,6 +52,7 @@ export interface ServerShape {
     | ServerRuntimeStartup
     | ServerSettingsService
     | ThreadDeletionReactor
+    | WorkspaceManager
     | OrchestratorControlPlane
   >;
   readonly stopSignal: Effect.Effect<void, never>;
@@ -77,6 +79,7 @@ export const createEffectServer = Effect.fn(function* () {
   const runtimeStartup = yield* ServerRuntimeStartup;
   const serverSettings = yield* ServerSettingsService;
   const threadDeletionReactor = yield* ThreadDeletionReactor;
+  const workspaceManager = yield* WorkspaceManager;
   const readiness = yield* makeServerReadiness;
 
   yield* keybindings.syncDefaultKeybindingsOnStartup.pipe(
@@ -138,6 +141,16 @@ export const createEffectServer = Effect.fn(function* () {
   yield* Scope.provide(providerSessionReaper.start(), subscriptionsScope);
   yield* readiness.markOrchestrationSubscriptionsReady;
   yield* readiness.markTerminalSubscriptionsReady;
+  // Classify persisted workspaces against Git before accepting commands. This
+  // intentionally never removes paths or branches; interrupted provisioning
+  // stays resumable through WorkspaceManager.provision.
+  yield* workspaceManager.reconcile().pipe(
+    Effect.catch((error) =>
+      Effect.logWarning("workspace startup reconciliation failed", {
+        detail: error.detail,
+      }),
+    ),
+  );
   // Heal turns orphaned by the previous process exit (their in-memory runtimes
   // died, so they can never complete on their own) before clients can observe
   // the stale "Working" state.

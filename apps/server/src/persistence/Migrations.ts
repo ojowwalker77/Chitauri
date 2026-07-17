@@ -70,6 +70,7 @@ import Migration0051 from "./Migrations/051_ProfileStatsDeletedTokensModel.ts";
 import Migration0052 from "./Migrations/052_RetireStudioProjectKind.ts";
 import Migration0053 from "./Migrations/053_ProjectionThreadsOrchestratorMode.ts";
 import Migration0054 from "./Migrations/054_Workspaces.ts";
+import Migration0055 from "./Migrations/055_WorkspaceAttachments.ts";
 
 /**
  * Migration loader with all migrations defined inline.
@@ -136,6 +137,7 @@ export const migrationEntries = [
   [52, "RetireStudioProjectKind", Migration0052],
   [53, "ProjectionThreadsOrchestratorMode", Migration0053],
   [54, "Workspaces", Migration0054],
+  [55, "WorkspaceAttachments", Migration0055],
 ] as const;
 
 export const makeMigrationLoader = (throughId?: number) =>

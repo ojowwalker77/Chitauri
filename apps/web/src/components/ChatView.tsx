@@ -65,13 +65,12 @@ import {
   type ReactNode,
 } from "react";
 import { GoTasklist } from "react-icons/go";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Debouncer, useDebouncedValue } from "@tanstack/react-pacer";
 import { useNavigate } from "@tanstack/react-router";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
   GIT_WORKING_TREE_DIFF_LIVE_REFETCH_INTERVAL_MS,
-  gitCreateWorktreeMutationOptions,
   gitBranchesQueryOptions,
 } from "~/lib/gitReactQuery";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
@@ -922,7 +921,6 @@ export default function ChatView({
   const rawSearch = useDiffRouteSearch();
   const { resolvedTheme } = useTheme();
   const queryClient = useQueryClient();
-  const createWorktreeMutation = useMutation(gitCreateWorktreeMutationOptions({ queryClient }));
   const isEditorRail = presentationMode === "editor";
   const isInactiveSplitPane = surfaceMode === "split" && !isFocusedPane;
   const composerDraft = useComposerThreadDraft(threadId);
@@ -6535,42 +6533,26 @@ export default function ChatView({
     let turnStartSucceeded = false;
     await (async () => {
       // On first message: lock in branch + create worktree if needed.
-      if (baseBranchForWorktree) {
-        const result = await createWorktreeMutation.mutateAsync({
-          cwd: targetProjectCwdForSend,
-          branch: baseBranchForWorktree,
+      if (baseBranchForWorktree && isServerThread) {
+        const result = await api.workspace.provisionThreadWorktree({
+          threadId: threadIdForSend,
+          baseBranch: baseBranchForWorktree,
           newBranch: buildTemporaryWorktreeBranchName(),
         });
         beginLocalDispatch({
           worktreeSetupStepId: "prepare-thread",
           setupScriptName: worktreeSetupScriptName,
         });
-        nextThreadBranch = result.worktree.branch;
-        nextThreadWorktreePath = result.worktree.path;
-        const nextAssociatedWorktree = deriveAssociatedWorktreeMetadata({
-          branch: result.worktree.branch,
-          worktreePath: result.worktree.path,
+        nextThreadBranch = result.branch;
+        nextThreadWorktreePath = result.worktreePath;
+        setStoreThreadWorkspace(threadIdForSend, {
+          envMode: result.envMode,
+          branch: result.branch,
+          worktreePath: result.worktreePath,
+          associatedWorktreePath: result.associatedWorktreePath,
+          associatedWorktreeBranch: result.associatedWorktreeBranch,
+          associatedWorktreeRef: result.associatedWorktreeRef,
         });
-        if (isServerThread) {
-          await api.orchestration.dispatchCommand({
-            type: "thread.meta.update",
-            commandId: newCommandId(),
-            threadId: threadIdForSend,
-            envMode: "worktree",
-            branch: result.worktree.branch,
-            worktreePath: result.worktree.path,
-            associatedWorktreePath: nextAssociatedWorktree.associatedWorktreePath,
-            associatedWorktreeBranch: nextAssociatedWorktree.associatedWorktreeBranch,
-            associatedWorktreeRef: nextAssociatedWorktree.associatedWorktreeRef,
-          });
-          // Keep local thread state in sync immediately so terminal drawer opens
-          // with the worktree cwd/env instead of briefly using the project root.
-          setStoreThreadWorkspace(threadIdForSend, {
-            branch: result.worktree.branch,
-            worktreePath: result.worktree.path,
-            ...nextAssociatedWorktree,
-          });
-        }
       }
 
       const threadCreateModelSelection: ModelSelection = buildModelSelection(
@@ -6630,6 +6612,31 @@ export default function ChatView({
           });
         }
         createdServerThreadForLocalDraft = true;
+      }
+
+      // Newly promoted drafts do not exist on the server until the preceding
+      // command completes. Provision after that creation so WorkspaceManager
+      // owns both Git materialization and the durable attachment.
+      if (baseBranchForWorktree && !isServerThread && createdServerThreadForLocalDraft) {
+        const result = await api.workspace.provisionThreadWorktree({
+          threadId: threadIdForSend,
+          baseBranch: baseBranchForWorktree,
+          newBranch: buildTemporaryWorktreeBranchName(),
+        });
+        beginLocalDispatch({
+          worktreeSetupStepId: "prepare-thread",
+          setupScriptName: worktreeSetupScriptName,
+        });
+        nextThreadBranch = result.branch;
+        nextThreadWorktreePath = result.worktreePath;
+        setStoreThreadWorkspace(threadIdForSend, {
+          envMode: result.envMode,
+          branch: result.branch,
+          worktreePath: result.worktreePath,
+          associatedWorktreePath: result.associatedWorktreePath,
+          associatedWorktreeBranch: result.associatedWorktreeBranch,
+          associatedWorktreeRef: result.associatedWorktreeRef,
+        });
       }
 
       const setupScript = setupScriptForWorktree;

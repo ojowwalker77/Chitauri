@@ -71,6 +71,11 @@ import type {
   GitUnstageFilesResult,
 } from "./git";
 import type {
+  WorkspaceHandoffThreadInput,
+  WorkspaceProvisionThreadWorktreeInput,
+  WorkspaceThreadOperationResult,
+} from "./workspace";
+import type {
   GitHubConnectionInput,
   GitHubConnectionResult,
   GitHubPullRequestDiffInput,
@@ -388,6 +393,12 @@ export interface NativeApi {
     summarizeDiff: (input: GitSummarizeDiffInput) => Promise<GitSummarizeDiffResult>;
     runStackedAction: (input: GitRunStackedActionInput) => Promise<GitRunStackedActionResult>;
     onActionProgress: (callback: (event: GitActionProgressEvent) => void) => () => void;
+  };
+  workspace: {
+    provisionThreadWorktree: (
+      input: WorkspaceProvisionThreadWorktreeInput,
+    ) => Promise<WorkspaceThreadOperationResult>;
+    handoffThread: (input: WorkspaceHandoffThreadInput) => Promise<WorkspaceThreadOperationResult>;
   };
   github: {
     connection: (input: GitHubConnectionInput) => Promise<GitHubConnectionResult>;
