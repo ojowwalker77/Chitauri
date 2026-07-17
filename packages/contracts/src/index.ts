@@ -12,6 +12,7 @@ export * from "./ws";
 export * from "./keybindings";
 export * from "./server";
 export * from "./stats";
+export * from "./performance";
 export * from "./settings";
 export * from "./git";
 export * from "./github";

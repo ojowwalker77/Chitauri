@@ -194,6 +194,7 @@ import {
   StatsGetProfileTokenStatsInput,
   StatsGetProfileTokenStatsResult,
 } from "./stats";
+import { PerformanceGetSnapshotInput, PerformanceGetSnapshotResult } from "./performance";
 import { WS_METHODS } from "./ws";
 
 export class WsRpcError extends Schema.TaggedErrorClass<WsRpcError>()("WsRpcError", {
@@ -720,6 +721,12 @@ export const WsServerGetDiagnosticsRpc = Rpc.make(WS_METHODS.serverGetDiagnostic
   error: WsRpcError,
 });
 
+export const WsPerformanceGetSnapshotRpc = Rpc.make(WS_METHODS.performanceGetSnapshot, {
+  payload: PerformanceGetSnapshotInput,
+  success: PerformanceGetSnapshotResult,
+  error: WsRpcError,
+});
+
 export const WsServerGenerateThreadRecapRpc = Rpc.make(WS_METHODS.serverGenerateThreadRecap, {
   payload: ServerGenerateThreadRecapInput,
   success: ServerGenerateThreadRecapResult,
@@ -1026,6 +1033,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsStatsGetProfileStatsRpc,
   WsStatsGetProfileTokenStatsRpc,
   WsServerGetDiagnosticsRpc,
+  WsPerformanceGetSnapshotRpc,
   WsServerGenerateThreadRecapRpc,
   WsServerGenerateAutomationIntentRpc,
   WsServerUpsertKeybindingRpc,
