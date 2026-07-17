@@ -180,7 +180,7 @@ export const codexUsageFetcher: ProviderUsageFetcher = {
         headers: {
           Authorization: `Bearer ${auth.accessToken}`,
           Accept: "application/json",
-          "User-Agent": "Chitauri",
+          "User-Agent": "TeaCode",
           ...(auth.accountId ? { "ChatGPT-Account-Id": auth.accountId } : {}),
         },
       });

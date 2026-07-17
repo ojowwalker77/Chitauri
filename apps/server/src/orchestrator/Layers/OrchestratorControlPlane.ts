@@ -93,7 +93,7 @@ function formatRoutingInstructions(policy: OrchestratorRoutingPolicy): string {
     return `- ${lane}: ${route.modelSelection.provider}:${route.modelSelection.model}${escalation}`;
   });
   return [
-    "Delegate self-contained work by lane, never by model. Chitauri enforces this routing policy and creates an isolated child worktree:",
+    "Delegate self-contained work by lane, never by model. TeaCode enforces this routing policy and creates an isolated child worktree:",
     ...lanes,
     "Do not delegate judgment. Review every returned diff before using the child thread's merge controls.",
   ].join("\n");
@@ -302,7 +302,7 @@ export const makeOrchestratorControlPlane = Effect.gen(function* () {
       }
 
       const childThreadId = ThreadId.makeUnsafe(`orchestrator:${randomUUID()}`);
-      const branch = `chitauri/delegate-${input.lane}-${randomUUID().slice(0, 8)}`;
+      const branch = `teacode/delegate-${input.lane}-${randomUUID().slice(0, 8)}`;
       const createdAt = DateTime.formatIso(yield* DateTime.now);
       const worktree = yield* gitCore.createWorktree({
         cwd: parentCwd,

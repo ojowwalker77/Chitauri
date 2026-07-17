@@ -137,5 +137,5 @@ export function isCodexCliVersionSupported(version: string): boolean {
 
 export function formatCodexCliUpgradeMessage(version: string | null): string {
   const versionLabel = version ? `v${version}` : "the installed version";
-  return `Codex CLI ${versionLabel} is too old for Chitauri. Upgrade to v${MINIMUM_CODEX_CLI_VERSION} or newer and restart Chitauri.`;
+  return `Codex CLI ${versionLabel} is too old for TeaCode. Upgrade to v${MINIMUM_CODEX_CLI_VERSION} or newer and restart TeaCode.`;
 }

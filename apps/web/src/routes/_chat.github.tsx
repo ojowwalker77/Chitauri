@@ -754,7 +754,7 @@ function GitHubWorkbenchRoute() {
     if (!selectedItem || !selectedProject) {
       toastManager.add({
         type: "warning",
-        title: "Add this repository to Chitauri first",
+        title: "Add this repository to TeaCode first",
         description: "Agent work needs a local project or managed checkout.",
         timeout: 5000,
       });

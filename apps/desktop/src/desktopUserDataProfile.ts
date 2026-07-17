@@ -6,9 +6,11 @@ import * as FS from "node:fs";
 import * as OS from "node:os";
 import * as Path from "node:path";
 
-const DEV_USER_DATA_DIR_NAME = "chitauri-dev";
-const PROD_USER_DATA_DIR_NAME = "chitauri";
+const DEV_USER_DATA_DIR_NAME = "teacode-dev";
+const PROD_USER_DATA_DIR_NAME = "teacode";
 const DEV_LEGACY_USER_DATA_DIR_NAMES = [
+  "chitauri-dev",
+  "Chitauri (Dev)",
   "synara-dev",
   "Synara (Dev)",
   "dpcode-dev",
@@ -16,6 +18,8 @@ const DEV_LEGACY_USER_DATA_DIR_NAMES = [
   "DP Code (Dev)",
 ] as const;
 const PROD_LEGACY_USER_DATA_DIR_NAMES = [
+  "chitauri",
+  "Chitauri",
   "synara",
   "Synara",
   "dpcode",
@@ -112,21 +116,23 @@ export function seedDesktopUserDataProfileFromLegacy(input: {
         force: false,
       });
     }
-    const legacyBrowserPartitionPath = Path.join(input.targetPath, "Partitions", "synara-browser");
-    const chitauriBrowserPartitionPath = Path.join(
+    const teaCodeBrowserPartitionPath = Path.join(
       input.targetPath,
       "Partitions",
-      "chitauri-browser",
+      "teacode-browser",
     );
-    if (FS.existsSync(legacyBrowserPartitionPath) && !FS.existsSync(chitauriBrowserPartitionPath)) {
-      FS.cpSync(legacyBrowserPartitionPath, chitauriBrowserPartitionPath, {
+    const legacyBrowserPartitionPath = ["chitauri-browser", "synara-browser"]
+      .map((name) => Path.join(input.targetPath, "Partitions", name))
+      .find((candidate) => FS.existsSync(candidate));
+    if (legacyBrowserPartitionPath && !FS.existsSync(teaCodeBrowserPartitionPath)) {
+      FS.cpSync(legacyBrowserPartitionPath, teaCodeBrowserPartitionPath, {
         recursive: true,
         errorOnExist: false,
         force: false,
       });
     }
     FS.writeFileSync(
-      Path.join(input.targetPath, "chitauri-profile-seed.json"),
+      Path.join(input.targetPath, "teacode-profile-seed.json"),
       `${JSON.stringify(
         {
           sourcePath,

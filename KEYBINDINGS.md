@@ -1,6 +1,6 @@
 # Keybindings
 
-Chitauri reads keybindings from:
+TeaCode reads keybindings from:
 
 - `~/.dpcode/userdata/keybindings.json`
 

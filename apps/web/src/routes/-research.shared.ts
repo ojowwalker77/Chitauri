@@ -34,7 +34,7 @@ export function buildResearchRevisionPrompt(document: ResearchDocument, request:
     ? `Keep its metadata manifest synchronized at ${document.manifestPath}. Update updatedAt and references when the source set changes.`
     : "Create the sibling .research.json manifest required by the /research skill before finishing.";
   return [
-    "You are polishing an existing Chitauri Research artifact.",
+    "You are polishing an existing TeaCode Research artifact.",
     `Edit the document in place at: ${document.documentPath}`,
     manifestInstruction,
     "Preserve its strongest material and visual quality. Inspect the current file before editing, then validate the result.",

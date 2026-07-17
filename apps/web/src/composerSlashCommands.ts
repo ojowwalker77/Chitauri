@@ -368,8 +368,8 @@ export function getAvailableComposerSlashCommands(input: {
         ]
       : [
           // Claude owns most slash-command UX natively; sidechat remains app-level because it
-          // creates a Chitauri split/context clone before the provider sees the first turn.
-          // /export is app-level too — Chitauri owns the thread transcript, so the download
+          // creates a TeaCode split/context clone before the provider sees the first turn.
+          // /export is app-level too — TeaCode owns the thread transcript, so the download
           // happens in the app rather than being forwarded to Claude's native /export.
           ...(input.canOfferExportCommand ? (["export"] as const) : []),
         ];

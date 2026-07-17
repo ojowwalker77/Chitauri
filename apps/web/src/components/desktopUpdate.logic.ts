@@ -164,12 +164,12 @@ export function getArm64IntelBuildWarningDescription(state: DesktopUpdateState):
 
   const action = resolveDesktopUpdateButtonAction(state);
   if (action === "download") {
-    return "This Mac has Apple Silicon, but Chitauri is still running the Intel build under Rosetta. Chitauri is preparing the native Apple Silicon update.";
+    return "This Mac has Apple Silicon, but TeaCode is still running the Intel build under Rosetta. TeaCode is preparing the native Apple Silicon update.";
   }
   if (action === "install") {
-    return "This Mac has Apple Silicon, but Chitauri is still running the Intel build under Rosetta. Click Update to restart into the native Apple Silicon build.";
+    return "This Mac has Apple Silicon, but TeaCode is still running the Intel build under Rosetta. Click Update to restart into the native Apple Silicon build.";
   }
-  return "This Mac has Apple Silicon, but Chitauri is still running the Intel build under Rosetta. The next app update will replace it with the native Apple Silicon build.";
+  return "This Mac has Apple Silicon, but TeaCode is still running the Intel build under Rosetta. The next app update will replace it with the native Apple Silicon build.";
 }
 
 export function getDesktopUpdateButtonTooltip(

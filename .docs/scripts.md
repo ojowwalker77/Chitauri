@@ -3,9 +3,9 @@
 - `bun run dev` — Starts contracts, server, and web in `turbo watch` mode.
 - `bun run dev:server` — Starts just the WebSocket server (uses Bun TypeScript execution).
 - `bun run dev:web` — Starts just the Vite dev server for the web app.
-- Dev commands default `CHITAURI_HOME` to `~/.chitauri`, with development state isolated under `~/.chitauri/dev`.
+- Dev commands default `TEACODE_HOME` to `~/.teacode`, with development state isolated under `~/.teacode/dev`.
 - Override server CLI-equivalent flags from root dev commands with `--`, for example:
-  `bun run dev -- --home-dir ~/.chitauri-2`
+  `bun run dev -- --home-dir ~/.teacode-2`
 - `bun run start` — Runs the production server (serves built web app as static files).
 - `bun run build` — Builds contracts, web app, and server through Turbo.
 - `bun run typecheck` — Strict TypeScript checks for all packages.
@@ -33,10 +33,10 @@
 
 ## Running multiple dev instances
 
-Set `CHITAURI_DEV_INSTANCE` to any value to deterministically shift all dev ports together.
+Set `TEACODE_DEV_INSTANCE` to any value to deterministically shift all dev ports together.
 
 - Default ports: server `3773`, web `5733`
-- Shifted ports: `base + offset` (offset is hashed from `CHITAURI_DEV_INSTANCE`)
-- Example: `CHITAURI_DEV_INSTANCE=branch-a bun run dev:desktop`
+- Shifted ports: `base + offset` (offset is hashed from `TEACODE_DEV_INSTANCE`)
+- Example: `TEACODE_DEV_INSTANCE=branch-a bun run dev:desktop`
 
-If you want full control instead of hashing, set `CHITAURI_PORT_OFFSET` to a numeric offset.
+If you want full control instead of hashing, set `TEACODE_PORT_OFFSET` to a numeric offset.

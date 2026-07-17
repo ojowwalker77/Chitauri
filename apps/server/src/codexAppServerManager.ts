@@ -604,7 +604,7 @@ export function buildCodexInitializeParams() {
   return {
     clientInfo: {
       name: "chitauri_desktop",
-      title: "Chitauri Desktop",
+      title: "TeaCode Desktop",
       version: "0.1.0",
     },
     capabilities: {
@@ -760,7 +760,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     this.chitauriSkillsDir = options?.chitauriSkillsDir;
   }
 
-  // Registers `~/.chitauri/skills` as a codex skill root so portable skills are
+  // Registers `~/.teacode/skills` as a codex skill root so portable skills are
   // first-class: skills/list returns them and turn/start `skill` items inject
   // their instructions. Verified live: skill items with paths outside known
   // roots are silently ignored by codex app-server, so this call is required.
@@ -773,7 +773,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         extraRoots: [this.chitauriSkillsDir],
       });
     } catch (error) {
-      // Older codex builds (< extra-roots support) keep working; Chitauri-only
+      // Older codex builds (< extra-roots support) keep working; TeaCode-only
       // skills simply stay invisible to codex on those versions.
       log.warn("skills/extraRoots/set unavailable", { error });
     }

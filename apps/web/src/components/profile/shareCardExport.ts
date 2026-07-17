@@ -10,7 +10,7 @@ import { readNativeApi } from "~/nativeApi";
 
 export { downloadBlob } from "~/lib/browserDownload";
 
-const SHARE_BRAND_HANDLE = "@ChitauriApp";
+const SHARE_BRAND_HANDLE = "@TeaCodeApp";
 export const SHARE_TWEET_TEXT = `Just checking my ${SHARE_BRAND_HANDLE} dev stats. Absolute masterpiece of an IDE.`;
 const SHARE_URL = "https://github.com/ojowwalker77/Chitauri";
 
@@ -70,6 +70,6 @@ export function shareIntentUrl(target: ShareTarget): string {
     case "reddit":
       return `https://www.reddit.com/submit?url=${encodeURIComponent(
         SHARE_URL,
-      )}&title=${encodeURIComponent("My Chitauri dev stats")}`;
+      )}&title=${encodeURIComponent("My TeaCode dev stats")}`;
   }
 }

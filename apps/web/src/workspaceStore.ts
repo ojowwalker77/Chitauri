@@ -17,7 +17,7 @@ interface WorkspaceStoreState {
   setServerWorkspacePaths: (paths: ServerWorkspacePaths) => void;
 }
 
-const WORKSPACE_STORE_STORAGE_KEY = "chitauri:workspace-paths:v1";
+const WORKSPACE_STORE_STORAGE_KEY = "teacode:workspace-paths:v1";
 
 function normalizePath(value: string | null | undefined): string | null | undefined {
   return value === undefined ? undefined : (value?.trim() ?? null);

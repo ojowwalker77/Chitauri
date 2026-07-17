@@ -14,5 +14,5 @@ export function normalizeDesktopWsUrl(value: unknown): string | null {
 }
 
 export function resolveDesktopWsUrlFromEnv(env: NodeJS.ProcessEnv): string | null {
-  return normalizeDesktopWsUrl(env.CHITAURI_DESKTOP_WS_URL);
+  return normalizeDesktopWsUrl(env.TEACODE_DESKTOP_WS_URL ?? env.CHITAURI_DESKTOP_WS_URL);
 }

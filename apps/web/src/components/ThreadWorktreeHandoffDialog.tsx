@@ -85,7 +85,7 @@ export function ThreadWorktreeHandoffDialog({
                     onOpenChange(false);
                   }
                 }}
-                placeholder="chitauri/feature-name"
+                placeholder="teacode/feature-name"
               />
             </label>
           </form>

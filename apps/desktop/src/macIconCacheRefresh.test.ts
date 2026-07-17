@@ -10,8 +10,8 @@ import {
 
 describe("resolveLaunchVersionRecordPath", () => {
   it("places the record file inside the userData directory", () => {
-    expect(resolveLaunchVersionRecordPath("/home/me/AppData/Chitauri")).toBe(
-      "/home/me/AppData/Chitauri/last-launch-version.json",
+    expect(resolveLaunchVersionRecordPath("/home/me/AppData/TeaCode")).toBe(
+      "/home/me/AppData/TeaCode/last-launch-version.json",
     );
   });
 });
@@ -58,13 +58,13 @@ describe("shouldRefreshIconCache", () => {
 describe("resolveMacAppBundlePath", () => {
   it("resolves the .app bundle from the Electron executable on macOS", () => {
     expect(
-      resolveMacAppBundlePath("/Applications/Chitauri.app/Contents/MacOS/Chitauri", "darwin"),
-    ).toBe("/Applications/Chitauri.app");
+      resolveMacAppBundlePath("/Applications/TeaCode.app/Contents/MacOS/TeaCode", "darwin"),
+    ).toBe("/Applications/TeaCode.app");
   });
 
   it("returns null off macOS", () => {
     expect(
-      resolveMacAppBundlePath("/Applications/Chitauri.app/Contents/MacOS/Chitauri", "linux"),
+      resolveMacAppBundlePath("/Applications/TeaCode.app/Contents/MacOS/TeaCode", "linux"),
     ).toBeNull();
   });
 

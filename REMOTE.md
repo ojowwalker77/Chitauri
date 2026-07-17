@@ -1,20 +1,20 @@
 # Remote Access Setup
 
-Use this when you want to open Chitauri from another device (phone, tablet, another laptop).
+Use this when you want to open TeaCode from another device (phone, tablet, another laptop).
 
 ## CLI ↔ Env option map
 
-The Chitauri CLI accepts the following configuration options, available either as CLI flags or environment variables:
+The TeaCode CLI accepts the following configuration options, available either as CLI flags or environment variables:
 
 | CLI flag                | Env var               | Notes                              |
 | ----------------------- | --------------------- | ---------------------------------- |
-| `--mode <web\|desktop>` | `CHITAURI_MODE`       | Runtime mode.                      |
-| `--port <number>`       | `CHITAURI_PORT`       | HTTP/WebSocket port.               |
-| `--host <address>`      | `CHITAURI_HOST`       | Bind interface/address.            |
-| `--home-dir <path>`     | `CHITAURI_HOME`       | Base directory.                    |
+| `--mode <web\|desktop>` | `TEACODE_MODE`        | Runtime mode.                      |
+| `--port <number>`       | `TEACODE_PORT`        | HTTP/WebSocket port.               |
+| `--host <address>`      | `TEACODE_HOST`        | Bind interface/address.            |
+| `--home-dir <path>`     | `TEACODE_HOME`        | Base directory.                    |
 | `--dev-url <url>`       | `VITE_DEV_SERVER_URL` | Dev web URL redirect/proxy target. |
-| `--no-browser`          | `CHITAURI_NO_BROWSER` | Disable auto-open browser.         |
-| `--auth-token <token>`  | `CHITAURI_AUTH_TOKEN` | WebSocket auth token.              |
+| `--no-browser`          | `TEACODE_NO_BROWSER`  | Disable auto-open browser.         |
+| `--auth-token <token>`  | `TEACODE_AUTH_TOKEN`  | WebSocket auth token.              |
 
 > TIP: Use the `--help` flag to see all available options and their descriptions.
 

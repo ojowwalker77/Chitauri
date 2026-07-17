@@ -23,7 +23,7 @@ export type ToggleFeatureFlagId =
 
 type FeatureFlagState = Record<ToggleFeatureFlagId, boolean>;
 
-const FEATURE_FLAG_STORAGE_KEY = "chitauri:feature-flags";
+const FEATURE_FLAG_STORAGE_KEY = "teacode:feature-flags";
 
 const DEFAULT_FEATURE_FLAG_STATE: FeatureFlagState = {
   "persist-action-failed-debug-toasts": false,

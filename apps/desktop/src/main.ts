@@ -3,6 +3,8 @@
 // Layer: Desktop main process
 // Depends on: Electron, backend startup helpers, browser manager, and update runtime.
 
+import "@t3tools/shared/teacodeEnvironmentBootstrap";
+
 import * as ChildProcess from "node:child_process";
 import * as Crypto from "node:crypto";
 import * as FS from "node:fs";
@@ -39,7 +41,17 @@ import type {
 import { autoUpdater, BaseUpdater, CancellationToken } from "electron-updater";
 
 import type { ContextMenuItem } from "@t3tools/contracts";
-import { DESKTOP_APP_HOST, DESKTOP_SCHEME } from "@t3tools/shared/desktopAppOrigin";
+import {
+  DESKTOP_APP_HOST,
+  DESKTOP_SCHEME,
+  LEGACY_DESKTOP_SCHEME,
+} from "@t3tools/shared/desktopAppOrigin";
+import {
+  PRODUCT_BUNDLE_ID,
+  PRODUCT_HOME_DIRNAME,
+  PRODUCT_NAME,
+  readTeaCodeEnvironmentValue,
+} from "@t3tools/shared/productIdentity";
 import { getMacTrafficLightPosition } from "@t3tools/shared/desktopChrome";
 import { NetService } from "@t3tools/shared/Net";
 import { RotatingFileSink } from "@t3tools/shared/logging";
@@ -137,21 +149,20 @@ const UPDATE_DOWNLOAD_CHANNEL = "desktop:update-download";
 const UPDATE_INSTALL_CHANNEL = "desktop:update-install";
 const NOTIFICATIONS_IS_SUPPORTED_CHANNEL = "desktop:notifications-is-supported";
 const NOTIFICATIONS_SHOW_CHANNEL = "desktop:notifications-show";
-const BASE_DIR = process.env.CHITAURI_HOME?.trim() || Path.join(OS.homedir(), ".chitauri");
+const BASE_DIR =
+  readTeaCodeEnvironmentValue(process.env, "HOME")?.trim() ||
+  Path.join(OS.homedir(), PRODUCT_HOME_DIRNAME);
 const STATE_DIR = Path.join(BASE_DIR, "userdata");
 const ROOT_DIR = Path.resolve(__dirname, "../../..");
 const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
-const APP_DISPLAY_NAME = isDevelopment ? "Chitauri (Dev)" : "Chitauri";
-const APP_USER_MODEL_ID = isDevelopment
-  ? "com.ojowwalker77.chitauri.dev"
-  : "com.ojowwalker77.chitauri";
+const APP_DISPLAY_NAME = isDevelopment ? `${PRODUCT_NAME} (Dev)` : PRODUCT_NAME;
+const APP_USER_MODEL_ID = isDevelopment ? `${PRODUCT_BUNDLE_ID}.dev` : PRODUCT_BUNDLE_ID;
 const COMMIT_HASH_PATTERN = /^[0-9a-f]{7,40}$/i;
 const COMMIT_HASH_DISPLAY_LENGTH = 12;
 const LOG_DIR = Path.join(STATE_DIR, "logs");
 const LOG_FILE_MAX_BYTES = 10 * 1024 * 1024;
 const LOG_FILE_MAX_FILES = 10;
 const APP_RUN_ID = Crypto.randomBytes(6).toString("hex");
-const hasSingleInstanceLock = app.requestSingleInstanceLock();
 const AUTO_UPDATE_STARTUP_DELAY_MS = 15_000;
 const AUTO_UPDATE_POLL_INTERVAL_MS = 4 * 60 * 60 * 1000;
 const AUTO_UPDATE_FOREGROUND_RECHECK_MIN_INTERVAL_MS = 5 * 60 * 1000;
@@ -168,7 +179,7 @@ const AUTO_UPDATE_STALLED_DOWNLOAD_CANCELLATION_SUPPRESSION_MS = 2 * 60 * 1000;
 const AUTO_UPDATE_INSTALL_WATCHDOG_MS = 15 * 1000;
 const BACKEND_FORCE_KILL_DELAY_MS = 8_000;
 const BACKEND_SHUTDOWN_TIMEOUT_MS = 10_000;
-const BACKEND_MAX_OLD_SPACE_ENV_KEY = "CHITAURI_BACKEND_MAX_OLD_SPACE_MB";
+const BACKEND_MAX_OLD_SPACE_ENV_KEY = "TEACODE_BACKEND_MAX_OLD_SPACE_MB";
 const DESKTOP_UPDATE_CHANNEL = "latest";
 const DESKTOP_UPDATE_ALLOW_PRERELEASE = false;
 const DESKTOP_MENU_ZOOM_FACTOR_STEP = 1.1;
@@ -202,7 +213,6 @@ let restoreStdIoCapture: (() => void) | null = null;
 let unreadBackgroundNotificationCount = 0;
 let configuredGitHubUpdateSource: ReturnType<typeof resolveGitHubUpdateSource> = null;
 let configuredUpdaterCacheDirName: string | null = null;
-
 let destructiveMenuIconCache: Electron.NativeImage | null | undefined;
 const desktopRuntimeInfo = resolveDesktopRuntimeInfo({
   platform: process.platform,
@@ -361,6 +371,7 @@ async function reserveBackendEndpoint(reason: string): Promise<void> {
   );
   backendHttpUrl = `http://127.0.0.1:${backendPort}`;
   backendWsUrl = `ws://127.0.0.1:${backendPort}/?token=${encodeURIComponent(backendAuthToken)}`;
+  process.env.TEACODE_DESKTOP_WS_URL = backendWsUrl;
   process.env.CHITAURI_DESKTOP_WS_URL = backendWsUrl;
   writeDesktopLogHeader(`${reason} resolved backend endpoint port=${backendPort}`);
 }
@@ -608,6 +619,15 @@ protocol.registerSchemesAsPrivileged([
       corsEnabled: true,
     },
   },
+  {
+    scheme: LEGACY_DESKTOP_SCHEME,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
 ]);
 
 function resolveAppRoot(): string {
@@ -682,7 +702,9 @@ function resolveAboutCommitHash(): string | null {
     return aboutCommitHashCache;
   }
 
-  const envCommitHash = normalizeCommitHash(process.env.CHITAURI_COMMIT_HASH);
+  const envCommitHash = normalizeCommitHash(
+    readTeaCodeEnvironmentValue(process.env, "COMMIT_HASH"),
+  );
   if (envCommitHash) {
     aboutCommitHashCache = envCommitHash;
     return aboutCommitHashCache;
@@ -766,7 +788,7 @@ function handleFatalStartupError(stage: string, error: unknown): void {
   console.error(`[desktop] fatal startup error (${stage})`, error);
   if (!isQuitting) {
     isQuitting = true;
-    dialog.showErrorBox("Chitauri failed to start", `Stage: ${stage}\n${message}${detail}`);
+    dialog.showErrorBox("TeaCode failed to start", `Stage: ${stage}\n${message}${detail}`);
   }
   stopBackend();
   restoreStdIoCapture?.();
@@ -787,7 +809,10 @@ function registerDesktopProtocol(): void {
   const staticRootPrefix = `${staticRootResolved}${Path.sep}`;
   const fallbackIndex = Path.join(staticRootResolved, "index.html");
 
-  protocol.registerFileProtocol(DESKTOP_SCHEME, (request, callback) => {
+  const handleRequest: Parameters<typeof protocol.registerFileProtocol>[1] = (
+    request,
+    callback,
+  ) => {
     try {
       const candidate = resolveDesktopStaticPath(staticRootResolved, request.url);
       const resolvedCandidate = Path.resolve(candidate);
@@ -808,9 +833,65 @@ function registerDesktopProtocol(): void {
     } catch {
       callback({ path: fallbackIndex });
     }
-  });
+  };
+
+  protocol.registerFileProtocol(DESKTOP_SCHEME, handleRequest);
+  protocol.registerFileProtocol(LEGACY_DESKTOP_SCHEME, handleRequest);
 
   desktopProtocolRegistered = true;
+}
+
+const LEGACY_RENDERER_STORAGE_MIGRATION_MARKER = "teacode:legacy-origin-migrated:v1";
+
+async function loadStorageBridge(scheme: string): Promise<BrowserWindow> {
+  const bridge = new BrowserWindow({
+    show: false,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  await bridge.loadURL(`${scheme}://${DESKTOP_APP_HOST}/storage-bridge.html`);
+  return bridge;
+}
+
+async function migrateLegacyRendererStorage(): Promise<void> {
+  if (isDevelopment) return;
+
+  let targetBridge: BrowserWindow | null = null;
+  let sourceBridge: BrowserWindow | null = null;
+  try {
+    targetBridge = await loadStorageBridge(DESKTOP_SCHEME);
+    const alreadyMigrated = await targetBridge.webContents.executeJavaScript(
+      `localStorage.getItem(${JSON.stringify(LEGACY_RENDERER_STORAGE_MIGRATION_MARKER)}) === "1"`,
+    );
+    if (alreadyMigrated === true) return;
+
+    sourceBridge = await loadStorageBridge(LEGACY_DESKTOP_SCHEME);
+    const legacyStorage = (await sourceBridge.webContents.executeJavaScript(
+      "Object.fromEntries(Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index)).filter(Boolean).map((key) => [key, localStorage.getItem(key)]))",
+    )) as Record<string, string | null>;
+    const serializedStorage = JSON.stringify(legacyStorage ?? {});
+
+    await targetBridge.webContents.executeJavaScript(`
+      (() => {
+        const entries = Object.entries(${serializedStorage});
+        for (const [key, value] of entries) {
+          if (value !== null && localStorage.getItem(key) === null) localStorage.setItem(key, value);
+        }
+        localStorage.setItem(${JSON.stringify(LEGACY_RENDERER_STORAGE_MIGRATION_MARKER)}, "1");
+      })()
+    `);
+    console.info(
+      `[desktop] migrated ${Object.keys(legacyStorage ?? {}).length} legacy renderer storage entries`,
+    );
+  } catch (error) {
+    console.warn("[desktop] legacy renderer storage migration could not complete", error);
+  } finally {
+    sourceBridge?.destroy();
+    targetBridge?.destroy();
+  }
 }
 
 function dispatchMenuAction(action: string): void {
@@ -870,7 +951,10 @@ function adjustWindowZoomFromMenu(multiplier: number): void {
 // A configured app-update.yml (or the mock-updates flag) is the prerequisite for any
 // auto-update activity; centralized so the menu and the enable check stay in lockstep.
 function hasConfiguredUpdateFeed(): boolean {
-  return readAppUpdateYml() !== null || Boolean(process.env.CHITAURI_DESKTOP_MOCK_UPDATES);
+  return (
+    readAppUpdateYml() !== null ||
+    Boolean(readTeaCodeEnvironmentValue(process.env, "DESKTOP_MOCK_UPDATES"))
+  );
 }
 
 function resolveAutoUpdateDisabledReason(): string | null {
@@ -879,7 +963,7 @@ function resolveAutoUpdateDisabledReason(): string | null {
     isPackaged: app.isPackaged,
     platform: process.platform,
     appImage: process.env.APPIMAGE,
-    disabledByEnv: process.env.CHITAURI_DISABLE_AUTO_UPDATE === "1",
+    disabledByEnv: readTeaCodeEnvironmentValue(process.env, "DISABLE_AUTO_UPDATE") === "1",
     hasUpdateFeedConfig: hasConfiguredUpdateFeed(),
   });
 }
@@ -911,14 +995,14 @@ async function checkForUpdatesFromMenu(): Promise<void> {
     void dialog.showMessageBox({
       type: "info",
       title: "You're up to date!",
-      message: `Chitauri ${updateState.currentVersion} is currently the newest version available.`,
+      message: `TeaCode ${updateState.currentVersion} is currently the newest version available.`,
       buttons: ["OK"],
     });
   } else if (updateState.status === "downloading" || updateState.status === "available") {
     void dialog.showMessageBox({
       type: "info",
       title: "Update found",
-      message: "Chitauri is preparing the update in the background.",
+      message: "TeaCode is preparing the update in the background.",
       buttons: ["OK"],
     });
   } else if (updateState.status === "downloaded") {
@@ -1083,9 +1167,9 @@ function resolveNotificationIconPath(): string | null {
     return null;
   }
   if (process.platform === "win32") {
-    return resolveResourcePath("chitauri.png") ?? resolveIconPath("ico");
+    return resolveResourcePath("teacode.png") ?? resolveIconPath("ico");
   }
-  return resolveResourcePath("chitauri.png") ?? resolveIconPath("png");
+  return resolveResourcePath("teacode.png") ?? resolveIconPath("png");
 }
 
 // Keep the app badge aligned with desktop notifications that arrive off-focus.
@@ -1173,7 +1257,7 @@ function showDesktopNotification(input: {
  * Resolve the Electron userData directory path.
  *
  * Electron derives the default userData path from `productName` in
- * package.json. We override it to a clean lowercase Chitauri name while seeding
+ * package.json. We override it to a clean lowercase TeaCode name while seeding
  * from legacy app profiles when needed.
  */
 function resolveUserDataPath(): string {
@@ -1184,12 +1268,12 @@ function resolveUserDataPath(): string {
     legacyPaths: resolveLegacyDesktopUserDataPaths({ appDataBase, isDevelopment }),
   });
   if (seedResult.status === "seeded") {
-    console.info("[desktop] Seeded Chitauri Electron profile from legacy profile", {
+    console.info("[desktop] Seeded TeaCode Electron profile from legacy profile", {
       sourcePath: seedResult.sourcePath,
       targetPath: seedResult.targetPath,
     });
   } else if (seedResult.status === "seed-failed") {
-    console.warn("[desktop] Failed to seed Chitauri Electron profile from legacy profile", {
+    console.warn("[desktop] Failed to seed TeaCode Electron profile from legacy profile", {
       sourcePath: seedResult.sourcePath,
       targetPath: seedResult.targetPath,
       error: seedResult.error,
@@ -1847,7 +1931,7 @@ function configureAutoUpdater(): void {
 
   scheduleUpdatePoll();
 }
-// Builds process-local Node args so provider/tool children do not inherit Chitauri's heap guard.
+// Builds process-local Node args so provider/tool children do not inherit TeaCode's heap guard.
 function backendNodeArgs(): string[] {
   const rawMaxOldSpaceMb = process.env[BACKEND_MAX_OLD_SPACE_ENV_KEY];
   const configuredMaxOldSpaceMb =
@@ -1862,6 +1946,11 @@ function backendNodeArgs(): string[] {
 function backendEnv(): NodeJS.ProcessEnv {
   return {
     ...process.env,
+    TEACODE_MODE: "desktop",
+    TEACODE_NO_BROWSER: "1",
+    TEACODE_PORT: String(backendPort),
+    TEACODE_HOME: BASE_DIR,
+    TEACODE_AUTH_TOKEN: backendAuthToken,
     CHITAURI_MODE: "desktop",
     CHITAURI_NO_BROWSER: "1",
     CHITAURI_PORT: String(backendPort),
@@ -2591,6 +2680,7 @@ function configureMediaPermissions(): void {
 app.setPath("userData", resolveUserDataPath());
 
 configureAppIdentity();
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
 
 if (!hasSingleInstanceLock) {
   app.quit();
@@ -2664,7 +2754,7 @@ app.on("before-quit", (event) => {
 if (hasSingleInstanceLock) {
   app
     .whenReady()
-    .then(() => {
+    .then(async () => {
       writeDesktopLogHeader("app ready");
       configureAppIdentity();
       applyLegacyMacDockIcon();
@@ -2672,6 +2762,7 @@ if (hasSingleInstanceLock) {
       configureMediaPermissions();
       configureApplicationMenu();
       registerDesktopProtocol();
+      await migrateLegacyRendererStorage();
       configureAutoUpdater();
       void bootstrap().catch((error) => {
         handleFatalStartupError("bootstrap", error);

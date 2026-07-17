@@ -1480,7 +1480,7 @@ function SettingsRouteView() {
       return;
     }
 
-    const notification = new Notification(title, { body, tag: "chitauri:test-notification" });
+    const notification = new Notification(title, { body, tag: "teacode:test-notification" });
     notification.addEventListener("click", () => {
       window.focus();
     });
@@ -1905,7 +1905,7 @@ function SettingsRouteView() {
         <SettingsCard>
           <SettingsRow
             title="Theme"
-            description="Choose how Chitauri looks across the app."
+            description="Choose how TeaCode looks across the app."
             resetAction={
               theme !== "system" ? (
                 <SettingResetButton label="theme" onClick={() => setTheme("system")} />
@@ -3122,7 +3122,7 @@ function SettingsRouteView() {
 
         <SettingsRow
           title="Provider updates"
-          description="Review installed provider tools that Chitauri can safely update."
+          description="Review installed provider tools that TeaCode can safely update."
           status={
             !settings.enableProviderUpdateChecks
               ? "Automatic checks off"
@@ -3408,7 +3408,7 @@ function SettingsRouteView() {
                                     </code>
                                   </>
                                 ) : (
-                                  "A newer version is available, but Chitauri could not identify a safe one-click update command for this installation."
+                                  "A newer version is available, but TeaCode could not identify a safe one-click update command for this installation."
                                 )}
                               </div>
                             ) : null}

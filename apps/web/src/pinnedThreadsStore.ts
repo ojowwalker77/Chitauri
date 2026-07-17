@@ -16,7 +16,7 @@ interface PinnedThreadsStoreState {
   prunePinnedThreads: (threadIds: readonly ThreadId[]) => void;
 }
 
-const PINNED_THREADS_STORAGE_KEY = "chitauri:pinned-threads:v1";
+const PINNED_THREADS_STORAGE_KEY = "teacode:pinned-threads:v1";
 
 export const usePinnedThreadsStore = create<PinnedThreadsStoreState>()(
   persist(

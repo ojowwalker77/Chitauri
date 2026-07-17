@@ -1,5 +1,5 @@
 // FILE: desktopWsBridge.test.ts
-// Purpose: Verifies desktop WebSocket URL resolution from the CHITAURI_DESKTOP_WS_URL env name.
+// Purpose: Verifies canonical and legacy desktop WebSocket URL environment resolution.
 
 import { describe, expect, it } from "vitest";
 
@@ -17,7 +17,16 @@ describe("desktopWsBridge", () => {
     expect(normalizeDesktopWsUrl(null)).toBeNull();
   });
 
-  it("reads CHITAURI_DESKTOP_WS_URL", () => {
+  it("prefers TEACODE_DESKTOP_WS_URL", () => {
+    expect(
+      resolveDesktopWsUrlFromEnv({
+        TEACODE_DESKTOP_WS_URL: "ws://127.0.0.1:6000/?token=teacode",
+        CHITAURI_DESKTOP_WS_URL: "ws://127.0.0.1:6000/?token=chitauri",
+      } as NodeJS.ProcessEnv),
+    ).toBe("ws://127.0.0.1:6000/?token=teacode");
+  });
+
+  it("accepts CHITAURI_DESKTOP_WS_URL during migration", () => {
     expect(
       resolveDesktopWsUrlFromEnv({
         CHITAURI_DESKTOP_WS_URL: "ws://127.0.0.1:6000/?token=chitauri",
@@ -25,10 +34,13 @@ describe("desktopWsBridge", () => {
     ).toBe("ws://127.0.0.1:6000/?token=chitauri");
   });
 
-  it("returns null when CHITAURI_DESKTOP_WS_URL is missing or empty", () => {
+  it("returns null when both environment values are missing or empty", () => {
     expect(resolveDesktopWsUrlFromEnv({} as NodeJS.ProcessEnv)).toBeNull();
     expect(
-      resolveDesktopWsUrlFromEnv({ CHITAURI_DESKTOP_WS_URL: "   " } as NodeJS.ProcessEnv),
+      resolveDesktopWsUrlFromEnv({
+        TEACODE_DESKTOP_WS_URL: "   ",
+        CHITAURI_DESKTOP_WS_URL: "   ",
+      } as NodeJS.ProcessEnv),
     ).toBeNull();
   });
 });

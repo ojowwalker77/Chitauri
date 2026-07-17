@@ -1,6 +1,6 @@
 /**
  * FILE: homeMigration.test.ts
- * Purpose: Verifies first-run import and resume behavior into the ~/.chitauri home.
+ * Purpose: Verifies first-run import and resume behavior into the ~/.teacode home.
  * Layer: Server startup tests
  * Depends on: deriveServerPaths, node:sqlite fixtures, and the migration marker contract
  */
@@ -15,11 +15,12 @@ import { Effect, FileSystem } from "effect";
 
 import { deriveServerPaths } from "./config";
 import {
+  LEGACY_CHITAURI_HOME_DIRNAME,
   LEGACY_DPCODE_HOME_DIRNAME,
   getLegacyImportMarkerPath,
   LEGACY_T3_HOME_DIRNAME,
   migrateLegacyHomeIfNeeded,
-  CHITAURI_HOME_DIRNAME,
+  TEACODE_HOME_DIRNAME,
 } from "./homeMigration";
 
 // Creates the minimal sqlite state the migration needs to prove DB contents moved correctly.
@@ -54,7 +55,34 @@ const readMarker = (markerPath: string) =>
   };
 
 it.layer(NodeServices.layer)("homeMigration", (it) => {
-  it.effect("imports legacy dpcode userdata into the Chitauri default home", () =>
+  it.effect("imports the immediately previous Chitauri home first", () =>
+    Effect.gen(function* () {
+      const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "teacode-home-migration-"));
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => fs.rmSync(tempHome, { recursive: true, force: true })),
+      );
+
+      const legacyBaseDir = path.join(tempHome, LEGACY_CHITAURI_HOME_DIRNAME);
+      const targetBaseDir = path.join(tempHome, TEACODE_HOME_DIRNAME);
+      const legacyPaths = yield* deriveServerPaths(legacyBaseDir, undefined);
+      const targetPaths = yield* deriveServerPaths(targetBaseDir, undefined);
+
+      fs.mkdirSync(path.dirname(legacyPaths.dbPath), { recursive: true });
+      createProjectDb(legacyPaths.dbPath, "Chitauri project");
+
+      const result = yield* migrateLegacyHomeIfNeeded({
+        baseDir: targetBaseDir,
+        homeDir: tempHome,
+        devUrl: undefined,
+      });
+
+      assert.equal(result.status, "migrated");
+      assert.equal(readProjectTitle(targetPaths.dbPath), "Chitauri project");
+      assert.isTrue(fs.existsSync(legacyPaths.dbPath));
+    }),
+  );
+
+  it.effect("imports legacy dpcode userdata into the TeaCode default home", () =>
     Effect.gen(function* () {
       const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "synara-home-migration-"));
       yield* Effect.addFinalizer(() =>
@@ -62,7 +90,7 @@ it.layer(NodeServices.layer)("homeMigration", (it) => {
       );
 
       const legacyBaseDir = path.join(tempHome, LEGACY_DPCODE_HOME_DIRNAME);
-      const targetBaseDir = path.join(tempHome, CHITAURI_HOME_DIRNAME);
+      const targetBaseDir = path.join(tempHome, TEACODE_HOME_DIRNAME);
       const legacyPaths = yield* deriveServerPaths(legacyBaseDir, undefined);
       const targetPaths = yield* deriveServerPaths(targetBaseDir, undefined);
 
@@ -94,7 +122,7 @@ it.layer(NodeServices.layer)("homeMigration", (it) => {
 
       const dpcodeBaseDir = path.join(tempHome, LEGACY_DPCODE_HOME_DIRNAME);
       const t3BaseDir = path.join(tempHome, LEGACY_T3_HOME_DIRNAME);
-      const targetBaseDir = path.join(tempHome, CHITAURI_HOME_DIRNAME);
+      const targetBaseDir = path.join(tempHome, TEACODE_HOME_DIRNAME);
       const dpcodePaths = yield* deriveServerPaths(dpcodeBaseDir, undefined);
       const t3Paths = yield* deriveServerPaths(t3BaseDir, undefined);
       const targetPaths = yield* deriveServerPaths(targetBaseDir, undefined);
@@ -137,7 +165,7 @@ it.layer(NodeServices.layer)("homeMigration", (it) => {
       );
 
       const legacyBaseDir = path.join(tempHome, LEGACY_T3_HOME_DIRNAME);
-      const targetBaseDir = path.join(tempHome, CHITAURI_HOME_DIRNAME);
+      const targetBaseDir = path.join(tempHome, TEACODE_HOME_DIRNAME);
       const legacyPaths = yield* deriveServerPaths(legacyBaseDir, undefined);
       const targetPaths = yield* deriveServerPaths(targetBaseDir, undefined);
 
@@ -187,7 +215,7 @@ it.layer(NodeServices.layer)("homeMigration", (it) => {
       );
 
       const legacyBaseDir = path.join(tempHome, LEGACY_T3_HOME_DIRNAME);
-      const targetBaseDir = path.join(tempHome, CHITAURI_HOME_DIRNAME);
+      const targetBaseDir = path.join(tempHome, TEACODE_HOME_DIRNAME);
       const legacyPaths = yield* deriveServerPaths(legacyBaseDir, undefined);
       const targetPaths = yield* deriveServerPaths(targetBaseDir, undefined);
 
@@ -220,7 +248,7 @@ it.layer(NodeServices.layer)("homeMigration", (it) => {
       );
 
       const legacyBaseDir = path.join(tempHome, LEGACY_T3_HOME_DIRNAME);
-      const targetBaseDir = path.join(tempHome, CHITAURI_HOME_DIRNAME);
+      const targetBaseDir = path.join(tempHome, TEACODE_HOME_DIRNAME);
       const legacyPaths = yield* deriveServerPaths(legacyBaseDir, undefined);
       const targetPaths = yield* deriveServerPaths(targetBaseDir, undefined);
 
@@ -252,7 +280,7 @@ it.layer(NodeServices.layer)("homeMigration", (it) => {
       );
 
       const legacyBaseDir = path.join(tempHome, LEGACY_T3_HOME_DIRNAME);
-      const targetBaseDir = path.join(tempHome, CHITAURI_HOME_DIRNAME);
+      const targetBaseDir = path.join(tempHome, TEACODE_HOME_DIRNAME);
       const legacyPaths = yield* deriveServerPaths(legacyBaseDir, undefined);
       const targetPaths = yield* deriveServerPaths(targetBaseDir, undefined);
       const markerPath = yield* getLegacyImportMarkerPath(targetPaths.stateDir);
@@ -317,7 +345,7 @@ it.layer(NodeServices.layer)("homeMigration", (it) => {
       );
 
       const legacyBaseDir = path.join(tempHome, LEGACY_T3_HOME_DIRNAME);
-      const targetBaseDir = path.join(tempHome, CHITAURI_HOME_DIRNAME);
+      const targetBaseDir = path.join(tempHome, TEACODE_HOME_DIRNAME);
       const devUrl = new URL("http://127.0.0.1:5173");
       const legacyPaths = yield* deriveServerPaths(legacyBaseDir, devUrl);
       const targetPaths = yield* deriveServerPaths(targetBaseDir, devUrl);

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import "@t3tools/shared/teacodeEnvironmentBootstrap";
+
 import { homedir } from "node:os";
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
@@ -14,8 +16,8 @@ const BASE_WEB_PORT = 5733;
 const MAX_HASH_OFFSET = 3000;
 const MAX_PORT = 65535;
 
-export const DEFAULT_CHITAURI_HOME = Effect.map(Effect.service(Path.Path), (path) =>
-  path.join(homedir(), ".chitauri"),
+export const DEFAULT_TEACODE_HOME = Effect.map(Effect.service(Path.Path), (path) =>
+  path.join(homedir(), ".teacode"),
 );
 
 const MODE_ARGS = {
@@ -70,11 +72,11 @@ const optionalUrlConfig = (name: string): Config.Config<URL | undefined> =>
   );
 
 const OffsetConfig = Config.all({
-  portOffset: optionalIntegerConfig("CHITAURI_PORT_OFFSET"),
-  devInstance: optionalStringConfig("CHITAURI_DEV_INSTANCE"),
+  portOffset: optionalIntegerConfig("TEACODE_PORT_OFFSET"),
+  devInstance: optionalStringConfig("TEACODE_DEV_INSTANCE"),
 });
 const HomeConfig = Config.all({
-  chitauriHome: optionalStringConfig("CHITAURI_HOME"),
+  chitauriHome: optionalStringConfig("TEACODE_HOME"),
 }).pipe(Config.map(({ chitauriHome }) => chitauriHome));
 
 export function resolveOffset(config: {
@@ -83,11 +85,11 @@ export function resolveOffset(config: {
 }): { readonly offset: number; readonly source: string } {
   if (config.portOffset !== undefined) {
     if (config.portOffset < 0) {
-      throw new Error(`Invalid CHITAURI_PORT_OFFSET: ${config.portOffset}`);
+      throw new Error(`Invalid TEACODE_PORT_OFFSET: ${config.portOffset}`);
     }
     return {
       offset: config.portOffset,
-      source: `CHITAURI_PORT_OFFSET=${config.portOffset}`,
+      source: `TEACODE_PORT_OFFSET=${config.portOffset}`,
     };
   }
 
@@ -97,11 +99,11 @@ export function resolveOffset(config: {
   }
 
   if (/^\d+$/.test(seed)) {
-    return { offset: Number(seed), source: `numeric CHITAURI_DEV_INSTANCE=${seed}` };
+    return { offset: Number(seed), source: `numeric TEACODE_DEV_INSTANCE=${seed}` };
   }
 
   const offset = ((Hash.string(seed) >>> 0) % MAX_HASH_OFFSET) + 1;
-  return { offset, source: `hashed CHITAURI_DEV_INSTANCE=${seed}` };
+  return { offset, source: `hashed TEACODE_DEV_INSTANCE=${seed}` };
 }
 
 function resolveBaseDir(baseDir: string | undefined): Effect.Effect<string, never, Path.Path> {
@@ -113,7 +115,7 @@ function resolveBaseDir(baseDir: string | undefined): Effect.Effect<string, neve
       return path.resolve(configured);
     }
 
-    return yield* DEFAULT_CHITAURI_HOME;
+    return yield* DEFAULT_TEACODE_HOME;
   });
 }
 
@@ -155,57 +157,57 @@ export function createDevRunnerEnv({
 
     const output: NodeJS.ProcessEnv = {
       ...baseEnv,
-      CHITAURI_PORT: String(serverPort),
+      TEACODE_PORT: String(serverPort),
       PORT: String(webPort),
       ELECTRON_RENDERER_PORT: String(webPort),
       VITE_WS_URL: `ws://[::1]:${serverPort}`,
       VITE_DEV_SERVER_URL: devUrl?.toString() ?? `http://localhost:${webPort}`,
-      CHITAURI_HOME: resolvedBaseDir,
+      TEACODE_HOME: resolvedBaseDir,
     };
 
     if (host !== undefined) {
-      output.CHITAURI_HOST = host;
+      output.TEACODE_HOST = host;
     }
 
     const trimmedStateNamespace = stateNamespace?.trim();
     if (trimmedStateNamespace) {
-      output.CHITAURI_STATE_NAMESPACE = trimmedStateNamespace;
+      output.TEACODE_STATE_NAMESPACE = trimmedStateNamespace;
     } else {
-      delete output.CHITAURI_STATE_NAMESPACE;
+      delete output.TEACODE_STATE_NAMESPACE;
     }
 
     if (authToken !== undefined) {
-      output.CHITAURI_AUTH_TOKEN = authToken;
+      output.TEACODE_AUTH_TOKEN = authToken;
     } else {
-      delete output.CHITAURI_AUTH_TOKEN;
+      delete output.TEACODE_AUTH_TOKEN;
     }
 
     if (noBrowser !== undefined) {
-      output.CHITAURI_NO_BROWSER = noBrowser ? "1" : "0";
+      output.TEACODE_NO_BROWSER = noBrowser ? "1" : "0";
     } else {
-      delete output.CHITAURI_NO_BROWSER;
+      delete output.TEACODE_NO_BROWSER;
     }
 
     if (autoBootstrapProjectFromCwd !== undefined) {
-      output.CHITAURI_AUTO_BOOTSTRAP_PROJECT_FROM_CWD = autoBootstrapProjectFromCwd ? "1" : "0";
+      output.TEACODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD = autoBootstrapProjectFromCwd ? "1" : "0";
     } else {
-      delete output.CHITAURI_AUTO_BOOTSTRAP_PROJECT_FROM_CWD;
+      delete output.TEACODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD;
     }
 
     if (logWebSocketEvents !== undefined) {
-      output.CHITAURI_LOG_WS_EVENTS = logWebSocketEvents ? "1" : "0";
+      output.TEACODE_LOG_WS_EVENTS = logWebSocketEvents ? "1" : "0";
     } else {
-      delete output.CHITAURI_LOG_WS_EVENTS;
+      delete output.TEACODE_LOG_WS_EVENTS;
     }
 
     if (mode === "dev") {
-      output.CHITAURI_MODE = "web";
-      delete output.CHITAURI_DESKTOP_WS_URL;
+      output.TEACODE_MODE = "web";
+      delete output.TEACODE_DESKTOP_WS_URL;
     }
 
     if (mode === "dev:server" || mode === "dev:web") {
-      output.CHITAURI_MODE = "web";
-      delete output.CHITAURI_DESKTOP_WS_URL;
+      output.TEACODE_MODE = "web";
+      delete output.TEACODE_DESKTOP_WS_URL;
     }
 
     return output;
@@ -394,7 +396,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       Effect.mapError(
         (cause) =>
           new DevRunnerError({
-            message: "Failed to read CHITAURI_PORT_OFFSET/CHITAURI_DEV_INSTANCE configuration.",
+            message: "Failed to read TEACODE_PORT_OFFSET/TEACODE_DEV_INSTANCE configuration.",
             cause,
           }),
       ),
@@ -410,11 +412,11 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
     });
 
     const envOverrides = {
-      noBrowser: readOptionalBooleanEnv("CHITAURI_NO_BROWSER"),
+      noBrowser: readOptionalBooleanEnv("TEACODE_NO_BROWSER"),
       autoBootstrapProjectFromCwd: readOptionalBooleanEnv(
-        "CHITAURI_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
+        "TEACODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
       ),
-      logWebSocketEvents: readOptionalBooleanEnv("CHITAURI_LOG_WS_EVENTS"),
+      logWebSocketEvents: readOptionalBooleanEnv("TEACODE_LOG_WS_EVENTS"),
     };
 
     const { serverOffset, webOffset } = yield* resolveModePortOffsets({
@@ -452,7 +454,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
         : "";
 
     yield* Effect.logInfo(
-      `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.CHITAURI_PORT)} webPort=${String(env.PORT)} baseDir=${String(env.CHITAURI_HOME)}`,
+      `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.TEACODE_PORT)} webPort=${String(env.PORT)} baseDir=${String(env.TEACODE_HOME)}`,
     );
 
     if (input.dryRun) {
@@ -501,37 +503,37 @@ const devRunnerCli = Command.make("dev-runner", {
     Argument.withDescription("Development mode to run."),
   ),
   chitauriHome: Flag.string("home-dir").pipe(
-    Flag.withDescription("Base directory for all Chitauri data (equivalent to CHITAURI_HOME)."),
+    Flag.withDescription("Base directory for all TeaCode data (equivalent to TEACODE_HOME)."),
     Flag.withFallbackConfig(HomeConfig),
   ),
   authToken: Flag.string("auth-token").pipe(
-    Flag.withDescription("Auth token (forwards to CHITAURI_AUTH_TOKEN)."),
+    Flag.withDescription("Auth token (forwards to TEACODE_AUTH_TOKEN)."),
     Flag.withAlias("token"),
-    Flag.withFallbackConfig(optionalStringConfig("CHITAURI_AUTH_TOKEN")),
+    Flag.withFallbackConfig(optionalStringConfig("TEACODE_AUTH_TOKEN")),
   ),
   noBrowser: Flag.boolean("no-browser").pipe(
-    Flag.withDescription("Browser auto-open toggle (equivalent to CHITAURI_NO_BROWSER)."),
-    Flag.withFallbackConfig(optionalBooleanConfig("CHITAURI_NO_BROWSER")),
+    Flag.withDescription("Browser auto-open toggle (equivalent to TEACODE_NO_BROWSER)."),
+    Flag.withFallbackConfig(optionalBooleanConfig("TEACODE_NO_BROWSER")),
   ),
   autoBootstrapProjectFromCwd: Flag.boolean("auto-bootstrap-project-from-cwd").pipe(
     Flag.withDescription(
-      "Auto-bootstrap toggle (equivalent to CHITAURI_AUTO_BOOTSTRAP_PROJECT_FROM_CWD).",
+      "Auto-bootstrap toggle (equivalent to TEACODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD).",
     ),
-    Flag.withFallbackConfig(optionalBooleanConfig("CHITAURI_AUTO_BOOTSTRAP_PROJECT_FROM_CWD")),
+    Flag.withFallbackConfig(optionalBooleanConfig("TEACODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD")),
   ),
   logWebSocketEvents: Flag.boolean("log-websocket-events").pipe(
-    Flag.withDescription("WebSocket event logging toggle (equivalent to CHITAURI_LOG_WS_EVENTS)."),
+    Flag.withDescription("WebSocket event logging toggle (equivalent to TEACODE_LOG_WS_EVENTS)."),
     Flag.withAlias("log-ws-events"),
-    Flag.withFallbackConfig(optionalBooleanConfig("CHITAURI_LOG_WS_EVENTS")),
+    Flag.withFallbackConfig(optionalBooleanConfig("TEACODE_LOG_WS_EVENTS")),
   ),
   host: Flag.string("host").pipe(
-    Flag.withDescription("Server host/interface override (forwards to CHITAURI_HOST)."),
-    Flag.withFallbackConfig(optionalStringConfig("CHITAURI_HOST")),
+    Flag.withDescription("Server host/interface override (forwards to TEACODE_HOST)."),
+    Flag.withFallbackConfig(optionalStringConfig("TEACODE_HOST")),
   ),
   port: Flag.integer("port").pipe(
     Flag.withSchema(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 }))),
-    Flag.withDescription("Server port override (forwards to CHITAURI_PORT)."),
-    Flag.withFallbackConfig(optionalPortConfig("CHITAURI_PORT")),
+    Flag.withDescription("Server port override (forwards to TEACODE_PORT)."),
+    Flag.withFallbackConfig(optionalPortConfig("TEACODE_PORT")),
   ),
   devUrl: Flag.string("dev-url").pipe(
     Flag.withSchema(Schema.URLFromString),
@@ -540,10 +542,10 @@ const devRunnerCli = Command.make("dev-runner", {
   ),
   stateNamespace: Flag.string("state-namespace").pipe(
     Flag.withDescription(
-      "State-dir namespace under the home dir (forwards to CHITAURI_STATE_NAMESPACE). " +
+      "State-dir namespace under the home dir (forwards to TEACODE_STATE_NAMESPACE). " +
         "Use `userdata` to share the production desktop state instead of the isolated `dev` namespace.",
     ),
-    Flag.withFallbackConfig(optionalStringConfig("CHITAURI_STATE_NAMESPACE")),
+    Flag.withFallbackConfig(optionalStringConfig("TEACODE_STATE_NAMESPACE")),
   ),
   dryRun: Flag.boolean("dry-run").pipe(
     Flag.withDescription("Resolve mode/ports/env and print, but do not spawn turbo."),

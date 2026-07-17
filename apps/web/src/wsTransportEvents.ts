@@ -5,7 +5,7 @@
 
 export type WsTransportState = "connecting" | "open" | "closed" | "disposed";
 
-export const CHITAURI_WS_TRANSPORT_STATE_EVENT = "chitauri:ws-transport-state";
+export const CHITAURI_WS_TRANSPORT_STATE_EVENT = "teacode:ws-transport-state";
 
 export interface WsTransportStateEventDetail {
   state: WsTransportState;

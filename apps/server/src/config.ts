@@ -70,7 +70,8 @@ export const DEV_STATE_DIR_NAME = "dev";
  * By default the namespace tracks whether the UI is served from a Vite dev
  * server (`dev`) or a packaged build (`userdata`), so routine `bun dev`
  * experiments never pollute real desktop data. An explicit override
- * (`CHITAURI_STATE_NAMESPACE`) lets a dev build deliberately share the production
+ * (`TEACODE_STATE_NAMESPACE`, with legacy `CHITAURI_STATE_NAMESPACE` support) lets
+ * a dev build deliberately share the production
  * namespace so threads continue across both. The override must be a single safe
  * path segment; anything else (empty, separators, parent refs) is ignored and
  * the devUrl-derived default applies.
@@ -124,7 +125,7 @@ export function resolveDefaultChatWorkspaceRoot(input: {
   const homeDir = input.homeDir.trim();
   const platform = input.platform ?? process.platform;
   const pathApi = platform === "win32" ? pathWin32 : pathPosix;
-  return pathApi.join(homeDir, "Documents", "Chitauri");
+  return pathApi.join(homeDir, "Documents", "TeaCode");
 }
 
 export interface ResolvedWorkspaceRoots {

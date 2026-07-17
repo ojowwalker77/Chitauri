@@ -2,7 +2,10 @@
 // Purpose: Pins which browser origins can use local-data HTTP/WS surfaces.
 // Layer: Server utility tests
 
-import { DESKTOP_APP_CORS_ORIGIN } from "@t3tools/shared/desktopAppOrigin";
+import {
+  DESKTOP_APP_CORS_ORIGIN,
+  LEGACY_DESKTOP_APP_CORS_ORIGIN,
+} from "@t3tools/shared/desktopAppOrigin";
 import { describe, expect, it } from "vitest";
 
 import type { ServerConfigShape } from "./config";
@@ -35,6 +38,13 @@ describe("trustedOrigins", () => {
     expect(
       isTrustedAppOrigin({
         origin: DESKTOP_APP_CORS_ORIGIN,
+        requestOrigin: "http://127.0.0.1:58090",
+        config,
+      }),
+    ).toBe(true);
+    expect(
+      isTrustedAppOrigin({
+        origin: LEGACY_DESKTOP_APP_CORS_ORIGIN,
         requestOrigin: "http://127.0.0.1:58090",
         config,
       }),
@@ -84,6 +94,9 @@ describe("trustedOrigins", () => {
 
   it("normalizes desktop origins with trailing slashes", () => {
     expect(normalizeCorsOrigin(`${DESKTOP_APP_CORS_ORIGIN}/`)).toBe(DESKTOP_APP_CORS_ORIGIN);
+    expect(normalizeCorsOrigin(`${LEGACY_DESKTOP_APP_CORS_ORIGIN}/`)).toBe(
+      LEGACY_DESKTOP_APP_CORS_ORIGIN,
+    );
   });
 
   // The packaged renderer loads over a custom scheme, so its Origin never parses to a

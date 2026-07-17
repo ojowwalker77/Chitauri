@@ -13,12 +13,12 @@ import {
 
 it.layer(NodeServices.layer)("dev-runner", (it) => {
   describe("resolveOffset", () => {
-    it.effect("uses explicit CHITAURI_PORT_OFFSET when provided", () =>
+    it.effect("uses explicit TEACODE_PORT_OFFSET when provided", () =>
       Effect.sync(() => {
         const result = resolveOffset({ portOffset: 12, devInstance: undefined });
         assert.deepStrictEqual(result, {
           offset: 12,
-          source: "CHITAURI_PORT_OFFSET=12",
+          source: "TEACODE_PORT_OFFSET=12",
         });
       }),
     );
@@ -40,13 +40,13 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           }),
         );
 
-        assert.ok(error.includes("Invalid CHITAURI_PORT_OFFSET"));
+        assert.ok(error.includes("Invalid TEACODE_PORT_OFFSET"));
       }),
     );
   });
 
   describe("createDevRunnerEnv", () => {
-    it.effect("defaults CHITAURI_HOME to ~/.chitauri when not provided", () =>
+    it.effect("defaults TEACODE_HOME to ~/.teacode when not provided", () =>
       Effect.gen(function* () {
         const env = yield* createDevRunnerEnv({
           mode: "dev",
@@ -64,7 +64,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           stateNamespace: undefined,
         });
 
-        assert.equal(env.CHITAURI_HOME, resolve(homedir(), ".chitauri"));
+        assert.equal(env.TEACODE_HOME, resolve(homedir(), ".teacode"));
       }),
     );
 
@@ -86,13 +86,13 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           stateNamespace: undefined,
         });
 
-        assert.equal(env.CHITAURI_HOME, resolve("/tmp/custom-t3"));
-        assert.equal(env.CHITAURI_PORT, "4222");
+        assert.equal(env.TEACODE_HOME, resolve("/tmp/custom-t3"));
+        assert.equal(env.TEACODE_PORT, "4222");
         assert.equal(env.VITE_WS_URL, "ws://[::1]:4222");
-        assert.equal(env.CHITAURI_NO_BROWSER, "1");
-        assert.equal(env.CHITAURI_AUTO_BOOTSTRAP_PROJECT_FROM_CWD, "0");
-        assert.equal(env.CHITAURI_LOG_WS_EVENTS, "1");
-        assert.equal(env.CHITAURI_HOST, "0.0.0.0");
+        assert.equal(env.TEACODE_NO_BROWSER, "1");
+        assert.equal(env.TEACODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD, "0");
+        assert.equal(env.TEACODE_LOG_WS_EVENTS, "1");
+        assert.equal(env.TEACODE_HOST, "0.0.0.0");
         assert.equal(env.VITE_DEV_SERVER_URL, "http://localhost:7331/");
       }),
     );
@@ -102,7 +102,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         const env = yield* createDevRunnerEnv({
           mode: "dev",
           baseEnv: {
-            CHITAURI_LOG_WS_EVENTS: "keep-me-out",
+            TEACODE_LOG_WS_EVENTS: "keep-me-out",
           },
           serverOffset: 0,
           webOffset: 0,
@@ -117,8 +117,8 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           stateNamespace: undefined,
         });
 
-        assert.equal(env.CHITAURI_MODE, "web");
-        assert.equal(env.CHITAURI_LOG_WS_EVENTS, undefined);
+        assert.equal(env.TEACODE_MODE, "web");
+        assert.equal(env.TEACODE_LOG_WS_EVENTS, undefined);
       }),
     );
 
@@ -140,7 +140,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           stateNamespace: undefined,
         });
 
-        assert.equal(env.CHITAURI_LOG_WS_EVENTS, "0");
+        assert.equal(env.TEACODE_LOG_WS_EVENTS, "0");
       }),
     );
 
@@ -162,11 +162,11 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           stateNamespace: undefined,
         });
 
-        assert.equal(env.CHITAURI_HOME, resolve("/tmp/my-t3"));
+        assert.equal(env.TEACODE_HOME, resolve("/tmp/my-t3"));
       }),
     );
 
-    it.effect("forwards an explicit state namespace to CHITAURI_STATE_NAMESPACE", () =>
+    it.effect("forwards an explicit state namespace to TEACODE_STATE_NAMESPACE", () =>
       Effect.gen(function* () {
         const env = yield* createDevRunnerEnv({
           mode: "dev:desktop",
@@ -184,7 +184,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           stateNamespace: "userdata",
         });
 
-        assert.equal(env.CHITAURI_STATE_NAMESPACE, "userdata");
+        assert.equal(env.TEACODE_STATE_NAMESPACE, "userdata");
       }),
     );
 
@@ -192,7 +192,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
       Effect.gen(function* () {
         const env = yield* createDevRunnerEnv({
           mode: "dev:desktop",
-          baseEnv: { CHITAURI_STATE_NAMESPACE: "leak" },
+          baseEnv: { TEACODE_STATE_NAMESPACE: "leak" },
           serverOffset: 0,
           webOffset: 0,
           chitauriHome: undefined,
@@ -206,7 +206,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           stateNamespace: undefined,
         });
 
-        assert.equal(env.CHITAURI_STATE_NAMESPACE, undefined);
+        assert.equal(env.TEACODE_STATE_NAMESPACE, undefined);
       }),
     );
   });

@@ -280,7 +280,6 @@ import {
   resolveProjectEmptyState,
   resolveSettingsBackTarget,
   type SettingsBackTarget,
-  resolveSidebarBranchLabel,
   resolveSidebarNewThreadEnvMode,
   resolveThreadHoverCardMetadata,
   resolveThreadRowClassName,
@@ -3813,7 +3812,7 @@ export default function Sidebar() {
   }, [discoveredScriptTargetsByProjectId, standardProjects]);
   projectRunCommandByProjectIdRef.current = projectRunCommandByProjectId;
   // Keep manual server attribution alive without repeating the expensive
-  // port/process scan while no Chitauri-owned run needs near-real-time status.
+  // port/process scan while no TeaCode-owned run needs near-real-time status.
   const hasActiveProjectRun = useMemo(
     () => Object.keys(projectRunsByProjectId).length > 0,
     [projectRunsByProjectId],
@@ -3827,7 +3826,7 @@ export default function Sidebar() {
   const projectRunServerByProjectId = useMemo(() => {
     const servers = projectRunLocalServersQuery.data?.servers ?? [];
     const serverByProjectId = new Map<ProjectId, ServerLocalServerProcess>();
-    // 1. Authoritative: Chitauri-tracked runs matched by pid/ppid.
+    // 1. Authoritative: TeaCode-tracked runs matched by pid/ppid.
     for (const run of Object.values(projectRunsByProjectId)) {
       const server = findTrackedProjectRunServer(run, servers);
       if (server) {
@@ -3835,7 +3834,7 @@ export default function Sidebar() {
       }
     }
     // 2. Fallback: attribute remaining servers to a project by cwd, so dev
-    //    servers started outside Chitauri still light up the running indicator.
+    //    servers started outside TeaCode still light up the running indicator.
     for (const server of servers) {
       if (!server.cwd) {
         continue;
@@ -4883,8 +4882,6 @@ export default function Sidebar() {
     const threadJumpLabel = visibleThreadJumpLabelByThreadId.get(thread.id) ?? null;
     const threadJumpLabelParts =
       visibleThreadJumpLabelPartsByThreadId.get(thread.id) ?? EMPTY_SHORTCUT_PARTS;
-    const treeBranchLabel = isProjectTreeThread ? resolveSidebarBranchLabel(thread.branch) : null;
-    const showStatusLabel = Boolean(threadStatus) && !threadJumpLabel && isProjectTreeThread;
     // Untouched draft chat threads are intentionally text-only until they get a real title.
     const showThreadProviderAvatar = !isGenericChatThreadTitle(thread.title);
     const childCountLabel = `${childCount} ${pluralize(childCount, "subagent")}`;
@@ -4928,14 +4925,15 @@ export default function Sidebar() {
                     isActive,
                     isSelected,
                   }),
-                  isProjectTreeThread && "h-auto min-h-10 py-1",
+                  isProjectTreeThread && "h-10 min-h-10 py-0",
                   leadingPrStatus ? "pl-8" : topLevel && !isSubagentThread ? "pl-2" : null,
                   isSubagentThread
                     ? "pr-7.5"
                     : resolveThreadRowTrailingReserveClass({
-                        metaChipCount: showCompactMeta ? rightMetaChips.length : 0,
+                        metaChipCount:
+                          showCompactMeta && !isProjectTreeThread ? rightMetaChips.length : 0,
                         hasTrailingGlyph: Boolean(threadStatus) || Boolean(threadJumpLabel),
-                        hasStatusLabel: showStatusLabel,
+                        hasStatusLabel: false,
                       }),
                 )}
                 draggable
@@ -5003,22 +5001,38 @@ export default function Sidebar() {
                 />
               </span>
             ) : threadEntryPoint === "terminal" ? (
-              <SidebarGlyph icon={TerminalIcon} variant="chrome" />
+              isProjectTreeThread ? (
+                <span className="inline-flex size-[26px] shrink-0 items-center justify-center rounded-full bg-muted/35 text-muted-foreground/85">
+                  <SidebarGlyph icon={TerminalIcon} variant="chrome" />
+                </span>
+              ) : (
+                <SidebarGlyph icon={TerminalIcon} variant="chrome" />
+              )
             ) : showThreadProviderAvatar ? (
-              <ProviderAvatarWithTerminal
-                provider={thread.session?.provider ?? thread.modelSelection.provider}
-                handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
-                handoffTooltip={handoffBadgeLabel}
-                terminalStatus={terminalStatus}
-                terminalCount={terminalCount}
-              />
+              isProjectTreeThread ? (
+                <span className="inline-flex size-[26px] shrink-0 items-center justify-center rounded-full bg-muted/35 text-muted-foreground/85">
+                  <ProviderAvatarWithTerminal
+                    provider={thread.session?.provider ?? thread.modelSelection.provider}
+                    handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
+                    handoffTooltip={handoffBadgeLabel}
+                    terminalStatus={terminalStatus}
+                    terminalCount={terminalCount}
+                  />
+                </span>
+              ) : (
+                <ProviderAvatarWithTerminal
+                  provider={thread.session?.provider ?? thread.modelSelection.provider}
+                  handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
+                  handoffTooltip={handoffBadgeLabel}
+                  terminalStatus={terminalStatus}
+                  terminalCount={terminalCount}
+                />
+              )
             ) : null}
             <div
               className={cn(
-                "min-w-0 flex-1 text-left",
-                isProjectTreeThread
-                  ? "grid gap-0.5"
-                  : cn("flex items-center", isSubagentThread ? "gap-[5px]" : "gap-1.5"),
+                "flex min-w-0 flex-1 items-center text-left",
+                isSubagentThread ? "gap-[5px]" : "gap-1.5",
               )}
             >
               <div className="flex min-w-0 items-center gap-1.5">
@@ -5048,11 +5062,6 @@ export default function Sidebar() {
                   )}
                 </span>
               </div>
-              {treeBranchLabel ? (
-                <div className="flex min-w-0 items-center leading-none">
-                  <SidebarTreeBranchChip branch={thread.branch} highlighted={isHighlighted} />
-                </div>
-              ) : null}
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-1.5 pr-1">
               {canToggleSubagents ? (
@@ -5099,9 +5108,9 @@ export default function Sidebar() {
                 isSubagentThread,
                 threadJumpLabel,
                 threadJumpLabelParts,
-                rightMetaChips: showCompactMeta ? rightMetaChips : [],
+                rightMetaChips: showCompactMeta && !isProjectTreeThread ? rightMetaChips : [],
                 threadStatus,
-                statusPresentation: showStatusLabel ? "label" : "glyph",
+                statusPresentation: "glyph",
                 timestampToneClassName: isSubagentThread
                   ? isHighlighted
                     ? "text-foreground/38 dark:text-foreground/46"
@@ -5154,8 +5163,8 @@ export default function Sidebar() {
     const projectFolderIconClassName = isProjectPinned ? "opacity-0" : undefined;
     const projectRun = projectRunsByProjectId[project.id] ?? null;
     const projectRunServer = projectRunServerByProjectId.get(project.id) ?? null;
-    // A project reads as "running" when Chitauri tracks a run for it or when a
-    // local server (possibly started outside Chitauri) is attributed by cwd.
+    // A project reads as "running" when TeaCode tracks a run for it or when a
+    // local server (possibly started outside TeaCode) is attributed by cwd.
     const isProjectRunning = projectRun !== null || projectRunServer !== null;
     // The "open dev server" affordance now lives in the project context menu, so
     // the hover toolbar always reserves space for the three thread actions. The
@@ -5183,7 +5192,7 @@ export default function Sidebar() {
               size="sm"
               className={cn(
                 SIDEBAR_HEADER_ROW_CLASS_NAME,
-                "h-auto min-h-10 py-1 hover:bg-[var(--sidebar-accent)] group-hover/project-header:bg-[var(--sidebar-accent)] group-hover/project-header:text-[var(--sidebar-accent-foreground)]",
+                "h-10 min-h-10 py-0 hover:bg-[var(--sidebar-accent)] group-hover/project-header:bg-[var(--sidebar-accent)] group-hover/project-header:text-[var(--sidebar-accent-foreground)]",
                 isManualProjectSorting ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
               )}
               {...(isManualProjectSorting && dragHandleProps ? dragHandleProps.attributes : {})}
@@ -5236,10 +5245,9 @@ export default function Sidebar() {
                   ) : null}
                   {isProjectRunning ? <ProjectRunIndicatorDot /> : null}
                   {projectActivityRollup ? (
-                    <SidebarTreeStatusPill
-                      status={projectActivityRollup.status}
-                      label={projectActivityRollup.label}
-                    />
+                    <span title={projectActivityRollup.label}>
+                      <SidebarStatusTrailingGlyph status={projectActivityRollup.status} />
+                    </span>
                   ) : null}
                 </span>
               ) : null}
@@ -5832,7 +5840,7 @@ export default function Sidebar() {
             toastManager.add({
               type: "info",
               title: "Preparing update",
-              description: `Chitauri is preparing version ${nextState.availableVersion ?? "available"} in the background.`,
+              description: `TeaCode is preparing version ${nextState.availableVersion ?? "available"} in the background.`,
             });
             return;
           }
@@ -5841,7 +5849,7 @@ export default function Sidebar() {
             toastManager.add({
               type: "info",
               title: "Preparing update",
-              description: "Chitauri is downloading the update in the background.",
+              description: "TeaCode is downloading the update in the background.",
             });
             return;
           }
@@ -5859,7 +5867,7 @@ export default function Sidebar() {
             toastManager.add({
               type: "info",
               title: "You're up to date",
-              description: `Chitauri ${nextState.currentVersion} is already the newest version.`,
+              description: `TeaCode ${nextState.currentVersion} is already the newest version.`,
             });
             return;
           }

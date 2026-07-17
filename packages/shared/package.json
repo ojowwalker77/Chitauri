@@ -36,6 +36,14 @@
       "types": "./src/desktopAppOrigin.ts",
       "import": "./src/desktopAppOrigin.ts"
     },
+    "./productIdentity": {
+      "types": "./src/productIdentity.ts",
+      "import": "./src/productIdentity.ts"
+    },
+    "./teacodeEnvironmentBootstrap": {
+      "types": "./src/teacodeEnvironmentBootstrap.ts",
+      "import": "./src/teacodeEnvironmentBootstrap.ts"
+    },
     "./desktopChrome": {
       "types": "./src/desktopChrome.ts",
       "import": "./src/desktopChrome.ts"
