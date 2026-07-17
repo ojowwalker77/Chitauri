@@ -7,7 +7,6 @@ import {
   ApprovalRequestId,
   CommandId,
   type ContextMenuItem,
-  DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
   EventId,
   ORCHESTRATION_WS_CHANNELS,
   ORCHESTRATION_WS_METHODS,
@@ -288,6 +287,7 @@ describe("wsNativeApi", () => {
         enableAssistantStreaming: true,
         enableProviderUpdateChecks: true,
         defaultThreadEnvMode: "local",
+        defaultRuntimeMode: "full-access",
         addProjectBaseDirectory: "",
         textGenerationModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
         providers: {
@@ -313,7 +313,6 @@ describe("wsNativeApi", () => {
           pi: { enabled: true, binaryPath: "pi", agentDir: "", customModels: [] },
         },
         skills: { disabled: [] },
-        orchestrator: DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
       },
     } as const;
     emitPush(WS_CHANNELS.serverSettingsUpdated, payload);
@@ -324,32 +323,6 @@ describe("wsNativeApi", () => {
     const lateListener = vi.fn();
     onServerSettingsUpdated(lateListener);
     expect(lateListener).toHaveBeenCalledTimes(1);
-    expect(lateListener).toHaveBeenCalledWith(payload);
-  });
-
-  it("delivers and caches orchestrator seat-health updates", async () => {
-    const { createWsNativeApi, onServerOrchestratorSeatStatusesUpdated } =
-      await import("./wsNativeApi");
-
-    createWsNativeApi();
-    const listener = vi.fn();
-    onServerOrchestratorSeatStatusesUpdated(listener);
-
-    const payload = {
-      seats: [
-        {
-          threadId: ThreadId.makeUnsafe("thread-seat"),
-          status: "connected",
-          reason: null,
-          updatedAt: "2026-07-17T12:00:00.000Z",
-        },
-      ],
-    } as const;
-    emitPush(WS_CHANNELS.serverOrchestratorSeatStatusesUpdated, payload);
-
-    expect(listener).toHaveBeenCalledWith(payload);
-    const lateListener = vi.fn();
-    onServerOrchestratorSeatStatusesUpdated(lateListener);
     expect(lateListener).toHaveBeenCalledWith(payload);
   });
 

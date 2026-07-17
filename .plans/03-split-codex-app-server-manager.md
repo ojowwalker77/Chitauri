@@ -25,7 +25,7 @@ Split `CodexAppServerManager` into smaller modules with clear responsibilities.
    - `codex/jsonrpcRouter.ts`
    - `codex/sessionState.ts`
    - `codex/parsing.ts`
-2. Keep `CodexAppServerManager` as thin orchestrator/facade.
+2. Keep `CodexAppServerManager` as a thin facade.
 3. Move pure helpers (`classifyCodexStderrLine`, route parsing) into unit-testable files.
 4. Add targeted unit tests for:
    - Message classification

@@ -718,20 +718,20 @@ describe("startSession", () => {
     expect(cwd).toContain(`${path.sep}chitauri-codex-workspaces${path.sep}thread-1`);
   });
 
-  it("maps orchestrator MCP servers to official Codex per-thread config", () => {
+  it("maps HTTP MCP servers to official Codex per-thread config", () => {
     expect(
       buildCodexMcpConfig([
         {
-          name: "chitauri_orchestrator",
-          url: "http://127.0.0.1:5173/api/orchestrator/mcp",
+          name: "project_tools",
+          url: "http://127.0.0.1:5173/api/mcp",
           headers: { Authorization: "Bearer seat-token" },
           toolTimeoutMs: 3_600_000,
         },
       ]),
     ).toEqual({
       mcp_servers: {
-        chitauri_orchestrator: {
-          url: "http://127.0.0.1:5173/api/orchestrator/mcp",
+        project_tools: {
+          url: "http://127.0.0.1:5173/api/mcp",
           http_headers: { Authorization: "Bearer seat-token" },
           tool_timeout_sec: 3_600,
           required: true,
@@ -1018,31 +1018,6 @@ describe("sendTurn", () => {
         },
       },
     });
-  });
-
-  it("injects the orchestrator persona on every turn even without an interaction mode", async () => {
-    const { manager, context, sendRequest } = createSendTurnHarness();
-    Object.assign(context, {
-      orchestratorPersona: "<orchestrator_seat>delegate first</orchestrator_seat>",
-    });
-
-    await manager.sendTurn({
-      threadId: asThreadId("thread_1"),
-      input: "Implement the requested UI change",
-    });
-
-    expect(sendRequest).toHaveBeenCalledWith(
-      context,
-      "turn/start",
-      expect.objectContaining({
-        collaborationMode: {
-          mode: "default",
-          settings: expect.objectContaining({
-            developer_instructions: `${CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS}\n\n<orchestrator_seat>delegate first</orchestrator_seat>`,
-          }),
-        },
-      }),
-    );
   });
 
   it("keeps the session model when interaction mode is set without an explicit model", async () => {

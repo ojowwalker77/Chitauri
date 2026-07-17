@@ -51,7 +51,6 @@ import {
 import { resolveTextGenerationInputForSelection } from "../../git/textGenerationSelection.ts";
 import { ProviderService } from "../../provider/Services/ProviderService.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
-import { OrchestratorControlPlane } from "../../orchestrator/Services/OrchestratorControlPlane.ts";
 import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import {
   buildPriorTranscriptBootstrapText,
@@ -253,7 +252,6 @@ const make = Effect.gen(function* () {
   const git = yield* GitCore;
   const textGeneration = yield* TextGeneration;
   const serverSettings = yield* ServerSettingsService;
-  const orchestratorControlPlane = yield* OrchestratorControlPlane;
   const handledTurnStartKeys = yield* Cache.make<string, true>({
     capacity: HANDLED_TURN_START_KEY_MAX,
     timeToLive: HANDLED_TURN_START_KEY_TTL,
@@ -708,23 +706,6 @@ const make = Effect.gen(function* () {
       readonly provider?: ProviderKind;
     }) =>
       Effect.gen(function* () {
-        // Seat wiring must never take the user's turn down with it: on any
-        // control-plane failure the session starts without delegation tools
-        // and the seat is marked degraded for the UI instead.
-        const seatStartConfig = thread.orchestratorMode
-          ? yield* orchestratorControlPlane.getSeatStartConfig(threadId).pipe(
-              Effect.catch((cause) => {
-                const detail = cause instanceof Error ? cause.message : String(cause);
-                return Effect.logWarning(
-                  "orchestrator seat start config unavailable; starting session without delegation tools",
-                  { threadId, detail },
-                ).pipe(
-                  Effect.andThen(orchestratorControlPlane.markSeatDegraded(threadId, detail)),
-                  Effect.as(undefined),
-                );
-              }),
-            )
-          : undefined;
         return yield* providerService.startSession(threadId, {
           threadId,
           ...(preferredProvider ? { provider: preferredProvider } : {}),
@@ -732,12 +713,6 @@ const make = Effect.gen(function* () {
           modelSelection: desiredModelSelection,
           ...(options?.providerOptions !== undefined
             ? { providerOptions: options.providerOptions }
-            : {}),
-          ...(seatStartConfig
-            ? {
-                mcpServers: [seatStartConfig.mcpServer],
-                orchestratorPersona: seatStartConfig.persona,
-              }
             : {}),
           ...(input?.resumeCursor !== undefined ? { resumeCursor: input.resumeCursor } : {}),
           runtimeMode: desiredRuntimeMode,

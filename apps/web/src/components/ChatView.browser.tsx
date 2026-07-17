@@ -3,7 +3,6 @@ import "../index.css";
 
 import {
   AutomationId,
-  DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
   type AutomationCreateInput,
   type AutomationDefinition,
   EventId,
@@ -46,7 +45,6 @@ import {
   sendEffectRpcChunk,
   sendEffectRpcExit,
 } from "../test/effectRpcWebSocketMock";
-import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useTerminalStateStore } from "../terminalStateStore";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
 import { estimateTimelineMessageHeight } from "./timelineHeight";
@@ -1096,7 +1094,6 @@ const worker = setupWorker(
       if (
         method === WS_METHODS.subscribeServerProviderStatuses ||
         method === WS_METHODS.subscribeServerSettings ||
-        method === WS_METHODS.subscribeServerOrchestratorSeatStatuses ||
         method === WS_METHODS.subscribeTerminalEvents ||
         method === WS_METHODS.subscribeOrchestrationDomainEvents
       ) {
@@ -1568,9 +1565,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
       threads: [],
       sidebarThreadSummaryById: {},
       threadsHydrated: false,
-    });
-    useTemporaryThreadStore.setState({
-      temporaryThreadIds: {},
     });
     useTerminalStateStore.setState({
       terminalStateByThreadId: {},
@@ -3679,266 +3673,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("defaults a new chat draft to Orchestrator and creates the allowed seat on first send", async () => {
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-orchestrator-default-test" as MessageId,
-        targetText: "orchestrator default test",
-      }),
-    });
-
-    try {
-      await page.getByTestId("new-thread-button").click();
-      const newThreadPath = await waitForURL(
-        mounted.router,
-        (path) => UUID_ROUTE_RE.test(path),
-        "Route should have changed to a new orchestrator draft thread UUID.",
-      );
-      const newThreadId = newThreadPath.slice(1) as ThreadId;
-
-      const modeTrigger = page.getByTestId("composer-thread-mode-trigger");
-      await expect.element(modeTrigger).toHaveTextContent("Orchestrator");
-      await expect.element(page.getByTestId("orchestrator-onboarding")).not.toBeInTheDocument();
-
-      useComposerDraftStore.getState().setPrompt(newThreadId, "Coordinate this change");
-      const composerEditor = await waitForComposerEditor();
-      await vi.waitFor(() => {
-        expect(composerEditor.textContent ?? "").toContain("Coordinate this change");
-      });
-      const sendButton = await waitForSendButton();
-      expect(sendButton.disabled).toBe(false);
-      await sendButton.click();
-
-      await vi.waitFor(
-        () => {
-          const createCommand = wsRequests
-            .map(readDispatchedCommand)
-            .find(
-              (command) => command?.type === "thread.create" && command.threadId === newThreadId,
-            );
-          expect(createCommand).toMatchObject({
-            orchestratorMode: true,
-            modelSelection: {
-              provider: "codex",
-              model: "gpt-5.6-sol",
-            },
-          });
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("lets a new chat draft opt into Single Agent before creating the thread", async () => {
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-single-agent-picker-test" as MessageId,
-        targetText: "single agent picker test",
-      }),
-    });
-
-    try {
-      await page.getByTestId("new-thread-button").click();
-      const newThreadPath = await waitForURL(
-        mounted.router,
-        (path) => UUID_ROUTE_RE.test(path),
-        "Route should have changed to a new single-agent draft thread UUID.",
-      );
-      const newThreadId = newThreadPath.slice(1) as ThreadId;
-
-      await page.getByTestId("composer-thread-mode-trigger").click();
-      await page.getByTestId("composer-thread-mode-single-agent").click();
-      await vi.waitFor(() => {
-        expect(
-          useComposerDraftStore.getState().draftsByThreadId[newThreadId]?.orchestratorMode,
-        ).toBe(false);
-      });
-      await expect
-        .element(page.getByTestId("composer-thread-mode-trigger"))
-        .toHaveTextContent("Single Agent");
-
-      useComposerDraftStore.getState().setPrompt(newThreadId, "Handle this directly");
-      const composerEditor = await waitForComposerEditor();
-      await vi.waitFor(() => {
-        expect(composerEditor.textContent ?? "").toContain("Handle this directly");
-      });
-      const sendButton = await waitForSendButton();
-      expect(sendButton.disabled).toBe(false);
-      await sendButton.click();
-
-      await vi.waitFor(
-        () => {
-          const createCommand = wsRequests
-            .map(readDispatchedCommand)
-            .find(
-              (command) => command?.type === "thread.create" && command.threadId === newThreadId,
-            );
-          expect(createCommand).toMatchObject({
-            orchestratorMode: false,
-            modelSelection: {
-              provider: "codex",
-              model: "gpt-5",
-            },
-          });
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("changes an existing thread to Orchestrator without creating duplicate server threads", async () => {
-    const snapshot = createSnapshotForTargetUser({
-      targetMessageId: "msg-user-orchestrator-transition-test" as MessageId,
-      targetText: "orchestrator transition test",
-    });
-    const sourceThread = snapshot.threads[0]!;
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: {
-        ...snapshot,
-        threads: [
-          {
-            ...sourceThread,
-            envMode: "worktree",
-            branch: "feature/orchestrator-source",
-            worktreePath: "/repo/.worktrees/orchestrator-source",
-            runtimeMode: "approval-required",
-            interactionMode: "plan",
-            lastKnownPr: null,
-          },
-        ],
-      },
-    });
-
-    try {
-      useComposerDraftStore.getState().setPrompt(THREAD_ID, "Keep this unsent draft");
-      const modeTrigger = page.getByTestId("composer-thread-mode-trigger");
-      await expect.element(modeTrigger).toHaveTextContent("Single Agent");
-      await modeTrigger.click();
-      await page.getByTestId("composer-thread-mode-orchestrator").click();
-
-      const nextThreadPath = await waitForURL(
-        mounted.router,
-        (path) => path !== `/${THREAD_ID}` && UUID_ROUTE_RE.test(path),
-        "Mode change should navigate to a fresh local draft.",
-      );
-      const nextThreadId = nextThreadPath.slice(1) as ThreadId;
-
-      expect(useComposerDraftStore.getState().draftsByThreadId[nextThreadId]).toMatchObject({
-        prompt: "Keep this unsent draft",
-        orchestratorMode: true,
-      });
-      expect(useComposerDraftStore.getState().getDraftThread(nextThreadId)).toMatchObject({
-        envMode: "worktree",
-        branch: "feature/orchestrator-source",
-        worktreePath: "/repo/.worktrees/orchestrator-source",
-        runtimeMode: "approval-required",
-        interactionMode: "plan",
-        lastKnownPr: null,
-      });
-      expect(
-        wsRequests.some((request) => readDispatchedCommand(request)?.type === "thread.create"),
-      ).toBe(false);
-
-      const sendButton = await waitForSendButton();
-      expect(sendButton.disabled).toBe(false);
-      await sendButton.click();
-      await vi.waitFor(
-        () => {
-          const createCommand = wsRequests
-            .map(readDispatchedCommand)
-            .find(
-              (command) => command?.type === "thread.create" && command.threadId === nextThreadId,
-            );
-          expect(createCommand).toMatchObject({
-            orchestratorMode: true,
-            envMode: "worktree",
-            branch: "feature/orchestrator-source",
-            worktreePath: "/repo/.worktrees/orchestrator-source",
-            runtimeMode: "approval-required",
-            interactionMode: "plan",
-            lastKnownPr: null,
-          });
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("keeps an existing Orchestrator seat on its persisted provider and model", async () => {
-    localStorage.setItem(
-      "chitauri:app-settings:v1",
-      JSON.stringify({
-        orchestratorRoutingPolicy: {
-          ...DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
-          seatModels: [{ provider: "claudeAgent", model: "claude-fable-5" }],
-        },
-      }),
-    );
-    const snapshot = createSnapshotForTargetUser({
-      targetMessageId: "msg-user-orchestrator-persisted-seat-test" as MessageId,
-      targetText: "orchestrator persisted seat test",
-    });
-    const sourceThread = snapshot.threads[0]!;
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: {
-        ...snapshot,
-        threads: [
-          {
-            ...sourceThread,
-            orchestratorMode: true,
-            modelSelection: { provider: "codex", model: "gpt-5.6-sol" },
-          },
-        ],
-      },
-    });
-
-    try {
-      await expect
-        .element(page.getByTestId("composer-thread-mode-trigger"))
-        .toHaveTextContent("Orchestrator");
-      useComposerDraftStore.getState().setPrompt(THREAD_ID, "Continue with the current seat");
-      const sendButton = await waitForSendButton();
-      expect(sendButton.disabled).toBe(false);
-      await sendButton.click();
-
-      await vi.waitFor(
-        () => {
-          const turnCommand = wsRequests
-            .map(readDispatchedCommand)
-            .find((command) => command?.type === "thread.turn.start");
-          expect(turnCommand).toMatchObject({
-            threadId: THREAD_ID,
-            modelSelection: { provider: "codex", model: "gpt-5.6-sol" },
-          });
-          const providerSwitch = wsRequests
-            .map(readDispatchedCommand)
-            .find(
-              (command) =>
-                command?.type === "thread.meta.update" &&
-                typeof command.modelSelection === "object" &&
-                command.modelSelection !== null &&
-                "provider" in command.modelSelection &&
-                command.modelSelection.provider === "claudeAgent",
-            );
-          expect(providerSwitch).toBeUndefined();
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
   it("offers New worktree from an empty draft thread", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
@@ -4503,7 +4237,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           activeProvider: "claudeAgent",
           runtimeMode: null,
           interactionMode: null,
-          orchestratorMode: null,
         },
       },
       draftThreadsByThreadId: {

@@ -28,7 +28,6 @@ import {
   Minimize2,
   PluginIcon,
   SkillCubeIcon,
-  TemporaryThreadIcon,
   TerminalIcon,
   WorktreeIcon,
 } from "~/lib/icons";

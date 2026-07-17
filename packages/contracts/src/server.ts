@@ -339,20 +339,6 @@ export const ServerSettingsUpdatedPayload = Schema.Struct({
 });
 export type ServerSettingsUpdatedPayload = typeof ServerSettingsUpdatedPayload.Type;
 
-export const OrchestratorSeatRuntimeStatus = Schema.Struct({
-  threadId: ThreadId,
-  status: Schema.Literals(["pending", "connected", "degraded"]),
-  reason: Schema.NullOr(Schema.String),
-  updatedAt: IsoDateTime,
-});
-export type OrchestratorSeatRuntimeStatus = typeof OrchestratorSeatRuntimeStatus.Type;
-
-export const ServerOrchestratorSeatStatusesUpdatedPayload = Schema.Struct({
-  seats: Schema.Array(OrchestratorSeatRuntimeStatus),
-});
-export type ServerOrchestratorSeatStatusesUpdatedPayload =
-  typeof ServerOrchestratorSeatStatusesUpdatedPayload.Type;
-
 export const ServerLifecycleWelcomePayload = Schema.Struct({
   cwd: TrimmedNonEmptyString,
   homeDir: Schema.optional(TrimmedNonEmptyString),

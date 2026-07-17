@@ -17,7 +17,6 @@ import {
   type ServerConfigStreamEvent,
   type ServerDiagnosticsResult,
   type ServerLifecycleStreamEvent,
-  type ServerOrchestratorSeatStatusesUpdatedPayload,
 } from "@t3tools/contracts";
 import { clamp } from "effect/Number";
 import { Effect, FileSystem, Layer, Option, Path, Queue, Schema, Stream } from "effect";
@@ -49,7 +48,6 @@ import { makeImportThreadHandler } from "./orchestration/importThreadRoute";
 import { makeListImportableDesktopThreadsHandler } from "./orchestration/listImportableDesktopThreadsRoute";
 import { OrchestrationEngineService } from "./orchestration/Services/OrchestrationEngine";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
-import { OrchestratorControlPlane } from "./orchestrator/Services/OrchestratorControlPlane";
 import { ProviderDiscoveryService } from "./provider/Services/ProviderDiscoveryService";
 import { discoverSkillsCatalog, chitauriSkillsDir } from "./provider/skillsCatalog";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
@@ -365,7 +363,6 @@ export const makeWsRpcLayer = () =>
       const keybindings = yield* Keybindings;
       const open = yield* Open;
       const orchestrationEngine = yield* OrchestrationEngineService;
-      const orchestratorControlPlane = yield* OrchestratorControlPlane;
       const path = yield* Path.Path;
       const profileStatsQuery = yield* ProfileStatsQuery;
       const projectionReadModelQuery = yield* ProjectionSnapshotQuery;
@@ -1423,23 +1420,6 @@ export const makeWsRpcLayer = () =>
               onDroppedEvents: failLiveUiStreamForSnapshotResync,
             }).pipe(Stream.map((settings) => ({ settings }))),
           ).pipe(Stream.mapError((cause) => toWsRpcError(cause, "Server settings stream failed"))),
-        [WS_METHODS.subscribeServerOrchestratorSeatStatuses]: () =>
-          // Subscribe before reading the snapshot: a provider can complete its
-          // MCP handshake while this stream is being established, and that
-          // transition must not disappear in the snapshot-to-live handoff.
-          Stream.callback((queue) =>
-            Effect.gen(function* () {
-              const unsubscribe = orchestratorControlPlane.subscribeSeatStatus((seat) => {
-                Effect.runFork(Queue.offer(queue, { seats: [seat] }).pipe(Effect.asVoid));
-              });
-              const seats = yield* orchestratorControlPlane.getSeatRuntimeStatuses;
-              yield* Queue.offer(queue, {
-                seats,
-              } satisfies ServerOrchestratorSeatStatusesUpdatedPayload);
-              yield* Effect.addFinalizer(() => Effect.sync(unsubscribe));
-            }),
-          ),
-
         [WS_METHODS.providerGetComposerCapabilities]: (input) =>
           rpcEffect(
             providerDiscoveryService.getComposerCapabilities(input),

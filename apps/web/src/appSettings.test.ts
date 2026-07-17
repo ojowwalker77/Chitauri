@@ -674,6 +674,7 @@ describe("AppSettingsSchema", () => {
       codexHomePath: "",
       grokBinaryPath: "",
       defaultThreadEnvMode: "local",
+      defaultRuntimeMode: "full-access",
       taskListDisplayMode: DEFAULT_TASK_LIST_DISPLAY_MODE,
       confirmThreadDelete: false,
       confirmTerminalTabClose: true,

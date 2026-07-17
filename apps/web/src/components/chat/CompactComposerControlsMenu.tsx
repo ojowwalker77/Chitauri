@@ -1,4 +1,4 @@
-import { ProviderInteractionMode, RuntimeMode } from "@t3tools/contracts";
+import { type ProviderInteractionMode } from "@t3tools/contracts";
 import { memo, type ReactNode } from "react";
 import { EllipsisIcon, ListTodoIcon } from "~/lib/icons";
 import { Button } from "../ui/button";
@@ -18,11 +18,9 @@ export const CompactComposerControlsMenu = memo(function CompactComposerControls
   activePlan: boolean;
   interactionMode: ProviderInteractionMode;
   planSidebarOpen: boolean;
-  runtimeMode: RuntimeMode;
   traitsMenuContent?: ReactNode;
   onToggleInteractionMode: () => void;
   onTogglePlanSidebar: () => void;
-  onToggleRuntimeMode: () => void;
 }) {
   return (
     <Menu>

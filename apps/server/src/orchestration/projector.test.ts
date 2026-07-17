@@ -82,7 +82,6 @@ describe("orchestration projector", () => {
         },
         runtimeMode: "full-access",
         interactionMode: "default",
-        orchestratorMode: false,
         envMode: "local",
         workspaceId: null,
         branch: null,

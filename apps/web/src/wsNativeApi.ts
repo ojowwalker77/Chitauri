@@ -22,7 +22,6 @@ import {
   type ProjectDevServerEvent,
   type ServerProviderStatusesUpdatedPayload,
   type ServerLifecycleStreamEvent,
-  type ServerOrchestratorSeatStatusesUpdatedPayload,
   type ServerSettingsUpdatedPayload,
   type TerminalEvent,
   ORCHESTRATION_WS_CHANNELS,
@@ -48,9 +47,6 @@ const serverProviderStatusesUpdatedListeners = new Set<
 >();
 const serverMaintenanceUpdatedListeners = new Set<(payload: ServerLifecycleStreamEvent) => void>();
 const serverSettingsUpdatedListeners = new Set<(payload: ServerSettingsUpdatedPayload) => void>();
-const serverOrchestratorSeatStatusesUpdatedListeners = new Set<
-  (payload: ServerOrchestratorSeatStatusesUpdatedPayload) => void
->();
 const gitActionProgressListeners = new Set<(payload: GitActionProgressEvent) => void>();
 
 function omitNullUserInputAnswers(
@@ -212,28 +208,6 @@ export function onServerSettingsUpdated(
   };
 }
 
-/** Replays the latest seat-health snapshot for late thread views. */
-export function onServerOrchestratorSeatStatusesUpdated(
-  listener: (payload: ServerOrchestratorSeatStatusesUpdatedPayload) => void,
-): () => void {
-  serverOrchestratorSeatStatusesUpdatedListeners.add(listener);
-
-  const latestStatuses =
-    instance?.transport.getLatestPush(WS_CHANNELS.serverOrchestratorSeatStatusesUpdated)?.data ??
-    null;
-  if (latestStatuses) {
-    try {
-      listener(latestStatuses);
-    } catch {
-      // Swallow listener errors
-    }
-  }
-
-  return () => {
-    serverOrchestratorSeatStatusesUpdatedListeners.delete(listener);
-  };
-}
-
 export function createWsNativeApi(): NativeApi {
   if (instance) {
     if (instance.transport.getState() !== "disposed") {
@@ -288,16 +262,6 @@ export function createWsNativeApi(): NativeApi {
   transport.subscribe(WS_CHANNELS.serverSettingsUpdated, (message) => {
     const payload = message.data;
     for (const listener of serverSettingsUpdatedListeners) {
-      try {
-        listener(payload);
-      } catch {
-        // Swallow listener errors
-      }
-    }
-  });
-  transport.subscribe(WS_CHANNELS.serverOrchestratorSeatStatusesUpdated, (message) => {
-    const payload = message.data;
-    for (const listener of serverOrchestratorSeatStatusesUpdatedListeners) {
       try {
         listener(payload);
       } catch {
@@ -658,7 +622,6 @@ export function resetWsNativeApiForTest(): void {
   serverProviderStatusesUpdatedListeners.clear();
   serverMaintenanceUpdatedListeners.clear();
   serverSettingsUpdatedListeners.clear();
-  serverOrchestratorSeatStatusesUpdatedListeners.clear();
   gitActionProgressListeners.clear();
   terminalEventListeners.clear();
   projectDevServerEventListeners.clear();
@@ -675,7 +638,6 @@ if (import.meta.hot) {
     serverConfigUpdatedListeners.clear();
     serverProviderStatusesUpdatedListeners.clear();
     serverSettingsUpdatedListeners.clear();
-    serverOrchestratorSeatStatusesUpdatedListeners.clear();
     gitActionProgressListeners.clear();
     terminalEventListeners.clear();
     projectDevServerEventListeners.clear();

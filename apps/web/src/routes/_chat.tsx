@@ -13,7 +13,6 @@ import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
 import ThreadSidebar from "../components/Sidebar";
 import { isElectron } from "../env";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
-import { useTemporaryThreadLifecycle } from "../hooks/useTemporaryThreadLifecycle";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import { useLatestProjectStore } from "../latestProjectStore";
 import {
@@ -209,7 +208,6 @@ function ChatRouteGlobalShortcuts() {
   const setLatestProjectId = useLatestProjectStore((state) => state.setLatestProjectId);
   const clearLatestProjectId = useLatestProjectStore((state) => state.clearLatestProjectId);
   const threadsHydrated = useStore((state) => state.threadsHydrated);
-  useTemporaryThreadLifecycle(activeContextThreadId);
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const keybindings = serverConfigQuery.data?.keybindings ?? EMPTY_KEYBINDINGS;
   const platform = typeof navigator === "undefined" ? "" : navigator.platform;

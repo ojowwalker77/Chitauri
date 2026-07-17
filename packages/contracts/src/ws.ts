@@ -101,7 +101,6 @@ import {
   ServerUpdateSettingsInput,
   ServerGetProviderUsageSnapshotInput,
   ServerListProviderUsageInput,
-  ServerOrchestratorSeatStatusesUpdatedPayload,
   ServerProviderStatusesUpdatedPayload,
   ServerSettingsUpdatedPayload,
   ServerStopLocalServerInput,
@@ -217,7 +216,6 @@ export const WS_METHODS = {
   subscribeServerConfig: "server.subscribeConfig",
   subscribeServerProviderStatuses: "server.subscribeProviderStatuses",
   subscribeServerSettings: "server.subscribeSettings",
-  subscribeServerOrchestratorSeatStatuses: "server.subscribeOrchestratorSeatStatuses",
 
   // Streaming subscriptions
   subscribeTerminalEvents: "terminal.subscribeEvents",
@@ -259,7 +257,6 @@ export const WS_CHANNELS = {
   serverConfigUpdated: "server.configUpdated",
   serverProviderStatusesUpdated: "server.providerStatusesUpdated",
   serverSettingsUpdated: "server.settingsUpdated",
-  serverOrchestratorSeatStatusesUpdated: "server.orchestratorSeatStatusesUpdated",
 } as const;
 
 // -- Tagged Union of all request body schemas ─────────────────────────
@@ -453,7 +450,6 @@ export interface WsPushPayloadByChannel {
   readonly [WS_CHANNELS.serverConfigUpdated]: typeof ServerConfigUpdatedPayload.Type;
   readonly [WS_CHANNELS.serverProviderStatusesUpdated]: typeof ServerProviderStatusesUpdatedPayload.Type;
   readonly [WS_CHANNELS.serverSettingsUpdated]: typeof ServerSettingsUpdatedPayload.Type;
-  readonly [WS_CHANNELS.serverOrchestratorSeatStatusesUpdated]: typeof ServerOrchestratorSeatStatusesUpdatedPayload.Type;
   readonly [WS_CHANNELS.automationEvent]: typeof AutomationStreamEvent.Type;
   readonly [WS_CHANNELS.gitActionProgress]: typeof GitActionProgressEvent.Type;
   readonly [WS_CHANNELS.terminalEvent]: typeof TerminalEvent.Type;
@@ -494,10 +490,6 @@ export const WsPushServerSettingsUpdated = makeWsPushSchema(
   WS_CHANNELS.serverSettingsUpdated,
   ServerSettingsUpdatedPayload,
 );
-export const WsPushServerOrchestratorSeatStatusesUpdated = makeWsPushSchema(
-  WS_CHANNELS.serverOrchestratorSeatStatusesUpdated,
-  ServerOrchestratorSeatStatusesUpdatedPayload,
-);
 export const WsPushAutomationEvent = makeWsPushSchema(
   WS_CHANNELS.automationEvent,
   AutomationStreamEvent,
@@ -531,7 +523,6 @@ export const WsPushChannelSchema = Schema.Literals([
   WS_CHANNELS.serverConfigUpdated,
   WS_CHANNELS.serverProviderStatusesUpdated,
   WS_CHANNELS.serverSettingsUpdated,
-  WS_CHANNELS.serverOrchestratorSeatStatusesUpdated,
   WS_CHANNELS.automationEvent,
   WS_CHANNELS.terminalEvent,
   WS_CHANNELS.projectDevServerEvent,
@@ -547,7 +538,6 @@ export const WsPush = Schema.Union([
   WsPushServerConfigUpdated,
   WsPushServerProviderStatusesUpdated,
   WsPushServerSettingsUpdated,
-  WsPushServerOrchestratorSeatStatusesUpdated,
   WsPushAutomationEvent,
   WsPushGitActionProgress,
   WsPushTerminalEvent,

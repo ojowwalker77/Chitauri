@@ -32,7 +32,6 @@ import { LOCAL_IMAGE_ROUTE_PATH, resolveAllowedLocalPreviewFile } from "./localI
 import type { ProjectFaviconResolverShape } from "./project/Services/ProjectFaviconResolver";
 import { ProjectFaviconResolver } from "./project/Services/ProjectFaviconResolver";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
-import { OrchestratorControlPlane } from "./orchestrator/Services/OrchestratorControlPlane.ts";
 import { threadArchiveChunks, threadArchiveFileName } from "./orchestration/exportThreadArchive";
 import type { ServerReadiness } from "./server/readiness";
 import { resolveFavicon, tryParseHost } from "./siteFaviconCache";
@@ -170,7 +169,6 @@ export function makeEffectHttpRouteLayer(readiness: ServerReadiness) {
       ),
     ),
     authEffectRouteLayer,
-    orchestratorMcpEffectRouteLayer,
     projectFaviconEffectRouteLayer,
     threadExportEffectRouteLayer,
     siteFaviconEffectRouteLayer,
@@ -180,51 +178,6 @@ export function makeEffectHttpRouteLayer(readiness: ServerReadiness) {
     staticAndDevEffectRouteLayer,
   );
 }
-
-function toEffectMcpResponse(response: Response): HttpServerResponse.HttpServerResponse {
-  const headers = [...response.headers.entries()];
-  const contentType = response.headers.get("content-type");
-  const body = response.body;
-  const options = {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  };
-  if (!body) return HttpServerResponse.empty(options);
-
-  return HttpServerResponse.stream(
-    Stream.fromReadableStream({
-      evaluate: () => body,
-      onError: (cause) => cause,
-    }),
-    {
-      ...options,
-      ...(contentType ? { contentType } : {}),
-    },
-  );
-}
-
-export const orchestratorMcpEffectRouteLayer = HttpRouter.add(
-  "*",
-  "/api/orchestrator/mcp",
-  Effect.gen(function* () {
-    const request = yield* HttpServerRequest.HttpServerRequest;
-    const controlPlane = yield* OrchestratorControlPlane;
-    const webRequest = yield* HttpServerRequest.toWeb(request);
-    const response = yield* controlPlane.handleHttpRequest(webRequest);
-    // Effect's Web Response bridge currently passes a native Headers instance
-    // where its own header record is expected, then assigns a default binary
-    // content type to the bridged stream. Rebuild the streaming response with
-    // explicit headers so MCP content types and session ids survive on the wire.
-    return toEffectMcpResponse(response);
-  }).pipe(
-    Effect.catch((cause) =>
-      Effect.logWarning("orchestrator MCP request failed", { cause }).pipe(
-        Effect.as(HttpServerResponse.text("Internal Server Error", { status: 500 })),
-      ),
-    ),
-  ),
-);
 
 const requireAuthenticatedRequest = Effect.gen(function* () {
   const request = yield* HttpServerRequest.HttpServerRequest;

@@ -36,10 +36,6 @@ import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
 import { ProviderCommandReactor } from "../Services/ProviderCommandReactor.ts";
 import { attachmentRelativePath } from "../../attachmentStore.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
-import {
-  OrchestratorControlPlane,
-  type OrchestratorControlPlaneShape,
-} from "../../orchestrator/Services/OrchestratorControlPlane.ts";
 import { checkpointRefForThreadTurn } from "../../checkpointing/Utils.ts";
 import {
   CheckpointStore,
@@ -305,15 +301,6 @@ describe("ProviderCommandReactor", () => {
     );
 
     const unsupported = () => Effect.die(new Error("Unsupported provider call in test")) as never;
-    const orchestratorControlPlane: OrchestratorControlPlaneShape = {
-      getSeatStartConfig: unsupported,
-      markSeatDegraded: unsupported,
-      getSeatRuntimeStatuses: unsupported(),
-      subscribeSeatStatus: () => () => undefined,
-      handleHttpRequest: unsupported,
-      getTaskStatus: unsupported,
-      getTaskResult: unsupported,
-    };
     const service: ProviderServiceShape = {
       startSession: startSession as ProviderServiceShape["startSession"],
       sendTurn: sendTurn as ProviderServiceShape["sendTurn"],
@@ -361,7 +348,6 @@ describe("ProviderCommandReactor", () => {
         } as unknown as TextGenerationShape),
       ),
       Layer.provideMerge(ServerSettingsService.layerTest()),
-      Layer.provideMerge(Layer.succeed(OrchestratorControlPlane, orchestratorControlPlane)),
       Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
       Layer.provideMerge(NodeServices.layer),
       Layer.provideMerge(SqlitePersistenceMemory),

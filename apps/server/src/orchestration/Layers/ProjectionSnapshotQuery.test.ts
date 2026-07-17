@@ -315,7 +315,6 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           },
           interactionMode: "default",
           runtimeMode: "full-access",
-          orchestratorMode: false,
           envMode: "local",
           workspaceId: null,
           branch: null,
@@ -447,75 +446,6 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           },
         },
       ]);
-    }),
-  );
-
-  it.effect("preserves orchestrator mode across every projected thread read path", () =>
-    Effect.gen(function* () {
-      const snapshotQuery = yield* ProjectionSnapshotQuery;
-      const sql = yield* SqlClient.SqlClient;
-
-      yield* sql`DELETE FROM projection_threads`;
-      yield* sql`DELETE FROM projection_projects`;
-
-      yield* sql`
-        INSERT INTO projection_projects (
-          project_id,
-          title,
-          workspace_root,
-          default_model_selection_json,
-          scripts_json,
-          created_at,
-          updated_at,
-          deleted_at
-        )
-        VALUES (
-          'project-orchestrator-mode',
-          'Orchestrator Project',
-          '/tmp/project-orchestrator-mode',
-          '{"provider":"codex","model":"gpt-5.6-sol"}',
-          '[]',
-          '2026-07-16T00:00:00.000Z',
-          '2026-07-16T00:00:00.000Z',
-          NULL
-        )
-      `;
-
-      yield* sql`
-        INSERT INTO projection_threads (
-          thread_id,
-          project_id,
-          title,
-          model_selection_json,
-          orchestrator_mode,
-          created_at,
-          updated_at,
-          deleted_at
-        )
-        VALUES (
-          'thread-orchestrator-mode',
-          'project-orchestrator-mode',
-          'Orchestrator Thread',
-          '{"provider":"codex","model":"gpt-5.6-sol"}',
-          1,
-          '2026-07-16T00:00:01.000Z',
-          '2026-07-16T00:00:01.000Z',
-          NULL
-        )
-      `;
-
-      const threadId = asThreadId("thread-orchestrator-mode");
-      const snapshot = yield* snapshotQuery.getSnapshot();
-      const commandReadModel = yield* snapshotQuery.getCommandReadModel();
-      const shellSnapshot = yield* snapshotQuery.getShellSnapshot();
-      const threadShell = yield* snapshotQuery.getThreadShellById(threadId);
-      const threadDetail = yield* snapshotQuery.getThreadDetailById(threadId);
-
-      assert.equal(snapshot.threads[0]?.orchestratorMode, true);
-      assert.equal(commandReadModel.threads[0]?.orchestratorMode, true);
-      assert.equal(shellSnapshot.threads[0]?.orchestratorMode, true);
-      assert.equal(Option.getOrNull(threadShell)?.orchestratorMode, true);
-      assert.equal(Option.getOrNull(threadDetail)?.orchestratorMode, true);
     }),
   );
 
@@ -1427,7 +1357,6 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           },
           interactionMode: "default",
           runtimeMode: "full-access",
-          orchestratorMode: false,
           envMode: "local",
           workspaceId: null,
           branch: null,

@@ -68,10 +68,6 @@ export const ProviderSessionStartInput = Schema.Struct({
       }),
     ),
   ),
-  // Developer/system persona injected when the thread is an orchestrator seat.
-  // Adapters must deliver this through a channel the model actually weights
-  // (developer instructions / system prompt), not tool metadata.
-  orchestratorPersona: Schema.optional(TrimmedNonEmptyString),
   runtimeMode: RuntimeMode,
 });
 export type ProviderSessionStartInput = typeof ProviderSessionStartInput.Type;

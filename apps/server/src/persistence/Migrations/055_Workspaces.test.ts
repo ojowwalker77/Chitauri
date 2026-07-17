@@ -7,7 +7,7 @@ import * as NodeSqliteClient from "../NodeSqliteClient.ts";
 
 const layer = it.layer(Layer.mergeAll(NodeSqliteClient.layerMemory()));
 
-layer("054_Workspaces", (it) => {
+layer("055_Workspaces", (it) => {
   it.effect("backfills durable workspace identity while retaining legacy thread fields", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
@@ -30,8 +30,8 @@ layer("054_Workspaces", (it) => {
       `;
 
       yield* runMigrations();
-      assert.deepStrictEqual(migrationEntries.find(([id]) => id === 54)?.slice(0, 2), [
-        54,
+      assert.deepStrictEqual(migrationEntries.find(([id]) => id === 55)?.slice(0, 2), [
+        55,
         "Workspaces",
       ]);
       const rows = yield* sql<{

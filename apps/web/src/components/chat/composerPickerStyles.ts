@@ -55,10 +55,6 @@ export const COMPOSER_PICKER_MODEL_ROW_LABEL_INDENT_CLASS_NAME = "pl-[1.125rem]"
 /** Muted accent text for effort labels and empty-landing folder names. */
 export const COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME = "text-muted-foreground/45";
 
-/** Calm but unmistakable accent for the composer thread-mode control. */
-export const ORCHESTRATOR_MODE_ACCENT_CLASS_NAME =
-  "[--orchestrator-mode-accent:var(--color-indigo-600,#4f46e5)] bg-indigo-500/8 text-indigo-700 hover:bg-indigo-500/12 hover:text-indigo-800 data-pressed:bg-indigo-500/12 data-pressed:text-indigo-800 dark:[--orchestrator-mode-accent:var(--color-indigo-300,#a5b4fc)] dark:text-indigo-300 dark:hover:text-indigo-200 dark:data-pressed:text-indigo-200";
-
 // NOTE: Composer picker section headers (Effort, Thinking, Mode, …) now render
 // through the shared `MenuGroupLabel` primitive (../ui/menu) so they stay in
 // sync with dropdown group labels like "Git actions". Picker padding is still
@@ -209,9 +205,6 @@ export const COMPOSER_COMMAND_MENU_ITEM_ACTIVE_CLASS_NAME =
   "bg-[var(--color-background-button-secondary)] text-[var(--color-text-foreground)]";
 
 export const COMPOSER_INPUT_SURFACE_BANNER_CLASS_NAME = `chat-composer-surface-banner border-b ${COMPOSER_SURFACE_BORDER_CLASS_NAME} bg-[var(--color-background-elevated-secondary)]`;
-
-export const RUNTIME_FULL_ACCESS_ACCENT_CLASS_NAME =
-  "text-[var(--runtime-full-access-accent)] hover:opacity-85";
 
 /** Minimum composer editor height — two lines at the element's line-height.
  *  `leading-relaxed` (1.625) keeps the input in step with the transcript/bubble leading. */
