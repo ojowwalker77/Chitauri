@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { stat as statPath } from "node:fs/promises";
 
 import {
   CommandId,
@@ -28,6 +29,9 @@ import { ServerAuth } from "./auth/Services/ServerAuth";
 import { SessionCredentialService } from "./auth/Services/SessionCredentialService";
 import { CheckpointDiffQuery } from "./checkpointing/Services/CheckpointDiffQuery";
 import { ServerConfig } from "./config";
+import { eventLoopMonitor } from "./performance/eventLoopMonitor";
+import { perfCounters } from "./performance/perfCounters";
+import { buildBackendPerformanceSnapshot } from "./performance/performanceSnapshot";
 import { realpathNearestExisting } from "./realpathNearestExisting";
 import { DevServerManager, findProjectDevServerForLocalServer } from "./devServerManager";
 import { GitCore, type GitCoreShape } from "./git/Services/GitCore";
@@ -251,6 +255,18 @@ function readDescendantProcesses(rootPid: number): Promise<ProcessTableRow[]> {
       },
     );
   });
+}
+
+// Best-effort on-disk size for the SQLite DB and its WAL sidecar. Returns 0 when
+// the file is absent (e.g. an in-memory DB or the WAL not yet materialized) so the
+// performance snapshot never fails on a missing sidecar.
+async function readFileSizeBytes(path: string): Promise<number> {
+  try {
+    const stats = await statPath(path);
+    return Math.max(0, Number(stats.size));
+  } catch {
+    return 0;
+  }
 }
 
 function toWsRpcError(cause: unknown, fallbackMessage: string) {
@@ -1029,6 +1045,65 @@ export const makeWsRpcLayer = () =>
               return diagnostics;
             }),
             "Failed to load server diagnostics",
+          ),
+        [WS_METHODS.performanceGetSnapshot]: (input) =>
+          rpcEffect(
+            Effect.gen(function* () {
+              const config = yield* ServerConfig;
+              const fullChildProcesses = yield* Effect.promise(() =>
+                readDescendantProcesses(process.pid),
+              );
+              const [dbFileBytes, walFileBytes] = yield* Effect.promise(() =>
+                Promise.all([
+                  readFileSizeBytes(config.dbPath),
+                  readFileSizeBytes(`${config.dbPath}-wal`),
+                ]),
+              );
+              const memory = process.memoryUsage();
+              const rssByPid = new Map<number, number>();
+              for (const processRow of fullChildProcesses) {
+                rssByPid.set(processRow.pid, processRow.rssBytes);
+              }
+              // Callers that only want cheap aggregates can skip the (capped)
+              // per-process table; totals and the RSS-by-pid join still run.
+              const childProcesses =
+                input.includeChildProcesses === false
+                  ? []
+                  : fullChildProcesses.slice(0, MAX_DIAGNOSTIC_CHILD_PROCESSES);
+              return buildBackendPerformanceSnapshot(
+                {
+                  now: new Date(),
+                  pid: process.pid,
+                  uptimeSeconds: Math.max(0, Math.round(process.uptime())),
+                  memory: {
+                    rssBytes: Math.max(0, Math.round(memory.rss)),
+                    heapTotalBytes: Math.max(0, Math.round(memory.heapTotal)),
+                    heapUsedBytes: Math.max(0, Math.round(memory.heapUsed)),
+                    externalBytes: Math.max(0, Math.round(memory.external)),
+                    arrayBuffersBytes: Math.max(0, Math.round(memory.arrayBuffers)),
+                  },
+                  childProcesses,
+                  childProcessTotalRssBytes: fullChildProcesses.reduce(
+                    (total, processRow) => total + processRow.rssBytes,
+                    0,
+                  ),
+                  rssByPid,
+                  dbFileBytes,
+                  walFileBytes,
+                  // Provider-runtime and ingestion-cache occupancy are populated by
+                  // the Phase 2 RAM-ownership work, which introduces the
+                  // authoritative provider warm-runtime budget and turn-scoped
+                  // ingestion state. Until then these sections report empty.
+                  ingestion: { entries: 0, estimatedBytes: 0 },
+                  providerRuntimes: [],
+                  // Populated by the Phase 1 live transcript lane.
+                  liveLane: null,
+                },
+                perfCounters.snapshot(),
+                eventLoopMonitor.snapshot(),
+              );
+            }),
+            "Failed to load performance snapshot",
           ),
         [WS_METHODS.serverGenerateThreadRecap]: (input) =>
           rpcEffect(

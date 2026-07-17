@@ -136,6 +136,7 @@ import type {
   ServerUpsertKeybindingInput,
   ServerUpsertKeybindingResult,
 } from "./server";
+import type { PerformanceGetSnapshotInput, PerformanceGetSnapshotResult } from "./performance";
 import type {
   TerminalAckOutputInput,
   TerminalClearInput,
@@ -542,6 +543,9 @@ export interface NativeApi {
       input: ServerListProviderUsageInput,
     ) => Promise<ServerListProviderUsageResult>;
     getDiagnostics: () => Promise<ServerDiagnosticsResult>;
+    getPerformanceSnapshot: (
+      input: PerformanceGetSnapshotInput,
+    ) => Promise<PerformanceGetSnapshotResult>;
     generateThreadRecap: (
       input: ServerGenerateThreadRecapInput,
     ) => Promise<ServerGenerateThreadRecapResult>;

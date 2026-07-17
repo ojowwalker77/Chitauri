@@ -25,6 +25,7 @@ import { Open } from "./open";
 import * as SqlitePersistence from "./persistence/Layers/Sqlite";
 import { makeServerProviderLayer, makeServerRuntimeServicesLayer } from "./serverLayers";
 import { startServerMemoryDiagnostics } from "./memoryDiagnostics";
+import { eventLoopMonitor } from "./performance/eventLoopMonitor";
 import { startClaudeCredentialKeepalive } from "./provider/claudeCredentialKeepalive";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { ProviderHealthLive } from "./provider/Layers/ProviderHealth";
@@ -304,6 +305,9 @@ const makeServerProgram = (input: CliInput) =>
 
     const config = yield* ServerConfig;
     yield* Effect.sync(() => startServerMemoryDiagnostics({ mode: config.mode }));
+    // Enable the event-loop delay histogram so the performance snapshot has data;
+    // utilization is always tracked, but the delay histogram must be enabled once.
+    yield* Effect.sync(() => eventLoopMonitor.start());
 
     if (!config.devUrl && !config.staticDir) {
       yield* Effect.logWarning(

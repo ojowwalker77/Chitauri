@@ -105,6 +105,7 @@ import {
   ServerStopLocalServerInput,
 } from "./server";
 import { StatsGetProfileStatsInput, StatsGetProfileTokenStatsInput } from "./stats";
+import { PerformanceGetSnapshotInput } from "./performance";
 import {
   ProviderListCommandsInput,
   ProviderGetComposerCapabilitiesInput,
@@ -204,6 +205,7 @@ export const WS_METHODS = {
   statsGetProfileStats: "stats.getProfileStats",
   statsGetProfileTokenStats: "stats.getProfileTokenStats",
   serverGetDiagnostics: "server.getDiagnostics",
+  performanceGetSnapshot: "performance.getSnapshot",
   serverGenerateThreadRecap: "server.generateThreadRecap",
   serverGenerateAutomationIntent: "server.generateAutomationIntent",
   serverUpsertKeybinding: "server.upsertKeybinding",
@@ -376,6 +378,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.statsGetProfileStats, StatsGetProfileStatsInput),
   tagRequestBody(WS_METHODS.statsGetProfileTokenStats, StatsGetProfileTokenStatsInput),
   tagRequestBody(WS_METHODS.serverGetDiagnostics, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.performanceGetSnapshot, PerformanceGetSnapshotInput),
   tagRequestBody(WS_METHODS.serverGenerateThreadRecap, ServerGenerateThreadRecapInput),
   tagRequestBody(WS_METHODS.serverGenerateAutomationIntent, ServerGenerateAutomationIntentInput),
   tagRequestBody(WS_METHODS.serverUpsertKeybinding, KeybindingRule),
