@@ -17,16 +17,18 @@ describe("OrchestratorDelegationPanel", () => {
     );
 
     expect(markup).toContain("Orchestrator is ready");
-    expect(markup).toContain("Seat model: gpt-5.6-sol");
-    expect(markup).toContain("Delegation stays visible in this thread");
+    expect(markup).toContain("Seat: gpt-5.6-sol");
+    expect(markup).toContain("Waiting for delegation tools");
+    expect(markup).toContain("Describe the outcome you want");
   });
 
-  it("stays out of the transcript after onboarding when there is no delegated work", () => {
+  it("keeps seat health visible when there is no delegated work", () => {
     const markup = renderToStaticMarkup(
       <OrchestratorDelegationPanel threads={[]} onOpenThread={vi.fn()} />,
     );
 
-    expect(markup).toBe("");
+    expect(markup).toContain("Delegation control");
+    expect(markup).toContain("Waiting for delegation tools");
   });
 
   it("shows interrupted delegated work as needing attention", () => {

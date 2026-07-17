@@ -35,10 +35,27 @@ export interface OrchestratorMcpServerConfig {
   readonly toolTimeoutMs: number;
 }
 
+export interface OrchestratorSeatStartConfig {
+  readonly mcpServer: OrchestratorMcpServerConfig;
+  readonly persona: string;
+}
+
+export interface OrchestratorSeatRuntimeStatus {
+  readonly threadId: ThreadId;
+  readonly status: "pending" | "connected" | "degraded";
+  readonly reason: string | null;
+  readonly updatedAt: string;
+}
+
 export interface OrchestratorControlPlaneShape {
-  readonly getMcpServerForSeat: (
+  readonly getSeatStartConfig: (
     seatThreadId: ThreadId,
-  ) => Effect.Effect<OrchestratorMcpServerConfig, Error>;
+  ) => Effect.Effect<OrchestratorSeatStartConfig, Error>;
+  readonly markSeatDegraded: (seatThreadId: ThreadId, reason: string) => Effect.Effect<void>;
+  readonly getSeatRuntimeStatuses: Effect.Effect<ReadonlyArray<OrchestratorSeatRuntimeStatus>>;
+  readonly subscribeSeatStatus: (
+    listener: (status: OrchestratorSeatRuntimeStatus) => void,
+  ) => () => void;
   readonly handleHttpRequest: (request: Request) => Effect.Effect<Response, Error>;
   readonly getTaskStatus: (
     seatThreadId: ThreadId,

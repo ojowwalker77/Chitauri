@@ -113,6 +113,7 @@ interface CodexSessionContext {
   nextRequestId: number;
   stopping: boolean;
   discovery?: boolean;
+  orchestratorPersona?: string;
 }
 
 interface CodexSkillListInput {
@@ -200,6 +201,7 @@ export interface CodexAppServerStartSessionInput {
   readonly resumeCursor?: unknown;
   readonly providerOptions?: ProviderSessionStartInput["providerOptions"];
   readonly mcpServers?: ProviderSessionStartInput["mcpServers"];
+  readonly orchestratorPersona?: string;
   readonly runtimeMode: RuntimeMode;
 }
 
@@ -617,6 +619,7 @@ function buildCodexCollaborationMode(input: {
   readonly interactionMode?: "default" | "plan";
   readonly model?: string;
   readonly effort?: string;
+  readonly orchestratorPersona?: string;
 }):
   | {
       mode: "default" | "plan";
@@ -627,19 +630,27 @@ function buildCodexCollaborationMode(input: {
       };
     }
   | undefined {
-  if (input.interactionMode === undefined) {
+  // An orchestrator seat persona must reach the model as developer
+  // instructions on every turn, so a seat synthesizes a default-mode
+  // collaboration block even when no interaction mode was requested.
+  const interactionMode =
+    input.interactionMode ?? (input.orchestratorPersona !== undefined ? "default" : undefined);
+  if (interactionMode === undefined) {
     return undefined;
   }
   const model = normalizeCodexModelSlug(input.model) ?? "gpt-5.3-codex";
+  const modeInstructions =
+    interactionMode === "plan"
+      ? CODEX_PLAN_MODE_DEVELOPER_INSTRUCTIONS
+      : CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS;
   return {
-    mode: input.interactionMode,
+    mode: interactionMode,
     settings: {
       model,
       reasoning_effort: input.effort ?? "medium",
-      developer_instructions:
-        input.interactionMode === "plan"
-          ? CODEX_PLAN_MODE_DEVELOPER_INSTRUCTIONS
-          : CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS,
+      developer_instructions: input.orchestratorPersona
+        ? `${modeInstructions}\n\n${input.orchestratorPersona}`
+        : modeInstructions,
     },
   };
 }
@@ -837,6 +848,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         reviewTurnIds: new Set(),
         nextRequestId: 1,
         stopping: false,
+        ...(input.orchestratorPersona ? { orchestratorPersona: input.orchestratorPersona } : {}),
       };
 
       this.sessions.set(threadId, context);
@@ -1093,6 +1105,9 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       ...(input.interactionMode !== undefined ? { interactionMode: input.interactionMode } : {}),
       ...(normalizedModel !== undefined ? { model: normalizedModel } : {}),
       ...(input.effort !== undefined ? { effort: input.effort } : {}),
+      ...(context.orchestratorPersona !== undefined
+        ? { orchestratorPersona: context.orchestratorPersona }
+        : {}),
     });
     if (collaborationMode) {
       if (!turnStartParams.model) {

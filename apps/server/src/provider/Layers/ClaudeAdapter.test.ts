@@ -325,6 +325,29 @@ describe("ClaudeAdapterLive", () => {
     );
   });
 
+  it.effect("appends the orchestrator persona to Claude's system prompt", () => {
+    const harness = makeHarness();
+    return Effect.gen(function* () {
+      const adapter = yield* ClaudeAdapter;
+      yield* adapter.startSession({
+        threadId: THREAD_ID,
+        provider: "claudeAgent",
+        runtimeMode: "full-access",
+        orchestratorPersona: "<orchestrator_seat>delegate first</orchestrator_seat>",
+      });
+
+      const systemPrompt = harness.getLastCreateQueryInput()?.options.systemPrompt;
+      if (!systemPrompt || typeof systemPrompt !== "object" || Array.isArray(systemPrompt)) {
+        throw new Error("Expected Claude's preset system prompt.");
+      }
+      assert.equal(systemPrompt?.type, "preset");
+      assert.equal(systemPrompt.append?.endsWith("delegate first</orchestrator_seat>"), true);
+    }).pipe(
+      Effect.provideService(Random.Random, makeDeterministicRandomService()),
+      Effect.provide(harness.layer),
+    );
+  });
+
   it.effect("keeps explicit claude permission mode over runtime-derived defaults", () => {
     const harness = makeHarness();
     return Effect.gen(function* () {

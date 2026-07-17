@@ -1,5 +1,5 @@
 import type { ThreadId } from "@t3tools/contracts";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type Ref } from "react";
 
 import type { Thread } from "~/types";
 import { cn } from "~/lib/utils";
@@ -41,11 +41,38 @@ const DELEGATION_STATE_COPY = {
   failed: { label: "Needs attention", colorClassName: "bg-destructive" },
 } as const;
 
+const SEAT_STATUS_COPY = {
+  pending: {
+    label: "Waiting for delegation tools",
+    detail: "The provider is connecting to the delegation control plane.",
+    dotClassName: "bg-muted-foreground/55",
+  },
+  connected: {
+    label: "Connected — delegation tools armed",
+    detail: "Implementation work will be delegated to specialist agents in isolated worktrees.",
+    dotClassName: "bg-emerald-500",
+  },
+  degraded: {
+    label: "Delegation unavailable",
+    detail:
+      "This turn can continue, but the seat cannot delegate until its control plane is available.",
+    dotClassName: "bg-amber-500",
+  },
+} as const;
+
+type SeatStatus = keyof typeof SEAT_STATUS_COPY;
+
 export function OrchestratorDelegationPanel(props: {
   threads: readonly Thread[];
   onOpenThread: (threadId: ThreadId) => void;
   showOnboarding?: boolean;
   seatModel?: string | null;
+  seatStatus?: SeatStatus;
+  seatStatusReason?: string | null;
+  laneRoutes?: ReadonlyArray<{ readonly lane: string; readonly model: string }>;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  panelRef?: Ref<HTMLDivElement>;
 }) {
   const [openThreadIds, setOpenThreadIds] = useState<ReadonlySet<ThreadId>>(
     () => new Set(props.threads.map((thread) => thread.id)),
@@ -64,119 +91,161 @@ export function OrchestratorDelegationPanel(props: {
     setOpenThreadIds((current) => new Set([...current, ...newThreadIds]));
   }, [props.threads]);
 
-  if (props.threads.length === 0) {
-    if (!props.showOnboarding) return null;
-
-    return (
-      <div
-        className="mx-auto w-full max-w-[var(--chat-column-max-width)] px-4 pt-3"
-        data-testid="orchestrator-onboarding"
-      >
-        <div className="relative overflow-hidden rounded-xl border border-indigo-500/18 bg-indigo-500/6 px-4 py-3.5 shadow-[0_1px_2px_color-mix(in_srgb,var(--foreground)_4%,transparent)]">
-          <div className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full bg-indigo-400/10 blur-3xl" />
-          <div className="relative flex items-start gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
-              <CentralIcon name="agent-network" className="size-[18px]" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <h2 className="text-balance text-sm font-medium text-foreground">
-                  Orchestrator is ready
-                </h2>
-                <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300">
-                  Active
-                </span>
-              </div>
-              <p className="mt-1 text-pretty text-xs leading-5 text-muted-foreground">
-                Describe the outcome you want. This seat can plan the work, delegate focused tasks
-                to specialist agents in isolated worktrees, and bring their results back for review.
-              </p>
-              <p className="mt-2 text-[10px] text-muted-foreground/70">
-                {props.seatModel ? `Seat model: ${props.seatModel} · ` : ""}Delegation stays visible
-                in this thread.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(
+    () => props.showOnboarding === true || props.threads.length > 0,
+  );
+  const open = props.open ?? uncontrolledOpen;
+  const setOpen = (nextOpen: boolean) => {
+    props.onOpenChange?.(nextOpen);
+    if (props.open === undefined) {
+      setUncontrolledOpen(nextOpen);
+    }
+  };
+  const seatStatus = props.seatStatus ?? "pending";
+  const seatStatusCopy = SEAT_STATUS_COPY[seatStatus];
 
   return (
-    <div className="mx-auto w-full max-w-[var(--chat-column-max-width)] space-y-2 px-4 pt-3">
-      <div className="flex items-center justify-between px-1">
-        <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/70">
-          Delegated work
-        </span>
-        <span className="tabular-nums text-[10px] text-muted-foreground/60">
-          {props.threads.length} {props.threads.length === 1 ? "task" : "tasks"}
-        </span>
-      </div>
-      {props.threads.map((thread) => {
-        const state = delegationState(thread);
-        const stateCopy = DELEGATION_STATE_COPY[state];
-        const open = openThreadIds.has(thread.id);
-        const finalMessage = finalAssistantMessage(thread);
-        return (
-          <Collapsible
-            key={thread.id}
-            open={open}
-            onOpenChange={(nextOpen) =>
-              setOpenThreadIds((current) => {
-                const next = new Set(current);
-                if (nextOpen) next.add(thread.id);
-                else next.delete(thread.id);
-                return next;
-              })
-            }
-          >
-            <div className="overflow-hidden rounded-xl border border-[color:var(--app-surface-divider)] bg-[var(--color-background-elevated-secondary)] shadow-[0_1px_2px_color-mix(in_srgb,var(--foreground)_3%,transparent)]">
-              <CollapsibleTrigger className="flex min-h-11 w-full items-center gap-2.5 px-3 text-left">
-                <span
-                  className={cn(
-                    "size-2 shrink-0 rounded-full",
-                    stateCopy.colorClassName,
-                    state === "running" && "animate-pulse motion-reduce:animate-none",
-                  )}
-                  aria-hidden
-                />
-                <span className="min-w-0 flex-1 truncate text-xs font-medium">{thread.title}</span>
-                <span className="hidden shrink-0 text-[11px] text-muted-foreground sm:inline">
-                  {stateCopy.label}
+    <div
+      ref={props.panelRef}
+      className="mx-auto w-full max-w-[var(--chat-column-max-width)] px-4 pt-3"
+      data-testid="orchestrator-delegation-panel"
+    >
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <div className="relative overflow-hidden rounded-xl border border-indigo-500/18 bg-indigo-500/6 shadow-[0_1px_2px_color-mix(in_srgb,var(--foreground)_4%,transparent)]">
+          {props.showOnboarding ? (
+            <div className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full bg-indigo-400/10 blur-3xl" />
+          ) : null}
+          <CollapsibleTrigger className="relative flex min-h-11 w-full items-center gap-3 px-3.5 text-left">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+              <CentralIcon name="agent-network" className="size-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span className="text-sm font-medium text-foreground">
+                  {props.showOnboarding ? "Orchestrator is ready" : "Delegation control"}
                 </span>
-                <DisclosureChevron open={open} className="opacity-70" />
-              </CollapsibleTrigger>
-              <CollapsiblePanel>
-                <div className="border-t border-[color:var(--app-surface-divider)] px-3 py-3">
-                  <p className="text-pretty whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
-                    {state === "running"
-                      ? `Working as ${thread.subagentRole ?? "a delegated specialist"} with ${thread.modelSelection.model} in an isolated worktree.`
-                      : state === "failed"
-                        ? (thread.error ??
-                          (thread.latestTurn?.state === "interrupted"
-                            ? "The delegated turn was interrupted before it finished. Open the task to inspect or retry it."
-                            : "The delegated turn failed."))
-                        : (finalMessage ?? "Delegated work finished and is ready for diff review.")}
-                  </p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <Button
-                      size="xs"
-                      variant={state === "needs_review" ? "default" : "outline"}
-                      onClick={() => props.onOpenThread(thread.id)}
-                    >
-                      {state === "running"
-                        ? "Open task"
-                        : state === "needs_review"
-                          ? "Review changes"
-                          : "Inspect failure"}
-                    </Button>
-                  </div>
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                  <span className={cn("size-1.5 rounded-full", seatStatusCopy.dotClassName)} />
+                  {seatStatusCopy.label}
+                </span>
+              </span>
+              <span className="mt-0.5 block truncate text-[11px] text-muted-foreground/70">
+                {props.threads.length} {props.threads.length === 1 ? "delegation" : "delegations"}
+                {props.seatModel ? ` · Seat: ${props.seatModel}` : ""}
+              </span>
+            </span>
+            <DisclosureChevron open={open} className="opacity-70" />
+          </CollapsibleTrigger>
+          <CollapsiblePanel>
+            <div className="relative border-t border-indigo-500/12 px-3.5 py-3">
+              <p className="text-pretty text-xs leading-5 text-muted-foreground">
+                {seatStatus === "degraded" && props.seatStatusReason
+                  ? props.seatStatusReason
+                  : seatStatusCopy.detail}
+              </p>
+              {props.laneRoutes && props.laneRoutes.length > 0 ? (
+                <div className="mt-3 grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+                  {props.laneRoutes.map((route) => (
+                    <div key={route.lane} className="flex min-w-0 items-center gap-2 text-[11px]">
+                      <span className="w-11 shrink-0 font-medium text-foreground/80">
+                        {route.lane}
+                      </span>
+                      <span className="min-w-0 truncate font-mono text-muted-foreground">
+                        {route.model}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              </CollapsiblePanel>
+              ) : null}
+              {props.threads.length === 0 ? (
+                <p className="mt-3 text-pretty text-xs leading-5 text-muted-foreground">
+                  Describe the outcome you want. This seat plans the work, delegates focused tasks,
+                  and returns their diffs for review here.
+                </p>
+              ) : (
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/70">
+                      Delegated work
+                    </span>
+                    <span className="tabular-nums text-[10px] text-muted-foreground/60">
+                      {props.threads.length} {props.threads.length === 1 ? "task" : "tasks"}
+                    </span>
+                  </div>
+                  {props.threads.map((thread) => {
+                    const state = delegationState(thread);
+                    const stateCopy = DELEGATION_STATE_COPY[state];
+                    const open = openThreadIds.has(thread.id);
+                    const finalMessage = finalAssistantMessage(thread);
+                    return (
+                      <Collapsible
+                        key={thread.id}
+                        open={open}
+                        onOpenChange={(nextOpen) =>
+                          setOpenThreadIds((current) => {
+                            const next = new Set(current);
+                            if (nextOpen) next.add(thread.id);
+                            else next.delete(thread.id);
+                            return next;
+                          })
+                        }
+                      >
+                        <div className="overflow-hidden rounded-lg border border-[color:var(--app-surface-divider)] bg-[var(--color-background-elevated-secondary)] shadow-[0_1px_2px_color-mix(in_srgb,var(--foreground)_3%,transparent)]">
+                          <CollapsibleTrigger className="flex min-h-11 w-full items-center gap-2.5 px-3 text-left">
+                            <span
+                              className={cn(
+                                "size-2 shrink-0 rounded-full",
+                                stateCopy.colorClassName,
+                                state === "running" && "animate-pulse motion-reduce:animate-none",
+                              )}
+                              aria-hidden
+                            />
+                            <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                              {thread.title}
+                            </span>
+                            <span className="hidden shrink-0 text-[11px] text-muted-foreground sm:inline">
+                              {stateCopy.label}
+                            </span>
+                            <DisclosureChevron open={open} className="opacity-70" />
+                          </CollapsibleTrigger>
+                          <CollapsiblePanel>
+                            <div className="border-t border-[color:var(--app-surface-divider)] px-3 py-3">
+                              <p className="text-pretty whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
+                                {state === "running"
+                                  ? `Working as ${thread.subagentRole ?? "a delegated specialist"} with ${thread.modelSelection.model} in an isolated worktree.`
+                                  : state === "failed"
+                                    ? (thread.error ??
+                                      (thread.latestTurn?.state === "interrupted"
+                                        ? "The delegated turn was interrupted before it finished. Open the task to inspect or retry it."
+                                        : "The delegated turn failed."))
+                                    : (finalMessage ??
+                                      "Delegated work finished and is ready for diff review.")}
+                              </p>
+                              <div className="mt-3 flex items-center gap-2">
+                                <Button
+                                  size="xs"
+                                  variant={state === "needs_review" ? "default" : "outline"}
+                                  onClick={() => props.onOpenThread(thread.id)}
+                                >
+                                  {state === "running"
+                                    ? "Open task"
+                                    : state === "needs_review"
+                                      ? "Review changes"
+                                      : "Inspect failure"}
+                                </Button>
+                              </div>
+                            </div>
+                          </CollapsiblePanel>
+                        </div>
+                      </Collapsible>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </Collapsible>
-        );
-      })}
+          </CollapsiblePanel>
+        </div>
+      </Collapsible>
     </div>
   );
 }

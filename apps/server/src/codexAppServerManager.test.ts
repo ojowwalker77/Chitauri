@@ -1020,6 +1020,31 @@ describe("sendTurn", () => {
     });
   });
 
+  it("injects the orchestrator persona on every turn even without an interaction mode", async () => {
+    const { manager, context, sendRequest } = createSendTurnHarness();
+    Object.assign(context, {
+      orchestratorPersona: "<orchestrator_seat>delegate first</orchestrator_seat>",
+    });
+
+    await manager.sendTurn({
+      threadId: asThreadId("thread_1"),
+      input: "Implement the requested UI change",
+    });
+
+    expect(sendRequest).toHaveBeenCalledWith(
+      context,
+      "turn/start",
+      expect.objectContaining({
+        collaborationMode: {
+          mode: "default",
+          settings: expect.objectContaining({
+            developer_instructions: `${CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS}\n\n<orchestrator_seat>delegate first</orchestrator_seat>`,
+          }),
+        },
+      }),
+    );
+  });
+
   it("keeps the session model when interaction mode is set without an explicit model", async () => {
     const { manager, context, sendRequest } = createSendTurnHarness();
     context.session.model = "gpt-5.2-codex";

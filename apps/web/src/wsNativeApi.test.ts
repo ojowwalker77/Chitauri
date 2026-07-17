@@ -327,6 +327,32 @@ describe("wsNativeApi", () => {
     expect(lateListener).toHaveBeenCalledWith(payload);
   });
 
+  it("delivers and caches orchestrator seat-health updates", async () => {
+    const { createWsNativeApi, onServerOrchestratorSeatStatusesUpdated } =
+      await import("./wsNativeApi");
+
+    createWsNativeApi();
+    const listener = vi.fn();
+    onServerOrchestratorSeatStatusesUpdated(listener);
+
+    const payload = {
+      seats: [
+        {
+          threadId: ThreadId.makeUnsafe("thread-seat"),
+          status: "connected",
+          reason: null,
+          updatedAt: "2026-07-17T12:00:00.000Z",
+        },
+      ],
+    } as const;
+    emitPush(WS_CHANNELS.serverOrchestratorSeatStatusesUpdated, payload);
+
+    expect(listener).toHaveBeenCalledWith(payload);
+    const lateListener = vi.fn();
+    onServerOrchestratorSeatStatusesUpdated(lateListener);
+    expect(lateListener).toHaveBeenCalledWith(payload);
+  });
+
   it("forwards valid terminal and orchestration events", async () => {
     const { createWsNativeApi } = await import("./wsNativeApi");
 
