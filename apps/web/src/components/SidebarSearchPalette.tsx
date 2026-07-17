@@ -54,15 +54,12 @@ import {
 import {
   type SidebarSearchAction,
   type SidebarSearchProject,
-  type SidebarSearchTheme,
   type SidebarSearchThread,
   matchSidebarSearchActions,
   matchSidebarSearchProjects,
-  matchSidebarSearchThemes,
   matchSidebarSearchThreads,
 } from "./SidebarSearchPalette.logic";
 import { useTheme } from "../hooks/useTheme";
-import { getAvailableCodeThemes, getCodeThemeSeed } from "../theme/theme.logic";
 import {
   Command,
   CommandDialog,
@@ -201,7 +198,7 @@ function createThemeCommandItem(
   if (mode === "system") {
     return {
       id: "theme-command:system",
-      label: "Switch to system theme",
+      label: "Follow system appearance",
       description: "Match your OS appearance setting.",
       mode,
       isActive: activeMode === mode,
@@ -270,22 +267,6 @@ function buildThemeCommandItems(input: {
   }
 
   return [];
-}
-
-function CodeThemeBadge(props: { accent: string; background: string; foreground: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className="inline-flex size-6 shrink-0 items-center justify-center rounded-full border font-medium text-[11px] leading-none tracking-[-0.01em]"
-      style={{
-        backgroundColor: props.background,
-        borderColor: `${props.foreground}26`,
-        color: props.accent,
-      }}
-    >
-      Aa
-    </span>
-  );
 }
 
 const THEME_MODE_ICONS: Record<"system" | "light" | "dark", IconComponent> = {
@@ -366,7 +347,7 @@ function HighlightedText(props: { text: string; query: string; className?: strin
 }
 
 export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
-  const { activeTheme, resolvedTheme, setCodeThemeId, setTheme, theme } = useTheme();
+  const { resolvedTheme, setTheme, theme } = useTheme();
   const [query, setQuery] = useState(props.initialBrowseQuery ?? "");
   const [highlightedItemValue, setHighlightedItemValue] = useState<string | null>(null);
   const [importProvider, setImportProvider] = useState<ImportProviderKind>(
@@ -499,31 +480,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
       }),
     [query, resolvedTheme, theme],
   );
-  const currentCodeThemeItems = useMemo<SidebarSearchTheme[]>(
-    () =>
-      getAvailableCodeThemes(resolvedTheme).map((option) => ({
-        id: `theme-code:${resolvedTheme}:${option.id}`,
-        type: "code-theme",
-        label: option.label,
-        description: `Apply to the current ${resolvedTheme} theme slot.`,
-        keywords: ["appearance", "theme", resolvedTheme, option.id],
-        codeThemeId: option.id,
-        variant: resolvedTheme,
-        isActive: activeTheme.codeThemeId === option.id,
-      })),
-    [activeTheme.codeThemeId, resolvedTheme],
-  );
-  const matchedCurrentThemes = useMemo(
-    () =>
-      isBrowsing || query.trim().length === 0
-        ? []
-        : matchSidebarSearchThemes(currentCodeThemeItems, query),
-    [currentCodeThemeItems, isBrowsing, query],
-  );
-  const showThemeSection =
-    !isBrowsing &&
-    query.trim().length > 0 &&
-    (themeCommandItems.length > 0 || matchedCurrentThemes.length > 0);
+  const showThemeSection = !isBrowsing && query.trim().length > 0 && themeCommandItems.length > 0;
   const matchedProjects = useMemo(
     () => (isBrowsing ? [] : matchSidebarSearchProjects(props.projects, query)),
     [isBrowsing, props.projects, query],
@@ -535,7 +492,6 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
   const hasSearchResults =
     matchedActions.length > 0 ||
     themeCommandItems.length > 0 ||
-    matchedCurrentThemes.length > 0 ||
     matchedProjects.length > 0 ||
     matchedThreads.length > 0;
   const importFieldLabel = importProvider === "codex" ? "Thread ID" : "Session ID";
@@ -1243,58 +1199,6 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                               </span>
                             </CommandItem>
                           ))}
-                        </CommandGroup>
-                      ) : null}
-                      {matchedCurrentThemes.length > 0 ? (
-                        <CommandGroup>
-                          <CommandGroupLabel className="py-1.5 pl-3">
-                            {resolvedTheme === "dark" ? "Dark themes" : "Light themes"}
-                          </CommandGroupLabel>
-                          {matchedCurrentThemes.map((themeItem) => {
-                            const seed =
-                              themeItem.codeThemeId && themeItem.variant
-                                ? getCodeThemeSeed(themeItem.codeThemeId, themeItem.variant)
-                                : null;
-                            return (
-                              <CommandItem
-                                key={themeItem.id}
-                                value={themeItem.id}
-                                className="cursor-pointer items-center gap-3 rounded-lg px-3 py-1.5"
-                                onMouseDown={(event) => {
-                                  event.preventDefault();
-                                }}
-                                onClick={() => {
-                                  if (!themeItem.codeThemeId || !themeItem.variant) return;
-                                  props.onOpenChange(false);
-                                  setCodeThemeId(themeItem.variant, themeItem.codeThemeId);
-                                }}
-                              >
-                                {seed ? (
-                                  <CodeThemeBadge
-                                    accent={seed.accent}
-                                    background={seed.surface}
-                                    foreground={seed.ink}
-                                  />
-                                ) : null}
-                                <span className="min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,14px)] text-foreground">
-                                  {themeItem.label}
-                                </span>
-                                <span className="shrink-0 text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/79">
-                                  {resolvedTheme === "dark"
-                                    ? "Dark color theme"
-                                    : "Light color theme"}
-                                </span>
-                                <span
-                                  className="flex size-3.5 shrink-0 items-center justify-center"
-                                  aria-hidden={!themeItem.isActive}
-                                >
-                                  {themeItem.isActive ? (
-                                    <CheckIcon className="size-3.5 text-muted-foreground/79" />
-                                  ) : null}
-                                </span>
-                              </CommandItem>
-                            );
-                          })}
                         </CommandGroup>
                       ) : null}
                     </>

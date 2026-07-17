@@ -139,8 +139,8 @@ const THEME_SHARE_PREFIX = "codex-theme-v1:";
 const CONTRAST_CURVE_BELOW_BASELINE = 0.7;
 const CONTRAST_CURVE_ABOVE_BASELINE = 2;
 const SURFACE_UNDER_BASE_ALPHA: Record<ThemeVariant, number> = {
-  // The Claude shell deliberately separates the flat window canvas from the one
-  // elevated panel layer. With the default #171717 panel this lands at #0a0a0a.
+  // The shell deliberately separates the flat window canvas from the one
+  // elevated panel layer.
   dark: 0.565,
   light: 0.04,
 };
@@ -148,9 +148,17 @@ const SURFACE_UNDER_CONTRAST_STEP: Record<ThemeVariant, number> = {
   dark: 0.001,
   light: 0.0012,
 };
+const CANVAS_COLOR_BY_VARIANT: Record<ThemeVariant, string> = {
+  dark: "#09090b",
+  light: "#e4e4e7",
+};
+const INFO_COLOR_BY_VARIANT: Record<ThemeVariant, string> = {
+  dark: "#3b82f6",
+  light: "#3b82f6",
+};
 const WARNING_COLOR_BY_VARIANT: Record<ThemeVariant, string> = {
-  dark: "#cf9d5e",
-  light: "#a66f2d",
+  dark: "#fb923c",
+  light: "#fb923c",
 };
 const PANEL_BASE_ALPHA: Record<ThemeVariant, number> = {
   dark: 0,
@@ -232,70 +240,37 @@ export const CODE_THEME_OPTIONS: readonly CodeThemeOption[] = [
 
 export const DEFAULT_CHROME_THEME_BY_VARIANT: Record<ThemeVariant, ChromeTheme> = {
   dark: {
-    accent: "#339cff",
+    accent: "#fb923c",
     contrast: 60,
     fonts: { code: null, ui: null },
-    ink: "#ffffff",
-    opaqueWindows: false,
-    semanticColors: {
-      diffAdded: "#40c977",
-      diffRemoved: "#fa423e",
-      skill: "#ad7bf9",
-    },
-    surface: "#181818",
-  },
-  light: {
-    accent: "#339cff",
-    contrast: 45,
-    fonts: { code: null, ui: null },
-    ink: "#1a1c1f",
-    opaqueWindows: false,
-    semanticColors: {
-      diffAdded: "#00a240",
-      diffRemoved: "#ba2623",
-      skill: "#924ff7",
-    },
-    surface: "#ffffff",
-  },
-};
-
-// A short-lived implementation of the desktop redesign shipped these values as
-// the default chrome theme. Keep the exact object private so normalization can
-// repair profiles that persisted that accidental migration without treating a
-// genuinely customized theme as a default.
-const CLAUDE_PIVOT_DEFAULT_CHROME_THEME_BY_VARIANT: Record<ThemeVariant, ChromeTheme> = {
-  dark: {
-    accent: "#d97757",
-    contrast: 60,
-    fonts: { code: null, ui: null },
-    ink: "#e6e4e1",
+    ink: "#f4f4f5",
     opaqueWindows: true,
     semanticColors: {
-      diffAdded: "#4cb782",
-      diffRemoved: "#d7655f",
-      skill: "#ad7bf9",
+      diffAdded: "#4ade80",
+      diffRemoved: "#f43f5e",
+      skill: "#3b82f6",
     },
-    surface: "#171717",
+    surface: "#18181b",
   },
   light: {
-    accent: "#d97757",
+    accent: "#fb923c",
     contrast: 45,
     fonts: { code: null, ui: null },
-    ink: "#292724",
+    ink: "#18181b",
     opaqueWindows: true,
     semanticColors: {
-      diffAdded: "#3f9d70",
-      diffRemoved: "#b9524d",
-      skill: "#924ff7",
+      diffAdded: "#4ade80",
+      diffRemoved: "#f43f5e",
+      skill: "#3b82f6",
     },
-    surface: "#f7f5f2",
+    surface: "#f4f4f5",
   },
 };
 
 export const DEFAULT_THEME_STATE: ThemeState = {
   chromeThemes: {
-    dark: getCodeThemeSeed("codex", "dark"),
-    light: getCodeThemeSeed("codex", "light"),
+    dark: DEFAULT_CHROME_THEME_BY_VARIANT.dark,
+    light: DEFAULT_CHROME_THEME_BY_VARIANT.light,
   },
   codeThemeIds: {
     dark: "codex",
@@ -429,23 +404,7 @@ export function normalizeThemeState(value: unknown): ThemeState {
     mode: isThemeMode(state.mode) ? state.mode : DEFAULT_THEME_STATE.mode,
   };
 
-  // Restore only the exact, short-lived pivot defaults. Customized/imported
-  // themes and the selected code theme remain untouched.
-  const restoreDefaultTheme = (variant: ThemeVariant): ChromeTheme => {
-    const currentTheme = normalizedState.chromeThemes[variant];
-    return normalizedState.codeThemeIds[variant] === "codex" &&
-      areChromeThemesEqual(currentTheme, CLAUDE_PIVOT_DEFAULT_CHROME_THEME_BY_VARIANT[variant])
-      ? DEFAULT_THEME_STATE.chromeThemes[variant]
-      : currentTheme;
-  };
-
-  return {
-    ...normalizedState,
-    chromeThemes: {
-      dark: restoreDefaultTheme("dark"),
-      light: restoreDefaultTheme("light"),
-    },
-  };
+  return normalizedState;
 }
 
 export function parseStoredThemeState(rawValue: string | null | undefined): ThemeState {
@@ -460,7 +419,13 @@ export function parseStoredThemeState(rawValue: string | null | undefined): Them
   }
 
   try {
-    return normalizeThemeState(JSON.parse(rawValue));
+    const storedState = normalizeThemeState(JSON.parse(rawValue));
+    // Appearance is intentionally fixed to the Claude light/dark pair. Keep
+    // only the user's mode when migrating older theme packs or custom colors.
+    return {
+      ...DEFAULT_THEME_STATE,
+      mode: storedState.mode,
+    };
   } catch {
     return DEFAULT_THEME_STATE;
   }
@@ -600,6 +565,9 @@ export function setThemeCodeThemeId(
 
 export function getCodeThemeSeed(codeThemeId: string, variant: ThemeVariant): ChromeTheme {
   const fallback = DEFAULT_CHROME_THEME_BY_VARIANT[variant];
+  if (codeThemeId === "codex") {
+    return fallback;
+  }
   const themeSeed = THEME_SEED_CATALOG[codeThemeId]?.[variant];
   return themeSeed ? normalizeChromeTheme(themeSeed, variant) : fallback;
 }
@@ -797,7 +765,7 @@ export function buildThemeCssVariables(
     "--faint": readCodexVariable("--color-text-foreground-tertiary"),
     "--gold": warningColor,
     "--hover": readCodexVariable("--color-background-button-secondary-hover"),
-    "--info": pack.theme.accent,
+    "--info": INFO_COLOR_BY_VARIANT[variant],
     // Keep legacy app-level "info" consumers on the accent-text path so
     // links, file labels, and similar affordances inherit the real light/dark logic.
     "--info-foreground": readCodexVariable("--color-text-accent"),
@@ -1202,6 +1170,9 @@ function buildSurfaceUnder(
   ink: RgbColor,
   variant: ThemeVariant,
 ): string {
+  if (areChromeThemesEqual(theme, DEFAULT_CHROME_THEME_BY_VARIANT[variant])) {
+    return CANVAS_COLOR_BY_VARIANT[variant];
+  }
   const baseline = DEFAULT_CHROME_THEME_BY_VARIANT[variant].contrast;
   const mixAmount =
     SURFACE_UNDER_BASE_ALPHA[variant] +

@@ -27,11 +27,9 @@ import {
   normalizeChatFontSizePx,
   normalizeCustomModelSlugs,
   normalizeStoredAppSettings,
-  normalizeTerminalFontFamily,
   normalizeTerminalFontSizePx,
   patchCustomModels,
   resolveAppModelSelection,
-  resolveTerminalFontFamilyStack,
 } from "./appSettings";
 
 describe("normalizeCustomModelSlugs", () => {
@@ -301,31 +299,6 @@ describe("terminal font size defaults", () => {
   });
 });
 
-describe("terminal font family settings", () => {
-  it("leaves the bundled terminal font stack active for empty values", () => {
-    expect(resolveTerminalFontFamilyStack("")).toBeNull();
-    expect(resolveTerminalFontFamilyStack("   ")).toBeNull();
-  });
-
-  it("quotes a single multi-word font and appends a monospace fallback", () => {
-    expect(resolveTerminalFontFamilyStack("Fira Code")).toBe('"Fira Code", monospace');
-    expect(resolveTerminalFontFamilyStack("Menlo")).toBe("Menlo, monospace");
-  });
-
-  it("preserves explicit font stacks while adding a generic fallback when missing", () => {
-    expect(resolveTerminalFontFamilyStack('"Fira Code", Menlo')).toBe(
-      '"Fira Code", Menlo, monospace',
-    );
-    expect(resolveTerminalFontFamilyStack('"Fira Code", ui-monospace')).toBe(
-      '"Fira Code", ui-monospace',
-    );
-  });
-
-  it("strips characters that could break the terminal font CSS variable", () => {
-    expect(normalizeTerminalFontFamily("Fira; Code{}\n<>")).toBe("Fira Code");
-  });
-});
-
 describe("sidebar sort defaults", () => {
   it("defaults project sorting to manual", () => {
     expect(DEFAULT_SIDEBAR_PROJECT_SORT_ORDER).toBe("manual");
@@ -347,6 +320,18 @@ describe("normalizeStoredAppSettings", () => {
     const decodedSettings = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema))("{}");
 
     expect(decodedSettings.enableNativeFontSmoothing).toBe(getDefaultNativeFontSmoothing());
+  });
+
+  it("drops legacy font-family preferences now that fonts are bundled and fixed", () => {
+    const decodedSettings = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema))(
+      JSON.stringify({
+        chatCodeFontFamily: "JetBrains Mono",
+        terminalFontFamily: "Fira Code",
+      }),
+    );
+
+    expect(decodedSettings).not.toHaveProperty("chatCodeFontFamily");
+    expect(decodedSettings).not.toHaveProperty("terminalFontFamily");
   });
 
   it("preserves an explicitly stored updated_at project sort order", () => {

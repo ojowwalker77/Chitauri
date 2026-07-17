@@ -24,6 +24,7 @@ import {
   useState,
 } from "react";
 import ChatView from "../components/ChatView";
+import { ProjectSurfaceFrame } from "../components/ProjectSurfaceHeader";
 import { EditorWorkspaceView } from "../components/EditorWorkspaceView";
 import { DiffWorkerPoolProvider } from "../components/DiffWorkerPoolProvider";
 import {
@@ -677,6 +678,8 @@ function SingleChatSurface(props: {
     },
     [dockState.panes, props.threadId, requestImmediateDockHydration, setActivePane],
   );
+  const projectSurfaceThread =
+    threadSummaries.find((thread) => thread.id === props.threadId) ?? null;
 
   // The editor file path arrives via the URL, so an attacker-crafted link can
   // carry traversal segments ("../../etc"). Treat unsafe values as no selection
@@ -736,7 +739,7 @@ function SingleChatSurface(props: {
   );
 
   if (props.search.view === "editor") {
-    return (
+    const editorSurface = (
       <WorkspaceFileOpenerContext.Provider value={editorFileOpener}>
         <div
           className={cn(CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME, CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME)}
@@ -798,9 +801,23 @@ function SingleChatSurface(props: {
         </div>
       </WorkspaceFileOpenerContext.Provider>
     );
+    return projectSurfaceThread ? (
+      <ProjectSurfaceFrame
+        activeSurface="chat"
+        middleThreadId={props.threadId}
+        middleThreadTitle={projectSurfaceThread.title}
+        projectId={props.projectId}
+        projectName={activeProject?.name ?? null}
+        routeThreadId={props.threadId}
+      >
+        {editorSurface}
+      </ProjectSurfaceFrame>
+    ) : (
+      editorSurface
+    );
   }
 
-  return (
+  const chatSurface = (
     <WorkspaceFileOpenerContext.Provider value={dockFileOpener}>
       <div
         className={cn(CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME, CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME)}
@@ -838,6 +855,20 @@ function SingleChatSurface(props: {
         />
       </div>
     </WorkspaceFileOpenerContext.Provider>
+  );
+  return projectSurfaceThread ? (
+    <ProjectSurfaceFrame
+      activeSurface="chat"
+      middleThreadId={props.threadId}
+      middleThreadTitle={projectSurfaceThread.title}
+      projectId={props.projectId}
+      projectName={activeProject?.name ?? null}
+      routeThreadId={props.threadId}
+    >
+      {chatSurface}
+    </ProjectSurfaceFrame>
+  ) : (
+    chatSurface
   );
 }
 

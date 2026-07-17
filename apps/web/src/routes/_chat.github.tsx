@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import ChatMarkdown from "~/components/ChatMarkdown";
 import { DiffPanelPatchViewport } from "~/components/DiffPanelPatchViewport";
 import { RouteInsetSurface } from "~/components/RouteInsetSurface";
+import { ProjectSurfaceFrame } from "~/components/ProjectSurfaceHeader";
 import { SidebarHeaderNavigationControls } from "~/components/SidebarHeaderNavigationControls";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
@@ -29,7 +30,6 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
-import { Select, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { Textarea } from "~/components/ui/textarea";
 import { useComposerDraftStore } from "~/composerDraftStore";
@@ -40,6 +40,8 @@ import {
   groupGitHubItemsByRepository,
 } from "~/githubWorkbench.logic";
 import { useHandleNewThread } from "~/hooks/useHandleNewThread";
+import { useLatestProjectStore } from "~/latestProjectStore";
+import { useProjectActiveThreadStore } from "~/projectActiveThreadStore";
 import { useTheme } from "~/hooks/useTheme";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import {
@@ -643,6 +645,7 @@ function IssueCreationDialog({
 }
 
 function GitHubWorkbenchRoute() {
+  const latestProjectId = useLatestProjectStore((state) => state.latestProjectId);
   const queryClient = useQueryClient();
   const projects = useStore((state) => state.projects);
   const { handleNewThread } = useHandleNewThread();
@@ -650,11 +653,32 @@ function GitHubWorkbenchRoute() {
     () => projects.filter((project) => project.kind === "project"),
     [projects],
   );
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const selectedAttachedProject =
-    attachedProjects.find((project) => project.id === selectedProjectId) ??
+    attachedProjects.find((project) => project.id === latestProjectId) ??
     attachedProjects[0] ??
     null;
+  const rememberedThreadId = useProjectActiveThreadStore((state) =>
+    selectedAttachedProject
+      ? (state.activeThreadByProjectId[selectedAttachedProject.id] ?? null)
+      : null,
+  );
+  const rememberedThread = useStore((state) =>
+    rememberedThreadId ? (state.sidebarThreadSummaryById[rememberedThreadId] ?? null) : null,
+  );
+  const fallbackThread = useStore((state) =>
+    selectedAttachedProject
+      ? ((state.threadIds ?? [])
+          .map((threadId) => state.sidebarThreadSummaryById[threadId])
+          .find(
+            (thread) =>
+              thread?.projectId === selectedAttachedProject.id &&
+              !thread.parentThreadId &&
+              thread.archivedAt == null,
+          ) ?? null)
+      : null,
+  );
+  const surfaceThread =
+    rememberedThread?.projectId === selectedAttachedProject?.id ? rememberedThread : fallbackThread;
   const selectedProjectCwd = selectedAttachedProject?.cwd ?? null;
   const [view, setView] = useState<GitHubWorkListView>(DEFAULT_GITHUB_VIEW);
   const [query, setQuery] = useState("");
@@ -794,365 +818,369 @@ function GitHubWorkbenchRoute() {
   const connectionBlocked = connection && (!connection.available || !connection.authenticated);
 
   return (
-    <RouteInsetSurface>
-      <div className="flex h-full min-h-0 flex-col">
-        <header
-          className={cn(
-            CHAT_SURFACE_HEADER_HEIGHT_CLASS,
-            CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
-            CHAT_SURFACE_HEADER_PADDING_X_CLASS,
-            "flex shrink-0 items-center gap-3",
-          )}
-        >
-          <SidebarHeaderNavigationControls />
-          <GitHubIcon className="size-4" />
-          <span className="text-sm font-semibold">GitHub</span>
-          {attachedProjects.length > 0 ? (
-            <Select
-              value={selectedAttachedProject?.id ?? undefined}
-              onValueChange={(value) => {
-                setSelectedProjectId(value);
-                setSelectedId(null);
-              }}
-            >
-              <SelectTrigger size="sm" className="max-w-52">
-                <SelectValue placeholder="Select project" />
-              </SelectTrigger>
-              {attachedProjects.map((project) => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.name}
-                </SelectItem>
-              ))}
-            </Select>
-          ) : null}
-          {connection?.account ? (
-            <span className="hidden text-xs text-muted-foreground sm:inline">
-              {connection.account}
-              {connection.host ? ` · ${connection.host}` : ""}
-            </span>
-          ) : null}
-          <div className="ml-auto flex items-center gap-1">
-            <Button
-              size="icon-xs"
-              variant="ghost"
-              aria-label="Refresh GitHub"
-              onClick={() => void queryClient.invalidateQueries({ queryKey: ["github-workbench"] })}
-            >
-              <RefreshCwIcon />
-            </Button>
-            <Button size="xs" variant="outline" onClick={() => setCreateIssueOpen(true)}>
-              <PlusIcon /> Issue
-            </Button>
-          </div>
-        </header>
+    <ProjectSurfaceFrame
+      activeSurface="github"
+      middleThreadId={surfaceThread?.id ?? null}
+      middleThreadTitle={surfaceThread?.title ?? null}
+      projectId={selectedAttachedProject?.id ?? null}
+      projectName={selectedAttachedProject?.name ?? null}
+    >
+      <RouteInsetSurface>
+        <div className="flex h-full min-h-0 flex-col">
+          <header
+            className={cn(
+              CHAT_SURFACE_HEADER_HEIGHT_CLASS,
+              CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
+              CHAT_SURFACE_HEADER_PADDING_X_CLASS,
+              "flex shrink-0 items-center gap-3",
+            )}
+          >
+            <SidebarHeaderNavigationControls />
+            <GitHubIcon className="size-4" />
+            <span className="text-sm font-semibold">GitHub</span>
+            {connection?.account ? (
+              <span className="hidden text-xs text-muted-foreground sm:inline">
+                {connection.account}
+                {connection.host ? ` · ${connection.host}` : ""}
+              </span>
+            ) : null}
+            <div className="ml-auto flex items-center gap-1">
+              <Button
+                size="icon-xs"
+                variant="ghost"
+                aria-label="Refresh GitHub"
+                onClick={() =>
+                  void queryClient.invalidateQueries({ queryKey: ["github-workbench"] })
+                }
+              >
+                <RefreshCwIcon />
+              </Button>
+              <Button size="xs" variant="outline" onClick={() => setCreateIssueOpen(true)}>
+                <PlusIcon /> Issue
+              </Button>
+            </div>
+          </header>
 
-        {connectionBlocked ? (
-          <div className="m-4 rounded-xl border border-warning/40 bg-warning/5 p-4">
-            <div className="flex items-start gap-3">
-              <TriangleAlertIcon className="mt-0.5 size-5 text-warning" />
-              <div>
-                <h2 className="text-sm font-semibold">GitHub CLI needs attention</h2>
-                <p className="mt-1 text-xs text-muted-foreground">{connection.error}</p>
-                <code className="mt-3 block rounded-md bg-muted px-2 py-1.5 text-xs">
-                  {connection.available ? "gh auth login" : "brew install gh"}
-                </code>
+          {connectionBlocked ? (
+            <div className="m-4 rounded-xl border border-warning/40 bg-warning/5 p-4">
+              <div className="flex items-start gap-3">
+                <TriangleAlertIcon className="mt-0.5 size-5 text-warning" />
+                <div>
+                  <h2 className="text-sm font-semibold">GitHub CLI needs attention</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">{connection.error}</p>
+                  <code className="mt-3 block rounded-md bg-muted px-2 py-1.5 text-xs">
+                    {connection.available ? "gh auth login" : "brew install gh"}
+                  </code>
+                </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-1">
-            <aside
-              className={cn(
-                "w-[340px] min-w-[280px] max-w-[42%] shrink-0 flex-col border-r border-border/70 max-md:w-full max-md:max-w-full",
-                selectedItem ? "hidden md:flex" : "flex",
-              )}
-            >
-              <div className="border-b border-border/70 p-3">
-                <div className="flex gap-1 overflow-x-auto pb-1">
-                  {GITHUB_WORK_VIEWS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => changeView(option.value)}
-                      className={cn(
-                        "shrink-0 rounded-full px-2 py-1 text-[11px]",
-                        view === option.value
-                          ? "bg-foreground text-background"
-                          : "bg-muted text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="mt-2 flex items-center rounded-lg border border-border bg-background/60 px-2">
-                  <SearchIcon className="size-3.5 text-muted-foreground" />
-                  <Input
-                    unstyled
-                    type="search"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search title, repo, or number"
-                    className="min-h-8"
-                  />
-                </div>
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
-                {repositoryGroups.length > 0 ? (
-                  repositoryGroups.map((group) => (
-                    <section key={group.repository.nameWithOwner} className="mb-2">
-                      <h2 className="sticky top-0 z-10 bg-[var(--color-background-elevated)] px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground">
-                        {group.repository.nameWithOwner}
-                      </h2>
-                      {group.items.map((item) => (
-                        <WorkListRow
-                          key={item.id}
-                          item={item}
-                          selected={item.id === selectedId}
-                          onSelect={() => {
-                            setSelectedId(item.id);
-                            setDetailTab("summary");
-                            setComposerMode(null);
-                          }}
-                        />
-                      ))}
-                    </section>
-                  ))
-                ) : (
-                  <EmptyList loading={listLoading} error={listError} />
+          ) : (
+            <div className="flex min-h-0 flex-1">
+              <aside
+                className={cn(
+                  "w-[340px] min-w-[280px] max-w-[42%] shrink-0 flex-col border-r border-border/70 max-md:w-full max-md:max-w-full",
+                  selectedItem ? "hidden md:flex" : "flex",
                 )}
-              </div>
-              {listSyncedAt ? (
-                <div className="border-t border-border/70 px-3 py-2 text-[11px] text-muted-foreground">
-                  {visibleItems.length} items · synced {formatRelativeTime(listSyncedAt)}
+              >
+                <div className="border-b border-border/70 p-3">
+                  <div className="flex gap-1 overflow-x-auto pb-1">
+                    {GITHUB_WORK_VIEWS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => changeView(option.value)}
+                        className={cn(
+                          "shrink-0 rounded-full px-2 py-1 text-[11px]",
+                          view === option.value
+                            ? "bg-foreground text-background"
+                            : "bg-muted text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-2 flex items-center rounded-lg border border-border bg-background/60 px-2">
+                    <SearchIcon className="size-3.5 text-muted-foreground" />
+                    <Input
+                      unstyled
+                      type="search"
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder="Search title, repo, or number"
+                      className="min-h-8"
+                    />
+                  </div>
                 </div>
-              ) : null}
-            </aside>
+                <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
+                  {repositoryGroups.length > 0 ? (
+                    repositoryGroups.map((group) => (
+                      <section key={group.repository.nameWithOwner} className="mb-2">
+                        <h2 className="sticky top-0 z-10 bg-[var(--color-background-elevated)] px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground">
+                          {group.repository.nameWithOwner}
+                        </h2>
+                        {group.items.map((item) => (
+                          <WorkListRow
+                            key={item.id}
+                            item={item}
+                            selected={item.id === selectedId}
+                            onSelect={() => {
+                              setSelectedId(item.id);
+                              setDetailTab("summary");
+                              setComposerMode(null);
+                            }}
+                          />
+                        ))}
+                      </section>
+                    ))
+                  ) : (
+                    <EmptyList loading={listLoading} error={listError} />
+                  )}
+                </div>
+                {listSyncedAt ? (
+                  <div className="border-t border-border/70 px-3 py-2 text-[11px] text-muted-foreground">
+                    {visibleItems.length} items · synced {formatRelativeTime(listSyncedAt)}
+                  </div>
+                ) : null}
+              </aside>
 
-            <main
-              className={cn("min-w-0 flex-1 flex-col", selectedItem ? "flex" : "hidden md:flex")}
-            >
-              {!selectedItem ? (
-                <div className="flex h-full flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
-                  <GitHubIcon className="size-6 opacity-50" />
-                  Select a pull request or issue.
-                </div>
-              ) : detailQuery.isPending && !detail ? (
-                <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground">
-                  <Spinner className="size-4" /> Loading details…
-                </div>
-              ) : detailQuery.error && !detail ? (
-                <div className="m-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-xs text-destructive">
-                  {errorMessage(detailQuery.error)}
-                </div>
-              ) : detail ? (
-                <>
-                  <DetailHeader
-                    detail={detail}
-                    tab={detailTab}
-                    onBack={() => setSelectedId(null)}
-                    onTabChange={setDetailTab}
-                    onOpenExternal={() =>
-                      void ensureNativeApi().shell.openExternal(detail.item.url)
-                    }
-                  />
-                  <div className="flex flex-wrap items-center gap-1.5 border-b border-border/70 px-3 py-2">
-                    <Button size="xs" onClick={() => void startAgent("work")}>
-                      <SparklesIcon /> Work on this
-                    </Button>
-                    {detail.item.kind === "pull_request" ? (
-                      <Button size="xs" variant="outline" onClick={() => void startAgent("review")}>
-                        <GitPullRequestIcon /> Agent review
+              <main
+                className={cn("min-w-0 flex-1 flex-col", selectedItem ? "flex" : "hidden md:flex")}
+              >
+                {!selectedItem ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <GitHubIcon className="size-6 opacity-50" />
+                    Select a pull request or issue.
+                  </div>
+                ) : detailQuery.isPending && !detail ? (
+                  <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <Spinner className="size-4" /> Loading details…
+                  </div>
+                ) : detailQuery.error && !detail ? (
+                  <div className="m-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-xs text-destructive">
+                    {errorMessage(detailQuery.error)}
+                  </div>
+                ) : detail ? (
+                  <>
+                    <DetailHeader
+                      detail={detail}
+                      tab={detailTab}
+                      onBack={() => setSelectedId(null)}
+                      onTabChange={setDetailTab}
+                      onOpenExternal={() =>
+                        void ensureNativeApi().shell.openExternal(detail.item.url)
+                      }
+                    />
+                    <div className="flex flex-wrap items-center gap-1.5 border-b border-border/70 px-3 py-2">
+                      <Button size="xs" onClick={() => void startAgent("work")}>
+                        <SparklesIcon /> Work on this
                       </Button>
-                    ) : null}
-                    {detail.item.checkStatus === "failure" ? (
-                      <Button size="xs" variant="outline" onClick={() => void startAgent("fix_ci")}>
-                        <CircleAlertIcon /> Fix CI
-                      </Button>
-                    ) : null}
-                    <Button size="xs" variant="ghost" onClick={() => setComposerMode("comment")}>
-                      <MessageCircleIcon /> Comment
-                    </Button>
-                    {detail.item.kind === "pull_request" ? (
-                      <Button size="xs" variant="ghost" onClick={() => setComposerMode("review")}>
-                        <CheckCircle2Icon /> Review
-                      </Button>
-                    ) : null}
-                    {detail.item.isDraft && target ? (
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        onClick={() =>
-                          void runAction({ action: "ready", ...target, kind: "pull_request" })
-                        }
-                      >
-                        <PlayIcon /> Ready
-                      </Button>
-                    ) : null}
-                    {target ? (
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        onClick={() =>
-                          void runAction({
-                            action: "assign_self",
-                            ...target,
-                            assigned: !detail.item.assignees.some(
-                              (actor) => actor.login === connection?.account,
-                            ),
-                          })
-                        }
-                      >
-                        {detail.item.assignees.some((actor) => actor.login === connection?.account)
-                          ? "Unassign me"
-                          : "Assign me"}
-                      </Button>
-                    ) : null}
-                    <div className="ml-auto flex gap-1">
-                      {detail.item.kind === "pull_request" && target ? (
+                      {detail.item.kind === "pull_request" ? (
                         <Button
                           size="xs"
                           variant="outline"
+                          onClick={() => void startAgent("review")}
+                        >
+                          <GitPullRequestIcon /> Agent review
+                        </Button>
+                      ) : null}
+                      {detail.item.checkStatus === "failure" ? (
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          onClick={() => void startAgent("fix_ci")}
+                        >
+                          <CircleAlertIcon /> Fix CI
+                        </Button>
+                      ) : null}
+                      <Button size="xs" variant="ghost" onClick={() => setComposerMode("comment")}>
+                        <MessageCircleIcon /> Comment
+                      </Button>
+                      {detail.item.kind === "pull_request" ? (
+                        <Button size="xs" variant="ghost" onClick={() => setComposerMode("review")}>
+                          <CheckCircle2Icon /> Review
+                        </Button>
+                      ) : null}
+                      {detail.item.isDraft && target ? (
+                        <Button
+                          size="xs"
+                          variant="ghost"
                           onClick={() =>
-                            void runAction({
-                              action: "update_branch",
-                              ...target,
-                              kind: "pull_request",
-                            })
+                            void runAction({ action: "ready", ...target, kind: "pull_request" })
                           }
                         >
-                          <RefreshCwIcon /> Update branch
+                          <PlayIcon /> Ready
                         </Button>
                       ) : null}
                       {target ? (
                         <Button
                           size="xs"
-                          variant={detail.item.state === "open" ? "destructive-outline" : "outline"}
-                          onClick={async () => {
-                            const nextState = detail.item.state === "open" ? "closed" : "open";
-                            const confirmed =
-                              nextState === "open" ||
-                              (await ensureNativeApi().dialogs.confirm(
-                                `Close ${detail.item.kind === "pull_request" ? "pull request" : "issue"} #${detail.item.number}?`,
-                              ));
-                            if (confirmed)
-                              void runAction({
-                                action: "set_state",
-                                ...target,
-                                state: nextState,
-                                closeReason:
-                                  detail.item.kind === "issue" && nextState === "closed"
-                                    ? "completed"
-                                    : null,
-                              });
-                          }}
+                          variant="ghost"
+                          onClick={() =>
+                            void runAction({
+                              action: "assign_self",
+                              ...target,
+                              assigned: !detail.item.assignees.some(
+                                (actor) => actor.login === connection?.account,
+                              ),
+                            })
+                          }
                         >
-                          {detail.item.state === "open" ? "Close" : "Reopen"}
+                          {detail.item.assignees.some(
+                            (actor) => actor.login === connection?.account,
+                          )
+                            ? "Unassign me"
+                            : "Assign me"}
                         </Button>
                       ) : null}
-                      {detail.item.kind === "pull_request" &&
-                      detail.item.state === "open" &&
-                      detail.headSha &&
-                      target ? (
-                        <Button
-                          size="xs"
-                          onClick={async () => {
-                            const confirmed = await ensureNativeApi().dialogs.confirm(
-                              `Squash and merge #${detail.item.number} at ${detail.headSha?.slice(0, 8)}?`,
-                            );
-                            if (confirmed)
+                      <div className="ml-auto flex gap-1">
+                        {detail.item.kind === "pull_request" && target ? (
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            onClick={() =>
                               void runAction({
-                                action: "merge",
+                                action: "update_branch",
                                 ...target,
                                 kind: "pull_request",
-                                method: "squash",
-                                deleteBranch: true,
-                                auto: false,
-                                expectedHeadSha: detail.headSha!,
+                              })
+                            }
+                          >
+                            <RefreshCwIcon /> Update branch
+                          </Button>
+                        ) : null}
+                        {target ? (
+                          <Button
+                            size="xs"
+                            variant={
+                              detail.item.state === "open" ? "destructive-outline" : "outline"
+                            }
+                            onClick={async () => {
+                              const nextState = detail.item.state === "open" ? "closed" : "open";
+                              const confirmed =
+                                nextState === "open" ||
+                                (await ensureNativeApi().dialogs.confirm(
+                                  `Close ${detail.item.kind === "pull_request" ? "pull request" : "issue"} #${detail.item.number}?`,
+                                ));
+                              if (confirmed)
+                                void runAction({
+                                  action: "set_state",
+                                  ...target,
+                                  state: nextState,
+                                  closeReason:
+                                    detail.item.kind === "issue" && nextState === "closed"
+                                      ? "completed"
+                                      : null,
+                                });
+                            }}
+                          >
+                            {detail.item.state === "open" ? "Close" : "Reopen"}
+                          </Button>
+                        ) : null}
+                        {detail.item.kind === "pull_request" &&
+                        detail.item.state === "open" &&
+                        detail.headSha &&
+                        target ? (
+                          <Button
+                            size="xs"
+                            onClick={async () => {
+                              const confirmed = await ensureNativeApi().dialogs.confirm(
+                                `Squash and merge #${detail.item.number} at ${detail.headSha?.slice(0, 8)}?`,
+                              );
+                              if (confirmed)
+                                void runAction({
+                                  action: "merge",
+                                  ...target,
+                                  kind: "pull_request",
+                                  method: "squash",
+                                  deleteBranch: true,
+                                  auto: false,
+                                  expectedHeadSha: detail.headSha!,
+                                });
+                            }}
+                          >
+                            <GitMergeIcon /> Merge
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="min-h-0 flex-1 overflow-y-auto">
+                      {detailTab === "summary" ? (
+                        <SummaryView
+                          detail={detail}
+                          cwd={selectedProject?.cwd ?? null}
+                          rerunningCheckId={
+                            actionMutation.variables?.action === "rerun_checks"
+                              ? actionMutation.variables.runId
+                              : null
+                          }
+                          onRerunCheck={(runId) => {
+                            if (target)
+                              void runAction({
+                                action: "rerun_checks",
+                                cwd: target.cwd,
+                                kind: "pull_request",
+                                repository: target.repository,
+                                number: target.number,
+                                runId,
+                                failedOnly: true,
                               });
                           }}
-                        >
-                          <GitMergeIcon /> Merge
-                        </Button>
-                      ) : null}
+                        />
+                      ) : detailTab === "timeline" ? (
+                        <TimelineView detail={detail} cwd={selectedProject?.cwd ?? null} />
+                      ) : (
+                        <CodeView detail={detail} cwd={selectedProjectCwd} />
+                      )}
                     </div>
-                  </div>
-                  <div className="min-h-0 flex-1 overflow-y-auto">
-                    {detailTab === "summary" ? (
-                      <SummaryView
-                        detail={detail}
-                        cwd={selectedProject?.cwd ?? null}
-                        rerunningCheckId={
-                          actionMutation.variables?.action === "rerun_checks"
-                            ? actionMutation.variables.runId
-                            : null
-                        }
-                        onRerunCheck={(runId) => {
-                          if (target)
-                            void runAction({
-                              action: "rerun_checks",
-                              cwd: target.cwd,
-                              kind: "pull_request",
-                              repository: target.repository,
-                              number: target.number,
-                              runId,
-                              failedOnly: true,
-                            });
+                    {composerMode ? (
+                      <ActionComposer
+                        mode={composerMode}
+                        pending={actionMutation.isPending}
+                        canSubmitDecision={detail.item.author?.login !== connection?.account}
+                        onCancel={() => setComposerMode(null)}
+                        onSubmit={(body, verdict) => {
+                          if (!target) return;
+                          void runAction(
+                            composerMode === "review"
+                              ? {
+                                  action: "review",
+                                  ...target,
+                                  kind: "pull_request",
+                                  verdict,
+                                  body: body.trim(),
+                                }
+                              : { action: "comment", ...target, body: body.trim() },
+                          );
                         }}
                       />
-                    ) : detailTab === "timeline" ? (
-                      <TimelineView detail={detail} cwd={selectedProject?.cwd ?? null} />
-                    ) : (
-                      <CodeView detail={detail} cwd={selectedProjectCwd} />
-                    )}
-                  </div>
-                  {composerMode ? (
-                    <ActionComposer
-                      mode={composerMode}
-                      pending={actionMutation.isPending}
-                      canSubmitDecision={detail.item.author?.login !== connection?.account}
-                      onCancel={() => setComposerMode(null)}
-                      onSubmit={(body, verdict) => {
-                        if (!target) return;
-                        void runAction(
-                          composerMode === "review"
-                            ? {
-                                action: "review",
-                                ...target,
-                                kind: "pull_request",
-                                verdict,
-                                body: body.trim(),
-                              }
-                            : { action: "comment", ...target, body: body.trim() },
-                        );
-                      }}
-                    />
-                  ) : null}
-                </>
-              ) : null}
-            </main>
-          </div>
-        )}
-      </div>
-      <IssueCreationDialog
-        open={createIssueOpen}
-        defaultRepository={connection?.repository?.nameWithOwner ?? ""}
-        pending={actionMutation.isPending}
-        onOpenChange={setCreateIssueOpen}
-        onCreate={(input) => {
-          void runAction({
-            action: "create_issue",
-            cwd: selectedProjectCwd,
-            repository: input.repository,
-            title: input.title,
-            body: input.body,
-            labels: [],
-            assignees: [],
-          }).then((result) => {
-            if (result) setCreateIssueOpen(false);
-          });
-        }}
-      />
-    </RouteInsetSurface>
+                    ) : null}
+                  </>
+                ) : null}
+              </main>
+            </div>
+          )}
+        </div>
+        <IssueCreationDialog
+          open={createIssueOpen}
+          defaultRepository={connection?.repository?.nameWithOwner ?? ""}
+          pending={actionMutation.isPending}
+          onOpenChange={setCreateIssueOpen}
+          onCreate={(input) => {
+            void runAction({
+              action: "create_issue",
+              cwd: selectedProjectCwd,
+              repository: input.repository,
+              title: input.title,
+              body: input.body,
+              labels: [],
+              assignees: [],
+            }).then((result) => {
+              if (result) setCreateIssueOpen(false);
+            });
+          }}
+        />
+      </RouteInsetSurface>
+    </ProjectSurfaceFrame>
   );
 }

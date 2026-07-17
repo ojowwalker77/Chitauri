@@ -33,6 +33,24 @@ describe("parseStoredThemeState", () => {
     });
   });
 
+  it("keeps the saved mode while replacing legacy custom themes with the Claude palette", () => {
+    expect(
+      parseStoredThemeState(
+        JSON.stringify({
+          mode: "dark",
+          codeThemeIds: { dark: "linear", light: "github" },
+          chromeThemes: {
+            dark: { accent: "#339cff", surface: "#000000" },
+            light: { accent: "#ff00aa", surface: "#ffffff" },
+          },
+        }),
+      ),
+    ).toEqual({
+      ...DEFAULT_THEME_STATE,
+      mode: "dark",
+    });
+  });
+
   it("normalizes partial stored packs against the per-variant defaults", () => {
     expect(
       normalizeThemeState({
@@ -80,45 +98,7 @@ describe("parseStoredThemeState", () => {
     expect(migrated.chromeThemes.dark.accent).toBe("#606acc");
   });
 
-  it("restores profiles that persisted the short-lived Claude pivot default", () => {
-    const restored = normalizeThemeState({
-      mode: "dark",
-      codeThemeIds: { dark: "codex", light: "codex" },
-      chromeThemes: {
-        dark: {
-          accent: "#d97757",
-          contrast: 60,
-          fonts: { code: null, ui: null },
-          ink: "#e6e4e1",
-          opaqueWindows: true,
-          semanticColors: {
-            diffAdded: "#4cb782",
-            diffRemoved: "#d7655f",
-            skill: "#ad7bf9",
-          },
-          surface: "#171717",
-        },
-        light: {
-          accent: "#d97757",
-          contrast: 45,
-          fonts: { code: null, ui: null },
-          ink: "#292724",
-          opaqueWindows: true,
-          semanticColors: {
-            diffAdded: "#3f9d70",
-            diffRemoved: "#b9524d",
-            skill: "#924ff7",
-          },
-          surface: "#f7f5f2",
-        },
-      },
-    });
-
-    expect(restored.chromeThemes).toEqual(DEFAULT_THEME_STATE.chromeThemes);
-    expect(restored.codeThemeIds).toEqual({ dark: "codex", light: "codex" });
-  });
-
-  it("preserves customized chrome instead of treating it as the pivot default", () => {
+  it("keeps normalization useful for legacy share payloads before storage migration", () => {
     const customDark = { ...getCodeThemeSeed("codex", "dark"), accent: "#ff00aa" };
     const normalized = normalizeThemeState({
       codeThemeIds: { dark: "codex", light: "codex" },
@@ -402,10 +382,10 @@ describe("buildThemeCssVariables", () => {
     expect(tokens.aliases["--color-token-terminal-ansi-bright-black"]).toBe(
       tokens.derived.textForegroundSecondary,
     );
-    expect(tokens.aliases["--color-token-terminal-ansi-yellow"]).toBe("#cf9d5e");
+    expect(tokens.aliases["--color-token-terminal-ansi-yellow"]).toBe("#fb923c");
   });
 
-  it("matches Codex's default dark chrome composer/dropdown control color", () => {
+  it("derives the fixed dark appearance palette", () => {
     const tokens = buildResolvedThemeTokens(
       {
         codeThemeId: "codex",
@@ -414,8 +394,26 @@ describe("buildThemeCssVariables", () => {
       "dark",
     );
 
-    expect(tokens.derived.controlBackgroundOpaque).toBe("rgb(45, 45, 45)");
-    expect(tokens.aliases["--color-token-dropdown-background"]).toBe("rgb(45, 45, 45)");
+    expect(tokens.derived.controlBackgroundOpaque).toBe("rgb(44, 44, 47)");
+    expect(tokens.aliases["--color-token-dropdown-background"]).toBe("rgb(44, 44, 47)");
+    expect(tokens.computed.surfaceUnder).toBe("#09090b");
+  });
+
+  it("projects the requested semantic colors and light canvas", () => {
+    const darkVariables = buildThemeCssVariables(
+      resolveThemePack(DEFAULT_THEME_STATE, "dark"),
+      "dark",
+    ).variables;
+    const lightTokens = buildResolvedThemeTokens(
+      resolveThemePack(DEFAULT_THEME_STATE, "light"),
+      "light",
+    );
+
+    expect(darkVariables["--destructive"]).toBe("#f43f5e");
+    expect(darkVariables["--success"]).toBe("#4ade80");
+    expect(darkVariables["--warning"]).toBe("#fb923c");
+    expect(darkVariables["--info"]).toBe("#3b82f6");
+    expect(lightTokens.computed.surfaceUnder).toBe("#e4e4e7");
   });
 
   it("matches Codex's light composer surface token path", () => {

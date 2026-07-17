@@ -13,6 +13,7 @@ import {
 } from "~/appSettings";
 import ChatView from "~/components/ChatView";
 import { RouteInsetSurface } from "~/components/RouteInsetSurface";
+import { ProjectSurfaceFrame } from "~/components/ProjectSurfaceHeader";
 import { ResearchDocumentView } from "~/components/research/ResearchDocumentView";
 import { Button } from "~/components/ui/button";
 import { toastManager } from "~/components/ui/toast";
@@ -182,18 +183,27 @@ function ResearchDetailRoute() {
   );
 
   return (
-    <RouteInsetSurface>
-      <ChatView
-        threadId={threadId}
-        transcriptContent={transcriptContent}
-        surfaceTitle={document?.title ?? "Research"}
-        {...(document
-          ? {
-              transformOutgoingPrompt: (prompt: string) =>
-                buildResearchRevisionPrompt(document, prompt),
-            }
-          : {})}
-      />
-    </RouteInsetSurface>
+    <ProjectSurfaceFrame
+      activeSurface="research"
+      middleThreadId={threadId}
+      middleThreadTitle={serverThread?.title ?? null}
+      projectId={projectId}
+      projectName={project?.name ?? null}
+      routeThreadId={threadId}
+    >
+      <RouteInsetSurface>
+        <ChatView
+          threadId={threadId}
+          transcriptContent={transcriptContent}
+          surfaceTitle={document?.title ?? "Research"}
+          {...(document
+            ? {
+                transformOutgoingPrompt: (prompt: string) =>
+                  buildResearchRevisionPrompt(document, prompt),
+              }
+            : {})}
+        />
+      </RouteInsetSurface>
+    </ProjectSurfaceFrame>
   );
 }

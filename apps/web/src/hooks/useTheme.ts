@@ -1,32 +1,20 @@
 // FILE: useTheme.ts
-// Purpose: Persists the Codex-style theme store and projects the active pack into DOM CSS variables.
+// Purpose: Persists the appearance mode and projects the fixed Claude palette into DOM CSS variables.
 // Layer: Web appearance state hook
-// Exports: useTheme for mode, resolved variant, theme-pack import/export, and active theme metadata.
+// Exports: useTheme for the system, light, and dark appearance modes.
 
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { isElectron } from "../env";
 import { isMacPlatform } from "../lib/utils";
 import {
   DEFAULT_THEME_STATE,
-  type ChromeTheme,
-  type ThemeFonts,
   type ThemeMode,
-  type ThemePack,
   type ThemeState,
-  type ThemeVariant,
-  areThemePacksEqual,
   buildThemeCssVariables,
-  canParseThemeShareString,
-  createThemeShareString,
   parseStoredThemeState,
-  resetThemeVariant as resetThemeVariantState,
   resolveThemePack,
   resolveThemeVariant,
   serializeThemeState,
-  setThemeCodeThemeId,
-  setThemeFonts,
-  updateChromeTheme,
-  updateThemePackFromShareString,
 } from "../theme/theme.logic";
 
 type ThemeSnapshot = {
@@ -218,11 +206,6 @@ export function useTheme() {
   }));
   const theme = snapshot.state.mode;
   const resolvedTheme = resolveThemeVariant(theme, snapshot.systemDark);
-  const activeTheme = resolveThemePack(snapshot.state, resolvedTheme);
-  const darkTheme = resolveThemePack(snapshot.state, "dark");
-  const lightTheme = resolveThemePack(snapshot.state, "light");
-  const defaultActiveTheme = resolveThemePack(DEFAULT_THEME_STATE, resolvedTheme);
-  const isDefaultActiveTheme = areThemePacksEqual(activeTheme, defaultActiveTheme);
 
   const setTheme = useCallback((nextTheme: ThemeMode) => {
     updateStoredThemeState((state) => ({
@@ -231,84 +214,16 @@ export function useTheme() {
     }));
   }, []);
 
-  const canImportThemeString = useCallback(
-    (value: string, variant: ThemeVariant = resolvedTheme) =>
-      canParseThemeShareString(value, variant),
-    [resolvedTheme],
-  );
-
-  const importThemeString = useCallback(
-    (value: string, variant: ThemeVariant = resolvedTheme) => {
-      updateStoredThemeState((state) => updateThemePackFromShareString(state, value, variant));
-    },
-    [resolvedTheme],
-  );
-
-  const exportThemeString = useCallback(
-    (variant: ThemeVariant = resolvedTheme) =>
-      createThemeShareString(variant, resolveThemePack(snapshot.state, variant)),
-    [resolvedTheme, snapshot.state],
-  );
-
-  const resetActiveTheme = useCallback(() => {
-    updateStoredThemeState((state) => resetThemeVariantState(state, resolvedTheme));
-  }, [resolvedTheme]);
-
-  const resetThemeVariant = useCallback((variant: ThemeVariant) => {
-    updateStoredThemeState((state) => resetThemeVariantState(state, variant));
-  }, []);
-
-  const resetAllThemes = useCallback(() => {
-    updateStoredThemeState(() => DEFAULT_THEME_STATE);
-  }, []);
-
-  const updateThemePack = useCallback((variant: ThemeVariant, patch: Partial<ChromeTheme>) => {
-    updateStoredThemeState((state) => updateChromeTheme(state, variant, patch));
-  }, []);
-
-  const updateThemeFonts = useCallback((variant: ThemeVariant, patch: Partial<ThemeFonts>) => {
-    updateStoredThemeState((state) => setThemeFonts(state, variant, patch));
-  }, []);
-
-  const setCodeThemeId = useCallback((variant: ThemeVariant, codeThemeId: string) => {
-    updateStoredThemeState((state) => setThemeCodeThemeId(state, variant, codeThemeId));
-  }, []);
-
-  const isDefaultThemePack = useCallback(
-    (variant: ThemeVariant) =>
-      areThemePacksEqual(
-        resolveThemePack(snapshot.state, variant),
-        resolveThemePack(DEFAULT_THEME_STATE, variant),
-      ),
-    [snapshot.state],
-  );
-
   // Keep the DOM synced if something bypassed the immediate module-load apply.
   useEffect(() => {
     applyThemeState(snapshot.state);
   }, [snapshot.state]);
 
   return {
-    activeTheme,
-    canImportThemeString,
-    darkTheme,
-    defaultActiveTheme,
-    exportThemeString,
-    importThemeString,
-    isDefaultActiveTheme,
-    isDefaultThemePack,
-    lightTheme,
-    resetActiveTheme,
-    resetAllThemes,
-    resetThemeVariant,
     resolvedTheme,
-    setCodeThemeId,
     setTheme,
     theme,
-    themeState: snapshot.state,
-    updateThemeFonts,
-    updateThemePack,
   } as const;
 }
 
-export type { ChromeTheme, ThemeFonts, ThemeMode, ThemePack, ThemeState, ThemeVariant };
+export type { ThemeMode };
