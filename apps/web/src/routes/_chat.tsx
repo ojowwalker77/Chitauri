@@ -1,7 +1,7 @@
 import type { ResolvedKeybindingsConfig } from "@t3tools/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { Outlet, createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 import {
   goBackInAppHistory,
@@ -46,7 +46,8 @@ import { cn } from "~/lib/utils";
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
 const THREAD_SIDEBAR_WIDTH_STORAGE_KEY = "chat_thread_sidebar_width";
-const THREAD_SIDEBAR_MIN_WIDTH = 13 * 16;
+const THREAD_SIDEBAR_DEFAULT_WIDTH = 18 * 16;
+const THREAD_SIDEBAR_MIN_WIDTH = 16 * 16;
 const THREAD_MAIN_CONTENT_MIN_WIDTH = 40 * 16;
 
 // Single source of truth for the thread sidebar resize behavior. Shared by <Sidebar>
@@ -441,6 +442,7 @@ function ChatRouteGlobalShortcuts() {
   );
 }
 
+/** The Anthropic shell is deliberately flat. The panel supplies the only depth. */
 const SIDEBAR_GAP_CLASS = "bg-transparent";
 
 /** The inner element owns the one persistent panel treatment. */
@@ -461,7 +463,7 @@ function ChatRouteLayout() {
       collapsible="offcanvas"
       // Match the right dock's soft drawer slide (shared token) instead of the
       // shell's default `ease-linear`. Applied to the container + gap in lockstep.
-      className={cn("text-foreground", SIDEBAR_OFFCANVAS_MOTION_CLASS)}
+      className={cn("text-foreground md:p-3", SIDEBAR_OFFCANVAS_MOTION_CLASS)}
       gapClassName={cn(SIDEBAR_GAP_CLASS, SIDEBAR_OFFCANVAS_MOTION_CLASS)}
       innerClassName={SIDEBAR_INNER_CLASS}
       transparentSurface
@@ -489,8 +491,9 @@ function ChatRouteLayout() {
       defaultOpen
       open={resolvedSidebarOpen}
       onOpenChange={setSidebarOpen}
-      className="isolate overflow-hidden bg-[var(--app-shell-background)]"
+      className="chitauri-anthropic-shell isolate overflow-hidden bg-[var(--app-shell-background)]"
       data-sidebar-side="left"
+      style={{ "--sidebar-width": `${THREAD_SIDEBAR_DEFAULT_WIDTH}px` } as CSSProperties}
     >
       {isElectron ? <div aria-hidden="true" className="desktop-window-drag-strip" /> : null}
       <ThreadRetentionMaintenanceToast />

@@ -4,6 +4,7 @@
 
 import {
   ArchiveIcon,
+  AppsIcon,
   BrainIcon,
   CheckCircle2Icon,
   ChevronDownIcon,
@@ -31,7 +32,6 @@ import {
   WorktreeIcon,
   XIcon,
 } from "~/lib/icons";
-import { CentralIcon } from "~/lib/central-icons";
 import { PinStatusIcon, pinActionLabel } from "~/lib/pin";
 import { ensureNativeApi } from "~/nativeApi";
 import { autoAnimate } from "@formkit/auto-animate";
@@ -390,10 +390,6 @@ const EMPTY_SHORTCUT_PARTS: readonly string[] = [];
 const ADD_PROJECT_SNAPSHOT_CATCH_UP_MAX_ATTEMPTS = 6;
 const ADD_PROJECT_SNAPSHOT_CATCH_UP_DELAY_MS = 50;
 type SidebarView = "threads" | "workspace";
-const SIDEBAR_VIEW_LABELS: Record<SidebarView, string> = {
-  threads: "Projects",
-  workspace: "Workspace",
-};
 const DebugFeatureFlagsMenu = import.meta.env.DEV
   ? lazy(() =>
       import("./DebugFeatureFlagsMenu").then((module) => ({
@@ -553,10 +549,18 @@ function SidebarStatusTrailingGlyph({ status }: { status: ThreadStatusPill }) {
     );
   }
   if (status.pulse) {
-    return <ThreadRunningSpinner />;
+    return <ThreadRunningSpinner className="text-[var(--app-sidebar-coral)]" />;
   }
   return (
-    <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", status.dotClass)} />
+    <span
+      aria-hidden="true"
+      className={cn("size-1.5 shrink-0 rounded-full", status.dotClass)}
+      style={
+        status.label === "Pending Approval"
+          ? { backgroundColor: "var(--app-sidebar-gold)" }
+          : undefined
+      }
+    />
   );
 }
 
@@ -711,6 +715,10 @@ function ProviderAvatarWithTerminal({
   const badgeColorClass = terminalStatus?.colorClass ?? "text-muted-foreground/55";
 
   const hasHandoff = Boolean(handoffSourceProvider);
+  const providerStyle =
+    provider === "claudeAgent" ? { color: "var(--app-sidebar-coral)" } : undefined;
+  const handoffProviderStyle =
+    handoffSourceProvider === "claudeAgent" ? { color: "var(--app-sidebar-coral)" } : undefined;
   const containerClass = hasHandoff
     ? "relative inline-flex h-3 w-4.5 shrink-0 items-center"
     : "relative inline-flex size-3 shrink-0 items-center justify-center";
@@ -718,15 +726,19 @@ function ProviderAvatarWithTerminal({
   const avatarNode = hasHandoff ? (
     <span className={containerClass}>
       <span className="sidebar-icon-chip absolute left-0 top-1/2 inline-flex size-3 -translate-y-1/2 items-center justify-center rounded-full">
-        <ProviderIcon provider={handoffSourceProvider!} className="size-2" />
+        <ProviderIcon
+          provider={handoffSourceProvider!}
+          className="size-2"
+          style={handoffProviderStyle}
+        />
       </span>
       <span className="sidebar-icon-chip absolute right-0 top-1/2 z-10 inline-flex size-3 -translate-y-1/2 items-center justify-center rounded-full">
-        <ProviderIcon provider={provider} className="size-2" />
+        <ProviderIcon provider={provider} className="size-2" style={providerStyle} />
       </span>
     </span>
   ) : (
     <span className={containerClass}>
-      <ProviderIcon provider={provider} className="size-3" />
+      <ProviderIcon provider={provider} className="size-3" style={providerStyle} />
     </span>
   );
 
@@ -1091,62 +1103,37 @@ function ChatSortMenu({
   );
 }
 
-function SidebarPrimaryAction({
+function SidebarNavigationMenuItem({
   icon: Icon,
   label,
   onClick,
   active = false,
-  disabled = false,
-  shortcutLabel,
   badgeCount,
 }: {
   icon: LucideIcon;
   label: string;
   onClick?: () => void;
   active?: boolean;
-  disabled?: boolean;
-  shortcutLabel?: string | null;
   badgeCount?: number | null;
 }) {
-  const shortcutParts = shortcutLabel ? splitShortcutLabel(shortcutLabel) : [];
   const showBadge = typeof badgeCount === "number" && badgeCount > 0;
 
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        size="sm"
-        data-active={active}
-        aria-current={active ? "page" : undefined}
-        className={cn(
-          "group/sidebar-primary-action",
-          SIDEBAR_HEADER_ROW_CLASS_NAME,
-          active
-            ? SIDEBAR_ROW_ACTIVE_CLASS_NAME
-            : cn(SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME, SIDEBAR_ROW_HOVER_CLASS_NAME),
-        )}
-        aria-disabled={disabled || undefined}
-        disabled={disabled}
-        onClick={onClick}
-      >
-        <SidebarLeadingIcon size="sm" tone="text-inherit">
-          <SidebarGlyph icon={Icon} variant="leading" />
-        </SidebarLeadingIcon>
-        <span className="truncate">{label}</span>
-        {showBadge ? (
-          <span className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-md bg-muted px-1 text-[11px] font-medium text-muted-foreground">
-            {badgeCount}
-          </span>
-        ) : shortcutParts.length > 0 ? (
-          <span className="ml-auto opacity-0 transition-opacity group-hover/sidebar-primary-action:opacity-100 group-focus-visible/sidebar-primary-action:opacity-100">
-            <KbdGroup>
-              {shortcutParts.map((part) => (
-                <Kbd key={part}>{part}</Kbd>
-              ))}
-            </KbdGroup>
-          </span>
-        ) : null}
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+    <MenuItem
+      className={cn(
+        "min-h-8 gap-2 px-2.5 text-[length:var(--app-font-size-ui,12px)]",
+        active && "bg-[var(--color-background-button-secondary-hover)] text-foreground",
+      )}
+      onClick={onClick}
+    >
+      <SidebarGlyph icon={Icon} variant="leading" />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {showBadge ? (
+        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-md bg-muted px-1 text-[10px] font-medium tabular-nums text-muted-foreground">
+          {badgeCount}
+        </span>
+      ) : null}
+    </MenuItem>
   );
 }
 
@@ -1184,59 +1171,6 @@ function SortableProjectItem({
     >
       {children({ attributes, listeners, setActivatorNodeRef })}
     </li>
-  );
-}
-
-function SidebarSegmentedPicker({
-  views,
-  activeView,
-  onSelectView,
-}: {
-  views: ReadonlyArray<SidebarView>;
-  activeView: SidebarView;
-  onSelectView: (view: SidebarView) => void;
-}) {
-  // A single-option switcher is just a static label, so hide it entirely when the
-  // user has turned off one of the two sections in Settings.
-  if (views.length < 2) {
-    return null;
-  }
-  const activeIndex = views.indexOf(activeView);
-  return (
-    <div className="px-3 pb-2.5">
-      <div className="sidebar-segmented-picker relative isolate inline-flex w-full rounded-lg p-0.5">
-        {/* Single highlighted pill that glides between segments instead of snapping per-button. */}
-        <div
-          aria-hidden
-          className={cn(
-            "sidebar-segmented-thumb pointer-events-none absolute inset-y-0.5 left-0.5 z-0 rounded-md transition-transform duration-sheet ease-drawer",
-            activeIndex < 0 && "opacity-0",
-          )}
-          style={{
-            width: `calc((100% - 0.25rem) / ${views.length})`,
-            transform: `translateX(${Math.max(0, activeIndex) * 100}%)`,
-          }}
-        />
-        {views.map((view) => {
-          const active = activeView === view;
-          return (
-            <button
-              key={view}
-              type="button"
-              className={cn(
-                "relative z-10 flex-1 rounded-md px-2.5 py-1 text-[11.5px] font-medium transition-colors duration-200",
-                active
-                  ? "text-[var(--color-text-foreground)]"
-                  : "text-[var(--color-text-foreground-secondary)] hover:text-[var(--color-text-foreground)]",
-              )}
-              onClick={() => onSelectView(view)}
-            >
-              {SIDEBAR_VIEW_LABELS[view]}
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 }
 
@@ -4900,6 +4834,8 @@ export default function Sidebar() {
           // slot only carries the live status/loader glyph; when idle it
           // collapses and the hover action icons sit flush at the end.
           <span
+            aria-label={`Thread status: ${input.threadStatus.label}`}
+            title={input.threadStatus.label}
             className={threadRowTimestampSlotClassName(
               input.isSubagentThread,
               input.timestampToneClassName,
@@ -5133,11 +5069,12 @@ export default function Sidebar() {
               <div className="flex min-w-0 items-center gap-1.5">
                 <span
                   className={cn(
-                    "min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,14px)] leading-5",
+                    "min-w-0 flex-1 truncate text-[length:calc(var(--app-font-size-ui,12px)+0.5px)] leading-5",
                     isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
                   )}
                   data-testid={`thread-title-${thread.id}`}
                 >
+                  {thread.orchestratorMode ? <span className="sr-only">Orchestrator: </span> : null}
                   {isSubagentThread ? (
                     <SidebarSubagentLabel
                       threadId={thread.id}
@@ -5151,25 +5088,6 @@ export default function Sidebar() {
                     thread.title
                   )}
                 </span>
-                {thread.orchestratorMode ? (
-                  <span
-                    className="inline-flex shrink-0 items-center gap-0.5 rounded-sm border border-gold/30 bg-gold/8 px-1.5 py-0.5 text-[11px] font-medium text-gold"
-                    title="Orchestrator thread"
-                  >
-                    <CentralIcon name="agent-network" className="size-2.5" />
-                    Orchestrator
-                  </span>
-                ) : null}
-                {!showStatusLabel &&
-                !isSubagentThread &&
-                threadStatus?.label === "Pending Approval" ? (
-                  <span
-                    aria-label="Pending approval"
-                    className={cn("shrink-0 text-[11px] font-medium", threadStatus.colorClass)}
-                  >
-                    Pending
-                  </span>
-                ) : null}
               </div>
               <div className="flex min-w-0 items-center gap-1.5 leading-none">
                 {projectLabel ? (
@@ -5414,7 +5332,7 @@ export default function Sidebar() {
               <div className="flex min-w-0 items-center gap-1.5">
                 <span
                   className={cn(
-                    "min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,14px)]",
+                    "min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,12px)]",
                     // Inactive thread names share the resting label color with
                     // project/folder headers; the active row still pops via its
                     // background + full-foreground color from resolveThreadRowClassName.
@@ -5422,6 +5340,7 @@ export default function Sidebar() {
                     isSubagentThread ? "leading-[18px] text-foreground/80" : "leading-5",
                   )}
                 >
+                  {thread.orchestratorMode ? <span className="sr-only">Orchestrator: </span> : null}
                   {isSubagentThread ? (
                     <SidebarSubagentLabel
                       threadId={thread.id}
@@ -5436,25 +5355,6 @@ export default function Sidebar() {
                     thread.title
                   )}
                 </span>
-                {thread.orchestratorMode ? (
-                  <span
-                    className="inline-flex shrink-0 items-center gap-0.5 rounded-sm border border-gold/30 bg-gold/8 px-1.5 py-0.5 text-[11px] font-medium text-gold"
-                    title="Orchestrator thread"
-                  >
-                    <CentralIcon name="agent-network" className="size-2.5" />
-                    Orchestrator
-                  </span>
-                ) : null}
-                {!showStatusLabel &&
-                !isSubagentThread &&
-                threadStatus?.label === "Pending Approval" ? (
-                  <span
-                    aria-label="Pending approval"
-                    className={cn("shrink-0 text-[11px] font-medium", threadStatus.colorClass)}
-                  >
-                    Pending
-                  </span>
-                ) : null}
               </div>
               {treeBranchLabel ? (
                 <div className="flex min-w-0 items-center leading-none">
@@ -5620,29 +5520,16 @@ export default function Sidebar() {
                   projectToolbarReserveClassName,
                 )}
               >
-                <div className="flex min-w-0 items-center gap-2">
-                  <span
-                    className={cn(
-                      "truncate font-system-ui text-[length:var(--app-font-size-ui,14px)] font-normal leading-5",
-                      SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
-                    )}
-                  >
-                    {project.name}
-                  </span>
-                </div>
-                <div className="flex min-w-0 items-center gap-1.5 font-system-ui text-[11px] leading-4 text-muted-foreground/44">
-                  <span className="shrink-0 tabular-nums">
-                    {allProjectThreadCount} {pluralize(allProjectThreadCount, "thread")}
-                  </span>
-                  {project.localName ? (
-                    <>
-                      <span aria-hidden="true">·</span>
-                      <span className="truncate">{project.folderName}</span>
-                    </>
-                  ) : null}
-                </div>
+                <span
+                  className={cn(
+                    "truncate font-system-ui text-[length:calc(var(--app-font-size-ui,12px)+0.5px)] font-normal",
+                    SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
+                  )}
+                >
+                  {project.name}
+                </span>
               </div>
-              {isProjectRunning || projectActivityRollup ? (
+              {allProjectThreadCount > 0 || isProjectRunning || projectActivityRollup ? (
                 <span
                   aria-label={projectActivityRollup?.status.label}
                   className={cn(
@@ -5650,6 +5537,11 @@ export default function Sidebar() {
                     sidebarHoverRevealHideClassName("project-header"),
                   )}
                 >
+                  {allProjectThreadCount > 0 ? (
+                    <span className="text-[11px] leading-none tabular-nums text-muted-foreground/58">
+                      {allProjectThreadCount}
+                    </span>
+                  ) : null}
                   {isProjectRunning ? <ProjectRunIndicatorDot /> : null}
                   {projectActivityRollup ? (
                     <SidebarTreeStatusPill
@@ -6455,14 +6347,108 @@ export default function Sidebar() {
     </div>
   );
 
-  const headerControls = <SidebarLeadingControls className="ml-auto hidden md:flex" />;
+  const headerControls = <SidebarLeadingControls className="hidden md:flex" />;
+
+  const headerPrimaryActions = !isOnSettings ? (
+    <div className="ml-auto flex shrink-0 items-center gap-0.5 [-webkit-app-region:no-drag]">
+      <SidebarIconButton
+        icon={SearchIcon}
+        label="Search"
+        className={cn(
+          "size-7 text-muted-foreground/70 hover:text-foreground",
+          searchPaletteOpen && "bg-[var(--sidebar-accent-active)] text-foreground",
+        )}
+        onClick={() => setSearchPaletteOpen(true)}
+        tooltip={searchShortcutLabel ? `Search (${searchShortcutLabel})` : "Search"}
+        tooltipSide="bottom"
+      />
+      <SidebarIconButton
+        icon={isOnWorkspace ? TerminalIcon : NewThreadIcon}
+        label={isOnWorkspace ? "New workspace" : "New thread"}
+        className="size-7 text-muted-foreground/70 hover:text-foreground"
+        onClick={isOnWorkspace ? handleCreateWorkspace : handlePrimaryNewThread}
+        tooltip={
+          isOnWorkspace
+            ? "New workspace"
+            : newThreadShortcutLabel
+              ? `New thread (${newThreadShortcutLabel})`
+              : "New thread"
+        }
+        tooltipSide="bottom"
+      />
+    </div>
+  ) : null;
 
   const wordmark = (
     <div className="flex w-full items-center gap-1.5">
       <SidebarTrigger className="shrink-0 text-muted-foreground/75 hover:text-foreground md:hidden" />
       {headerControls}
+      {headerPrimaryActions}
     </div>
   );
+
+  const isOnProjects =
+    !isOnSettings && !isOnWorkspace && !isOnAutomations && !isOnGitHub && !isOnResearch;
+  const isOnUtility = isOnAutomations || isOnGitHub || isOnResearch;
+  const sidebarNavigationMenu = !isOnSettings ? (
+    <Menu>
+      <SidebarIconButton
+        render={<MenuTrigger />}
+        icon={AppsIcon}
+        label="Open navigation"
+        className={cn(
+          "size-7 text-muted-foreground/70 hover:text-foreground",
+          isOnUtility && "bg-[var(--sidebar-accent-active)] text-foreground",
+        )}
+        tooltip="More"
+        tooltipSide="top"
+      />
+      <MenuPopup
+        align="end"
+        side="top"
+        className="min-w-52 rounded-xl border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] shadow-lg"
+      >
+        <MenuGroup>
+          <SidebarNavigationMenuItem
+            icon={FolderIcon}
+            label="Projects"
+            active={isOnProjects}
+            onClick={() => handleSidebarViewChange("threads")}
+          />
+          {workspaceSectionVisible ? (
+            <SidebarNavigationMenuItem
+              icon={TerminalIcon}
+              label="Workspace"
+              active={isOnWorkspace}
+              onClick={() => handleSidebarViewChange("workspace")}
+            />
+          ) : null}
+        </MenuGroup>
+        <MenuSeparator />
+        <MenuGroup>
+          <SidebarNavigationMenuItem
+            icon={ClockIcon}
+            label="Automations"
+            active={isOnAutomations}
+            badgeCount={automationAttentionBadgeCount}
+            onClick={() => void navigate({ to: "/automations" })}
+          />
+          <SidebarNavigationMenuItem
+            icon={BrainIcon}
+            label="Research"
+            active={isOnResearch}
+            onClick={() => void navigate({ to: "/research" })}
+          />
+          <SidebarNavigationMenuItem
+            icon={GitHubIcon}
+            label="GitHub"
+            active={isOnGitHub}
+            onClick={() => void navigate({ to: "/github" })}
+          />
+        </MenuGroup>
+      </MenuPopup>
+    </Menu>
+  ) : null;
   const renameProjectDialogProject = renameProjectDialogId
     ? (projectById.get(renameProjectDialogId) ?? null)
     : null;
@@ -6511,6 +6497,7 @@ export default function Sidebar() {
             )}
           >
             {titlebarControls}
+            {headerPrimaryActions}
           </SidebarHeader>
         </>
       ) : (
@@ -6564,69 +6551,8 @@ export default function Sidebar() {
           </SidebarGroup>
         ) : (
           <>
-            <SidebarSegmentedPicker
-              views={["threads", ...(workspaceSectionVisible ? (["workspace"] as const) : [])]}
-              activeView={isOnWorkspace ? "workspace" : "threads"}
-              onSelectView={handleSidebarViewChange}
-            />
-            {/* Primary sidebar actions stay limited to features we currently ship. */}
-            <SidebarGroup className="px-1.5 pt-1 pb-1.5">
-              <SidebarMenu className="gap-0.5">
-                {isOnWorkspace ? (
-                  <SidebarPrimaryAction
-                    icon={TerminalIcon}
-                    label="New workspace"
-                    onClick={handleCreateWorkspace}
-                  />
-                ) : (
-                  <>
-                    <SidebarPrimaryAction
-                      icon={NewThreadIcon}
-                      label="New thread"
-                      onClick={handlePrimaryNewThread}
-                    />
-                    <SidebarPrimaryAction
-                      icon={SearchIcon}
-                      label="Search"
-                      active={searchPaletteOpen}
-                      onClick={() => {
-                        setSearchPaletteOpen(true);
-                      }}
-                      shortcutLabel={searchShortcutLabel}
-                    />
-                    <SidebarPrimaryAction
-                      icon={ClockIcon}
-                      label="Automations"
-                      active={isOnAutomations}
-                      badgeCount={automationAttentionBadgeCount}
-                      onClick={() => {
-                        void navigate({ to: "/automations" });
-                      }}
-                    />
-                    <SidebarPrimaryAction
-                      icon={BrainIcon}
-                      label="Research"
-                      active={isOnResearch}
-                      onClick={() => {
-                        void navigate({ to: "/research" });
-                      }}
-                    />
-                    <SidebarPrimaryAction
-                      icon={GitHubIcon}
-                      label="GitHub"
-                      active={isOnGitHub}
-                      onClick={() => {
-                        void navigate({ to: "/github" });
-                      }}
-                    />
-                  </>
-                )}
-              </SidebarMenu>
-            </SidebarGroup>
-
             {isOnWorkspace ? (
               <SidebarGroup className="px-1.5 pt-1 pb-1.5">
-                <div className="my-2 h-px w-full bg-border" />
                 <div className="mb-1.5 flex items-center px-2">
                   <span className={SIDEBAR_SECTION_LABEL_CLASS_NAME}>Workspace</span>
                 </div>
@@ -7026,6 +6952,7 @@ export default function Sidebar() {
                     <span>Settings</span>
                   </SidebarMenuButton>
                 )}
+                {sidebarNavigationMenu}
                 {showDesktopUpdateButton ? (
                   <Tooltip>
                     <TooltipTrigger
