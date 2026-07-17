@@ -47,6 +47,13 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
       "Pick the default workspace mode for newly created draft threads. local worktree environment",
   },
   {
+    id: "general:permissions-mode",
+    section: "general",
+    title: "Permissions Mode",
+    keywords:
+      "Choose the default access level for new chats. full access approval permissions ask first bypass",
+  },
+  {
     id: "general:project-order",
     section: "general",
     title: "Project order",
@@ -281,43 +288,6 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     section: "agents",
     title: "Saved model slugs",
     keywords: "Add custom model slugs for supported providers. custom model",
-  },
-
-  // ── Orchestrator ──────────────────────────────────────────────────────────────
-  {
-    id: "orchestrator:seat-models",
-    section: "agents",
-    title: "Seat models",
-    keywords:
-      "Provider and model pairs allowed to hold an orchestrator seat. orchestrator mode delegation control plane allowed models",
-  },
-  {
-    id: "orchestrator:bulk-lane",
-    section: "agents",
-    title: "Bulk lane",
-    keywords:
-      "Provider, model, effort, and manual escalation order for new delegated work. orchestrator routing delegate heavy implementation",
-  },
-  {
-    id: "orchestrator:ui-lane",
-    section: "agents",
-    title: "Ui lane",
-    keywords:
-      "Provider, model, effort, and manual escalation order for new delegated work. orchestrator routing delegate frontend design",
-  },
-  {
-    id: "orchestrator:explore-lane",
-    section: "agents",
-    title: "Explore lane",
-    keywords:
-      "Provider, model, effort, and manual escalation order for new delegated work. orchestrator routing delegate research read-only scouting",
-  },
-  {
-    id: "orchestrator:verify-lane",
-    section: "agents",
-    title: "Verify lane",
-    keywords:
-      "Provider, model, effort, and manual escalation order for new delegated work. orchestrator routing delegate review checks",
   },
 
   // ── Providers ─────────────────────────────────────────────────────────────────

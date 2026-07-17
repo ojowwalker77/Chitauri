@@ -48,7 +48,7 @@ export const PdfPageView = memo(function PdfPageView({
   const textLayerRef = useRef<HTMLDivElement>(null);
   const [isActive, setIsActive] = useState(false);
 
-  // Report the element to the orchestrator so it can map scroll offset -> page.
+  // Report the element to the preview controller so it can map scroll offset -> page.
   useEffect(() => {
     const element = wrapperRef.current;
     registerElement(pageNumber, element);

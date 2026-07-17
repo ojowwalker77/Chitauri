@@ -31,7 +31,6 @@ export interface NewThreadOptions {
   interactionMode?: ProviderInteractionMode;
   lastKnownPr?: OrchestrationThreadPullRequest | null;
   entryPoint?: ThreadPrimarySurface;
-  temporary?: boolean;
   provider?: ProviderKind;
   fresh?: boolean;
 }
@@ -164,7 +163,6 @@ export function createActiveDraftThreadSnapshot(
     worktreePath: activeDraftThread.worktreePath,
     lastKnownPr: activeDraftThread.lastKnownPr ?? null,
     envMode: activeDraftThread.envMode,
-    ...(activeDraftThread.isTemporary ? { isTemporary: true } : {}),
   };
 }
 
@@ -215,7 +213,6 @@ export function createFreshDraftThreadSeed(input: {
     interactionMode: input.options?.interactionMode ?? DEFAULT_INTERACTION_MODE,
     lastKnownPr: input.options?.lastKnownPr ?? null,
     entryPoint: input.entryPoint,
-    ...(input.options?.temporary ? { isTemporary: true } : {}),
   };
 }
 

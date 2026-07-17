@@ -9,11 +9,11 @@ import { Option, Schema } from "effect";
 import {
   type AssistantDeliveryMode,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
-  DEFAULT_ORCHESTRATOR_ROUTING_POLICY,
+  DEFAULT_RUNTIME_MODE,
   DEFAULT_SERVER_SETTINGS,
-  OrchestratorRoutingPolicy,
   TrimmedNonEmptyString,
   ProviderKind,
+  RuntimeMode,
   type ProviderStartOptions,
   type ServerSettings,
   type ServerSettingsPatch,
@@ -146,6 +146,7 @@ export const AppSettingsSchema = Schema.Struct({
   ),
   openCodeExperimentalWebSockets: Schema.Boolean.pipe(withDefaults(() => false)),
   defaultThreadEnvMode: EnvMode.pipe(withDefaults(() => "local" as const satisfies EnvMode)),
+  defaultRuntimeMode: RuntimeMode.pipe(withDefaults(() => DEFAULT_RUNTIME_MODE)),
   autoArchiveMergedPrThreads: Schema.Boolean.pipe(withDefaults(() => false)),
   autoDeleteMergedLocalBranches: Schema.Boolean.pipe(withDefaults(() => false)),
   confirmThreadDelete: Schema.Boolean.pipe(withDefaults(() => true)),
@@ -160,9 +161,6 @@ export const AppSettingsSchema = Schema.Struct({
   enableNativeFontSmoothing: Schema.Boolean.pipe(withDefaults(getDefaultNativeFontSmoothing)),
   enableTaskCompletionToasts: Schema.Boolean.pipe(withDefaults(() => true)),
   enableSystemTaskCompletionNotifications: Schema.Boolean.pipe(withDefaults(() => true)),
-  orchestratorRoutingPolicy: OrchestratorRoutingPolicy.pipe(
-    withDefaults(() => DEFAULT_ORCHESTRATOR_ROUTING_POLICY),
-  ),
   sidebarProjectSortOrder: SidebarProjectSortOrder.pipe(
     withDefaults(() => DEFAULT_SIDEBAR_PROJECT_SORT_ORDER),
   ),
@@ -383,6 +381,7 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     cursorApiEndpoint: settings.providers.cursor.apiEndpoint,
     cursorBinaryPath: settings.providers.cursor.binaryPath,
     defaultThreadEnvMode: settings.defaultThreadEnvMode,
+    defaultRuntimeMode: settings.defaultRuntimeMode,
     enableAssistantStreaming: settings.enableAssistantStreaming,
     enableProviderUpdateChecks: settings.enableProviderUpdateChecks,
     grokBinaryPath: settings.providers.grok.binaryPath,
@@ -404,7 +403,6 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     customPiModels: settings.providers.pi.customModels,
     textGenerationProvider: settings.textGenerationModelSelection.provider,
     textGenerationModel: settings.textGenerationModelSelection.model,
-    orchestratorRoutingPolicy: settings.orchestrator,
   };
 }
 
@@ -449,6 +447,12 @@ function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): Ser
   if (patch.defaultThreadEnvMode === "local" || patch.defaultThreadEnvMode === "worktree") {
     serverPatch.defaultThreadEnvMode = patch.defaultThreadEnvMode;
   }
+  if (
+    patch.defaultRuntimeMode === "approval-required" ||
+    patch.defaultRuntimeMode === "full-access"
+  ) {
+    serverPatch.defaultRuntimeMode = patch.defaultRuntimeMode;
+  }
   if (hasOwn(patch, "textGenerationModel") || hasOwn(patch, "textGenerationProvider")) {
     const model = patch.textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
     serverPatch.textGenerationModelSelection = {
@@ -461,10 +465,6 @@ function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): Ser
       model,
     };
   }
-  if (patch.orchestratorRoutingPolicy) {
-    serverPatch.orchestrator = patch.orchestratorRoutingPolicy;
-  }
-
   if (
     hasOwn(patch, "codexBinaryPath") ||
     hasOwn(patch, "codexHomePath") ||
@@ -577,6 +577,7 @@ function buildInitialServerSettingsMigrationPatch(settings: AppSettings): Server
     "cursorApiEndpoint",
     "cursorBinaryPath",
     "defaultThreadEnvMode",
+    "defaultRuntimeMode",
     "enableAssistantStreaming",
     "enableProviderUpdateChecks",
     "grokBinaryPath",

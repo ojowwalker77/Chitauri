@@ -1103,20 +1103,6 @@ describe("store pure functions", () => {
     expect(next.threads[0]?.createBranchFlowCompleted).toBe(true);
   });
 
-  it("preserves the orchestrator seat marker through live metadata updates", () => {
-    const initialState = makeState(makeThread());
-    const next = applyOrchestrationEvents(initialState, [
-      makeDomainEvent("thread.meta-updated", {
-        threadId: ThreadId.makeUnsafe("thread-1"),
-        orchestratorMode: true,
-        updatedAt: "2026-02-27T00:01:00.000Z",
-      }),
-    ]);
-
-    expect(next.threads[0]?.orchestratorMode).toBe(true);
-    expect(next.threadShellById?.[ThreadId.makeUnsafe("thread-1")]?.orchestratorMode).toBe(true);
-  });
-
   it("preserves pinnedMessages and notes through the normalized read-model projection", () => {
     // Regression: the normalized ThreadShell projection used to omit pinnedMessages/notes, so a
     // read-model sync would reconstruct the thread without them — pins clicked in the sidebar

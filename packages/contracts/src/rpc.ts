@@ -148,7 +148,6 @@ import {
   ServerListProviderUsageInput,
   ServerListProviderUsageResult,
   ServerLifecycleStreamEvent,
-  ServerOrchestratorSeatStatusesUpdatedPayload,
   ServerGetSettingsResult,
   ServerListLocalServersResult,
   ServerListWorktreesResult,
@@ -764,16 +763,6 @@ export const WsSubscribeServerSettingsRpc = Rpc.make(WS_METHODS.subscribeServerS
   stream: true,
 });
 
-export const WsSubscribeServerOrchestratorSeatStatusesRpc = Rpc.make(
-  WS_METHODS.subscribeServerOrchestratorSeatStatuses,
-  {
-    payload: Schema.Struct({}),
-    success: ServerOrchestratorSeatStatusesUpdatedPayload,
-    error: WsRpcError,
-    stream: true,
-  },
-);
-
 export const WsProviderGetComposerCapabilitiesRpc = Rpc.make(
   WS_METHODS.providerGetComposerCapabilities,
   {
@@ -975,7 +964,6 @@ export const WsRpcGroup = RpcGroup.make(
   WsSubscribeServerConfigRpc,
   WsSubscribeServerProviderStatusesRpc,
   WsSubscribeServerSettingsRpc,
-  WsSubscribeServerOrchestratorSeatStatusesRpc,
   WsProviderGetComposerCapabilitiesRpc,
   WsProviderCompactThreadRpc,
   WsProviderListCommandsRpc,

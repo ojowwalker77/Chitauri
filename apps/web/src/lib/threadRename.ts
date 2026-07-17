@@ -33,7 +33,6 @@ export async function dispatchThreadRename(input: {
         branch: string | null;
         worktreePath: string | null;
         lastKnownPr?: OrchestrationThreadPullRequest | null;
-        orchestratorMode?: boolean;
         createdAt: string;
       }
     | undefined;
@@ -67,9 +66,6 @@ export async function dispatchThreadRename(input: {
         worktreePath: input.createIfMissing.worktreePath,
         ...(input.createIfMissing.lastKnownPr !== undefined
           ? { lastKnownPr: input.createIfMissing.lastKnownPr }
-          : {}),
-        ...(input.createIfMissing.orchestratorMode !== undefined
-          ? { orchestratorMode: input.createIfMissing.orchestratorMode }
           : {}),
         createdAt: input.createIfMissing.createdAt,
       },
