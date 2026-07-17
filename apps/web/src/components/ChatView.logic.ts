@@ -517,8 +517,9 @@ export interface PullRequestDialogState {
   key: number;
 }
 
-// Ordered client-side phases of the "New worktree" first-send setup. The
-// labels surface verbatim in the transcript's transient setup row.
+// Ordered presentation phases of the server-owned "New worktree" first-send
+// operation. The browser shows progress but never sequences Git and metadata.
+// Labels surface verbatim in the transcript's transient setup row.
 export const WORKTREE_SETUP_STEP_DEFINITIONS: ReadonlyArray<{
   id: WorktreeSetupStepId;
   label: string;

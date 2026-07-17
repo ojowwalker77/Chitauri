@@ -66,6 +66,7 @@ import { TerminalManager } from "./terminal/Services/Manager";
 import { TerminalThreadTitleTracker } from "./terminal/terminalThreadTitleTracker";
 import { WorkspaceEntries } from "./workspace/Services/WorkspaceEntries";
 import { WorkspaceFileSystem } from "./workspace/Services/WorkspaceFileSystem";
+import { WorkspaceManager } from "./workspace/Services/WorkspaceManager";
 import { shouldRejectUntrustedRequestOrigin } from "./trustedOrigins";
 import { bufferLiveUiStream, type LiveUiStreamDropReport } from "./wsStreamBackpressure";
 
@@ -378,6 +379,7 @@ export const makeWsRpcLayer = () =>
       const textGeneration = yield* TextGeneration;
       const workspaceEntries = yield* WorkspaceEntries;
       const workspaceFileSystem = yield* WorkspaceFileSystem;
+      const workspaceManager = yield* WorkspaceManager;
 
       const canonicalizeProjectWorkspaceRoot = Effect.fnUntraced(function* (
         workspaceRoot: string,
@@ -548,6 +550,181 @@ export const makeWsRpcLayer = () =>
 
       const refreshGitStatus = (cwd: string) =>
         gitStatusBroadcaster.refreshStatus(cwd).pipe(Effect.catchCause(() => Effect.void));
+
+      const resolveThreadWorkspaceContext = Effect.fnUntraced(function* (threadId: ThreadId) {
+        const snapshot = yield* projectionReadModelQuery.getSnapshot();
+        const thread = snapshot.threads.find((candidate) => candidate.id === threadId);
+        if (!thread) {
+          return yield* new WsRpcError({ message: `Thread '${threadId}' was not found.` });
+        }
+        const project = snapshot.projects.find((candidate) => candidate.id === thread.projectId);
+        if (!project) {
+          return yield* new WsRpcError({ message: `Project '${thread.projectId}' was not found.` });
+        }
+        return { thread, project };
+      });
+
+      const projectWorkspaceBinding = Effect.fnUntraced(function* (input: {
+        readonly threadId: ThreadId;
+        readonly workspaceId: string;
+        readonly kind: "local" | "worktree" | "detached";
+        readonly retentionPolicy: "retain" | "delete-on-thread-delete";
+        readonly workspaceRoot: string;
+        readonly path: string | null;
+        readonly branch: string | null;
+        readonly ref: string | null;
+        readonly baseBranch?: string | null;
+        readonly legacyWorktreePath?: string | null;
+        readonly associatedWorktreePath?: string | null;
+        readonly associatedWorktreeBranch?: string | null;
+        readonly associatedWorktreeRef?: string | null;
+      }) {
+        const workspace = yield* workspaceManager.provision({
+          workspaceId: input.workspaceId as never,
+          projectId: (yield* resolveThreadWorkspaceContext(input.threadId)).project.id,
+          ownerThreadId: input.threadId,
+          kind: input.kind,
+          retentionPolicy: input.retentionPolicy,
+          workspaceRoot: input.workspaceRoot,
+          path: input.path,
+          branch: input.branch,
+          ref: input.ref,
+          ...(input.baseBranch ? { baseBranch: input.baseBranch } : {}),
+        });
+        yield* orchestrationEngine.dispatch({
+          type: "thread.meta.update",
+          commandId: CommandId.makeUnsafe(`server:workspace-binding:${crypto.randomUUID()}`),
+          threadId: input.threadId,
+          envMode: input.kind === "local" ? "local" : "worktree",
+          branch: input.branch,
+          worktreePath:
+            input.legacyWorktreePath !== undefined
+              ? input.legacyWorktreePath
+              : input.kind === "local"
+                ? null
+                : workspace.path,
+          associatedWorktreePath: input.associatedWorktreePath ?? workspace.path,
+          associatedWorktreeBranch: input.associatedWorktreeBranch ?? workspace.branch,
+          associatedWorktreeRef: input.associatedWorktreeRef ?? workspace.ref ?? workspace.branch,
+          createBranchFlowCompleted: false,
+        });
+        return workspace;
+      });
+
+      const provisionThreadWorktree = Effect.fnUntraced(function* (input: {
+        readonly threadId: ThreadId;
+        readonly baseBranch: string;
+        readonly newBranch: string;
+      }) {
+        const { thread, project } = yield* resolveThreadWorkspaceContext(input.threadId);
+        // One thread has one current attachment. Its previous workspace remains
+        // a record for reconciliation; only the relation changes here.
+        yield* workspaceManager.detach(input.threadId);
+        const workspace = yield* projectWorkspaceBinding({
+          threadId: input.threadId,
+          workspaceId:
+            thread.workspaceId && thread.envMode === "worktree"
+              ? thread.workspaceId
+              : `thread:${input.threadId}:worktree`,
+          kind: "worktree",
+          retentionPolicy: "retain",
+          workspaceRoot: project.workspaceRoot,
+          path: null,
+          branch: input.newBranch,
+          ref: input.newBranch,
+          baseBranch: input.baseBranch,
+        });
+        yield* refreshGitStatus(project.workspaceRoot);
+        return {
+          workspace,
+          envMode: "worktree" as const,
+          branch: workspace.branch,
+          worktreePath: workspace.path,
+          associatedWorktreePath: workspace.path,
+          associatedWorktreeBranch: workspace.branch,
+          associatedWorktreeRef: workspace.ref ?? workspace.branch,
+          changesTransferred: false,
+          conflictsDetected: false,
+          message: null,
+        };
+      });
+
+      const handoffThreadWorkspace = Effect.fnUntraced(function* (input: {
+        readonly threadId: ThreadId;
+        readonly targetMode: "local" | "worktree";
+        readonly preferredNewWorktreeName: string | null;
+      }) {
+        const { thread, project } = yield* resolveThreadWorkspaceContext(input.threadId);
+        // RPC retries are common after a reconnect. If the requested binding is
+        // already active, reconcile it through WorkspaceManager instead of
+        // replaying GitManager's transfer sequence.
+        if (thread.envMode === input.targetMode && thread.workspaceId) {
+          const branch = thread.associatedWorktreeBranch ?? thread.branch ?? null;
+          const ref = thread.associatedWorktreeRef ?? branch;
+          const workspace = yield* workspaceManager.provision({
+            workspaceId: thread.workspaceId,
+            projectId: project.id,
+            ownerThreadId: input.threadId,
+            kind: input.targetMode === "local" ? "local" : branch ? "worktree" : "detached",
+            retentionPolicy: "retain",
+            workspaceRoot: project.workspaceRoot,
+            path: input.targetMode === "local" ? project.workspaceRoot : thread.worktreePath,
+            branch,
+            ref,
+          });
+          return {
+            workspace,
+            envMode: input.targetMode,
+            branch: thread.branch ?? null,
+            worktreePath: thread.worktreePath ?? null,
+            associatedWorktreePath: thread.associatedWorktreePath ?? null,
+            associatedWorktreeBranch: thread.associatedWorktreeBranch ?? null,
+            associatedWorktreeRef: thread.associatedWorktreeRef ?? null,
+            changesTransferred: false,
+            conflictsDetected: false,
+            message: "Workspace was already active.",
+          };
+        }
+        const result = yield* gitManager.handoffThread({
+          cwd: project.workspaceRoot,
+          targetMode: input.targetMode,
+          currentBranch: thread.branch ?? null,
+          worktreePath: thread.worktreePath ?? null,
+          associatedWorktreePath: thread.associatedWorktreePath ?? null,
+          associatedWorktreeBranch: thread.associatedWorktreeBranch ?? null,
+          associatedWorktreeRef: thread.associatedWorktreeRef ?? null,
+          preferredLocalBranch: thread.branch ?? null,
+          preferredWorktreeBaseBranch: thread.branch ?? null,
+          preferredNewWorktreeName: input.preferredNewWorktreeName,
+        });
+        if (input.targetMode === "local" && thread.workspaceId) {
+          // GitManager has already removed the worktree. Retire its durable
+          // identity before binding Local, so a later re-handoff can reuse the
+          // branch/path without a stale ownership conflict.
+          yield* workspaceManager.retire(thread.workspaceId);
+        }
+        yield* workspaceManager.detach(input.threadId);
+        const workspace = yield* projectWorkspaceBinding({
+          threadId: input.threadId,
+          workspaceId:
+            input.targetMode === "worktree" && thread.workspaceId && thread.envMode === "worktree"
+              ? thread.workspaceId
+              : `thread:${input.threadId}:${input.targetMode}`,
+          kind: input.targetMode === "local" ? "local" : "worktree",
+          retentionPolicy: "retain",
+          workspaceRoot: project.workspaceRoot,
+          path: input.targetMode === "local" ? project.workspaceRoot : result.worktreePath,
+          branch: result.branch,
+          ref: result.associatedWorktreeRef,
+          legacyWorktreePath: result.worktreePath,
+          associatedWorktreePath: result.associatedWorktreePath,
+          associatedWorktreeBranch: result.associatedWorktreeBranch,
+          associatedWorktreeRef: result.associatedWorktreeRef,
+        });
+        yield* refreshGitStatus(project.workspaceRoot);
+        const { targetMode, ...handoff } = result;
+        return { workspace, envMode: targetMode, ...handoff };
+      });
 
       const toShellStreamEvent = (
         event: OrchestrationEvent,
@@ -926,6 +1103,10 @@ export const makeWsRpcLayer = () =>
             gitManager.handoffThread(input).pipe(Effect.tap(() => refreshGitStatus(input.cwd))),
             "Failed to hand off thread",
           ),
+        [WS_METHODS.workspaceProvisionThreadWorktree]: (input) =>
+          rpcEffect(provisionThreadWorktree(input), "Failed to provision the thread workspace"),
+        [WS_METHODS.workspaceHandoffThread]: (input) =>
+          rpcEffect(handoffThreadWorkspace(input), "Failed to hand off the thread workspace"),
 
         [WS_METHODS.terminalOpen]: (input) =>
           rpcEffect(
@@ -993,7 +1174,8 @@ export const makeWsRpcLayer = () =>
             "Failed to refresh providers",
           ),
         [WS_METHODS.serverUpdateProvider]: (input) => providerHealth.updateProvider(input),
-        [WS_METHODS.serverListWorktrees]: () => Effect.succeed({ worktrees: [] }),
+        [WS_METHODS.serverListWorktrees]: () =>
+          rpcEffect(workspaceManager.listInventory(), "Failed to list worktree inventory"),
         [WS_METHODS.serverListLocalServers]: () =>
           rpcEffect(
             Effect.promise(() => listLocalServers()),

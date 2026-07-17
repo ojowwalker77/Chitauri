@@ -1,7 +1,7 @@
 import { Layer } from "effect";
 
 import { GitCoreLive } from "./Layers/GitCore";
-import { GitHubCliLive } from "./Layers/GitHubCli";
+import { GitHubApiLive } from "./Layers/GitHubApi";
 import { GitManagerLive } from "./Layers/GitManager";
 import { GitStatusBroadcasterLive } from "./Layers/GitStatusBroadcaster";
 import { CodexTextGenerationServiceLive } from "./Layers/CodexTextGeneration";
@@ -12,6 +12,7 @@ import {
 } from "./Layers/OpenCodeTextGeneration";
 import { ProviderTextGenerationLive } from "./Layers/ProviderTextGeneration";
 import { OpenCodeRuntimeLive } from "../provider/opencodeRuntime";
+import { GitHubApiClientLayerLive } from "../github/apiRuntimeLayer";
 
 export const TextGenerationLayerLive = ProviderTextGenerationLive.pipe(
   Layer.provide(CodexTextGenerationServiceLive),
@@ -20,9 +21,14 @@ export const TextGenerationLayerLive = ProviderTextGenerationLive.pipe(
   Layer.provide(OpenCodeTextGenerationServiceLive.pipe(Layer.provide(OpenCodeRuntimeLive))),
 );
 
+const GitHubWorkflowApiLayerLive = GitHubApiLive.pipe(
+  Layer.provideMerge(GitCoreLive),
+  Layer.provideMerge(GitHubApiClientLayerLive),
+);
+
 export const GitManagerLayerLive = GitManagerLive.pipe(
   Layer.provideMerge(GitCoreLive),
-  Layer.provideMerge(GitHubCliLive),
+  Layer.provideMerge(GitHubWorkflowApiLayerLive),
   Layer.provideMerge(TextGenerationLayerLive),
 );
 

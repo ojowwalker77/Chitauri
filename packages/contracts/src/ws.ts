@@ -91,6 +91,7 @@ import {
 } from "./project";
 import { FilesystemBrowseInput } from "./filesystem";
 import { OpenInEditorInput } from "./editor";
+import { WorkspaceHandoffThreadInput, WorkspaceProvisionThreadWorktreeInput } from "./workspace";
 import {
   ServerConfigUpdatedPayload,
   ServerGenerateAutomationIntentInput,
@@ -170,6 +171,8 @@ export const WS_METHODS = {
   gitStageFiles: "git.stageFiles",
   gitUnstageFiles: "git.unstageFiles",
   gitHandoffThread: "git.handoffThread",
+  workspaceProvisionThreadWorktree: "workspace.provisionThreadWorktree",
+  workspaceHandoffThread: "workspace.handoffThread",
   gitResolvePullRequest: "git.resolvePullRequest",
   gitPullRequestSnapshot: "git.pullRequestSnapshot",
   gitPreparePullRequestThread: "git.preparePullRequestThread",
@@ -341,6 +344,11 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.gitStageFiles, GitStageFilesInput),
   tagRequestBody(WS_METHODS.gitUnstageFiles, GitUnstageFilesInput),
   tagRequestBody(WS_METHODS.gitHandoffThread, GitHandoffThreadInput),
+  tagRequestBody(
+    WS_METHODS.workspaceProvisionThreadWorktree,
+    WorkspaceProvisionThreadWorktreeInput,
+  ),
+  tagRequestBody(WS_METHODS.workspaceHandoffThread, WorkspaceHandoffThreadInput),
   tagRequestBody(WS_METHODS.gitResolvePullRequest, GitPullRequestRefInput),
   tagRequestBody(WS_METHODS.gitPullRequestSnapshot, GitPullRequestSnapshotInput),
   tagRequestBody(WS_METHODS.gitPreparePullRequestThread, GitPreparePullRequestThreadInput),

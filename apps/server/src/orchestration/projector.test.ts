@@ -83,6 +83,7 @@ describe("orchestration projector", () => {
         runtimeMode: "full-access",
         interactionMode: "default",
         envMode: "local",
+        workspaceId: null,
         branch: null,
         worktreePath: null,
         associatedWorktreePath: null,

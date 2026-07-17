@@ -460,6 +460,11 @@ export function createWsNativeApi(): NativeApi {
         };
       },
     },
+    workspace: {
+      provisionThreadWorktree: (input) =>
+        transport.request(WS_METHODS.workspaceProvisionThreadWorktree, input),
+      handoffThread: (input) => transport.request(WS_METHODS.workspaceHandoffThread, input),
+    },
     github: {
       connection: (input) => transport.request(WS_METHODS.githubConnection, input),
       listWork: (input) => transport.request(WS_METHODS.githubListWork, input),

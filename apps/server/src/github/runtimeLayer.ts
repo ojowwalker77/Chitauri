@@ -1,6 +1,10 @@
 import { Layer } from "effect";
 
-import { GitHubCliLive } from "../git/Layers/GitHubCli";
+import { GitCoreLive } from "../git/Layers/GitCore";
 import { GitHubWorkbenchLive } from "./Layers/GitHubWorkbench";
+import { GitHubApiClientLayerLive } from "./apiRuntimeLayer";
 
-export const GitHubWorkbenchLayerLive = GitHubWorkbenchLive.pipe(Layer.provide(GitHubCliLive));
+export const GitHubWorkbenchLayerLive = GitHubWorkbenchLive.pipe(
+  Layer.provideMerge(GitCoreLive),
+  Layer.provideMerge(GitHubApiClientLayerLive),
+);

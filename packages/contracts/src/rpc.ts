@@ -95,6 +95,11 @@ import {
   ResearchReadResult,
 } from "./research";
 import {
+  WorkspaceHandoffThreadInput,
+  WorkspaceProvisionThreadWorktreeInput,
+  WorkspaceThreadOperationResult,
+} from "./workspace";
+import {
   ProviderGetComposerCapabilitiesInput,
   ProviderComposerCapabilities,
   ProviderListAgentsInput,
@@ -539,6 +544,21 @@ export const WsGitHandoffThreadRpc = Rpc.make(WS_METHODS.gitHandoffThread, {
   error: WsRpcError,
 });
 
+export const WsWorkspaceProvisionThreadWorktreeRpc = Rpc.make(
+  WS_METHODS.workspaceProvisionThreadWorktree,
+  {
+    payload: WorkspaceProvisionThreadWorktreeInput,
+    success: WorkspaceThreadOperationResult,
+    error: WsRpcError,
+  },
+);
+
+export const WsWorkspaceHandoffThreadRpc = Rpc.make(WS_METHODS.workspaceHandoffThread, {
+  payload: WorkspaceHandoffThreadInput,
+  success: WorkspaceThreadOperationResult,
+  error: WsRpcError,
+});
+
 export const WsGitHubConnectionRpc = Rpc.make(WS_METHODS.githubConnection, {
   payload: GitHubConnectionInput,
   success: GitHubConnectionResult,
@@ -929,6 +949,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsGitStageFilesRpc,
   WsGitUnstageFilesRpc,
   WsGitHandoffThreadRpc,
+  WsWorkspaceProvisionThreadWorktreeRpc,
+  WsWorkspaceHandoffThreadRpc,
   WsGitHubConnectionRpc,
   WsGitHubListWorkRpc,
   WsGitHubWorkItemDetailRpc,
