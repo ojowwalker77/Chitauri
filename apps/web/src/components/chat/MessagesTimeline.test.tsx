@@ -118,7 +118,8 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain('class="relative" style="height:');
     expect(markup).toContain('data-timeline-row-kind="message"');
     expect(markup).toContain('data-assistant-provider="codex"');
-    expect(markup).not.toContain("✳");
+    expect(markup).toContain("✳");
+    expect(markup).toContain(">Codex<");
   }, 10_000);
 
   it("renders assistant math through the shared markdown renderer", async () => {
@@ -972,7 +973,7 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain("Compacting conversation...");
-    expect(markup).toContain("Working for");
+    expect(markup).toContain("Working ·");
     expect(markup).not.toContain("h-px flex-1 bg-border");
   });
 
@@ -1423,9 +1424,15 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("Tool 2");
     expect(markup).toContain("Tool 3");
     expect(markup).toContain("Tool 6");
-    expect(markup).toContain("2 earlier operations");
-    expect(markup).toContain('data-work-ledger="true"');
-    expect(markup).toContain('data-ledger-sequence="3"');
+    expect(markup).toContain("2 earlier calls");
+    expect(markup).toContain('data-work-trail="true"');
+    expect(markup).toContain('data-work-trail-sequence="3"');
+    expect(
+      markup.indexOf('data-assistant-message-id="message-assistant-inline-tools-live"'),
+    ).toBeLessThan(markup.indexOf('data-work-trail="true"'));
+    expect(markup).not.toContain(">Explore<");
+    expect(markup).not.toContain(">Run<");
+    expect(markup).not.toContain(">03<");
   });
 
   it("attaches trailing tool rows to the last assistant reply after completion", async () => {

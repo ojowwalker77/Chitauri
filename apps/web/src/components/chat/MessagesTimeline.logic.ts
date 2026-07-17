@@ -62,7 +62,7 @@ export type MessagesTimelineRow =
       assistantTurnDiffSummary?: TurnDiffSummary | undefined;
       // The latest visible activity row owns the live elapsed header once the
       // turn has produced work or assistant text. This keeps the header and the
-      // technical ledger in one surface instead of rendering a detached divider.
+      // activity trail in one surface instead of rendering a detached divider.
       activeTurnStartedAt?: string | undefined;
       // True while this row's turn is still running. The end-of-turn changes
       // card (Undo / Review) is held back until the turn settles so it cannot
@@ -401,7 +401,7 @@ export function deriveMessagesTimelineRows(input: {
   });
 
   // Once live work or narration exists, let its latest row own the elapsed
-  // header so the status and technical ledger read as one surface. Before the
+  // header so the status and activity trail read as one surface. Before the
   // first activity arrives, keep a standalone header immediately after the user
   // message so the elapsed state is never lost.
   if (
@@ -428,7 +428,7 @@ export function deriveMessagesTimelineRows(input: {
 
 // Finds the latest assistant/work row after the most recent user boundary. The
 // generic trailing "working" row is intentionally ignored: it is a spinner, not
-// durable transcript activity, and must not own the elapsed ledger header.
+// durable transcript activity, and must not own the elapsed activity header.
 function findLiveTurnActivityOwnerIndex(rows: ReadonlyArray<MessagesTimelineRow>): number {
   for (let index = rows.length - 1; index >= 0; index -= 1) {
     const row = rows[index]!;
@@ -444,7 +444,7 @@ function findLiveTurnActivityOwnerIndex(rows: ReadonlyArray<MessagesTimelineRow>
 
 // The live turn starts at the most recent user message, so its header slots in
 // right after it. Absent any user message (degenerate transcripts) the header
-// leads the transcript so the "Working for" copy is never lost.
+// leads the transcript so the active "Working" status is never lost.
 function findLiveTurnHeaderInsertIndex(rows: ReadonlyArray<MessagesTimelineRow>): number {
   for (let index = rows.length - 1; index >= 0; index -= 1) {
     const row = rows[index]!;
