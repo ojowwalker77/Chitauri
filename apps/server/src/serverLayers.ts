@@ -32,6 +32,7 @@ import { ServerLifecycleEventsLive } from "./serverLifecycleEvents";
 import { ServerRuntimeStartupLive } from "./serverRuntimeStartup";
 import { ServerSettingsLive } from "./serverSettings";
 import { WorkspaceLayerLive } from "./workspace/runtimeLayer";
+import { WorkspaceManagerLive } from "./workspace/Layers/WorkspaceManager";
 import { ProjectFaviconResolverLive } from "./project/Layers/ProjectFaviconResolver";
 import { OrchestratorControlPlaneLive } from "./orchestrator/Layers/OrchestratorControlPlane";
 import { ServerEnvironmentLive } from "./environment/Layers/ServerEnvironment";
@@ -42,6 +43,7 @@ export { makeServerProviderLayer } from "./provider/runtimeLayer";
 
 export function makeServerRuntimeServicesLayer() {
   const checkpointStoreLayer = CheckpointStoreLive.pipe(Layer.provide(GitCoreLive));
+  const workspaceManagerLayer = WorkspaceManagerLive.pipe(Layer.provideMerge(GitCoreLive));
 
   const checkpointDiffQueryLayer = CheckpointDiffQueryLive.pipe(
     Layer.provideMerge(OrchestrationLayerLive),
@@ -84,6 +86,7 @@ export function makeServerRuntimeServicesLayer() {
     Layer.provideMerge(profileStatsArchiveLayer),
     Layer.provideMerge(OrchestrationLayerLive),
     Layer.provideMerge(TerminalLayerLive),
+    Layer.provideMerge(workspaceManagerLayer),
   );
   // Shares the single memoized TerminalManager with the top-level TerminalLayerLive.
   const devServerManagerLayer = DevServerManagerLive.pipe(Layer.provide(TerminalLayerLive));
@@ -145,6 +148,7 @@ export function makeServerRuntimeServicesLayer() {
     ServerLifecycleEventsLive,
     ServerRuntimeStartupLive,
     WorkspaceLayerLive,
+    workspaceManagerLayer,
     ProjectFaviconResolverLive,
   ).pipe(Layer.provideMerge(NodeServices.layer));
 }
