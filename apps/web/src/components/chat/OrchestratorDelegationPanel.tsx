@@ -36,8 +36,8 @@ function finalAssistantMessage(thread: Thread): string | null {
 }
 
 const DELEGATION_STATE_COPY = {
-  running: { label: "Running", colorClassName: "bg-sky-500" },
-  needs_review: { label: "Ready to review", colorClassName: "bg-indigo-500" },
+  running: { label: "Running", colorClassName: "bg-claude" },
+  needs_review: { label: "Ready to review", colorClassName: "bg-success" },
   failed: { label: "Needs attention", colorClassName: "bg-destructive" },
 } as const;
 
@@ -50,13 +50,13 @@ const SEAT_STATUS_COPY = {
   connected: {
     label: "Connected — delegation tools armed",
     detail: "Implementation work will be delegated to specialist agents in isolated worktrees.",
-    dotClassName: "bg-emerald-500",
+    dotClassName: "bg-success",
   },
   degraded: {
     label: "Delegation unavailable",
     detail:
       "This turn can continue, but the seat cannot delegate until its control plane is available.",
-    dotClassName: "bg-amber-500",
+    dotClassName: "bg-gold",
   },
 } as const;
 
@@ -111,12 +111,9 @@ export function OrchestratorDelegationPanel(props: {
       data-testid="orchestrator-delegation-panel"
     >
       <Collapsible open={open} onOpenChange={setOpen}>
-        <div className="relative overflow-hidden rounded-xl border border-indigo-500/18 bg-indigo-500/6 shadow-[0_1px_2px_color-mix(in_srgb,var(--foreground)_4%,transparent)]">
-          {props.showOnboarding ? (
-            <div className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full bg-indigo-400/10 blur-3xl" />
-          ) : null}
-          <CollapsibleTrigger className="relative flex min-h-11 w-full items-center gap-3 px-3.5 text-left">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+        <div className="relative overflow-hidden rounded-xl border border-panel-border bg-panel">
+          <CollapsibleTrigger className="relative flex min-h-12 w-full items-center gap-3 px-4 text-left transition-[background-color,scale] duration-press ease-out hover:bg-hover active:scale-[0.96] motion-reduce:active:scale-100">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-selected text-claude">
               <CentralIcon name="agent-network" className="size-4" />
             </span>
             <span className="min-w-0 flex-1">
@@ -124,12 +121,12 @@ export function OrchestratorDelegationPanel(props: {
                 <span className="text-sm font-medium text-foreground">
                   {props.showOnboarding ? "Orchestrator is ready" : "Delegation control"}
                 </span>
-                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
                   <span className={cn("size-1.5 rounded-full", seatStatusCopy.dotClassName)} />
                   {seatStatusCopy.label}
                 </span>
               </span>
-              <span className="mt-0.5 block truncate text-[11px] text-muted-foreground/70">
+              <span className="mt-0.5 block truncate text-[11px] text-muted-foreground/80">
                 {props.threads.length} {props.threads.length === 1 ? "delegation" : "delegations"}
                 {props.seatModel ? ` · Seat: ${props.seatModel}` : ""}
               </span>
@@ -137,7 +134,7 @@ export function OrchestratorDelegationPanel(props: {
             <DisclosureChevron open={open} className="opacity-70" />
           </CollapsibleTrigger>
           <CollapsiblePanel>
-            <div className="relative border-t border-indigo-500/12 px-3.5 py-3">
+            <div className="relative border-t border-panel-border px-4 py-3.5">
               <p className="text-pretty text-xs leading-5 text-muted-foreground">
                 {seatStatus === "degraded" && props.seatStatusReason
                   ? props.seatStatusReason
@@ -146,7 +143,10 @@ export function OrchestratorDelegationPanel(props: {
               {props.laneRoutes && props.laneRoutes.length > 0 ? (
                 <div className="mt-3 grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
                   {props.laneRoutes.map((route) => (
-                    <div key={route.lane} className="flex min-w-0 items-center gap-2 text-[11px]">
+                    <div
+                      key={route.lane}
+                      className="flex min-w-0 items-center gap-2 text-[11px]"
+                    >
                       <span className="w-11 shrink-0 font-medium text-foreground/80">
                         {route.lane}
                       </span>
@@ -165,10 +165,10 @@ export function OrchestratorDelegationPanel(props: {
               ) : (
                 <div className="mt-3 space-y-2">
                   <div className="flex items-center justify-between px-1">
-                    <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/70">
+                    <span className="text-[11px] font-medium uppercase tracking-[0.07em] text-muted-foreground/80">
                       Delegated work
                     </span>
-                    <span className="tabular-nums text-[10px] text-muted-foreground/60">
+                    <span className="tabular-nums text-[11px] text-muted-foreground/70">
                       {props.threads.length} {props.threads.length === 1 ? "task" : "tasks"}
                     </span>
                   </div>
@@ -190,13 +190,12 @@ export function OrchestratorDelegationPanel(props: {
                           })
                         }
                       >
-                        <div className="overflow-hidden rounded-lg border border-[color:var(--app-surface-divider)] bg-[var(--color-background-elevated-secondary)] shadow-[0_1px_2px_color-mix(in_srgb,var(--foreground)_3%,transparent)]">
-                          <CollapsibleTrigger className="flex min-h-11 w-full items-center gap-2.5 px-3 text-left">
+                        <div className="overflow-hidden rounded-[11px] border border-panel-border bg-[var(--color-background-elevated-secondary)]">
+                          <CollapsibleTrigger className="flex min-h-11 w-full items-center gap-2.5 px-3 text-left transition-[background-color,scale] duration-press ease-out hover:bg-hover active:scale-[0.96] motion-reduce:active:scale-100">
                             <span
                               className={cn(
                                 "size-2 shrink-0 rounded-full",
                                 stateCopy.colorClassName,
-                                state === "running" && "animate-pulse motion-reduce:animate-none",
                               )}
                               aria-hidden
                             />
@@ -224,7 +223,7 @@ export function OrchestratorDelegationPanel(props: {
                               <div className="mt-3 flex items-center gap-2">
                                 <Button
                                   size="xs"
-                                  variant={state === "needs_review" ? "default" : "outline"}
+                                  variant="outline"
                                   onClick={() => props.onOpenThread(thread.id)}
                                 >
                                   {state === "running"

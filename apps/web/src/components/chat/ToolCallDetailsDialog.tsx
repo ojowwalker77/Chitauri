@@ -221,7 +221,7 @@ function LabeledCodeBlock(props: { title: string; tone: "output" | "error"; chil
       <div
         className={cn(
           DETAIL_HEADER_CLASS_NAME,
-          props.tone === "error" ? "text-rose-200/88" : "text-muted-foreground/60",
+          props.tone === "error" ? "text-destructive" : "text-muted-foreground/60",
         )}
       >
         {props.title}
@@ -236,13 +236,15 @@ function TextChangeBlock(props: { title: string; tone: "add" | "remove"; childre
     <div
       className={cn(
         "min-w-0 border-border/45 md:[&:not(:first-child)]:border-l",
-        props.tone === "add" ? "bg-emerald-500/5" : "bg-rose-500/5",
+        props.tone === "add"
+          ? "bg-[color-mix(in_srgb,var(--success)_6%,transparent)]"
+          : "bg-[color-mix(in_srgb,var(--destructive)_6%,transparent)]",
       )}
     >
       <div
         className={cn(
           DETAIL_HEADER_CLASS_NAME,
-          props.tone === "add" ? "text-emerald-200/82" : "text-rose-200/82",
+          props.tone === "add" ? "text-success-foreground" : "text-destructive",
         )}
       >
         {props.title}
@@ -278,10 +280,10 @@ function DiffCodeBlock({ children }: { children: string }) {
           className={cn(
             "block min-w-max whitespace-pre-wrap break-words px-3",
             line.startsWith("+") && !line.startsWith("+++")
-              ? "bg-emerald-500/8 text-emerald-100/92"
+              ? "bg-[color-mix(in_srgb,var(--success)_8%,transparent)] text-success-foreground"
               : null,
             line.startsWith("-") && !line.startsWith("---")
-              ? "bg-rose-500/8 text-rose-100/92"
+              ? "bg-[color-mix(in_srgb,var(--destructive)_8%,transparent)] text-destructive"
               : null,
             line.startsWith("@@") ? "text-sky-200/90" : null,
             /^(diff --git|index |--- |\+\+\+ )/.test(line) ? "text-muted-foreground/62" : null,

@@ -97,6 +97,19 @@ describe("GitHub workbench logic", () => {
     expect(findProjectForGitHubItem([project], item)?.id).toBe(project.id);
   });
 
+  it("does not guess when multiple attached projects share a repository basename", () => {
+    const widgetProjects: Project[] = ["one", "two"].map((suffix) => ({
+      ...project,
+      id: ProjectId.makeUnsafe(`project-${suffix}`),
+      name: "widgets",
+      remoteName: "widgets",
+      folderName: "widgets",
+      cwd: `/repo/${suffix}/widgets`,
+    }));
+
+    expect(findProjectForGitHubItem(widgetProjects, issueInOtherRepo)).toBeNull();
+  });
+
   it("builds a safe agent handoff prompt", () => {
     const prompt = buildGitHubAgentPrompt(item, "review");
     expect(prompt.startsWith("$Splus PR Review")).toBe(true);

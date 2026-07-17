@@ -149,16 +149,51 @@ const SURFACE_UNDER_CONTRAST_STEP: Record<ThemeVariant, number> = {
   light: 0.0012,
 };
 const CANVAS_COLOR_BY_VARIANT: Record<ThemeVariant, string> = {
-  dark: "#09090b",
-  light: "#e4e4e7",
+  dark: "#0a0a0a",
+  light: "#e7e4df",
 };
 const INFO_COLOR_BY_VARIANT: Record<ThemeVariant, string> = {
-  dark: "#3b82f6",
-  light: "#3b82f6",
+  dark: "#9c9a96",
+  light: "#6b6965",
 };
 const WARNING_COLOR_BY_VARIANT: Record<ThemeVariant, string> = {
-  dark: "#fb923c",
-  light: "#fb923c",
+  dark: "#cf9d5e",
+  light: "#a96f35",
+};
+const MUTED_COLOR_BY_VARIANT: Record<ThemeVariant, string> = {
+  dark: "#9c9a96",
+  light: "#696661",
+};
+const FAINT_COLOR_BY_VARIANT: Record<ThemeVariant, string> = {
+  dark: "#6b6965",
+  light: "#85817a",
+};
+const SUCCESS_FOREGROUND_BY_VARIANT: Record<ThemeVariant, string> = {
+  dark: "#a5d6b7",
+  light: "#27694c",
+};
+const DESTRUCTIVE_FOREGROUND_BY_VARIANT: Record<ThemeVariant, string> = {
+  dark: "#f0b4af",
+  light: "#7e2f2a",
+};
+const WARNING_FOREGROUND_BY_VARIANT: Record<ThemeVariant, string> = {
+  dark: "#e5c8a5",
+  light: "#5c3b1d",
+};
+const TERMINAL_ANSI_BY_VARIANT: Record<
+  ThemeVariant,
+  { blue: string; cyan: string; magenta: string }
+> = {
+  dark: { blue: "#75a7e0", cyan: "#66b8b0", magenta: "#b99ad6" },
+  light: { blue: "#326aa5", cyan: "#2f7f79", magenta: "#76508f" },
+};
+const COMPOSER_SURFACE_BY_VARIANT: Record<ThemeVariant, string> = {
+  dark: "#141414",
+  light: "#efebe5",
+};
+const INPUT_SURFACE_BY_VARIANT: Record<ThemeVariant, string> = {
+  dark: "#1f1f1f",
+  light: "#ebe7e1",
 };
 const PANEL_BASE_ALPHA: Record<ThemeVariant, number> = {
   dark: 0,
@@ -239,6 +274,35 @@ export const CODE_THEME_OPTIONS: readonly CodeThemeOption[] = [
 ] as const;
 
 export const DEFAULT_CHROME_THEME_BY_VARIANT: Record<ThemeVariant, ChromeTheme> = {
+  dark: {
+    accent: "#d97757",
+    contrast: 60,
+    fonts: { code: null, ui: null },
+    ink: "#e6e4e1",
+    opaqueWindows: true,
+    semanticColors: {
+      diffAdded: "#4cb782",
+      diffRemoved: "#d9685f",
+      skill: "#9c9a96",
+    },
+    surface: "#171717",
+  },
+  light: {
+    accent: "#d97757",
+    contrast: 45,
+    fonts: { code: null, ui: null },
+    ink: "#252421",
+    opaqueWindows: true,
+    semanticColors: {
+      diffAdded: "#4cb782",
+      diffRemoved: "#c4554e",
+      skill: "#6b6965",
+    },
+    surface: "#f5f2ed",
+  },
+};
+
+const LEGACY_DEFAULT_CHROME_THEME_BY_VARIANT: Record<ThemeVariant, ChromeTheme> = {
   dark: {
     accent: "#fb923c",
     contrast: 60,
@@ -362,19 +426,31 @@ export function normalizeThemePack(value: unknown, variant: ThemeVariant): Theme
   };
 }
 
-function areChromeThemesEqual(left: ChromeTheme, right: ChromeTheme): boolean {
+function haveSameChromePalette(left: ChromeTheme, right: ChromeTheme): boolean {
   return (
     left.accent === right.accent &&
     left.contrast === right.contrast &&
-    left.fonts.code === right.fonts.code &&
-    left.fonts.ui === right.fonts.ui &&
     left.ink === right.ink &&
-    left.opaqueWindows === right.opaqueWindows &&
     left.semanticColors.diffAdded === right.semanticColors.diffAdded &&
     left.semanticColors.diffRemoved === right.semanticColors.diffRemoved &&
     left.semanticColors.skill === right.semanticColors.skill &&
     left.surface === right.surface
   );
+}
+
+function migrateLegacyDefaultChromeTheme(
+  theme: ChromeTheme,
+  variant: ThemeVariant,
+): ChromeTheme {
+  if (!haveSameChromePalette(theme, LEGACY_DEFAULT_CHROME_THEME_BY_VARIANT[variant])) {
+    return theme;
+  }
+
+  return {
+    ...DEFAULT_CHROME_THEME_BY_VARIANT[variant],
+    fonts: theme.fonts,
+    opaqueWindows: theme.opaqueWindows,
+  };
 }
 
 export function normalizeThemeState(value: unknown): ThemeState {
@@ -420,11 +496,12 @@ export function parseStoredThemeState(rawValue: string | null | undefined): Them
 
   try {
     const storedState = normalizeThemeState(JSON.parse(rawValue));
-    // Appearance is intentionally fixed to the Claude light/dark pair. Keep
-    // only the user's mode when migrating older theme packs or custom colors.
     return {
-      ...DEFAULT_THEME_STATE,
-      mode: storedState.mode,
+      ...storedState,
+      chromeThemes: {
+        dark: migrateLegacyDefaultChromeTheme(storedState.chromeThemes.dark, "dark"),
+        light: migrateLegacyDefaultChromeTheme(storedState.chromeThemes.light, "light"),
+      },
     };
   } catch {
     return DEFAULT_THEME_STATE;
@@ -711,12 +788,17 @@ export function buildThemeCssVariables(
       ? "translucent"
       : "opaque";
   const warningColor = WARNING_COLOR_BY_VARIANT[variant];
+  const isDefaultTheme = haveSameChromePalette(
+    pack.theme,
+    DEFAULT_CHROME_THEME_BY_VARIANT[variant],
+  );
   // The sidebar is the single persistent panel layer; the main transcript uses
   // the darker under-surface directly as its flat canvas.
   const sidebarSurface = readCodexVariable("--color-background-surface");
   const settingsSurface = readCodexVariable("--color-background-surface-under");
-  const composerSurface =
-    variant === "dark"
+  const composerSurface = isDefaultTheme
+    ? COMPOSER_SURFACE_BY_VARIANT[variant]
+    : variant === "dark"
       ? mixHex(pack.theme.surface, resolvedTokens.computed.surfaceUnder, 0.23)
       : "color-mix(in oklab, var(--color-background-control) 90%, transparent)";
   const composerPickerMenuSurface = sidebarSurface;
@@ -728,20 +810,15 @@ export function buildThemeCssVariables(
   // Shared surface for the user message bubble and fenced code blocks so both
   // read as the same "input/source" affordance inside the transcript. Sourced
   // from the user-message token so code blocks pick up the bubble's color.
-  const chatCodeSurface = mixHex(
-    pack.theme.surface,
-    pack.theme.ink,
-    variant === "dark" ? 0.04 : 0.05,
-  );
+  const chatCodeSurface = isDefaultTheme
+    ? INPUT_SURFACE_BY_VARIANT[variant]
+    : mixHex(pack.theme.surface, pack.theme.ink, variant === "dark" ? 0.04 : 0.05);
   const appVariables: Record<string, string> = {
-    "--accent": readCodexVariable("--color-background-accent"),
+    "--accent": pack.theme.accent,
     "--accent-foreground": readCodexVariable("--color-text-foreground"),
     "--app-shell-background": readCodexVariable("--color-background-surface-under"),
     "--app-composer-focus-border": composerFocusBorder,
-    // Frosted blur only when the shell is translucent (macOS). On an opaque
-    // shell these promote the surface to a GPU layer that Chromium rasterizes at
-    // the wrong scale on fractional DPI (Windows), so text reads blurry until a
-    // repaint. Keep them "none" off macOS.
+    // Composer and picker surfaces stay opaque in every runtime.
     "--app-composer-backdrop-filter": "none",
     "--app-composer-picker-backdrop-filter": "none",
     "--app-composer-picker-surface": composerPickerMenuSurface,
@@ -760,15 +837,15 @@ export function buildThemeCssVariables(
     "--card-foreground": readCodexVariable("--color-text-foreground"),
     "--composer-surface": composerSurface,
     "--destructive": pack.theme.semanticColors.diffRemoved,
-    "--destructive-foreground": pack.theme.surface,
+    "--destructive-foreground": isDefaultTheme
+      ? DESTRUCTIVE_FOREGROUND_BY_VARIANT[variant]
+      : pack.theme.semanticColors.diffRemoved,
     "--foreground": readCodexVariable("--color-text-foreground"),
     "--faint": readCodexVariable("--color-text-foreground-tertiary"),
     "--gold": warningColor,
     "--hover": readCodexVariable("--color-background-button-secondary-hover"),
     "--info": INFO_COLOR_BY_VARIANT[variant],
-    // Keep legacy app-level "info" consumers on the accent-text path so
-    // links, file labels, and similar affordances inherit the real light/dark logic.
-    "--info-foreground": readCodexVariable("--color-text-accent"),
+    "--info-foreground": INFO_COLOR_BY_VARIANT[variant],
     "--input": readCodexVariable("--color-background-control-opaque"),
     "--muted": readCodexVariable("--color-background-elevated-secondary"),
     "--muted-foreground": readCodexVariable("--color-text-foreground-secondary"),
@@ -789,12 +866,17 @@ export function buildThemeCssVariables(
     "--sidebar-border": readCodexVariable("--color-border"),
     "--sidebar-foreground": readCodexVariable("--color-text-foreground"),
     "--success": pack.theme.semanticColors.diffAdded,
-    "--success-foreground": pack.theme.surface,
+    "--success-foreground": isDefaultTheme
+      ? SUCCESS_FOREGROUND_BY_VARIANT[variant]
+      : pack.theme.semanticColors.diffAdded,
     "--theme-font-code-family": normalizeMonospaceFontFamilyCssValue(pack.theme.fonts.code) ?? "",
     "--theme-font-ui-family": normalizeFontFamilyCssValue(pack.theme.fonts.ui) ?? "",
     "--warning": warningColor,
-    "--warning-foreground": pack.theme.surface,
+    "--warning-foreground": isDefaultTheme
+      ? WARNING_FOREGROUND_BY_VARIANT[variant]
+      : warningColor,
     "--claude": pack.theme.accent,
+    "--well": composerSurface,
   };
 
   return {
@@ -857,6 +939,11 @@ function buildCodexCssVariables(
     | ReturnType<typeof buildDarkDerivedTokens>,
   panelBackground: string,
 ) {
+  const isDefaultTheme = haveSameChromePalette(
+    theme.theme,
+    DEFAULT_CHROME_THEME_BY_VARIANT[theme.variant],
+  );
+  const terminalAnsi = TERMINAL_ANSI_BY_VARIANT[theme.variant];
   const terminalAnsiGreen = buildTerminalAnsiGreen(theme.theme.semanticColors.diffAdded);
 
   return {
@@ -923,18 +1010,22 @@ function buildCodexCssVariables(
     "--color-text-foreground-secondary": derivedTokens.textForegroundSecondary,
     "--color-text-foreground-tertiary": derivedTokens.textForegroundTertiary,
     "--vscode-terminal-ansiBlack": derivedTokens.textForegroundTertiary,
-    "--vscode-terminal-ansiBlue": theme.theme.accent,
+    "--vscode-terminal-ansiBlue": isDefaultTheme ? terminalAnsi.blue : theme.theme.accent,
     "--vscode-terminal-ansiBrightBlack": derivedTokens.textForegroundSecondary,
-    "--vscode-terminal-ansiBrightBlue": theme.theme.accent,
-    "--vscode-terminal-ansiBrightCyan": theme.theme.accent,
+    "--vscode-terminal-ansiBrightBlue": isDefaultTheme ? terminalAnsi.blue : theme.theme.accent,
+    "--vscode-terminal-ansiBrightCyan": isDefaultTheme ? terminalAnsi.cyan : theme.theme.accent,
     "--vscode-terminal-ansiBrightGreen": terminalAnsiGreen,
-    "--vscode-terminal-ansiBrightMagenta": theme.theme.semanticColors.skill,
+    "--vscode-terminal-ansiBrightMagenta": isDefaultTheme
+      ? terminalAnsi.magenta
+      : theme.theme.semanticColors.skill,
     "--vscode-terminal-ansiBrightRed": theme.theme.semanticColors.diffRemoved,
     "--vscode-terminal-ansiBrightWhite": derivedTokens.textForeground,
     "--vscode-terminal-ansiBrightYellow": WARNING_COLOR_BY_VARIANT[theme.variant],
-    "--vscode-terminal-ansiCyan": theme.theme.accent,
+    "--vscode-terminal-ansiCyan": isDefaultTheme ? terminalAnsi.cyan : theme.theme.accent,
     "--vscode-terminal-ansiGreen": terminalAnsiGreen,
-    "--vscode-terminal-ansiMagenta": theme.theme.semanticColors.skill,
+    "--vscode-terminal-ansiMagenta": isDefaultTheme
+      ? terminalAnsi.magenta
+      : theme.theme.semanticColors.skill,
     "--vscode-terminal-ansiRed": theme.theme.semanticColors.diffRemoved,
     "--vscode-terminal-ansiWhite": derivedTokens.textForeground,
     "--vscode-terminal-ansiYellow": WARNING_COLOR_BY_VARIANT[theme.variant],
@@ -1059,6 +1150,11 @@ function getRequiredVariable(variables: Record<string, string>, name: string): s
 function buildLightDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
   // Retains the established light-theme derivation while the default seed supplies
   // the warmer Claude palette.
+  const isDefaultTheme = haveSameChromePalette(
+    theme.theme,
+    DEFAULT_CHROME_THEME_BY_VARIANT.light,
+  );
+  const quietInk = isDefaultTheme ? BLACK : theme.ink;
   const controlBase = mixRgb(theme.surface, WHITE, 0.09 + theme.contrast * 0.04);
   const elevatedSecondaryBase = mixRgb(theme.surface, WHITE, 0.08 + theme.contrast * 0.08);
   const elevatedPrimaryBase = mixRgb(theme.surface, WHITE, 0.16 + theme.contrast * 0.12);
@@ -1085,13 +1181,22 @@ function buildLightDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
     buttonPrimaryBackgroundActive: formatRgba(theme.ink, 0.1 + theme.contrast * 0.12),
     buttonPrimaryBackgroundHover: formatRgba(theme.ink, 0.05 + theme.contrast * 0.06),
     buttonPrimaryBackgroundInactive: formatRgba(theme.ink, 0.18 + theme.contrast * 0.14),
-    buttonSecondaryBackground: formatRgba(theme.ink, 0.04),
-    buttonSecondaryBackgroundActive: formatRgba(theme.ink, 0.03 + theme.contrast * 0.02),
-    buttonSecondaryBackgroundHover: formatRgba(theme.ink, 0.032 + theme.contrast * 0.012),
-    buttonSecondaryBackgroundInactive: formatRgba(theme.ink, 0.01 + theme.contrast * 0.02),
-    buttonTertiaryBackground: formatRgba(theme.ink, 0),
-    buttonTertiaryBackgroundActive: formatRgba(theme.ink, 0.16 + theme.contrast * 0.08),
-    buttonTertiaryBackgroundHover: formatRgba(theme.ink, 0.08 + theme.contrast * 0.04),
+    buttonSecondaryBackground: formatRgba(quietInk, 0.04),
+    buttonSecondaryBackgroundActive: formatRgba(
+      quietInk,
+      0.03 + theme.contrast * 0.02,
+    ),
+    buttonSecondaryBackgroundHover: formatRgba(
+      quietInk,
+      0.032 + theme.contrast * 0.012,
+    ),
+    buttonSecondaryBackgroundInactive: formatRgba(
+      quietInk,
+      0.01 + theme.contrast * 0.02,
+    ),
+    buttonTertiaryBackground: formatRgba(quietInk, 0),
+    buttonTertiaryBackgroundActive: formatRgba(quietInk, 0.16 + theme.contrast * 0.08),
+    buttonTertiaryBackgroundHover: formatRgba(quietInk, 0.08 + theme.contrast * 0.04),
     controlBackground: formatRgba(controlBase, 0.96),
     controlBackgroundOpaque: formatOpaqueRgb(controlBase),
     elevatedPrimary: formatRgba(elevatedPrimaryBase, 0.96),
@@ -1100,21 +1205,36 @@ function buildLightDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
     elevatedSecondaryOpaque: formatOpaqueRgb(elevatedSecondaryBase),
     iconAccent: theme.theme.accent,
     iconPrimary: theme.theme.ink,
-    iconSecondary: formatRgba(theme.ink, 0.65 + theme.contrast * 0.1),
-    iconTertiary: formatRgba(theme.ink, 0.45 + theme.contrast * 0.1),
+    iconSecondary: isDefaultTheme
+      ? MUTED_COLOR_BY_VARIANT.light
+      : formatRgba(theme.ink, 0.65 + theme.contrast * 0.1),
+    iconTertiary: isDefaultTheme
+      ? FAINT_COLOR_BY_VARIANT.light
+      : formatRgba(theme.ink, 0.45 + theme.contrast * 0.1),
     simpleScrim: formatRgba(BLACK, 0.08 + theme.contrast * 0.04),
     textAccent: theme.theme.accent,
     textButtonPrimary: theme.theme.surface,
     textButtonSecondary: theme.theme.ink,
-    textButtonTertiary: formatRgba(theme.ink, 0.45 + theme.contrast * 0.1),
+    textButtonTertiary: isDefaultTheme
+      ? FAINT_COLOR_BY_VARIANT.light
+      : formatRgba(theme.ink, 0.45 + theme.contrast * 0.1),
     textForeground: theme.theme.ink,
-    textForegroundSecondary: formatRgba(theme.ink, 0.65 + theme.contrast * 0.1),
-    textForegroundTertiary: formatRgba(theme.ink, 0.45 + theme.contrast * 0.1),
+    textForegroundSecondary: isDefaultTheme
+      ? MUTED_COLOR_BY_VARIANT.light
+      : formatRgba(theme.ink, 0.65 + theme.contrast * 0.1),
+    textForegroundTertiary: isDefaultTheme
+      ? FAINT_COLOR_BY_VARIANT.light
+      : formatRgba(theme.ink, 0.45 + theme.contrast * 0.1),
   };
 }
 
 function buildDarkDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
   // Claude dark chrome uses one restrained panel layer over a flat canvas.
+  const isDefaultTheme = haveSameChromePalette(
+    theme.theme,
+    DEFAULT_CHROME_THEME_BY_VARIANT.dark,
+  );
+  const quietInk = isDefaultTheme ? WHITE : theme.ink;
   const controlBase = mixRgb(theme.surface, theme.ink, 0.06 + theme.contrast * 0.05);
   const elevatedPrimaryBase = mixRgb(theme.surface, theme.ink, 0.08 + theme.contrast * 0.08);
 
@@ -1132,18 +1252,18 @@ function buildDarkDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
     buttonPrimaryBackgroundActive: formatRgba(theme.ink, 0.07 + theme.contrast * 0.05),
     buttonPrimaryBackgroundHover: formatRgba(theme.ink, 0.04 + theme.contrast * 0.03),
     buttonPrimaryBackgroundInactive: formatRgba(theme.ink, 0.02 + theme.contrast * 0.02),
-    buttonSecondaryBackground: formatRgba(theme.ink, 0.04),
-    buttonSecondaryBackgroundActive: formatRgba(theme.ink, 0.08),
-    buttonSecondaryBackgroundHover: formatRgba(theme.ink, 0.05),
-    buttonSecondaryBackgroundInactive: formatRgba(theme.ink, 0.02 + theme.contrast * 0.03),
-    buttonTertiaryBackground: formatRgba(theme.ink, 0.02 + theme.contrast * 0.015),
-    buttonTertiaryBackgroundActive: formatRgba(theme.ink, 0.07 + theme.contrast * 0.05),
-    buttonTertiaryBackgroundHover: formatRgba(theme.ink, 0.05 + theme.contrast * 0.03),
+    buttonSecondaryBackground: formatRgba(quietInk, 0.04),
+    buttonSecondaryBackgroundActive: formatRgba(quietInk, 0.08),
+    buttonSecondaryBackgroundHover: formatRgba(quietInk, 0.05),
+    buttonSecondaryBackgroundInactive: formatRgba(quietInk, 0.02 + theme.contrast * 0.03),
+    buttonTertiaryBackground: formatRgba(quietInk, 0.02 + theme.contrast * 0.015),
+    buttonTertiaryBackgroundActive: formatRgba(quietInk, 0.07 + theme.contrast * 0.05),
+    buttonTertiaryBackgroundHover: formatRgba(quietInk, 0.05 + theme.contrast * 0.03),
     controlBackground: formatRgba(controlBase, 0.96),
     controlBackgroundOpaque: formatOpaqueRgb(controlBase),
     elevatedPrimary: formatRgba(elevatedPrimaryBase, 0.96),
     elevatedPrimaryOpaque: formatOpaqueRgb(elevatedPrimaryBase),
-    elevatedSecondary: formatRgba(theme.ink, 0.02 + theme.contrast * 0.02),
+    elevatedSecondary: formatRgba(quietInk, 0.02 + theme.contrast * 0.02),
     elevatedSecondaryOpaque: mixHex(
       theme.theme.surface,
       theme.theme.ink,
@@ -1151,16 +1271,24 @@ function buildDarkDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
     ),
     iconAccent: theme.theme.accent,
     iconPrimary: formatRgba(theme.ink, 0.82 + theme.contrast * 0.14),
-    iconSecondary: formatRgba(theme.ink, 0.66),
-    iconTertiary: formatRgba(theme.ink, 0.44),
+    iconSecondary: isDefaultTheme
+      ? MUTED_COLOR_BY_VARIANT.dark
+      : formatRgba(theme.ink, 0.66),
+    iconTertiary: isDefaultTheme ? FAINT_COLOR_BY_VARIANT.dark : formatRgba(theme.ink, 0.44),
     simpleScrim: formatRgba(theme.ink, 0.08 + theme.contrast * 0.04),
     textAccent: theme.theme.accent,
     textButtonPrimary: theme.theme.surface,
     textButtonSecondary: mixHex(theme.theme.ink, theme.theme.surface, 0.7 + theme.contrast * 0.1),
-    textButtonTertiary: formatRgba(theme.ink, 0.45 + theme.contrast * 0.1),
+    textButtonTertiary: isDefaultTheme
+      ? FAINT_COLOR_BY_VARIANT.dark
+      : formatRgba(theme.ink, 0.45 + theme.contrast * 0.1),
     textForeground: theme.theme.ink,
-    textForegroundSecondary: formatRgba(theme.ink, 0.66),
-    textForegroundTertiary: formatRgba(theme.ink, 0.44),
+    textForegroundSecondary: isDefaultTheme
+      ? MUTED_COLOR_BY_VARIANT.dark
+      : formatRgba(theme.ink, 0.66),
+    textForegroundTertiary: isDefaultTheme
+      ? FAINT_COLOR_BY_VARIANT.dark
+      : formatRgba(theme.ink, 0.44),
   };
 }
 
@@ -1170,7 +1298,7 @@ function buildSurfaceUnder(
   ink: RgbColor,
   variant: ThemeVariant,
 ): string {
-  if (areChromeThemesEqual(theme, DEFAULT_CHROME_THEME_BY_VARIANT[variant])) {
+  if (haveSameChromePalette(theme, DEFAULT_CHROME_THEME_BY_VARIANT[variant])) {
     return CANVAS_COLOR_BY_VARIANT[variant];
   }
   const baseline = DEFAULT_CHROME_THEME_BY_VARIANT[variant].contrast;

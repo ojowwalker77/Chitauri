@@ -9,9 +9,9 @@
 import { type ReactNode } from "react";
 import { cn } from "~/lib/utils";
 
-/** Semantic accent for a choice row. `neutral` reads like a plain list control;
- *  `primary` nudges the recommended action; `destructive` marks a rejecting action. */
-export type ComposerChoiceTone = "neutral" | "primary" | "destructive";
+/** Semantic accent for a choice row. `gold` is reserved for permission grants;
+ *  `primary` marks a recommended decision and `destructive` a rejecting action. */
+export type ComposerChoiceTone = "neutral" | "primary" | "gold" | "destructive";
 
 interface ComposerChoiceRowProps {
   /** 1-based shortcut number shown in the leading chip; `null` hides the chip. */
@@ -30,6 +30,7 @@ interface ComposerChoiceRowProps {
 const ROW_TONE_CLASS_NAME: Record<ComposerChoiceTone, string> = {
   neutral: "hover:bg-[var(--color-background-button-secondary-hover)]",
   primary: "hover:bg-[var(--color-background-button-secondary-hover)]",
+  gold: "hover:bg-[color-mix(in_srgb,var(--gold)_8%,var(--hover))]",
   destructive:
     "hover:bg-[color-mix(in_srgb,var(--destructive)_10%,var(--color-background-button-secondary-hover))]",
 };
@@ -39,6 +40,8 @@ const CHIP_TONE_CLASS_NAME: Record<ComposerChoiceTone, string> = {
     "border border-[color:var(--color-border)] text-[var(--color-text-foreground-secondary)] group-hover:text-[var(--color-text-foreground)]",
   primary:
     "border border-[color:color-mix(in_srgb,var(--claude)_50%,var(--color-border))] text-claude group-hover:border-[color:color-mix(in_srgb,var(--claude)_78%,var(--color-border))]",
+  gold:
+    "border border-[color:color-mix(in_srgb,var(--gold)_55%,var(--color-border))] text-gold group-hover:border-[color:color-mix(in_srgb,var(--gold)_78%,var(--color-border))]",
   destructive:
     "border border-[color:color-mix(in_srgb,var(--destructive)_42%,var(--color-border))] text-destructive-foreground group-hover:border-[color:color-mix(in_srgb,var(--destructive)_68%,var(--color-border))]",
 };
@@ -59,17 +62,19 @@ export function ComposerChoiceRow({
       disabled={disabled}
       onClick={onSelect}
       className={cn(
-        "group flex w-full items-start gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors duration-150",
-        selected ? "bg-[var(--color-background-button-secondary)]" : ROW_TONE_CLASS_NAME[tone],
+        "group flex w-full items-start gap-2.5 rounded-[10px] border border-transparent px-2.5 py-2 text-left transition-[background-color,border-color,scale] duration-press ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.96] motion-reduce:active:scale-100",
+        selected
+          ? "border-[color:color-mix(in_srgb,var(--claude)_40%,var(--panel-border))] bg-[color-mix(in_srgb,var(--claude)_8%,transparent)]"
+          : ROW_TONE_CLASS_NAME[tone],
         disabled && "cursor-not-allowed opacity-50",
       )}
     >
       {shortcut !== null ? (
         <span
           className={cn(
-            "flex size-[18px] shrink-0 items-center justify-center rounded-full text-[11px] font-medium tabular-nums transition-colors duration-150",
+            "flex size-[18px] shrink-0 items-center justify-center rounded-full text-[11px] font-medium tabular-nums transition-colors duration-press",
             selected
-              ? "bg-[var(--color-text-foreground)] text-[var(--color-background-surface)]"
+              ? "border border-[color:color-mix(in_srgb,var(--claude)_60%,var(--panel-border))] text-claude"
               : CHIP_TONE_CLASS_NAME[tone],
           )}
         >

@@ -6,6 +6,7 @@
 import type { SearchAddon, ISearchOptions } from "@xterm/addon-search";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconButton } from "~/components/ui/icon-button";
+import { OVERLAY_SURFACE_CLASS_NAME } from "~/components/ui/surface";
 import { ChevronDownIcon, ChevronUpIcon, XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 
@@ -136,7 +137,12 @@ export function TerminalSearch({ searchAddon, isOpen, onClose }: TerminalSearchP
   if (!isOpen) return null;
 
   return (
-    <div className="absolute right-1 top-1 z-10 flex max-w-[calc(100%-0.5rem)] items-center rounded-xl border border-panel-border bg-panel pl-2 pr-0.5 shadow-[0_16px_44px_rgba(0,0,0,0.5)]">
+    <div
+      className={cn(
+        OVERLAY_SURFACE_CLASS_NAME,
+        "absolute right-1 top-1 z-10 flex max-w-[calc(100%-0.5rem)] items-center pl-2 pr-0.5",
+      )}
+    >
       <input
         ref={inputRef}
         type="text"

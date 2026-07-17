@@ -335,13 +335,12 @@ function findVisibleThreadMarkerElement(elements: readonly HTMLElement[]): HTMLE
 // task-list card: spinner while active, check when done, hollow node pending.
 function WorktreeSetupStepGlyph({ status }: { status: WorktreeSetupStep["status"] }) {
   if (status === "done") {
-    // Foreground (black) check, same box as the spinner so done/active nodes match.
-    return <CircleCheckIcon className="size-2.5 text-[var(--color-text-foreground)]" />;
+    return <CircleCheckIcon className="size-2.5 text-success" />;
   }
   if (status === "active") {
-    // Spinner sized to match the pending nodes, in foreground (black) so the
-    // active step reads as the current work rather than an accent flourish.
-    return <LoaderIcon className="size-2.5 animate-spin text-[var(--color-text-foreground)]" />;
+    return (
+      <LoaderIcon className="size-2.5 animate-spin text-claude motion-reduce:animate-none" />
+    );
   }
   if (status === "error") {
     return <CircleAlertIcon className="size-2.5 text-destructive" />;
@@ -374,7 +373,7 @@ function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> 
                   className={cn(
                     "absolute left-[6.5px] top-1/2 h-full w-px",
                     step.status === "done"
-                      ? "bg-[var(--color-text-foreground)]"
+                      ? "bg-success/70"
                       : "bg-[color:var(--color-border)]",
                   )}
                 />
@@ -385,8 +384,10 @@ function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> 
               <span
                 className={cn(
                   "text-[13px] leading-5",
-                  step.status === "active" || step.status === "done"
-                    ? "text-[var(--color-text-foreground)]"
+                  step.status === "active"
+                    ? "text-claude"
+                    : step.status === "done"
+                      ? "text-[var(--color-text-foreground)]"
                     : step.status === "error"
                       ? "text-destructive"
                       : "text-[var(--color-text-foreground-tertiary)] opacity-70",
@@ -1417,7 +1418,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 ) : null}
                 {narrationItems.length > 0 ? (
                   <section className="pt-1.5" data-work-trail-notes="true">
-                    <div className="mb-1.5 font-system-ui text-[10px] font-medium text-muted-foreground/48">
+                    <div className="mb-1.5 font-system-ui text-[11px] font-medium text-muted-foreground/65">
                       Agent notes · {narrationItems.length}
                     </div>
                     <div className="space-y-2 text-muted-foreground/72">
@@ -1823,10 +1824,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
 
       {row.kind === "working" && (
         <div
-          className="shimmer pt-0.5 text-muted-foreground/70 font-system-ui"
+          className="flex items-center gap-2 pt-0.5 font-system-ui text-muted-foreground/70"
           style={{ fontSize: `${appTypographyScale.chatPx}px` }}
         >
-          Thinking
+          <span aria-hidden="true" className="text-claude">
+            ✳
+          </span>
+          <span className="shimmer">Thinking</span>
         </div>
       )}
 
@@ -2621,19 +2625,19 @@ function workToneIcon(tone: TimelineWorkEntry["tone"]): {
   if (tone === "error") {
     return {
       icon: CircleAlertIcon,
-      className: "text-muted-foreground/50",
+      className: "text-destructive",
     };
   }
   if (tone === "thinking") {
     return {
       icon: BotIcon,
-      className: "text-muted-foreground/40",
+      className: "text-claude",
     };
   }
   if (tone === "info") {
     return {
       icon: CheckIcon,
-      className: "text-muted-foreground/50",
+      className: "text-muted-foreground/70",
     };
   }
   return {
@@ -2943,7 +2947,7 @@ function WorkTrailHeaderContent(props: {
           props.status === "active"
             ? "text-claude"
             : props.status === "settled"
-              ? "text-emerald-600/80 dark:text-emerald-400/70"
+              ? "text-success"
               : "text-muted-foreground/55",
         )}
       >
@@ -3236,7 +3240,7 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
           >
             <span
               className={cn(
-                "flex shrink-0 items-center justify-center text-muted-foreground/40",
+                "flex shrink-0 items-center justify-center text-claude",
                 compact ? "size-4" : "size-5",
               )}
             >
@@ -3279,7 +3283,8 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
               <span
                 className={cn(
                   "flex shrink-0 items-center justify-center",
-                  WORK_ROW_MUTED_HOVER_TONE["tool-row"],
+                  workToneIcon(workEntry.tone).className,
+                  "transition-colors group-hover/tool-row:text-foreground group-focus-visible/tool-row:text-foreground",
                   compact ? "size-4" : "size-5",
                 )}
                 data-tool-icon={leftIconKind}

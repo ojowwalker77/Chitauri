@@ -3,9 +3,14 @@
 // Layer: UI styling helper
 // Exports: surface/option/radius tokens; open panels via ComposerPickerMenuPopup / ComposerPickerSelectPopup
 
+import {
+  OVERLAY_SURFACE_CLASS_NAME,
+  PANEL_SURFACE_CLASS_NAME,
+} from "~/components/ui/surface";
+
 export { COMPOSER_PICKER_SIZE, type ComposerPickerSize } from "./composerPickerSize";
 
-/** Overlay-only shadow for menus, tooltips, and dialogs. */
+/** Compatibility shadow token for consumers that compose popup chrome incrementally. */
 export const COMPOSER_SURFACE_SHADOW_CLASS_NAME = "shadow-[0_16px_44px_rgba(0,0,0,0.5)]";
 
 // Uses the UI-sm token so picker labels sit slightly below the editor text size.
@@ -57,7 +62,7 @@ export const COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME = "text-muted-foreground/45";
 
 /** Calm but unmistakable accent for the composer thread-mode control. */
 export const ORCHESTRATOR_MODE_ACCENT_CLASS_NAME =
-  "[--orchestrator-mode-accent:var(--color-indigo-600,#4f46e5)] bg-indigo-500/8 text-indigo-700 hover:bg-indigo-500/12 hover:text-indigo-800 data-pressed:bg-indigo-500/12 data-pressed:text-indigo-800 dark:[--orchestrator-mode-accent:var(--color-indigo-300,#a5b4fc)] dark:text-indigo-300 dark:hover:text-indigo-200 dark:data-pressed:text-indigo-200";
+  "bg-selected text-foreground hover:bg-selected hover:text-foreground data-pressed:bg-selected data-pressed:text-foreground [&_[data-slot=central-icon]]:text-claude";
 
 // NOTE: Composer picker section headers (Effort, Thinking, Mode, …) now render
 // through the shared `MenuGroupLabel` primitive (../ui/menu) so they stay in
@@ -127,17 +132,17 @@ export const COMPOSER_INPUT_SURFACE_CLASS_NAME = `chat-composer-surface border $
 export const SIDEBAR_SEGMENTED_PICKER_ACTIVE_CLASS_NAME =
   "relative z-[1] text-[var(--color-text-foreground)]";
 
-/** Opaque panel shell for floating menus, pickers, and popovers. */
+/** Compatibility base for consumers that add transient elevation separately. */
 export const APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME =
-  "relative overflow-hidden border border-panel-border bg-panel text-popover-foreground";
+  `relative ${PANEL_SURFACE_CLASS_NAME} text-popover-foreground`;
 
 /** Default floating popup shell (dropdown menus, selects, popovers). */
-export const APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME = `${APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME} rounded-xl ${COMPOSER_SURFACE_SHADOW_CLASS_NAME}`;
+export const APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME = `relative ${OVERLAY_SURFACE_CLASS_NAME} text-popover-foreground`;
 
 /**
  * Overlay chrome shared by plain tooltips and sidebar hover cards.
  */
-export const APP_TOOLTIP_SURFACE_CLASS_NAME = `${APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME} rounded-lg ${COMPOSER_SURFACE_SHADOW_CLASS_NAME}`;
+export const APP_TOOLTIP_SURFACE_CLASS_NAME = `relative ${OVERLAY_SURFACE_CLASS_NAME} rounded-lg text-popover-foreground`;
 
 /** Compatibility backdrop hook for composer picker dropdown panels. */
 export const COMPOSER_PICKER_MENU_BACKDROP_CLASS_NAME = "composer-picker-menu-surface";
@@ -146,7 +151,7 @@ export const COMPOSER_PICKER_MENU_BACKDROP_CLASS_NAME = "composer-picker-menu-su
 export const COMPOSER_PICKER_MENU_SURFACE_CHROME_CLASS_NAME = `border border-border ${COMPOSER_PICKER_RADIUS_CLASS_NAME} ${COMPOSER_SURFACE_SHADOW_CLASS_NAME}`;
 
 /** Visual shell for composer picker dropdown panels (menus attached to the composer). */
-export const COMPOSER_PICKER_MENU_SURFACE_CLASS_NAME = `${APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME} ${COMPOSER_PICKER_MENU_SURFACE_CHROME_CLASS_NAME}`;
+export const COMPOSER_PICKER_MENU_SURFACE_CLASS_NAME = `relative ${OVERLAY_SURFACE_CLASS_NAME} text-popover-foreground`;
 
 /** Backdrop layer hook inside open picker panels. */
 export const COMPOSER_PICKER_MENU_POPUP_BACKDROP_LAYER_CLASS_NAME = `${COMPOSER_PICKER_MENU_BACKDROP_CLASS_NAME} pointer-events-none absolute inset-0 rounded-[inherit]`;
@@ -173,11 +178,11 @@ export const COMPOSER_PICKER_TOOLTIP_SURFACE_CLASS_NAME = `${COMPOSER_PICKER_MEN
 
 /** Opaque floating panel for the slash/mention command menu and @local browser. */
 export const COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME =
-  "relative overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground";
+  `relative ${OVERLAY_SURFACE_CLASS_NAME} bg-popover text-popover-foreground`;
 
 /** Opaque Environment panel card — same rationale as the command menu (overlays transcript). */
 export const ENVIRONMENT_PANEL_SURFACE_CLASS_NAME =
-  "relative overflow-hidden rounded-xl border border-panel-border bg-panel text-popover-foreground";
+  `relative ${PANEL_SURFACE_CLASS_NAME} text-popover-foreground`;
 
 /** Slide + inset timing matched to `SIDEBAR_OFFCANVAS_MOTION_CLASS` (right dock / thread sidebar). */
 // `translate`, not `transform`: the panel slides via `translate-x-*`, which compiles to the

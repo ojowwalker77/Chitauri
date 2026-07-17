@@ -828,7 +828,7 @@ export const ChatHeader = memo(function ChatHeader({
                     render={
                       <button
                         type="button"
-                        className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md bg-indigo-500/8 px-2 text-[11px] font-medium text-indigo-700 transition-[background-color,color,scale] duration-150 ease-out hover:bg-indigo-500/14 active:scale-[0.96] dark:text-indigo-300"
+                        className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-selected px-2 text-[11px] font-medium text-muted-foreground transition-[background-color,color,scale] duration-press ease-out hover:bg-hover hover:text-foreground active:scale-[0.96] motion-reduce:active:scale-100"
                         onClick={orchestratorSeat.onOpen}
                       >
                         <span
@@ -836,13 +836,13 @@ export const ChatHeader = memo(function ChatHeader({
                           className={cn(
                             "size-1.5 shrink-0 rounded-full",
                             orchestratorSeat.status === "connected"
-                              ? "bg-emerald-500"
+                              ? "bg-success"
                               : orchestratorSeat.status === "degraded"
-                                ? "bg-amber-500"
+                                ? "bg-gold"
                                 : "bg-muted-foreground/55",
                           )}
                         />
-                        <span aria-hidden className="text-[13px] leading-none">
+                        <span aria-hidden className="text-[13px] leading-none text-claude">
                           ⬡
                         </span>
                         <span className="hidden sm:inline">Orchestrator seat</span>

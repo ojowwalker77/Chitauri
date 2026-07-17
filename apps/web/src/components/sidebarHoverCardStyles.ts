@@ -29,7 +29,7 @@ export const SIDEBAR_HOVER_CARD_ROW_PADDING_CLASS_NAME = "px-1.5 py-1";
 export const SIDEBAR_HOVER_CARD_ROW_CLASS_NAME = `flex w-full min-w-0 items-center gap-2.5 rounded-md ${SIDEBAR_HOVER_CARD_ROW_PADDING_CLASS_NAME} text-[length:var(--app-font-size-ui-sm,13px)] leading-none`;
 
 /**
- * Frosted surface chrome shared by both hover-card popups: the same shared tooltip
+ * Opaque surface chrome shared by both hover-card popups: the same shared tooltip
  * surface every plain tooltip uses (APP_TOOLTIP_SURFACE_CLASS_NAME) plus a single
  * fixed width so the thread and project cards are always exactly the same size.
  * Width is owned here (not on either card's content) so neither surface can set its

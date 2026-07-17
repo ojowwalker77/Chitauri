@@ -42,7 +42,7 @@ const APPROVAL_ACTIONS: ReadonlyArray<ApprovalAction> = [
     decision: "accept",
     label: "Approve once",
     description: "Allow just this request",
-    tone: "primary",
+    tone: "gold",
   },
   {
     decision: "acceptForSession",
@@ -104,26 +104,29 @@ export const ComposerPendingApprovalPanel = memo(function ComposerPendingApprova
       onKeyDown={handleKeyDown}
       className={cn(
         COMPOSER_INPUT_SURFACE_CLASS_NAME,
-        "overflow-hidden !rounded-xl !border-panel-border !bg-panel px-3.5 py-3",
+        "overflow-hidden !rounded-xl !border-panel-border !bg-panel px-4 py-3.5",
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 text-[13px] font-medium leading-snug text-foreground/90">
-          {KIND_PROMPT[approval.requestKind]}
-          {parsed.tool ? (
-            <span className="ml-1.5 text-[11px] font-normal text-muted-foreground/50">
-              {parsed.tool}
-            </span>
-          ) : null}
-        </p>
+        <div className="flex min-w-0 items-start gap-2">
+          <span aria-hidden="true" className="mt-1 size-1.5 shrink-0 rounded-full bg-gold" />
+          <p className="min-w-0 text-[13px] font-medium leading-snug text-foreground/90">
+            {KIND_PROMPT[approval.requestKind]}
+            {parsed.tool ? (
+              <span className="ml-1.5 text-[11px] font-normal text-muted-foreground/70">
+                {parsed.tool}
+              </span>
+            ) : null}
+          </p>
+        </div>
         {pendingCount > 1 ? (
-          <span className="flex h-4 shrink-0 items-center rounded bg-[var(--color-background-elevated-secondary)] px-1 text-[11px] font-medium tabular-nums text-[var(--color-text-foreground-secondary)]">
+          <span className="flex h-5 shrink-0 items-center rounded-md bg-selected px-1.5 text-[11px] font-medium tabular-nums text-muted-foreground">
             1/{pendingCount}
           </span>
         ) : null}
       </div>
       <ApprovalDetail parsed={parsed} />
-      <div className="mt-2.5 space-y-0.5">
+      <div className="mt-3 space-y-1">
         {APPROVAL_ACTIONS.map((action, index) => (
           <ComposerChoiceRow
             key={action.decision}
@@ -145,7 +148,7 @@ function ApprovalDetail({ parsed }: { parsed: ParsedApproval }) {
     return (
       <div className="mt-2">
         <p
-          className="truncate text-[12.5px] font-medium leading-tight text-foreground/85"
+          className="truncate text-[13px] font-medium leading-tight text-foreground/85"
           title={parsed.fileDir ? `${parsed.fileDir}/${parsed.fileName}` : parsed.fileName}
         >
           {parsed.fileName}
@@ -166,7 +169,7 @@ function ApprovalDetail({ parsed }: { parsed: ParsedApproval }) {
   if (code) {
     return (
       <pre
-        className="mt-2 overflow-hidden rounded-md bg-[var(--color-background-elevated-secondary)] px-2.5 py-1.5 font-mono text-[11.5px] leading-snug text-foreground/85"
+        className="mt-2.5 overflow-hidden rounded-[11px] bg-[var(--color-background-elevated-secondary)] px-3 py-2 font-mono text-[12px] leading-snug text-foreground/85"
         title={code}
       >
         <code className="block truncate">{code}</code>

@@ -255,7 +255,9 @@ function summaryFromSearch(value: unknown, kind: GitHubWorkItemKind): GitHubWork
 function searchArgs(input: GitHubWorkListInput): string[] {
   const kind = input.kind === "issue" ? "issues" : "prs";
   const args = ["search", kind];
-  if (input.query?.trim()) args.push(input.query.trim());
+  // Never forward user search text to `gh search`: leading flags and GitHub
+  // qualifiers can expand the request beyond the repository boundary. The
+  // response is filtered by `input.query` after this repo-scoped fetch instead.
   args.push("--state", "open", "--archived=false");
   switch (input.view) {
     case "reviewing":
@@ -277,7 +279,7 @@ function searchArgs(input: GitHubWorkListInput): string[] {
     case "all":
       break;
   }
-  if (input.repository) args.push("--repo", input.repository);
+  args.push("--repo", input.repository);
   args.push(
     "--limit",
     String(input.limit),
@@ -620,9 +622,7 @@ export const GitHubWorkbenchLive = Layer.effect(
               const item = summaryFromSearch(entry, input.kind);
               return item ? [item] : [];
             })
-            .filter(
-              (item) => !input.repository || item.repository.nameWithOwner === input.repository,
-            )
+            .filter((item) => item.repository.nameWithOwner === input.repository)
             .filter((item) => {
               const query = input.query?.trim().toLowerCase();
               return (

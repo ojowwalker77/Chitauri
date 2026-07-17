@@ -8,6 +8,7 @@ import {
   CHAT_SURFACE_HEADER_HEIGHT_CLASS,
 } from "./chat/chatHeaderControls";
 import { Skeleton } from "./ui/skeleton";
+import { PANEL_SURFACE_CLASS_NAME } from "./ui/surface";
 
 export type DiffPanelMode = "inline" | "sheet" | "sidebar";
 
@@ -34,7 +35,10 @@ export function DiffPanelShell(props: {
       className={cn(
         "flex h-full min-w-0 flex-col bg-panel",
         props.mode === "inline"
-          ? "m-3 ml-0 w-[42vw] min-w-[360px] max-w-[560px] shrink-0 overflow-hidden rounded-xl border border-panel-border"
+          ? cn(
+              PANEL_SURFACE_CLASS_NAME,
+              "m-3 ml-0 w-[42vw] min-w-[360px] max-w-[560px] shrink-0",
+            )
           : "w-full",
       )}
     >

@@ -8904,7 +8904,11 @@ export default function ChatView({
   // relocated variant is icon-only since relocation means space is minimal.
   const relocateComposerLeadingControls = composerFooterControlsPlan.relocateLeadingControls;
   const renderComposerLeadingControls = (options: { iconOnly: boolean }) => (
-    <>
+    <div
+      role="group"
+      aria-label="Composer options"
+      className="flex min-w-0 shrink items-center gap-0.5"
+    >
       <ComposerExtrasMenu
         interactionMode={interactionMode}
         supportsFastMode={composerTraitSelection.caps.supportsFastMode}
@@ -8924,7 +8928,7 @@ export default function ChatView({
         className="shrink-0"
         hideLabel={options.iconOnly}
       />
-    </>
+    </div>
   );
   const branchToolbarProps = {
     threadId: activeThread.id,
@@ -9348,7 +9352,7 @@ export default function ChatView({
 
                     <div
                       data-chat-composer-actions="right"
-                      className="flex shrink-0 items-center gap-2"
+                      className="flex shrink-0 items-center gap-1"
                     >
                       {runtimeUsageContextWindow && composerFooterControlsPlan.showContextMeter ? (
                         <ContextWindowMeter

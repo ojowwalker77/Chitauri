@@ -1,12 +1,12 @@
 import { memo, useState } from "react";
 import { type TimestampFormat } from "../appSettings";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "./ui/collapsible";
 import { ScrollArea } from "./ui/scroll-area";
+import { PANEL_SURFACE_CLASS_NAME } from "./ui/surface";
 import ChatMarkdown from "./ChatMarkdown";
 import {
   CheckIcon,
-  ChevronDownIcon,
   ChevronRightIcon,
   LoaderIcon,
   PanelRightCloseIcon,
@@ -17,6 +17,7 @@ import type { LatestProposedPlanState } from "../session-logic";
 import { formatTimestamp } from "../timestampFormat";
 import { proposedPlanTitle, stripDisplayedPlanMarkdown } from "../proposedPlan";
 import { ProposedPlanActions } from "./chat/ProposedPlanActions";
+import { disclosureChevronClassName } from "~/lib/disclosureMotion";
 
 function stepStatusIcon(status: string): React.ReactNode {
   if (status === "completed") {
@@ -29,7 +30,7 @@ function stepStatusIcon(status: string): React.ReactNode {
   if (status === "inProgress") {
     return (
       <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--claude)_15%,transparent)] text-claude">
-        <LoaderIcon className="size-3 animate-spin" />
+        <LoaderIcon className="size-3 animate-spin motion-reduce:animate-none" />
       </span>
     );
   }
@@ -63,16 +64,18 @@ const PlanSidebar = memo(function PlanSidebar({
   const planTitle = planMarkdown ? proposedPlanTitle(planMarkdown) : null;
 
   return (
-    <div className="m-3 ml-0 flex h-[calc(100%_-_1.5rem)] w-[340px] shrink-0 flex-col overflow-hidden rounded-xl border border-panel-border bg-panel">
+    <div
+      className={cn(
+        PANEL_SURFACE_CLASS_NAME,
+        "m-3 ml-0 flex h-[calc(100%_-_1.5rem)] w-[340px] shrink-0 flex-col",
+      )}
+    >
       {/* Header */}
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/60 px-3">
         <div className="flex items-center gap-2">
-          <Badge
-            variant="secondary"
-            className="rounded-md bg-[color-mix(in_srgb,var(--claude)_10%,transparent)] px-1.5 py-0 text-[11px] font-semibold text-claude"
-          >
+          <span className="text-[length:var(--app-font-size-ui-sm,13px)] font-medium text-foreground">
             Plan
-          </Badge>
+          </span>
           {activeTaskList ? (
             <span className="text-[11px] text-muted-foreground/60">
               {formatTimestamp(activeTaskList.createdAt, timestampFormat)}
@@ -118,7 +121,7 @@ const PlanSidebar = memo(function PlanSidebar({
                 <div
                   key={`${task.status}:${task.task}`}
                   className={cn(
-                    "flex items-start gap-2.5 rounded-lg px-2.5 py-2 transition-colors duration-200",
+                    "flex items-start gap-2.5 rounded-lg px-2.5 py-2 transition-colors duration-menu ease-out",
                     task.status === "inProgress" &&
                       "bg-[color-mix(in_srgb,var(--claude)_5%,transparent)]",
                     task.status === "completed" &&
@@ -145,31 +148,28 @@ const PlanSidebar = memo(function PlanSidebar({
 
           {/* Proposed Plan Markdown */}
           {planMarkdown ? (
-            <div className="space-y-2">
-              <button
-                type="button"
-                className="group flex w-full items-center gap-1.5 text-left"
-                onClick={() => setProposedPlanExpanded((v) => !v)}
-              >
-                {proposedPlanExpanded ? (
-                  <ChevronDownIcon className="size-3 shrink-0 text-muted-foreground/40 transition-transform" />
-                ) : (
-                  <ChevronRightIcon className="size-3 shrink-0 text-muted-foreground/40 transition-transform" />
-                )}
+            <Collapsible open={proposedPlanExpanded} onOpenChange={setProposedPlanExpanded}>
+              <CollapsibleTrigger className="group flex w-full items-center gap-1.5 text-left transition-[color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100">
+                <ChevronRightIcon
+                  className={disclosureChevronClassName(
+                    proposedPlanExpanded,
+                    "size-3 text-muted-foreground/50",
+                  )}
+                />
                 <span className="text-[11px] font-semibold text-muted-foreground/40 group-hover:text-muted-foreground/60">
                   {planTitle ?? "Full Plan"}
                 </span>
-              </button>
-              {proposedPlanExpanded ? (
-                <div className="rounded-[11px] border border-panel-border bg-hover p-3">
+              </CollapsibleTrigger>
+              <CollapsiblePanel>
+                <div className="mt-2 rounded-[11px] border border-panel-border bg-hover p-3">
                   <ChatMarkdown
                     text={displayedPlanMarkdown ?? ""}
                     cwd={markdownCwd}
                     isStreaming={false}
                   />
                 </div>
-              ) : null}
-            </div>
+              </CollapsiblePanel>
+            </Collapsible>
           ) : null}
 
           {/* Empty state */}

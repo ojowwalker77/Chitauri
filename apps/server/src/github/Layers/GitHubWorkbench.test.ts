@@ -66,28 +66,28 @@ it.layer(
   );
 });
 
-it.layer(
-  makeLayer((input) => {
-    if (input.args[0] === "search") {
-      return JSON.stringify([
-        {
-          number: 42,
-          title: "Review me",
-          url: "https://github.com/acme/widgets/pull/42",
-          state: "OPEN",
-          updatedAt: "2026-07-15T12:00:00Z",
-          createdAt: "2026-07-15T10:00:00Z",
-          repository: { name: "widgets", nameWithOwner: "acme/widgets" },
-          author: { login: "octocat", is_bot: false },
-          labels: [{ name: "feature", color: "00ff00", description: "Feature" }],
-          assignees: [],
-          commentsCount: 2,
-        },
-      ]);
-    }
-    return "[]";
-  }).layer,
-)("GitHubWorkbench list", (it) => {
+const listFixture = makeLayer((input) => {
+  if (input.args[0] === "search") {
+    return JSON.stringify([
+      {
+        number: 42,
+        title: "Review me",
+        url: "https://github.com/acme/widgets/pull/42",
+        state: "OPEN",
+        updatedAt: "2026-07-15T12:00:00Z",
+        createdAt: "2026-07-15T10:00:00Z",
+        repository: { name: "widgets", nameWithOwner: "acme/widgets" },
+        author: { login: "octocat", is_bot: false },
+        labels: [{ name: "feature", color: "00ff00", description: "Feature" }],
+        assignees: [],
+        commentsCount: 2,
+      },
+    ]);
+  }
+  return "[]";
+});
+
+it.layer(listFixture.layer)("GitHubWorkbench list", (it) => {
   it.effect("lists review requests with normalized repository context", () =>
     Effect.gen(function* () {
       const workbench = yield* GitHubWorkbench;
@@ -96,12 +96,30 @@ it.layer(
         kind: "pull_request",
         view: "reviewing",
         query: null,
-        repository: null,
+        repository: "acme/widgets",
         limit: 50,
       });
       assert.equal(result.items.length, 1);
       assert.equal(result.items[0]?.repository.nameWithOwner, "acme/widgets");
       assert.equal(result.items[0]?.commentsCount, 2);
+    }),
+  );
+
+  it.effect("never forwards search text as CLI flags or repository qualifiers", () =>
+    Effect.gen(function* () {
+      const workbench = yield* GitHubWorkbench;
+      yield* workbench.listWork({
+        cwd: "/repo",
+        kind: "pull_request",
+        view: "all",
+        query: "--repo=outside/not-attached",
+        repository: "acme/widgets",
+        limit: 50,
+      });
+
+      const args = listFixture.calls.at(-1)?.args ?? [];
+      expect(args).toContain("acme/widgets");
+      expect(args).not.toContain("--repo=outside/not-attached");
     }),
   );
 });

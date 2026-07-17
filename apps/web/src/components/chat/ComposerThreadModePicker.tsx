@@ -96,17 +96,19 @@ export function ComposerThreadModePicker(props: {
                   key={mode}
                   value={mode}
                   disabled={disabled}
-                  className={cn(
-                    "items-start py-2.5",
-                    mode === "orchestrator" &&
-                      "data-checked:text-[var(--orchestrator-mode-accent)]",
-                  )}
+                  className="items-start py-2.5"
                   data-testid={`composer-thread-mode-${mode}`}
                 >
-                  <CentralIcon name={copy.icon} className="mt-0.5 size-4 shrink-0" />
+                  <CentralIcon
+                    name={copy.icon}
+                    className={cn(
+                      "mt-0.5 size-4 shrink-0",
+                      mode === props.value && mode === "orchestrator" && "text-claude",
+                    )}
+                  />
                   <span className="min-w-0 flex-1 text-left">
                     <span className="block font-medium leading-4">{copy.label}</span>
-                    <span className="mt-0.5 block text-pretty text-[10px] leading-4 text-muted-foreground">
+                    <span className="mt-0.5 block text-pretty text-[11px] leading-4 text-muted-foreground">
                       {disabled
                         ? "Add an allowed seat model in Settings → Orchestrator first."
                         : copy.description}

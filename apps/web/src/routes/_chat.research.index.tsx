@@ -4,9 +4,11 @@
 import { workspaceRootsEqual } from "@t3tools/shared/threadWorkspace";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import { RouteInsetSurface } from "~/components/RouteInsetSurface";
-import { ProjectSurfaceFrame } from "~/components/ProjectSurfaceHeader";
+import { ProjectSurfaceFrame } from "~/components/ProjectSurfaceFrame";
+import { RepositoryProjectFilter } from "~/components/RepositoryProjectFilter";
 import { SidebarHeaderNavigationControls } from "~/components/SidebarHeaderNavigationControls";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
@@ -21,14 +23,20 @@ import {
 } from "~/hooks/useDesktopTopBarGutter";
 import { useOpenResearchDocument } from "~/hooks/useOpenResearchDocument";
 import { ArrowUpRightIcon, BrainIcon, FileIcon, GitBranchIcon, RefreshCwIcon } from "~/lib/icons";
+import {
+  ALL_PROJECTS_FILTER,
+  parseProjectFilterSearch,
+  projectFilterValue,
+  resolveProjectFilter,
+} from "~/lib/projectFilter";
 import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
 import { useLatestProjectStore } from "~/latestProjectStore";
-import { useProjectActiveThreadStore } from "~/projectActiveThreadStore";
 import { useStore } from "~/store";
 import { researchListQueryOptions } from "./-research.shared";
 
 export const Route = createFileRoute("/_chat/research/")({
+  validateSearch: (search) => parseProjectFilterSearch(search),
   component: ResearchIndexRoute,
 });
 
@@ -43,55 +51,58 @@ function shortDate(value: string): string {
 }
 
 function ResearchIndexRoute() {
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const latestProjectId = useLatestProjectStore((state) => state.latestProjectId);
+  const projectsHydrated = useStore((state) => state.threadsHydrated);
   const projects = useStore((state) => state.projects);
-  const project =
-    projects.find(
-      (candidate) => candidate.kind === "project" && candidate.id === latestProjectId,
-    ) ??
-    projects.find((candidate) => candidate.kind === "project") ??
-    null;
-  const rememberedThreadId = useProjectActiveThreadStore((state) =>
-    project ? (state.activeThreadByProjectId[project.id] ?? null) : null,
-  );
-  const rememberedThread = useStore((state) =>
-    rememberedThreadId ? (state.sidebarThreadSummaryById[rememberedThreadId] ?? null) : null,
-  );
-  const fallbackThread = useStore((state) =>
-    project
-      ? ((state.threadIds ?? [])
-          .map((threadId) => state.sidebarThreadSummaryById[threadId])
-          .find(
-            (thread) =>
-              thread?.projectId === project.id &&
-              !thread.parentThreadId &&
-              thread.archivedAt == null,
-          ) ?? null)
-      : null,
-  );
-  const surfaceThread =
-    rememberedThread?.projectId === project?.id ? rememberedThread : fallbackThread;
+  const repositoryProjects = projects.filter((project) => project.kind === "project");
+  const project = resolveProjectFilter({
+    projects: repositoryProjects,
+    searchProject: search.project,
+    latestProjectId,
+  });
+  const canonicalProjectFilter = projectFilterValue(project);
+  useEffect(() => {
+    if (!projectsHydrated) return;
+    if (search.project === canonicalProjectFilter) return;
+    void navigate({
+      replace: true,
+      search: (previous) => ({ ...previous, project: canonicalProjectFilter }),
+    });
+  }, [canonicalProjectFilter, navigate, projectsHydrated, search.project]);
   const query = useQuery(researchListQueryOptions());
   const openResearch = useOpenResearchDocument();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
     useDesktopTopBarWindowControlsGutterClassName();
   const documents = (query.data?.documents ?? []).filter((document) => {
-    if (!project) return false;
-    return document.repositoryRoot
-      ? workspaceRootsEqual(document.repositoryRoot, project.cwd)
-      : document.repositoryName === project.name || document.repositoryName === project.folderName;
+    if (!project) return true;
+    const repositoryNameMatches =
+      document.repositoryName === project.name ||
+      document.repositoryName === project.remoteName ||
+      document.repositoryName === project.folderName;
+    return (
+      (document.repositoryRoot
+        ? workspaceRootsEqual(document.repositoryRoot, project.cwd)
+        : false) || repositoryNameMatches
+    );
   });
   const loadError = query.error instanceof Error ? query.error.message : null;
 
+  const updateProjectFilter = (value: string) => {
+    if (value !== ALL_PROJECTS_FILTER) {
+      const nextProject = repositoryProjects.find((candidate) => candidate.id === value);
+      if (!nextProject) return;
+      useLatestProjectStore.getState().setLatestProjectId(nextProject.id);
+    }
+    void navigate({
+      search: (previous) => ({ ...previous, project: value }),
+    });
+  };
+
   return (
-    <ProjectSurfaceFrame
-      activeSurface="research"
-      middleThreadId={surfaceThread?.id ?? null}
-      middleThreadTitle={surfaceThread?.title ?? null}
-      projectId={project?.id ?? null}
-      projectName={project?.name ?? null}
-    >
+    <ProjectSurfaceFrame>
       <RouteInsetSurface>
         <div
           className={cn(
@@ -110,7 +121,17 @@ function ResearchIndexRoute() {
           >
             <div className={cn("flex items-center gap-3", CHAT_SURFACE_HEADER_HEIGHT_CLASS)}>
               <SidebarHeaderNavigationControls />
-              <div className="min-w-0 flex-1" />
+              <BrainIcon className="size-4 text-claude" />
+              <span className="min-w-0 flex-1 truncate text-[14px] font-[590] tracking-[-0.005em] text-foreground">
+                Research
+              </span>
+              <RepositoryProjectFilter
+                ariaLabel="Research repository"
+                projects={repositoryProjects}
+                selectedProject={project}
+                onValueChange={updateProjectFilter}
+                align="end"
+              />
               <Button
                 type="button"
                 size="icon-sm"
@@ -126,19 +147,13 @@ function ResearchIndexRoute() {
           </header>
 
           <main className="min-h-0 flex-1 overflow-y-auto">
-            <div className="mx-auto flex w-full max-w-5xl flex-col px-6 pb-16 pt-9 sm:px-10">
-              <div className="mb-9 flex items-end justify-between gap-5">
-                <div>
-                  <div className="mb-3 flex size-10 items-center justify-center rounded-xl border border-panel-border bg-panel text-claude">
-                    <BrainIcon className="size-5" />
-                  </div>
-                  <h1 className="text-balance font-heading text-3xl font-semibold tracking-[-0.025em] text-foreground">
-                    {project ? `${project.name} Research` : "Research"}
-                  </h1>
-                  <p className="mt-2 max-w-xl text-pretty text-sm leading-6 text-muted-foreground">
-                    Plans and investigations saved for this project, ready to refine or implement.
-                  </p>
-                </div>
+            <div className="mx-auto flex w-full max-w-4xl flex-col px-6 pb-16 pt-6 sm:px-10">
+              <div className="mb-5 flex items-center justify-between gap-5">
+                <p className="max-w-xl text-[13px] leading-5 text-muted-foreground">
+                  {project
+                    ? `Plans and investigations saved for ${project.name}.`
+                    : "Plans and investigations across every repository."}
+                </p>
                 {query.data ? (
                   <Button
                     type="button"
@@ -153,12 +168,12 @@ function ResearchIndexRoute() {
                 ) : null}
               </div>
 
-              {query.isLoading ? (
-                <div className="py-20 text-center text-sm text-muted-foreground">
+              {query.isLoading || !projectsHydrated ? (
+                <div className="py-16 text-center text-sm text-muted-foreground">
                   Loading research…
                 </div>
               ) : query.isError ? (
-                <div className="flex flex-col items-center rounded-xl border border-destructive/28 bg-panel px-8 py-20 text-center">
+                <div className="flex flex-col items-center rounded-xl border border-destructive/28 bg-panel px-8 py-16 text-center">
                   <p className="text-sm font-medium text-foreground">
                     Research could not be loaded
                   </p>
@@ -176,10 +191,10 @@ function ResearchIndexRoute() {
                   </Button>
                 </div>
               ) : documents.length === 0 ? (
-                <div className="flex flex-col items-center rounded-xl border border-panel-border bg-panel px-8 py-20 text-center">
-                  <BrainIcon className="mb-4 size-8 text-muted-foreground/60" />
+                <div className="flex flex-col items-center rounded-xl border border-panel-border bg-panel px-8 py-16 text-center">
+                  <BrainIcon className="mb-3 size-6 text-claude" />
                   <p className="text-sm font-medium text-foreground">
-                    Your research library is ready
+                    {project ? "This research library is ready" : "Your research library is ready"}
                   </p>
                   <p className="mt-1 max-w-sm text-pretty text-xs leading-5 text-muted-foreground">
                     Invoke <span className="font-mono text-foreground">/research</span> in any
@@ -187,42 +202,46 @@ function ResearchIndexRoute() {
                   </p>
                 </div>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="overflow-hidden rounded-xl border border-panel-border bg-panel">
                   {documents.map((document) => (
                     <button
                       key={document.id}
                       type="button"
                       onClick={() => void openResearch(document)}
-                      className="group flex min-h-48 flex-col rounded-xl border border-panel-border bg-panel p-5 text-left transition-[scale,background-color] duration-press ease-out hover:bg-[color-mix(in_srgb,var(--panel)_95%,white_5%)] active:scale-[0.96] motion-reduce:transition-none"
+                      className="group flex w-full items-start gap-3 border-b border-panel-border px-4 py-3.5 text-left transition-[background-color,scale] duration-press ease-out last:border-b-0 hover:bg-hover active:scale-[0.96] motion-reduce:transition-none"
                     >
-                      <div className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
-                        <span className="rounded-full bg-selected px-2.5 py-1 font-medium">
-                          {document.format === "html" ? "Visual brief" : "Plan"}
-                        </span>
-                        <span className="tabular-nums">{shortDate(document.updatedAt)}</span>
-                      </div>
-                      <h2 className="mt-5 line-clamp-2 text-balance font-heading text-lg font-semibold leading-snug tracking-[-0.015em] text-foreground">
-                        {document.title}
-                      </h2>
-                      <p className="mt-2 line-clamp-2 text-pretty text-xs leading-5 text-muted-foreground">
-                        {document.summary ??
-                          "Open the research artifact to review its findings and implementation plan."}
-                      </p>
-                      <div className="mt-auto flex items-center gap-2 pt-5 text-[11px] text-muted-foreground">
-                        <span className="truncate font-medium text-foreground/80">
-                          {document.repositoryName}
-                        </span>
-                        {document.branch ? (
-                          <span className="flex min-w-0 items-center gap-1 truncate">
-                            <GitBranchIcon className="size-3 shrink-0" />
-                            <span className="truncate">{document.branch}</span>
+                      <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-selected text-claude">
+                        <FileIcon className="size-3.5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <h2 className="line-clamp-1 text-[14px] font-medium leading-5 text-foreground">
+                            {document.title}
+                          </h2>
+                          <span className="shrink-0 text-[11px] tabular-nums text-faint">
+                            {shortDate(document.updatedAt)}
                           </span>
-                        ) : null}
-                        <span className="ml-auto flex shrink-0 items-center gap-1">
-                          {document.referenceCount} refs
-                          <ArrowUpRightIcon className="size-3 opacity-0 transition-opacity duration-150 group-hover:opacity-70" />
-                        </span>
+                        </div>
+                        <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-muted-foreground">
+                          {document.summary ??
+                            "Open the research artifact to review its findings and implementation plan."}
+                        </p>
+                        <div className="mt-1.5 flex min-w-0 items-center gap-2 text-[11px] text-faint">
+                          <span className="truncate text-muted-foreground">
+                            {document.repositoryName}
+                          </span>
+                          <span>·</span>
+                          <span>{document.format === "html" ? "Visual brief" : "Plan"}</span>
+                          {document.branch ? (
+                            <span className="flex min-w-0 items-center gap-1 truncate">
+                              <GitBranchIcon className="size-3 shrink-0" />
+                              <span className="truncate">{document.branch}</span>
+                            </span>
+                          ) : null}
+                          <span className="ml-auto shrink-0">{document.referenceCount} refs</span>
+                        </div>
                       </div>
+                      <ArrowUpRightIcon className="mt-1 size-3.5 shrink-0 text-faint opacity-0 transition-opacity duration-tooltip group-hover:opacity-100" />
                     </button>
                   ))}
                 </div>

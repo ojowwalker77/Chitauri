@@ -167,12 +167,8 @@
      The panel is the only raised surface, so the hierarchy stays legible without
      gradients, glass, or a second content-card shadow competing for attention. */
   .chitauri-anthropic-shell {
-    --app-shell-background: #e4e4e7;
+    --app-shell-background: var(--background);
     --app-content-card-radius: 0px;
-  }
-
-  .dark .chitauri-anthropic-shell {
-    --app-shell-background: #09090b;
   }
 
   .sidebar-icon-button {
@@ -186,22 +182,9 @@
 
   /* Claude-style persistent sidebar panel: opaque, bordered, and shadowless. */
   .app-sidebar-surface {
-    --app-sidebar-coral: #fb923c;
-    --app-sidebar-gold: #fb923c;
-    --app-sidebar-surface: #f4f4f5;
-    --foreground: #18181b;
-    --muted-foreground: #52525b;
-    --sidebar-foreground: #18181b;
-    --sidebar-accent: rgba(24, 24, 27, 0.045);
-    --sidebar-accent-active: rgba(24, 24, 27, 0.075);
-    --sidebar-accent-foreground: #18181b;
-    --sidebar-border: rgba(24, 24, 27, 0.08);
-    --color-border: rgba(24, 24, 27, 0.08);
-    --color-text-foreground: #18181b;
-    --color-text-foreground-secondary: #52525b;
-    --color-background-button-secondary-hover: var(--sidebar-accent);
-    --color-background-button-secondary-active: var(--sidebar-accent-active);
-    --color-background-elevated-secondary: rgba(42, 39, 36, 0.035);
+    --app-sidebar-coral: var(--claude);
+    --app-sidebar-gold: var(--gold);
+    --app-sidebar-surface: var(--panel);
     --app-density-row-height: 2.375rem;
     --app-density-row-padding-y: 0rem;
     --app-density-row-gap: 0.5rem;
@@ -212,22 +195,6 @@
     box-shadow: none;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-  }
-
-  .dark .app-sidebar-surface {
-    --app-sidebar-gold: #fb923c;
-    --app-sidebar-surface: #18181b;
-    --foreground: #f4f4f5;
-    --muted-foreground: #a1a1aa;
-    --sidebar-foreground: #f4f4f5;
-    --sidebar-accent: rgba(255, 255, 255, 0.05);
-    --sidebar-accent-active: rgba(255, 255, 255, 0.08);
-    --sidebar-accent-foreground: #f4f4f5;
-    --sidebar-border: rgba(255, 255, 255, 0.07);
-    --color-border: rgba(255, 255, 255, 0.07);
-    --color-text-foreground: #f4f4f5;
-    --color-text-foreground-secondary: #a1a1aa;
-    --color-background-elevated-secondary: rgba(255, 255, 255, 0.035);
   }
 
   .app-sidebar-surface [data-slot="sidebar-footer"] {
@@ -248,27 +215,6 @@
     font-size: 0.78125rem;
     font-weight: 500;
     letter-spacing: 0;
-  }
-
-  .app-sidebar-surface .sidebar-icon-chip {
-    box-shadow: 0 0 0 1px var(--sidebar-border);
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .app-sidebar-surface [data-slot="sidebar-menu-button"]:active,
-    .app-sidebar-surface [data-slot="sidebar-menu-sub-button"]:active,
-    .app-sidebar-surface [data-thread-item]:active {
-      transform: scale(0.98);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .app-sidebar-surface [data-slot="sidebar-menu-button"],
-    .app-sidebar-surface [data-slot="sidebar-menu-sub-button"],
-    .app-sidebar-surface [data-thread-item] {
-      transform: none !important;
-      transition-property: background-color, color;
-    }
   }
 
   @media (max-width: 767px) {
@@ -426,43 +372,44 @@
   --font-mono-family: "0xProto", monospace;
   --font-chat-code-family: "0xProto", monospace;
   --terminal-font-family: "0xProto", monospace;
-  --app-shell-background: #e4e4e7;
+  --app-shell-background: #e7e4df;
   --app-sidebar-backdrop-filter: none;
   --app-sidebar-shadow: none;
-  --app-sidebar-surface: #f4f4f5;
-  --background: #e4e4e7;
-  --foreground: #18181b;
-  --panel: #f4f4f5;
-  --panel-border: rgba(24, 24, 27, 0.09);
-  --hover: rgba(24, 24, 27, 0.05);
-  --selected: rgba(24, 24, 27, 0.08);
-  --faint: #71717a;
-  --gold: #fb923c;
+  --app-sidebar-surface: #f5f2ed;
+  --background: #e7e4df;
+  --foreground: #252421;
+  --panel: #f5f2ed;
+  --panel-border: rgba(37, 36, 33, 0.1);
+  --hover: rgba(37, 36, 33, 0.05);
+  --selected: rgba(37, 36, 33, 0.08);
+  --faint: #85817a;
+  --gold: #a96f35;
+  --well: #efebe5;
   --card: var(--panel);
   --card-foreground: var(--foreground);
   --popover: var(--panel);
   --popover-foreground: var(--foreground);
   --primary: var(--foreground);
   --primary-foreground: var(--panel);
-  --secondary: --alpha(var(--color-black) / 4%);
+  --secondary: var(--hover);
   --secondary-foreground: var(--foreground);
-  --muted: --alpha(var(--color-black) / 4%);
-  --muted-foreground: #52525b;
-  --accent: --alpha(var(--color-black) / 4%);
+  --muted: var(--hover);
+  --muted-foreground: #696661;
+  --accent: #d97757;
   --accent-foreground: var(--foreground);
-  --destructive: #f43f5e;
-  --border: --alpha(var(--color-black) / 5%);
-  --input: --alpha(var(--color-black) / 6%);
-  --ring: #fb923c;
-  --destructive-foreground: var(--color-red-700);
+  --destructive: #c4554e;
+  --border: var(--panel-border);
+  --input: #ebe7e1;
+  --ring: #d97757;
+  --destructive-foreground: #7e2f2a;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --info: #3b82f6;
-  --info-foreground: #3b82f6;
-  --success: #4ade80;
+  --info: #6b6965;
+  --info-foreground: #6b6965;
+  --success: #4cb782;
   --success-foreground: #27694c;
   --sidebar: var(--card);
   --sidebar-foreground: var(--foreground);
@@ -474,47 +421,53 @@
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
   --color-background-button-secondary-hover: var(--secondary);
+  --color-background-button-secondary-active: var(--selected);
   --color-background-elevated-secondary: var(--secondary);
+  --color-border: var(--border);
+  --color-text-foreground: var(--foreground);
+  --color-text-foreground-secondary: var(--muted-foreground);
+  --color-text-foreground-tertiary: var(--faint);
   --warning: var(--gold);
-  --warning-foreground: #70491e;
-  --claude: #fb923c;
+  --warning-foreground: #5c3b1d;
+  --claude: #d97757;
 
   @variant dark {
     color-scheme: dark;
-    --app-shell-background: #09090b;
-    --background: #09090b;
-    --foreground: #f4f4f5;
-    --panel: #18181b;
+    --app-shell-background: #0a0a0a;
+    --background: #0a0a0a;
+    --foreground: #e6e4e1;
+    --panel: #171717;
     --panel-border: rgba(255, 255, 255, 0.07);
     --hover: rgba(255, 255, 255, 0.05);
     --selected: rgba(255, 255, 255, 0.08);
-    --faint: #71717a;
-    --gold: #fb923c;
+    --faint: #6b6965;
+    --gold: #cf9d5e;
+    --well: #141414;
     --card: var(--panel);
     --card-foreground: var(--foreground);
     --popover: var(--panel);
     --popover-foreground: var(--foreground);
     --primary: var(--foreground);
-    --primary-foreground: #18181b;
+    --primary-foreground: #171717;
     --secondary: var(--hover);
     --secondary-foreground: var(--foreground);
     --muted: var(--hover);
-    --muted-foreground: #a1a1aa;
-    --accent: var(--hover);
+    --muted-foreground: #9c9a96;
+    --accent: #d97757;
     --accent-foreground: var(--foreground);
-    --destructive: #f43f5e;
+    --destructive: #d9685f;
     --border: var(--panel-border);
     --input: #1f1f1f;
-    --ring: #fb923c;
-    --destructive-foreground: var(--color-red-400);
+    --ring: #d97757;
+    --destructive-foreground: #f0b4af;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --info: #3b82f6;
-    --info-foreground: #3b82f6;
-    --success: #4ade80;
+    --info: #9c9a96;
+    --info-foreground: #9c9a96;
+    --success: #4cb782;
     --success-foreground: #a5d6b7;
     --sidebar: var(--card);
     --sidebar-foreground: var(--foreground);
@@ -529,9 +482,14 @@
     --app-sidebar-shadow: none;
     --app-sidebar-surface: var(--panel);
     --color-background-button-secondary-hover: var(--secondary);
+    --color-background-button-secondary-active: var(--selected);
     --color-background-elevated-secondary: var(--secondary);
+    --color-border: var(--border);
+    --color-text-foreground: var(--foreground);
+    --color-text-foreground-secondary: var(--muted-foreground);
+    --color-text-foreground-tertiary: var(--faint);
     --warning: var(--gold);
-    --warning-foreground: #e2c193;
+    --warning-foreground: #e5c8a5;
   }
 }
 
@@ -551,18 +509,28 @@ body {
 }
 
 :focus-visible {
-  outline-color: color-mix(in srgb, var(--claude) 65%, transparent);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
-/* The floating shell leaves a 12px top inset. Make that real, opaque window
-   chrome and preserve it as an easy drag target instead of simulating wallpaper. */
+/* Electron-only native cue: a restrained wallpaper sliver doubles as the
+   frameless window drag target without adding chrome to the web shell. */
 .desktop-window-drag-strip {
+  display: none;
+}
+
+:root[data-runtime="electron"] .desktop-window-drag-strip {
+  display: block;
   position: fixed;
   z-index: 40;
   inset: 0 0 auto;
-  height: 0.75rem;
-  background: var(--app-shell-background, var(--background));
+  height: 0.5rem;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--claude) 7%, var(--background)),
+    color-mix(in srgb, var(--foreground) 3%, var(--background)) 48%,
+    color-mix(in srgb, var(--gold) 6%, var(--background))
+  );
   -webkit-app-region: drag;
 }
 
@@ -2339,12 +2307,12 @@ diffs-container {
 
 /* Composer is the darker input panel on the flat chat canvas. */
 :root {
-  --composer-surface: color-mix(in srgb, var(--panel) 77%, var(--background));
+  --composer-surface: var(--well);
   --runtime-full-access-accent: var(--gold);
 }
 
 .dark {
-  --composer-surface: color-mix(in srgb, var(--panel) 77%, var(--background));
+  --composer-surface: var(--well);
   --runtime-full-access-accent: var(--gold);
 }
 
@@ -2419,16 +2387,11 @@ diffs-container {
   caret-color: var(--claude);
 }
 
-/* Frosted translucent shell shared by floating menus & pickers (dropdown menus,
-   selects, popovers, comboboxes) and composer pickers. Background + blur are
-   theme-aware via the tokens set in theme.logic (control-opaque @70% + blur). */
+/* Opaque overlay shell shared by floating menus and composer pickers. */
 .composer-picker-menu-surface {
-  background: var(
-    --app-composer-picker-surface,
-    color-mix(in oklab, var(--popover) 70%, transparent)
-  );
-  backdrop-filter: var(--app-composer-picker-backdrop-filter, blur(32px));
-  -webkit-backdrop-filter: var(--app-composer-picker-backdrop-filter, blur(32px));
+  background: var(--app-composer-picker-surface, var(--panel));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 /* Density tokens per size modifier (--normal / --small). Width is opt-in below. */

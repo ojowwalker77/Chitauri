@@ -21,6 +21,7 @@ import { resolveActivePane } from "~/rightDockStore.logic";
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
 import { Menu, MenuItem, MenuTrigger } from "../ui/menu";
+import { PANEL_SURFACE_CLASS_NAME } from "../ui/surface";
 import {
   Sidebar,
   SIDEBAR_OFFCANVAS_MOTION_CLASS,
@@ -28,7 +29,6 @@ import {
   SidebarProvider,
   SidebarRail,
 } from "../ui/sidebar";
-import { CHAT_BACKGROUND_CLASS_NAME } from "./composerPickerStyles";
 import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 import {
   CHAT_SURFACE_HEADER_ROW_CLASS_NAME,
@@ -176,12 +176,10 @@ export function RightDock(props: RightDockProps) {
     >
       <Sidebar
         side="right"
+        variant="floating"
         collapsible="offcanvas"
-        className={cn(
-          "border-l border-[var(--app-surface-divider)] text-foreground",
-          chromeMotionClass,
-        )}
-        innerClassName={CHAT_BACKGROUND_CLASS_NAME}
+        className={cn("text-foreground", chromeMotionClass)}
+        innerClassName={cn(PANEL_SURFACE_CLASS_NAME, "rounded-xl")}
         gapClassName={chromeMotionClass}
         transparentSurface
         resizable={{
@@ -193,7 +191,7 @@ export function RightDock(props: RightDockProps) {
           <div
             className={cn(
               CHAT_SURFACE_HEADER_ROW_CLASS_NAME,
-              "gap-1 px-1.5",
+              "gap-1 border-b border-panel-border px-1.5",
               desktopTopBarWindowControlsGutterClassName,
             )}
           >

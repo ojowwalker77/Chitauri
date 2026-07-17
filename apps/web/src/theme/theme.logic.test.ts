@@ -33,22 +33,68 @@ describe("parseStoredThemeState", () => {
     });
   });
 
-  it("keeps the saved mode while replacing legacy custom themes with the Claude palette", () => {
-    expect(
-      parseStoredThemeState(
-        JSON.stringify({
-          mode: "dark",
-          codeThemeIds: { dark: "linear", light: "github" },
-          chromeThemes: {
-            dark: { accent: "#339cff", surface: "#000000" },
-            light: { accent: "#ff00aa", surface: "#ffffff" },
+  it("preserves stored custom themes and code theme selections", () => {
+    const parsed = parseStoredThemeState(
+      JSON.stringify({
+        mode: "dark",
+        codeThemeIds: { dark: "linear", light: "github" },
+        chromeThemes: {
+          dark: { accent: "#339cff", surface: "#000000" },
+          light: { accent: "#ff00aa", surface: "#ffffff" },
+        },
+      }),
+    );
+
+    expect(parsed.mode).toBe("dark");
+    expect(parsed.codeThemeIds).toEqual({ dark: "linear", light: "github" });
+    expect(parsed.chromeThemes.dark.accent).toBe("#339cff");
+    expect(parsed.chromeThemes.dark.surface).toBe("#000000");
+    expect(parsed.chromeThemes.light.accent).toBe("#ff00aa");
+    expect(parsed.chromeThemes.light.surface).toBe("#ffffff");
+  });
+
+  it("migrates only the legacy built-in palette while preserving fonts and code themes", () => {
+    const parsed = parseStoredThemeState(
+      JSON.stringify({
+        mode: "dark",
+        codeThemeIds: { dark: "linear", light: "github" },
+        chromeThemes: {
+          dark: {
+            accent: "#fb923c",
+            contrast: 60,
+            fonts: { code: "0xProto", ui: "Inter" },
+            ink: "#f4f4f5",
+            opaqueWindows: true,
+            semanticColors: {
+              diffAdded: "#4ade80",
+              diffRemoved: "#f43f5e",
+              skill: "#3b82f6",
+            },
+            surface: "#18181b",
           },
-        }),
-      ),
-    ).toEqual({
-      ...DEFAULT_THEME_STATE,
-      mode: "dark",
+          light: {
+            accent: "#fb923c",
+            contrast: 45,
+            fonts: { code: null, ui: null },
+            ink: "#18181b",
+            opaqueWindows: true,
+            semanticColors: {
+              diffAdded: "#4ade80",
+              diffRemoved: "#f43f5e",
+              skill: "#3b82f6",
+            },
+            surface: "#f4f4f5",
+          },
+        },
+      }),
+    );
+
+    expect(parsed.codeThemeIds).toEqual({ dark: "linear", light: "github" });
+    expect(parsed.chromeThemes.dark).toMatchObject({
+      ...DEFAULT_CHROME_THEME_BY_VARIANT.dark,
+      fonts: { code: "0xProto", ui: "Inter" },
     });
+    expect(parsed.chromeThemes.light).toEqual(DEFAULT_CHROME_THEME_BY_VARIANT.light);
   });
 
   it("normalizes partial stored packs against the per-variant defaults", () => {
@@ -382,10 +428,17 @@ describe("buildThemeCssVariables", () => {
     expect(tokens.aliases["--color-token-terminal-ansi-bright-black"]).toBe(
       tokens.derived.textForegroundSecondary,
     );
-    expect(tokens.aliases["--color-token-terminal-ansi-yellow"]).toBe("#fb923c");
+    expect(tokens.aliases["--color-token-terminal-ansi-yellow"]).toBe("#cf9d5e");
   });
 
   it("derives the fixed dark appearance palette", () => {
+    const variables = buildThemeCssVariables(
+      {
+        codeThemeId: "codex",
+        theme: DEFAULT_CHROME_THEME_BY_VARIANT.dark,
+      },
+      "dark",
+    ).variables;
     const tokens = buildResolvedThemeTokens(
       {
         codeThemeId: "codex",
@@ -394,9 +447,22 @@ describe("buildThemeCssVariables", () => {
       "dark",
     );
 
-    expect(tokens.derived.controlBackgroundOpaque).toBe("rgb(44, 44, 47)");
-    expect(tokens.aliases["--color-token-dropdown-background"]).toBe("rgb(44, 44, 47)");
-    expect(tokens.computed.surfaceUnder).toBe("#09090b");
+    expect(tokens.derived.controlBackgroundOpaque).toBe("rgb(42, 41, 41)");
+    expect(tokens.aliases["--color-token-dropdown-background"]).toBe("rgb(42, 41, 41)");
+    expect(tokens.computed.surfaceUnder).toBe("#0a0a0a");
+    expect(tokens.derived.textForegroundSecondary).toBe("#9c9a96");
+    expect(tokens.derived.textForegroundTertiary).toBe("#6b6965");
+    expect(variables["--background"]).toBe("#0a0a0a");
+    expect(variables["--panel"]).toBe("#171717");
+    expect(variables["--foreground"]).toBe("#e6e4e1");
+    expect(variables["--accent"]).toBe("#d97757");
+    expect(variables["--claude"]).toBe("#d97757");
+    expect(variables["--gold"]).toBe("#cf9d5e");
+    expect(variables["--composer-surface"]).toBe("#141414");
+    expect(variables["--app-user-message-background"]).toBe("#1f1f1f");
+    expect(variables["--vscode-terminal-ansiBlue"]).toBe("#75a7e0");
+    expect(variables["--vscode-terminal-ansiCyan"]).toBe("#66b8b0");
+    expect(variables["--vscode-terminal-ansiMagenta"]).toBe("#b99ad6");
   });
 
   it("projects the requested semantic colors and light canvas", () => {
@@ -409,11 +475,11 @@ describe("buildThemeCssVariables", () => {
       "light",
     );
 
-    expect(darkVariables["--destructive"]).toBe("#f43f5e");
-    expect(darkVariables["--success"]).toBe("#4ade80");
-    expect(darkVariables["--warning"]).toBe("#fb923c");
-    expect(darkVariables["--info"]).toBe("#3b82f6");
-    expect(lightTokens.computed.surfaceUnder).toBe("#e4e4e7");
+    expect(darkVariables["--destructive"]).toBe("#d9685f");
+    expect(darkVariables["--success"]).toBe("#4cb782");
+    expect(darkVariables["--warning"]).toBe("#cf9d5e");
+    expect(darkVariables["--info"]).toBe("#9c9a96");
+    expect(lightTokens.computed.surfaceUnder).toBe("#e7e4df");
   });
 
   it("matches Codex's light composer surface token path", () => {

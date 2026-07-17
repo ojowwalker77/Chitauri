@@ -5,6 +5,7 @@
 import type { ReactNode } from "react";
 import { MessageCircleIcon, PencilIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
+import { OVERLAY_SURFACE_CLASS_NAME } from "~/components/ui/surface";
 
 interface TranscriptSelectionActionProps {
   left: number;
@@ -58,7 +59,8 @@ export function TranscriptSelectionAction(props: TranscriptSelectionActionProps)
     >
       <div
         className={cn(
-          "pointer-events-auto inline-flex items-center gap-0.5 rounded-full border border-panel-border bg-panel p-0.5 shadow-[0_16px_44px_rgba(0,0,0,0.5)]",
+          OVERLAY_SURFACE_CLASS_NAME,
+          "pointer-events-auto inline-flex items-center gap-0.5 rounded-full p-0.5",
           props.placement === "top" ? "origin-bottom" : "origin-top",
         )}
       >

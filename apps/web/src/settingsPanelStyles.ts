@@ -4,6 +4,7 @@
 // Exports: border, surface, card, row, and inset list class names
 
 import { SIDEBAR_SECTION_LABEL_CLASS_NAME } from "./sidebarRowStyles";
+import { PANEL_SURFACE_CLASS_NAME } from "./components/ui/surface";
 
 /** Shared 14px corner radius for settings cards and dropdown panels. */
 export const SETTINGS_RADIUS_CLASS_NAME = "rounded-xl";
@@ -24,11 +25,7 @@ export const SETTINGS_SECTION_LABEL_CLASS_NAME = `px-2 py-1 ${SIDEBAR_SECTION_LA
 export const SETTINGS_PANEL_SECTION_CLASS_NAME = "flex flex-col gap-1.5 not-first:mt-4";
 
 /** Grouped settings card: one defined panel layer over the flat page canvas. */
-export const SETTINGS_CARD_CLASS_NAME = [
-  "overflow-hidden bg-panel",
-  SETTINGS_CONTROL_BORDER_CLASS_NAME,
-  SETTINGS_RADIUS_CLASS_NAME,
-].join(" ");
+export const SETTINGS_CARD_CLASS_NAME = PANEL_SURFACE_CLASS_NAME;
 
 /** Row padding inside a settings card. */
 export const SETTINGS_CARD_ROW_CLASS_NAME =
@@ -50,8 +47,6 @@ export const SETTINGS_INSET_LIST_CLASS_NAME = SETTINGS_CARD_CLASS_NAME;
 
 /** Empty / placeholder blocks. */
 export const SETTINGS_EMPTY_STATE_CLASS_NAME = [
-  "bg-panel",
-  SETTINGS_CONTROL_BORDER_CLASS_NAME,
-  SETTINGS_RADIUS_CLASS_NAME,
+  PANEL_SURFACE_CLASS_NAME,
   "border-dashed",
 ].join(" ");
