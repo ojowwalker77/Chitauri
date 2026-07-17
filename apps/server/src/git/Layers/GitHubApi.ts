@@ -510,7 +510,17 @@ export const makeGitHubApi = Effect.gen(function* () {
           cwd: input.cwd,
           args: ["checkout", ...(input.force ? ["--force"] : []), pullRequest.headRefName],
         });
-      }),
+      }).pipe(
+        Effect.mapError((cause) =>
+          cause instanceof GitHubCliError
+            ? cause
+            : new GitHubCliError({
+                operation: "checkoutPullRequest",
+                detail: cause instanceof Error ? cause.message : String(cause),
+                cause,
+              }),
+        ),
+      ),
   };
 
   return GitHubCli.of(service);
