@@ -101,7 +101,7 @@ export const CHAT_SURFACE_CONTROL_HOVER_CLASS_NAME =
  */
 export const CHAT_SURFACE_CHIP_CLASS_NAME = cn(
   CHAT_HEADER_CONTROL_CLASS_NAME,
-  "!h-8 gap-1.5 rounded-[9px] border-0 px-2.5 text-[length:var(--app-font-size-ui-sm,13px)] font-normal transition-colors duration-menu ease-out",
+  "!h-8 gap-1.5 rounded-[7px] border-0 px-2.5 text-[length:var(--app-font-size-ui-sm,13px)] font-normal transition-colors duration-menu ease-out",
   CHAT_SURFACE_CONTROL_IDLE_TEXT_CLASS_NAME,
   CHAT_SURFACE_CONTROL_HOVER_CLASS_NAME,
 );
@@ -136,7 +136,7 @@ export const CHAT_HEADER_TOGGLE_CLASS_NAME = cn(
  *  touch more breathing room than the symmetric chip base. */
 export const DOCK_TAB_CHIP_CLASS_NAME = cn(
   CHAT_SURFACE_CHIP_CLASS_NAME,
-  "inline-flex min-w-0 items-center rounded-[10px] border border-transparent pr-2.5 data-[active=true]:border-panel-border data-[active=true]:bg-panel data-[active=true]:text-foreground",
+  "inline-flex min-w-0 items-center rounded-[8px] border border-transparent pr-2.5 data-[active=true]:border-panel-border data-[active=true]:bg-panel data-[active=true]:text-foreground",
 );
 
 /** Icon slot for dock tabs — bare larger icon at rest; on hover a circular disc + X appears.

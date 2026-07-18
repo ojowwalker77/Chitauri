@@ -36,7 +36,7 @@ export default function TerminalWorkspaceTabs({
   }
 
   const tabClassName =
-    "group relative inline-flex h-8 shrink-0 items-center rounded-[9px] border border-transparent px-3 text-[13px] transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96]";
+    "group relative inline-flex h-8 shrink-0 items-center rounded-[7px] border border-transparent px-3 text-[13px] transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96]";
 
   return (
     <div className="relative px-3 py-1 sm:px-5">

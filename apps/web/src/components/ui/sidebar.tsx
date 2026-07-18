@@ -35,7 +35,7 @@ const SIDEBAR_RESIZE_DEFAULT_MIN_WIDTH = 16 * 16;
  * (Sidebar `className`) and the layout `gapClassName` so they animate in lockstep.
  * Shared by the thread sidebar (left) and the right dock so the two slides match.
  */
-const SIDEBAR_OFFCANVAS_MOTION_CLASS = "duration-sheet ease-drawer";
+const SIDEBAR_OFFCANVAS_MOTION_CLASS = "duration-sheet ease-drawer motion-reduce:transition-none";
 
 /**
  * Suppresses the slide entirely — for first mount or a reposition/remount where
@@ -893,7 +893,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button flex w-full cursor-pointer items-center gap-2 overflow-hidden rounded-[10px] p-2 text-left text-sm outline-hidden ring-ring/60 transition-[width,height,padding,background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100 hover:bg-[var(--sidebar-accent)] focus-visible:ring-2 active:bg-[var(--sidebar-accent-active)] active:text-[var(--sidebar-accent-foreground)] disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pe-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-[var(--sidebar-accent-active)] data-[active=true]:font-medium data-[active=true]:text-[var(--sidebar-accent-foreground)] data-[state=open]:hover:bg-[var(--sidebar-accent)] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! [&>span:last-child]:truncate [&>svg:not([class*='size-'])]:size-4 [&>svg]:shrink-0",
+  "peer/menu-button flex w-full cursor-pointer items-center gap-2 overflow-hidden rounded-[8px] p-2 text-left text-sm outline-hidden ring-ring/60 transition-[width,height,padding,background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100 hover:bg-[var(--sidebar-accent)] focus-visible:ring-2 active:bg-[var(--sidebar-accent-active)] active:text-[var(--sidebar-accent-foreground)] disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pe-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-[var(--sidebar-accent-active)] data-[active=true]:font-medium data-[active=true]:text-[var(--sidebar-accent-foreground)] data-[state=open]:hover:bg-[var(--sidebar-accent)] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! [&>span:last-child]:truncate [&>svg:not([class*='size-'])]:size-4 [&>svg]:shrink-0",
   {
     defaultVariants: {
       size: "default",

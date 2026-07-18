@@ -1480,6 +1480,16 @@ export default function ChatView({
     [draftThread, fallbackDraftProject?.defaultModelSelection, localDraftError, threadId],
   );
   const activeThread = serverThread ?? localDraftThread;
+  // History is "loading" (not "empty") when the server thread already has turns
+  // but its detail snapshot has not been applied yet — e.g. thread switch,
+  // deep-link, or reconnect before the subscription catches up. Draft threads
+  // never have a snapshot and stay on the genuine empty state.
+  const threadHistoryPending = useStore((store) => {
+    if (store.threadDetailSyncedById?.[threadId] === true) {
+      return false;
+    }
+    return store.sidebarThreadSummaryById[threadId]?.latestTurn != null;
+  });
   const runtimeMode =
     composerDraft.runtimeMode ?? activeThread?.runtimeMode ?? settings.defaultRuntimeMode;
   const interactionMode =
@@ -9647,7 +9657,21 @@ export default function ChatView({
                       chatFontSizePx={settings.chatFontSizePx}
                       timestampFormat={timestampFormat}
                       workspaceRoot={activeProject?.cwd ?? undefined}
-                      emptyStateContent={isEditorRail ? <span aria-hidden="true" /> : undefined}
+                      emptyStateContent={
+                        isEditorRail ? (
+                          <span aria-hidden="true" />
+                        ) : threadHistoryPending ? (
+                          <div
+                            role="status"
+                            aria-label="Loading conversation"
+                            className="flex w-full max-w-md flex-col gap-3 px-6"
+                          >
+                            <Skeleton className="h-4 w-2/5" />
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-4/5" />
+                          </div>
+                        ) : undefined
+                      }
                       emptyStateProjectName={activeProjectDisplayName}
                       terminalWorkspaceTerminalTabActive={terminalWorkspaceTerminalTabActive}
                       onMessagesScroll={onMessagesScroll}

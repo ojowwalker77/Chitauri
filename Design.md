@@ -15,8 +15,10 @@ generous whitespace.
 3. **Dark mode is an inversion, not a second palette.** The same neutral ramp with
    roles flipped, plus alpha variants of the ramp poles. No new hues in dark mode;
    the three semantic colors are identical in both modes.
-4. **Provider icons are monochrome.** They render in `currentColor` (typically
-   `--muted-foreground`, `--foreground` when emphasized). Never a brand fill.
+4. **Provider icons keep their brand identity.** A provider glyph is a logo, not
+   chrome: it may use its brand fill (e.g. Claude's coral). Brand color lives
+   inside the icon component only — it never leaks into surrounding chrome
+   tokens, borders, or text.
 
 ## 2. Neutral ramp
 
@@ -91,7 +93,9 @@ Same three values in light and dark. Foreground-on-tint variants are derived wit
   `--background`), no glass/backdrop blur on persistent chrome, shadows only on
   true overlays (menus, dialogs).
 - Spacing on the 8pt grid: 4, 8, 12, 16, 24, 32, 48, 64.
-- Radii: keep the existing `--radius` scale this pass (palette-only migration).
+- Radii: tight but not square. Base `--radius: 0.5rem`; the derived scale
+  (`--radius-sm` … `--radius-4xl`) follows. One-off radii should stay within a
+  step of the scale; pills (`999px`) remain for genuinely round controls.
 - Typography: Inter (UI) / 0xProto (mono) unchanged.
 
 ## 6. Components
@@ -110,9 +114,9 @@ Same three values in light and dark. Foreground-on-tint variants are derived wit
 - **Ultrathink / extended-thinking chrome**: monochrome (foreground-mix pill and
   text). It labels a mode, it doesn't indicate state.
 - **Activity heatmap**: grayscale ramp (foreground-mix intensity steps).
-- **Provider icons**: `currentColor` only. The icon shape identifies the provider;
-  color never does. Icon choice must derive from the thread's _current model
-  selection provider_ — never from a cached/stale session value.
+- **Provider icons**: brand fill allowed, scoped to the glyph itself (icon-local
+  constant, not a chrome token). Icon choice must derive from the thread's
+  _current model selection provider_ — never from a cached/stale session value.
 
 ## 7. Dark mode rule
 

@@ -62,7 +62,7 @@ export function ComposerChoiceRow({
       disabled={disabled}
       onClick={onSelect}
       className={cn(
-        "group flex w-full items-start gap-2.5 rounded-[10px] border border-transparent px-2.5 py-2 text-left transition-[background-color,border-color,scale] duration-press ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.96] motion-reduce:active:scale-100",
+        "group flex w-full items-start gap-2.5 rounded-[8px] border border-transparent px-2.5 py-2 text-left transition-[background-color,border-color,scale] duration-press ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.96] motion-reduce:active:scale-100",
         selected
           ? "border-[color:color-mix(in_srgb,var(--foreground)_20%,var(--panel-border))] bg-[var(--selected)]"
           : ROW_TONE_CLASS_NAME[tone],

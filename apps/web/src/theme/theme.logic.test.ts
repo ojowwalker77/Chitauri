@@ -97,6 +97,63 @@ describe("parseStoredThemeState", () => {
     expect(parsed.chromeThemes.light).toEqual(DEFAULT_CHROME_THEME_BY_VARIANT.light);
   });
 
+  it("migrates retired accents even when the rest of the palette was customized", () => {
+    const parsed = parseStoredThemeState(
+      JSON.stringify({
+        mode: "dark",
+        chromeThemes: {
+          dark: {
+            accent: "#d97757",
+            contrast: 80,
+            fonts: { code: null, ui: null },
+            ink: "#f4f4f5",
+            opaqueWindows: false,
+            semanticColors: {
+              diffAdded: "#4ade80",
+              diffRemoved: "#f43f5e",
+              skill: "#a855f7",
+            },
+            surface: "#101013",
+          },
+          light: {
+            accent: "#a96f35",
+            contrast: 45,
+            fonts: { code: null, ui: null },
+            ink: "#18181b",
+            opaqueWindows: true,
+            semanticColors: {
+              diffAdded: "#4ade80",
+              diffRemoved: "#f43f5e",
+              skill: "#3b82f6",
+            },
+            surface: "#fffdf8",
+          },
+        },
+      }),
+    );
+
+    // The retired accent migrates to the default; the customization survives.
+    expect(parsed.chromeThemes.dark.accent).toBe(DEFAULT_CHROME_THEME_BY_VARIANT.dark.accent);
+    expect(parsed.chromeThemes.dark.contrast).toBe(80);
+    expect(parsed.chromeThemes.dark.opaqueWindows).toBe(false);
+    expect(parsed.chromeThemes.dark.surface).toBe("#101013");
+    expect(parsed.chromeThemes.light.accent).toBe(DEFAULT_CHROME_THEME_BY_VARIANT.light.accent);
+    expect(parsed.chromeThemes.light.surface).toBe("#fffdf8");
+  });
+
+  it("keeps deliberately chosen non-legacy accents untouched", () => {
+    const parsed = parseStoredThemeState(
+      JSON.stringify({
+        mode: "dark",
+        chromeThemes: {
+          dark: { accent: "#606acc" },
+        },
+      }),
+    );
+
+    expect(parsed.chromeThemes.dark.accent).toBe("#606acc");
+  });
+
   it("normalizes partial stored packs against the per-variant defaults", () => {
     expect(
       normalizeThemeState({

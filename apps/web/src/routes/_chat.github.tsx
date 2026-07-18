@@ -141,7 +141,7 @@ function WorkListRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        "group flex w-full items-start gap-2.5 rounded-[10px] px-2.5 py-2 text-left outline-none transition-[background-color,scale] duration-press ease-out focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.96] motion-reduce:active:scale-100",
+        "group flex w-full items-start gap-2.5 rounded-[8px] px-2.5 py-2 text-left outline-none transition-[background-color,scale] duration-press ease-out focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.96] motion-reduce:active:scale-100",
         selected ? "bg-selected" : "hover:bg-hover",
       )}
     >
@@ -236,7 +236,7 @@ function DetailHeader({
             type="button"
             onClick={() => onTabChange(entry.value)}
             className={cn(
-              "h-8 rounded-[10px] border px-3 text-xs transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
+              "h-8 rounded-[8px] border px-3 text-xs transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
               tab === entry.value
                 ? "border-transparent bg-selected text-foreground"
                 : "border-transparent text-muted-foreground hover:bg-hover hover:text-foreground",
@@ -682,6 +682,11 @@ function GitHubWorkbenchRoute() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>("summary");
   const [composerMode, setComposerMode] = useState<ComposerMode>(null);
+  // Preparing a PR worktree is a slow git/network operation; the action buttons
+  // must show it in flight and refuse double-starts.
+  const [startingAgentIntent, setStartingAgentIntent] = useState<
+    "work" | "review" | "fix_ci" | null
+  >(null);
   const [createIssueOpen, setCreateIssueOpen] = useState(false);
 
   const connectionQueries = useQueries({
@@ -822,6 +827,9 @@ function GitHubWorkbenchRoute() {
       : null;
 
   const startAgent = async (intent: "work" | "review" | "fix_ci") => {
+    if (startingAgentIntent !== null) {
+      return;
+    }
     if (!selectedItem || !selectedProject) {
       toastManager.add({
         type: "warning",
@@ -831,6 +839,7 @@ function GitHubWorkbenchRoute() {
       });
       return;
     }
+    setStartingAgentIntent(intent);
     try {
       let branch: string | null = null;
       let worktreePath: string | null = null;
@@ -858,6 +867,8 @@ function GitHubWorkbenchRoute() {
         description: errorMessage(error),
         timeout: 6000,
       });
+    } finally {
+      setStartingAgentIntent(null);
     }
   };
 
@@ -979,7 +990,7 @@ function GitHubWorkbenchRoute() {
                         type="button"
                         onClick={() => changeView(option.value)}
                         className={cn(
-                          "h-8 shrink-0 rounded-[9px] px-2.5 text-[12px] transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
+                          "h-8 shrink-0 rounded-[7px] px-2.5 text-[12px] transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
                           view === option.value
                             ? "bg-selected text-foreground"
                             : "text-muted-foreground hover:bg-hover hover:text-foreground",
@@ -989,7 +1000,7 @@ function GitHubWorkbenchRoute() {
                       </button>
                     ))}
                   </div>
-                  <div className="mt-2 flex items-center rounded-[10px] border border-panel-border bg-[var(--well)] px-2">
+                  <div className="mt-2 flex items-center rounded-[8px] border border-panel-border bg-[var(--well)] px-2">
                     <SearchIcon className="size-3.5 text-muted-foreground" />
                     <Input
                       unstyled
@@ -1061,25 +1072,46 @@ function GitHubWorkbenchRoute() {
                       }
                     />
                     <div className="flex flex-wrap items-center gap-1.5 border-b border-border/70 px-3 py-2">
-                      <Button size="xs" onClick={() => void startAgent("work")}>
-                        <SparklesIcon /> Work on this
+                      <Button
+                        size="xs"
+                        disabled={startingAgentIntent !== null}
+                        onClick={() => void startAgent("work")}
+                      >
+                        {startingAgentIntent === "work" ? (
+                          <Spinner className="size-3.5" />
+                        ) : (
+                          <SparklesIcon />
+                        )}{" "}
+                        Work on this
                       </Button>
                       {detail.item.kind === "pull_request" ? (
                         <Button
                           size="xs"
                           variant="outline"
+                          disabled={startingAgentIntent !== null}
                           onClick={() => void startAgent("review")}
                         >
-                          <GitPullRequestIcon /> Agent review
+                          {startingAgentIntent === "review" ? (
+                            <Spinner className="size-3.5" />
+                          ) : (
+                            <GitPullRequestIcon />
+                          )}{" "}
+                          Agent review
                         </Button>
                       ) : null}
                       {detail.item.checkStatus === "failure" ? (
                         <Button
                           size="xs"
                           variant="outline"
+                          disabled={startingAgentIntent !== null}
                           onClick={() => void startAgent("fix_ci")}
                         >
-                          <CircleAlertIcon /> Fix CI
+                          {startingAgentIntent === "fix_ci" ? (
+                            <Spinner className="size-3.5" />
+                          ) : (
+                            <CircleAlertIcon />
+                          )}{" "}
+                          Fix CI
                         </Button>
                       ) : null}
                       <Button size="xs" variant="ghost" onClick={() => setComposerMode("comment")}>
