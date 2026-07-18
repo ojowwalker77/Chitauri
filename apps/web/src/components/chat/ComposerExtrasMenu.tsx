@@ -7,7 +7,7 @@ import { type ProviderInteractionMode } from "@t3tools/contracts";
 import { memo, useId, useRef, type ChangeEvent } from "react";
 import { GoTasklist } from "react-icons/go";
 
-import { PaperclipIcon, PlusIcon } from "~/lib/icons";
+import { PaperclipIcon, PencilIcon, PlusIcon } from "~/lib/icons";
 import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
 import { Button } from "../ui/button";
 import {
@@ -29,6 +29,9 @@ export const ComposerExtrasMenu = memo(function ComposerExtrasMenu(props: {
   onAddPhotos: (files: File[]) => void;
   onToggleFastMode: () => void;
   onSetPlanMode: (enabled: boolean) => void;
+  sketchpadOpen: boolean;
+  sketchpadElementCount: number;
+  onToggleSketchpad: () => void;
 }) {
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -76,6 +79,20 @@ export const ComposerExtrasMenu = memo(function ComposerExtrasMenu(props: {
             <PaperclipIcon className="size-4 shrink-0" />
             Add image
           </MenuItem>
+          <MenuCheckboxItem
+            checked={props.sketchpadOpen}
+            onCheckedChange={() => props.onToggleSketchpad()}
+          >
+            <span className="inline-flex items-center gap-2">
+              <PencilIcon className="size-4 shrink-0" />
+              <span>Sketchpad</span>
+              {props.sketchpadElementCount > 0 ? (
+                <span className="text-xs text-[var(--color-text-foreground-tertiary)]">
+                  {props.sketchpadElementCount}
+                </span>
+              ) : null}
+            </span>
+          </MenuCheckboxItem>
 
           <MenuSeparator />
           <MenuCheckboxItem

@@ -21,7 +21,6 @@ import {
   type ProviderStartOptions,
   type ProviderUserInputAnswers,
   type PinnedMessage,
-  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   type ResolvedKeybindingsConfig,
   type ServerProviderStatus,
   ThreadId,
@@ -240,12 +239,15 @@ import {
   ChevronRightIcon,
   ComposerSendArrowIcon,
   LayoutSidebarIcon,
+  PencilIcon,
   RefreshCwIcon,
   XIcon,
 } from "~/lib/icons";
 import { ComposerQueuedHeader } from "./chat/ComposerQueuedHeader";
 import { ComposerLiveChangesHeader } from "./chat/ComposerLiveChangesHeader";
 import { Button } from "./ui/button";
+import { DisclosureRegion } from "./ui/DisclosureRegion";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import { Skeleton } from "./ui/skeleton";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "./ui/menu";
 import { disposeAndCloseTerminalSession, randomTerminalId } from "./terminal/terminalSession";
@@ -301,8 +303,6 @@ import {
 import { useComposerFocusRequestStore } from "../composerFocusRequestStore";
 import { appendComposerPromptText } from "../lib/chatReferences";
 import {
-  appendOriginalComposerPromptBlocks,
-  appendTerminalContextsToPrompt,
   IMAGE_ONLY_BOOTSTRAP_PROMPT,
   formatTerminalContextLabel,
   insertInlineTerminalContextPlaceholder,
@@ -311,18 +311,25 @@ import {
   type TerminalContextSelection,
 } from "../lib/terminalContext";
 import {
-  appendPastedTextsToPrompt,
+  appendComposerMessageContext,
+  appendOriginalComposerPromptBlocks,
+} from "../lib/composerMessageContext";
+import {
+  cloneSketchpadDocument,
+  hasSketchpadContent,
+  sketchpadElementCount,
+  type SketchpadDocument,
+} from "../lib/composerSketchpad";
+import {
   createPastedTextDraft,
   pastedTextTitle,
   type PastedTextDraft,
 } from "../lib/composerPastedText";
 import {
-  appendAssistantSelectionsToPrompt,
   formatAssistantSelectionQueuePreview,
   formatAssistantSelectionTitleSeed,
 } from "../lib/assistantSelections";
 import {
-  appendFileCommentsToPrompt,
   formatFileCommentLabel,
   formatFileCommentTitleSeed,
   type FileCommentDraft,
@@ -383,6 +390,7 @@ import {
 } from "./chat/ComposerLocalDirectoryMenu";
 import { ComposerPendingApprovalPanel } from "./chat/ComposerPendingApprovalPanel";
 import { ComposerExtrasMenu } from "./chat/ComposerExtrasMenu";
+import { SketchpadPanel, type SketchpadPanelHandle } from "./chat/sketchpad/SketchpadPanel";
 import { ContextWindowMeter } from "./chat/ContextWindowMeter";
 import { ComposerInputBanners } from "./chat/ComposerInputBanners";
 import { ComposerPendingUserInputPanel } from "./chat/ComposerPendingUserInputPanel";
@@ -730,6 +738,7 @@ function buildQueuedComposerPreviewText(input: {
   terminalContexts: ReadonlyArray<TerminalContextDraft>;
   fileComments: ReadonlyArray<FileCommentDraft>;
   pastedTexts: ReadonlyArray<PastedTextDraft>;
+  sketchpadElementCount: number;
 }): string {
   if (input.trimmedPrompt.length > 0) {
     return input.trimmedPrompt;
@@ -756,6 +765,9 @@ function buildQueuedComposerPreviewText(input: {
   const pastedTitle = formatPastedTextTitleSeed(input.pastedTexts);
   if (pastedTitle) {
     return pastedTitle;
+  }
+  if (input.sketchpadElementCount > 0) {
+    return `Sketchpad: ${input.sketchpadElementCount} element${input.sketchpadElementCount === 1 ? "" : "s"}`;
   }
   return "Queued follow-up";
 }
@@ -911,6 +923,8 @@ export default function ChatView({
   const isInactiveSplitPane = surfaceMode === "split" && !isFocusedPane;
   const composerDraft = useComposerThreadDraft(threadId);
   const prompt = composerDraft.prompt;
+  const composerSketchpad = composerDraft.sketchpad;
+  const composerSketchpadElementCount = sketchpadElementCount(composerSketchpad);
   const composerPromptHistorySavedDraft = composerDraft.promptHistorySavedDraft;
   const composerPromptHistorySavedDraftImages = composerPromptHistorySavedDraft?.images ?? null;
   const composerImages = composerDraft.images;
@@ -931,6 +945,7 @@ export default function ChatView({
         fileCount: composerFiles.length,
         assistantSelectionCount: composerAssistantSelections.length,
         fileCommentCount: composerFileComments.length,
+        sketchpadElementCount: composerSketchpadElementCount,
         terminalContexts: composerTerminalContexts,
         pastedTexts: composerPastedTexts,
       }),
@@ -939,6 +954,7 @@ export default function ChatView({
       composerFileComments.length,
       composerFiles.length,
       composerImages.length,
+      composerSketchpadElementCount,
       composerTerminalContexts,
       composerPastedTexts,
       prompt,
@@ -946,6 +962,7 @@ export default function ChatView({
   );
   const nonPersistedComposerImageIds = composerDraft.nonPersistedImageIds;
   const setComposerDraftPrompt = useComposerDraftStore((store) => store.setPrompt);
+  const setComposerDraftSketchpad = useComposerDraftStore((store) => store.setSketchpadDocument);
   const setComposerDraftPromptHistorySavedDraft = useComposerDraftStore(
     (store) => store.setPromptHistorySavedDraft,
   );
@@ -1059,6 +1076,9 @@ export default function ChatView({
   const [activeTaskListCompact, setActiveTaskListCompact] = useState(false);
   const [backgroundAgentsCompact, setBackgroundAgentsCompact] = useState(false);
   const [isComposerFooterCompact, setIsComposerFooterCompact] = useState(false);
+  const [sketchpadOpenByThreadId, setSketchpadOpenByThreadId] = useState<
+    Partial<Record<ThreadId, boolean>>
+  >({});
   // Width-aware visibility for the footer picker cluster (context meter,
   // model name, traits label). Inputs live in a ref so the resize observer
   // can re-plan without re-subscribing; the sync function is exposed via ref
@@ -1179,6 +1199,7 @@ export default function ChatView({
     // Thread-bound handoff dialog state is reset by the dedicated hook.
   }, [threadId]);
   const composerEditorRef = useRef<ComposerPromptEditorHandle>(null);
+  const sketchpadPanelRef = useRef<SketchpadPanelHandle>(null);
   const composerFormRef = useRef<HTMLFormElement>(null);
   const pendingComposerFocusRef = useRef(false);
   const promptHistoryNavigationRef = useRef<PromptHistoryNavigationState | null>(null);
@@ -1187,6 +1208,7 @@ export default function ChatView({
   const promptHistoryAppliedPromptRef = useRef<string | null>(null);
   const composerFormHeightRef = useRef(0);
   const composerImagesRef = useRef<ComposerImageAttachment[]>([]);
+  const composerSketchpadRef = useRef<SketchpadDocument | null>(composerSketchpad);
   const composerFilesRef = useRef<ComposerFileAttachment[]>([]);
   const composerSelectLockRef = useRef(false);
   const composerMenuOpenRef = useRef(false);
@@ -3478,6 +3500,43 @@ export default function ChatView({
       focusComposer();
     });
   }, [focusComposer]);
+  const sketchpadShortcutLabel =
+    shortcutLabelForCommand(keybindings, "composer.sketchpad.toggle") ?? "Mod+Shift+D";
+  const isSketchpadOpen =
+    sketchpadOpenByThreadId[threadId] === true &&
+    !isComposerApprovalState &&
+    pendingUserInputs.length === 0;
+  const shouldMountSketchpad =
+    sketchpadOpenByThreadId[threadId] !== undefined || hasSketchpadContent(composerSketchpad);
+  const setSketchpadOpen = useCallback(
+    (open: boolean) => {
+      setSketchpadOpenByThreadId((current) =>
+        current[threadId] === open ? current : { ...current, [threadId]: open },
+      );
+      window.requestAnimationFrame(() => {
+        if (open) sketchpadPanelRef.current?.focus();
+        else scheduleComposerFocus();
+      });
+    },
+    [scheduleComposerFocus, threadId],
+  );
+  const toggleSketchpad = useCallback(() => {
+    if (isComposerApprovalState || pendingUserInputs.length > 0) return;
+    setSketchpadOpen(!isSketchpadOpen);
+  }, [isComposerApprovalState, isSketchpadOpen, pendingUserInputs.length, setSketchpadOpen]);
+  const onSketchpadDocumentChange = useCallback(
+    (document: SketchpadDocument | null) => {
+      discardPromptHistoryNavigationForComposerMutation();
+      setComposerDraftSketchpad(threadId, document);
+      setThreadError(threadId, null);
+    },
+    [
+      discardPromptHistoryNavigationForComposerMutation,
+      setComposerDraftSketchpad,
+      setThreadError,
+      threadId,
+    ],
+  );
   // External panels (diff headers, file explorer, preview) bump this nonce after
   // inserting a reference so the composer visibly receives the text.
   const composerFocusRequestNonce = useComposerFocusRequestStore(
@@ -4745,6 +4804,10 @@ export default function ChatView({
   }, [composerImages]);
 
   useEffect(() => {
+    composerSketchpadRef.current = composerSketchpad;
+  }, [composerSketchpad]);
+
+  useEffect(() => {
     composerFilesRef.current = composerFiles;
   }, [composerFiles]);
 
@@ -5301,6 +5364,14 @@ export default function ChatView({
         return;
       }
 
+      if (command === "composer.sketchpad.toggle") {
+        if (isComposerApprovalState || pendingUserInputs.length > 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        toggleSketchpad();
+        return;
+      }
+
       if (command === "modelPicker.toggle") {
         if (!composerPickerShortcutActive) return;
         event.preventDefault();
@@ -5478,6 +5549,7 @@ export default function ChatView({
     surfaceMode,
     scheduleComposerFocus,
     toggleComposerFocus,
+    toggleSketchpad,
     toggleRightDock,
     toggleTerminalVisibility,
   ]);
@@ -5502,7 +5574,8 @@ export default function ChatView({
           return (
             (currentDraft?.images.length ?? 0) +
             (currentDraft?.files.length ?? 0) +
-            (currentDraft?.assistantSelections.length ?? 0)
+            (currentDraft?.assistantSelections.length ?? 0) +
+            (hasSketchpadContent(currentDraft?.sketchpad) ? 1 : 0)
           );
         })(),
       });
@@ -5546,7 +5619,8 @@ export default function ChatView({
           return (
             (currentDraft?.images.length ?? 0) +
             (currentDraft?.files.length ?? 0) +
-            (currentDraft?.assistantSelections.length ?? 0)
+            (currentDraft?.assistantSelections.length ?? 0) +
+            (hasSketchpadContent(currentDraft?.sketchpad) ? 1 : 0)
           );
         })(),
       });
@@ -5653,6 +5727,9 @@ export default function ChatView({
       promptRef.current = "";
       setRestoredQueuedSourceProposedPlan(threadId, null);
       clearComposerDraftContent(threadId);
+      setSketchpadOpenByThreadId((current) =>
+        current[threadId] === false ? current : { ...current, [threadId]: false },
+      );
       updateSelectedComposerSkills([]);
       updateSelectedComposerMentions([]);
       setComposerHighlightedItemId(null);
@@ -5679,6 +5756,10 @@ export default function ChatView({
       const restoredAssistantSelections =
         queuedTurn.kind === "chat" ? queuedTurn.assistantSelections : [];
       const restoredFileComments = queuedTurn.kind === "chat" ? queuedTurn.fileComments : [];
+      const restoredSketchpad =
+        queuedTurn.kind === "chat" && queuedTurn.sketchpad
+          ? cloneSketchpadDocument(queuedTurn.sketchpad.document)
+          : null;
       promptRef.current = nextPrompt;
       clearComposerDraftContent(activeThread.id);
       setComposerDraftPrompt(activeThread.id, nextPrompt);
@@ -5689,6 +5770,13 @@ export default function ChatView({
         ...(queuedTurn.kind === "chat" ? { envMode: queuedTurn.envMode } : {}),
       });
       if (queuedTurn.kind === "chat") {
+        setComposerDraftSketchpad(activeThread.id, restoredSketchpad);
+        if (restoredSketchpad) {
+          setSketchpadOpenByThreadId((current) => ({
+            ...current,
+            [activeThread.id]: true,
+          }));
+        }
         if (restoredImages.length > 0) {
           addComposerImagesToDraft(restoredImages);
         }
@@ -5745,6 +5833,7 @@ export default function ChatView({
       setComposerDraftInteractionMode,
       setComposerDraftModelSelection,
       setComposerDraftPrompt,
+      setComposerDraftSketchpad,
       setComposerDraftRuntimeMode,
       updateSelectedComposerMentions,
       updateSelectedComposerSkills,
@@ -5814,10 +5903,36 @@ export default function ChatView({
     const liveComposerSnapshot =
       queuedChatTurn === null ? (composerEditorRef.current?.readSnapshot() ?? null) : null;
     let promptForSend = queuedChatTurn?.prompt ?? liveComposerSnapshot?.value ?? promptRef.current;
-    let composerImagesForSend = queuedChatTurn?.images ?? composerImages;
+    const composerRegularImagesForSend = queuedChatTurn?.images ?? composerImages;
     const composerFilesForSend = queuedChatTurn?.files ?? composerFiles;
     const composerAssistantSelectionsForSend =
       queuedChatTurn?.assistantSelections ?? composerAssistantSelections;
+    const composerSketchpadDocumentForSend =
+      queuedChatTurn?.sketchpad?.document ?? composerSketchpadRef.current;
+    let sketchpadSnapshotForSend = queuedChatTurn?.sketchpad ?? null;
+    if (queuedChatTurn === null && hasSketchpadContent(composerSketchpadDocumentForSend)) {
+      try {
+        sketchpadSnapshotForSend =
+          (await sketchpadPanelRef.current?.exportSnapshot(
+            composerRegularImagesForSend.length +
+              composerFilesForSend.length +
+              composerAssistantSelectionsForSend.length,
+          )) ?? null;
+        if (!sketchpadSnapshotForSend) {
+          throw new Error("The sketchpad renderer is not ready yet. Try again in a moment.");
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "TeaCode could not render the sketchpad.";
+        setThreadError(activeThread.id, message);
+        toastManager.add({ type: "error", title: "Could not send sketch", description: message });
+        return false;
+      }
+    }
+    const composerImagesForSend = [
+      ...composerRegularImagesForSend,
+      ...(sketchpadSnapshotForSend ? [sketchpadSnapshotForSend.image] : []),
+    ];
     const composerFileCommentsForSend = queuedChatTurn?.fileComments ?? composerFileComments;
     const composerTerminalContextsForSend =
       queuedChatTurn?.terminalContexts ?? composerTerminalContexts;
@@ -5977,7 +6092,7 @@ export default function ChatView({
       clearComposerInput(activeThread.id);
       scheduleComposerFocus();
       const queuedImagesForPersistence = await Promise.all(
-        composerImagesForSend.map(async (image) => {
+        composerRegularImagesForSend.map(async (image) => {
           try {
             return {
               ...image,
@@ -6000,8 +6115,10 @@ export default function ChatView({
           terminalContexts: sendableComposerTerminalContexts,
           fileComments: composerFileCommentsForSend,
           pastedTexts: sendableComposerPastedTexts,
+          sketchpadElementCount: sketchpadElementCount(sketchpadSnapshotForSend?.document ?? null),
         }),
         prompt: promptForSend,
+        sketchpad: sketchpadSnapshotForSend,
         images: queuedImagesForPersistence,
         files: composerFilesForSend,
         assistantSelections: composerAssistantSelectionsForSend,
@@ -6180,7 +6297,17 @@ export default function ChatView({
         : undefined,
     );
 
-    const composerImagesSnapshot = [...composerImagesForSend];
+    const composerRegularImagesSnapshot = [...composerRegularImagesForSend];
+    const composerSketchpadSnapshot = sketchpadSnapshotForSend
+      ? {
+          document: cloneSketchpadDocument(sketchpadSnapshotForSend.document),
+          image: sketchpadSnapshotForSend.image,
+        }
+      : null;
+    const composerImagesSnapshot = [
+      ...composerRegularImagesSnapshot,
+      ...(composerSketchpadSnapshot ? [composerSketchpadSnapshot.image] : []),
+    ];
     const composerFilesSnapshot = [...composerFilesForSend];
     const composerAssistantSelectionsSnapshot = [...composerAssistantSelectionsForSend];
     const composerFileCommentsSnapshot = [...composerFileCommentsForSend];
@@ -6188,19 +6315,14 @@ export default function ChatView({
     const composerPastedTextsSnapshot = [...sendableComposerPastedTexts];
     const composerSkillsSnapshot = [...selectedComposerSkillsForSend];
     const composerMentionsSnapshot = [...selectedComposerMentionsForSend];
-    // Trailing blocks are appended innermost-to-outermost: assistant selections,
-    // terminal contexts, file comments, then pasted text (outermost). The display
-    // extractors unwrap them in the reverse order.
-    const visibleMessageTextForSend = appendPastedTextsToPrompt(
-      appendFileCommentsToPrompt(
-        appendTerminalContextsToPrompt(
-          appendAssistantSelectionsToPrompt(promptForSend, composerAssistantSelectionsSnapshot),
-          composerTerminalContextsSnapshot,
-        ),
-        composerFileCommentsSnapshot,
-      ),
-      composerPastedTextsSnapshot,
-    );
+    const visibleMessageTextForSend = appendComposerMessageContext({
+      prompt: promptForSend,
+      assistantSelections: composerAssistantSelectionsSnapshot,
+      terminalContexts: composerTerminalContextsSnapshot,
+      fileComments: composerFileCommentsSnapshot,
+      pastedTexts: composerPastedTextsSnapshot,
+      sketchpad: composerSketchpadSnapshot?.document ?? null,
+    });
     const messageTextForSend = transformOutgoingPrompt
       ? transformOutgoingPrompt(visibleMessageTextForSend)
       : visibleMessageTextForSend;
@@ -6291,6 +6413,10 @@ export default function ChatView({
       expectedPromptHistoryPromptRef.current = null;
       promptRef.current = "";
       clearComposerDraftContent(threadIdForSend, { preservePreviewUrls: true });
+      setSketchpadOpenByThreadId((current) => ({
+        ...current,
+        [threadIdForSend]: false,
+      }));
       if (isLivePlanFollowUpSubmission) {
         setComposerDraftInteractionMode(threadIdForSend, interactionModeForSend);
       }
@@ -6526,7 +6652,8 @@ export default function ChatView({
         composerAssistantSelectionsRef.current.length === 0 &&
         composerFileCommentsRef.current.length === 0 &&
         composerTerminalContextsRef.current.length === 0 &&
-        composerPastedTextsRef.current.length === 0
+        composerPastedTextsRef.current.length === 0 &&
+        !hasSketchpadContent(composerSketchpadRef.current)
       ) {
         setOptimisticUserMessages((existing) => {
           const removed = existing.filter((message) => message.id === messageIdForSend);
@@ -6546,7 +6673,17 @@ export default function ChatView({
           });
         }
         setComposerCursor(collapseExpandedComposerCursor(promptForSend, promptForSend.length));
-        addComposerImagesToDraft(composerImagesSnapshot.map(cloneComposerImageAttachment));
+        addComposerImagesToDraft(composerRegularImagesSnapshot.map(cloneComposerImageAttachment));
+        if (composerSketchpadSnapshot) {
+          setComposerDraftSketchpad(
+            threadIdForSend,
+            cloneSketchpadDocument(composerSketchpadSnapshot.document),
+          );
+          setSketchpadOpenByThreadId((current) => ({
+            ...current,
+            [threadIdForSend]: true,
+          }));
+        }
         addComposerFilesToDraft(composerFilesSnapshot);
         for (const selection of composerAssistantSelectionsSnapshot) {
           addComposerAssistantSelectionToDraft(selection);
@@ -8669,7 +8806,35 @@ export default function ChatView({
         onAddPhotos={addComposerImages}
         onToggleFastMode={toggleFastMode}
         onSetPlanMode={setPlanMode}
+        sketchpadOpen={isSketchpadOpen}
+        sketchpadElementCount={composerSketchpadElementCount}
+        onToggleSketchpad={toggleSketchpad}
       />
+      {composerFooterTier < 3 ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="chrome"
+                className={cn("relative shrink-0 rounded-md", isSketchpadOpen && "text-info")}
+                aria-label={`${isSketchpadOpen ? "Close" : "Open"} sketchpad (${sketchpadShortcutLabel})`}
+                aria-pressed={isSketchpadOpen}
+                onClick={toggleSketchpad}
+              />
+            }
+          >
+            <PencilIcon aria-hidden="true" className="size-4" />
+            {!isSketchpadOpen && composerSketchpadElementCount > 0 ? (
+              <span className="absolute right-1 top-1 size-1.5 rounded-full bg-info" />
+            ) : null}
+          </TooltipTrigger>
+          <TooltipPopup>
+            {isSketchpadOpen ? "Close sketchpad" : "Open sketchpad"} · {sketchpadShortcutLabel}
+          </TooltipPopup>
+        </Tooltip>
+      ) : null}
     </>
   );
   const branchToolbarProps = {
@@ -8897,6 +9062,18 @@ export default function ChatView({
                       : null
                   }
                 />
+                {shouldMountSketchpad ? (
+                  <DisclosureRegion open={isSketchpadOpen}>
+                    <SketchpadPanel
+                      key={threadId}
+                      ref={sketchpadPanelRef}
+                      document={composerSketchpad}
+                      compact={isEditorRail || surfaceMode === "split"}
+                      onDocumentChange={onSketchpadDocumentChange}
+                      onClose={() => setSketchpadOpen(false)}
+                    />
+                  </DisclosureRegion>
+                ) : null}
                 <div
                   className={cn(
                     COMPOSER_EDITOR_PADDING_CLASS_NAME,

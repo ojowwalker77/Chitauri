@@ -113,10 +113,8 @@ import { openWorkspaceFileReference, useWorkspaceFileOpener } from "../../lib/wo
 import { isAgentActivityWorkEntry } from "./agentActivity.logic";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { TerminalContextInlineChip } from "./TerminalContextInlineChip";
-import {
-  deriveDisplayedUserMessageState,
-  type ParsedTerminalContextEntry,
-} from "~/lib/terminalContext";
+import { deriveDisplayedUserMessageState } from "~/lib/composerMessageContext";
+import { type ParsedTerminalContextEntry } from "~/lib/terminalContext";
 import { cn } from "~/lib/utils";
 import {
   DEFAULT_CHAT_FONT_SIZE_PX,

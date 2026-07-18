@@ -2,13 +2,10 @@ import { ThreadId } from "@t3tools/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
-  appendOriginalComposerPromptBlocks,
-  appendOriginalTerminalContextBlock,
   appendTerminalContextsToPrompt,
   buildTerminalContextPreviewTitle,
   buildTerminalContextBlock,
   countInlineTerminalContextPlaceholders,
-  deriveDisplayedUserMessageState,
   ensureInlineTerminalContextPlaceholders,
   extractTrailingTerminalContexts,
   filterTerminalContextsWithText,
@@ -25,6 +22,10 @@ import {
   stripInlineTerminalContextPlaceholders,
   type TerminalContextDraft,
 } from "./terminalContext";
+import {
+  appendOriginalComposerPromptBlocks,
+  deriveDisplayedUserMessageState,
+} from "./composerMessageContext";
 import { appendAssistantSelectionsToPrompt } from "./assistantSelections";
 import { appendPastedTextsToPrompt, createPastedTextDraft } from "./composerPastedText";
 import { appendFileCommentsToPrompt } from "./fileComments";
@@ -85,7 +86,7 @@ describe("terminalContext", () => {
   it("preserves the original terminal context block when editing display text", () => {
     const originalPrompt = appendTerminalContextsToPrompt("Investigate this", [makeContext()]);
     expect(
-      appendOriginalTerminalContextBlock({
+      appendOriginalComposerPromptBlocks({
         editedPrompt: "Investigate this edited",
         originalPrompt,
       }),

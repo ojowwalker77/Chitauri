@@ -132,6 +132,7 @@ const PROFILE_SKILL_TOKEN_REGEX = new RegExp(
   "giu",
 );
 const PROFILE_TRAILING_PROMPT_BLOCK_PATTERNS = [
+  /\n*<sketchpad_context version="\d+">\n[\s\S]*?\n<\/sketchpad_context>\s*$/u,
   /\n*<pasted_text>\n[\s\S]*?\n<\/pasted_text>\s*$/u,
   /\n*<file_comments>\n[\s\S]*?\n<\/file_comments>\s*$/u,
   /\n*<terminal_context>\n[\s\S]*?\n<\/terminal_context>\s*$/u,

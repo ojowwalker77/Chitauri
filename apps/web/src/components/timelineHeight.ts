@@ -5,7 +5,7 @@
 
 import type { TurnDiffFileChange } from "../types";
 import { DEFAULT_CHAT_FONT_SIZE_PX, normalizeChatFontSizePx } from "../appSettings";
-import { deriveDisplayedUserMessageState } from "../lib/terminalContext";
+import { deriveDisplayedUserMessageState } from "../lib/composerMessageContext";
 import { buildInlineTerminalContextText } from "./chat/userMessageTerminalContexts";
 import { deriveUserMessagePreviewState } from "./chat/userMessagePreview";
 import { hasLeadingUserMedia, resolveUserTurnMarker } from "./chat/userTurnMarker";

@@ -66,6 +66,7 @@ function makeComposerDraftState(
     runtimeMode: null,
     interactionMode: null,
     ...partial,
+    sketchpad: partial?.sketchpad ?? null,
   };
 }
 
