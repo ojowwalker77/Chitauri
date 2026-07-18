@@ -239,10 +239,13 @@ function SketchpadArtwork(props: ArtworkProps) {
             className={cn(
               "absolute flex cursor-move select-none items-center justify-center text-[13px]",
               props.exportMode ? "text-slate-900" : "text-[var(--color-text-foreground)] shadow-sm",
+              /* Notes read as notes through structure (dashed border on an inset
+                 surface), not a decorative hue — chrome stays monochrome per
+                 Design.md §1; the export render mirrors the same treatment. */
               node.kind === "note" &&
                 (props.exportMode
-                  ? "items-start justify-start rounded-lg border border-amber-400 bg-amber-100 p-3 text-left"
-                  : "items-start justify-start rounded-lg border border-amber-500/35 bg-amber-200/45 p-3 text-left dark:bg-amber-500/12"),
+                  ? "items-start justify-start rounded-lg border border-dashed border-slate-400 bg-slate-100 p-3 text-left"
+                  : "items-start justify-start rounded-lg border border-dashed border-[color:color-mix(in_srgb,var(--foreground)_25%,transparent)] bg-[var(--well)] p-3 text-left"),
               node.kind === "shape" &&
                 node.shape !== "diamond" &&
                 (props.exportMode
