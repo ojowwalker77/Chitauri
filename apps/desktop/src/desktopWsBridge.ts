@@ -2,7 +2,9 @@
 // Purpose: Shares the desktop WebSocket bridge channel and env fallback rules.
 // Exports: channel name plus helpers used by Electron main, preload, and tests.
 
-export const DESKTOP_WS_URL_CHANNEL = "desktop:get-ws-url";
+import { DESKTOP_IPC_CHANNELS } from "./ipcChannels";
+
+export const DESKTOP_WS_URL_CHANNEL = DESKTOP_IPC_CHANNELS.wsUrl;
 
 export function normalizeDesktopWsUrl(value: unknown): string | null {
   if (typeof value !== "string") {

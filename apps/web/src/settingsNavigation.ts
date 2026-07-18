@@ -5,6 +5,7 @@ export const SETTINGS_SECTION_IDS = [
   "general",
   "profile",
   "appearance",
+  "appsnap",
   "agents",
   "advanced",
 ] as const;
@@ -55,6 +56,14 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     description: "Theme, typography, and chat presentation.",
     icon: "color-palette",
     eyebrow: "Visual language",
+  },
+  {
+    id: "appsnap",
+    group: "app",
+    label: "AppSnap",
+    description: "Capture the frontmost macOS window into a TeaCode task.",
+    icon: "device-laptop",
+    eyebrow: "Window capture",
   },
   {
     id: "agents",

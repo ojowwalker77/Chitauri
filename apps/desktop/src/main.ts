@@ -122,33 +122,38 @@ import {
   seedDesktopUserDataProfileFromLegacy,
 } from "./desktopUserDataProfile";
 import { isBrokenPipeError } from "./desktopProcessErrors";
+import { DESKTOP_IPC_CHANNELS } from "./ipcChannels";
+import { DesktopAppSnapManager } from "./appSnapManager";
+import { registerAppSnapIpc } from "./appSnapIpc";
 
 syncShellEnvironment();
 
-const PICK_FOLDER_CHANNEL = "desktop:pick-folder";
-const SAVE_FILE_CHANNEL = "desktop:save-file";
-const CONFIRM_CHANNEL = "desktop:confirm";
-const SET_THEME_CHANNEL = "desktop:set-theme";
-const CONTEXT_MENU_CHANNEL = "desktop:context-menu";
-const OPEN_EXTERNAL_CHANNEL = "desktop:open-external";
-const SHOW_IN_FOLDER_CHANNEL = "desktop:show-in-folder";
-const CLIPBOARD_WRITE_IMAGE_CHANNEL = "desktop:clipboard-write-image";
+const {
+  pickFolder: PICK_FOLDER_CHANNEL,
+  saveFile: SAVE_FILE_CHANNEL,
+  confirm: CONFIRM_CHANNEL,
+  setTheme: SET_THEME_CHANNEL,
+  contextMenu: CONTEXT_MENU_CHANNEL,
+  openExternal: OPEN_EXTERNAL_CHANNEL,
+  showInFolder: SHOW_IN_FOLDER_CHANNEL,
+  clipboardWriteImage: CLIPBOARD_WRITE_IMAGE_CHANNEL,
+  windowMinimize: WINDOW_MINIMIZE_CHANNEL,
+  windowToggleMaximize: WINDOW_TOGGLE_MAXIMIZE_CHANNEL,
+  windowClose: WINDOW_CLOSE_CHANNEL,
+  windowGetState: WINDOW_GET_STATE_CHANNEL,
+  windowState: WINDOW_STATE_CHANNEL,
+  menuAction: MENU_ACTION_CHANNEL,
+  zoomFactor: ZOOM_FACTOR_CHANNEL,
+  zoomFactorChanged: ZOOM_FACTOR_CHANGED_CHANNEL,
+  updateState: UPDATE_STATE_CHANNEL,
+  updateGetState: UPDATE_GET_STATE_CHANNEL,
+  updateCheck: UPDATE_CHECK_CHANNEL,
+  updateDownload: UPDATE_DOWNLOAD_CHANNEL,
+  updateInstall: UPDATE_INSTALL_CHANNEL,
+  notificationsIsSupported: NOTIFICATIONS_IS_SUPPORTED_CHANNEL,
+  notificationsShow: NOTIFICATIONS_SHOW_CHANNEL,
+} = DESKTOP_IPC_CHANNELS;
 const MAX_CLIPBOARD_IMAGE_DATA_URL_LENGTH = 16 * 1024 * 1024;
-const WINDOW_MINIMIZE_CHANNEL = "desktop:window-minimize";
-const WINDOW_TOGGLE_MAXIMIZE_CHANNEL = "desktop:window-toggle-maximize";
-const WINDOW_CLOSE_CHANNEL = "desktop:window-close";
-const WINDOW_GET_STATE_CHANNEL = "desktop:window-get-state";
-const WINDOW_STATE_CHANNEL = "desktop:window-state";
-const MENU_ACTION_CHANNEL = "desktop:menu-action";
-const ZOOM_FACTOR_CHANNEL = "desktop:zoom-factor";
-const ZOOM_FACTOR_CHANGED_CHANNEL = "desktop:zoom-factor-changed";
-const UPDATE_STATE_CHANNEL = "desktop:update-state";
-const UPDATE_GET_STATE_CHANNEL = "desktop:update-get-state";
-const UPDATE_CHECK_CHANNEL = "desktop:update-check";
-const UPDATE_DOWNLOAD_CHANNEL = "desktop:update-download";
-const UPDATE_INSTALL_CHANNEL = "desktop:update-install";
-const NOTIFICATIONS_IS_SUPPORTED_CHANNEL = "desktop:notifications-is-supported";
-const NOTIFICATIONS_SHOW_CHANNEL = "desktop:notifications-show";
 const BASE_DIR =
   readTeaCodeEnvironmentValue(process.env, "HOME")?.trim() ||
   Path.join(OS.homedir(), PRODUCT_HOME_DIRNAME);
@@ -214,6 +219,8 @@ let unreadBackgroundNotificationCount = 0;
 let configuredGitHubUpdateSource: ReturnType<typeof resolveGitHubUpdateSource> = null;
 let configuredUpdaterCacheDirName: string | null = null;
 let destructiveMenuIconCache: Electron.NativeImage | null | undefined;
+let appSnapManager: DesktopAppSnapManager | null = null;
+let unregisterAppSnapIpc: (() => void) | null = null;
 const desktopRuntimeInfo = resolveDesktopRuntimeInfo({
   platform: process.platform,
   processArch: process.arch,
@@ -1200,9 +1207,12 @@ function clearUnreadNotificationBadge(): void {
 
 // Reuse the existing desktop window when the app is launched again so users
 // don't end up with multiple packaged instances racing the same local state.
-function focusMainWindow(): void {
+function focusMainWindow(options?: { stealAppFocus?: boolean }): void {
   if (!mainWindow) {
     return;
+  }
+  if (options?.stealAppFocus === true && process.platform === "darwin") {
+    app.focus({ steal: true });
   }
   if (mainWindow.isMinimized()) {
     mainWindow.restore();
@@ -1211,6 +1221,64 @@ function focusMainWindow(): void {
     mainWindow.show();
   }
   mainWindow.focus();
+}
+
+function resolveAppSnapHelperPath(): string {
+  if (isDevelopment) {
+    return Path.join(
+      ROOT_DIR,
+      "apps",
+      "desktop",
+      ".electron-runtime",
+      "appsnap",
+      "teacode-appsnap-helper",
+    );
+  }
+  return Path.resolve(process.resourcesPath, "..", "Helpers", "teacode-appsnap-helper");
+}
+
+function sendAppSnapEvent(channel: string, payload: unknown): boolean {
+  const window = mainWindow;
+  if (!window || window.isDestroyed() || window.webContents.isDestroyed()) return false;
+  const send = () => {
+    if (!window.isDestroyed() && !window.webContents.isDestroyed()) {
+      window.webContents.send(channel, payload);
+    }
+  };
+  if (window.webContents.isLoadingMainFrame()) {
+    window.webContents.once("did-finish-load", send);
+  } else {
+    send();
+  }
+  return true;
+}
+
+function initializeAppSnap(): void {
+  if (appSnapManager) return;
+  appSnapManager = new DesktopAppSnapManager({
+    platform: process.platform,
+    helperPath: resolveAppSnapHelperPath(),
+    captureDirectory: Path.join(app.getPath("userData"), "appsnap", "tmp"),
+    excludedBundleId: APP_USER_MODEL_ID,
+    onState: (state) => {
+      sendAppSnapEvent(DESKTOP_IPC_CHANNELS.appSnap.state, state);
+    },
+    onCaptured: (capture) => {
+      if (!mainWindow) mainWindow = createWindow();
+      focusMainWindow({ stealAppFocus: true });
+      sendAppSnapEvent(DESKTOP_IPC_CHANNELS.appSnap.captured, capture);
+    },
+    onError: (error, focusApp) => {
+      if (focusApp) {
+        if (!mainWindow) mainWindow = createWindow();
+        focusMainWindow({ stealAppFocus: true });
+      }
+      if (!sendAppSnapEvent(DESKTOP_IPC_CHANNELS.appSnap.error, error)) {
+        showDesktopNotification({ title: "AppSnap", body: error.message });
+      }
+    },
+  });
+  unregisterAppSnapIpc = registerAppSnapIpc(appSnapManager);
 }
 
 // Show a native OS notification and refocus the app window when the alert is clicked.
@@ -2149,6 +2217,10 @@ async function shutdownDesktopRuntime(reason: string): Promise<void> {
   desktopShutdownPromise = (async () => {
     writeDesktopLogHeader(`${reason} shutdown start`);
     try {
+      unregisterAppSnapIpc?.();
+      unregisterAppSnapIpc = null;
+      appSnapManager?.dispose();
+      appSnapManager = null;
       clearUpdateBackgroundBlurTimer();
       clearUpdateCheckTimeoutTimer();
       clearUpdatePollTimer();
@@ -2695,6 +2767,7 @@ async function bootstrap(): Promise<void> {
   backendAuthToken = Crypto.randomBytes(24).toString("hex");
   await reserveBackendEndpoint("bootstrap");
 
+  initializeAppSnap();
   registerIpcHandlers();
   writeDesktopLogHeader("bootstrap ipc handlers registered");
   startBackend();
