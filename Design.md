@@ -124,3 +124,56 @@ Dark mode = invert the neutral ramp roles (§2 table, right column) using only r
 members and alpha/color-mix variants of `#ffffff`/`#111318`. Semantic colors do not
 change. If a dark-mode value can't be expressed as a ramp member or a mix of the
 poles, the design is wrong — do not invent a new hex.
+
+## 8. Motion — the attention budget
+
+Animation is never allowed to make the user wait. If the user asked for
+something and an animation stands between them and it, the animation has
+failed regardless of how nice it looks.
+
+Duration tokens (single source: the `@theme` block in `apps/web/src/index.css`;
+they back the Tailwind `duration-*` utilities):
+
+| Token                 | ms  | Job                                      |
+| --------------------- | --- | ---------------------------------------- |
+| `duration-press`      | 140 | Press/hover feedback on buttons and rows |
+| `duration-tooltip`    | 160 | Tooltip fade                             |
+| `duration-menu`       | 200 | Menus, popovers, dialogs                 |
+| `duration-disclosure` | 220 | Expand/collapse (see disclosure rule)    |
+| `duration-sheet`      | 220 | Sheets, drawers, sliding panels          |
+
+Rules:
+
+- **Interaction-path motion is ≤ 220ms with zero entrance delay.** New tokens
+  above 220ms need a written justification in this file.
+- **One source for toggles.** Every open/close animation uses
+  `apps/web/src/lib/disclosureMotion.ts` (or `DisclosureRegion` /
+  `CollapsiblePanel` / `DisclosureChevron`). Never a bespoke height/opacity
+  transition.
+- **Reduced motion is not optional.** Every transition/animation carries
+  `motion-reduce:*` (utilities) or a `prefers-reduced-motion` block (CSS) —
+  including ambient loops (skeleton shimmer, pulse dots); the static element
+  must still read as its state with the loop stopped.
+- Ambient loops (spinners, pulses, shimmer) are exempt from the 220ms ceiling
+  but must be quiet: they signal, they don't perform.
+- Hide-delays that _reduce_ churn (e.g. the scrollbar's idle fade-out) are
+  allowed; delays before showing something are not.
+
+## 9. Feedback — every wait is visible
+
+Anything the user does that makes them wait MUST show that something is
+happening. Silence during an async operation is a bug, not a style choice.
+
+- **Buttons that fire async work** disable and swap their leading icon for a
+  `Spinner` while in flight; they refuse double-fires.
+- **Content that is loading** renders `Skeleton` blocks — never the empty
+  state. "Empty" and "not loaded yet" are different states and must render
+  differently (see `threadDetailSyncedById` for the transcript pattern).
+- **Long-running background operations** (worktree prep, handoff, session
+  spawn) surface on whatever chrome remains visible after the trigger closes —
+  a spinner on the trigger, a status chip, or a progress toast at start.
+- Reuse the existing primitives: `Spinner`, `Skeleton`,
+  `ThreadRunningSpinner`, `DiffPanelLoadingState`, the "Loading models"
+  picker pattern. Do not invent new loading visuals.
+- Working/streaming states stay monochrome per §3 — motion carries the
+  meaning.
