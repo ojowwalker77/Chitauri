@@ -6,7 +6,7 @@ import { Schema } from "effect";
 
 import { NonNegativeInt, PositiveInt, TrimmedNonEmptyString } from "./baseSchemas";
 
-export const ResearchDocumentFormat = Schema.Literals(["markdown", "html"]);
+export const ResearchDocumentFormat = Schema.Literal("markdown");
 export type ResearchDocumentFormat = typeof ResearchDocumentFormat.Type;
 
 export const ResearchReferenceKind = Schema.Literals([
@@ -40,6 +40,7 @@ export const ResearchDocumentSummary = Schema.Struct({
   branch: Schema.NullOr(TrimmedNonEmptyString),
   createdAt: TrimmedNonEmptyString,
   updatedAt: TrimmedNonEmptyString,
+  archivedAt: Schema.NullOr(TrimmedNonEmptyString),
   storagePath: TrimmedNonEmptyString,
   referenceCount: NonNegativeInt,
   tags: Schema.Array(TrimmedNonEmptyString),
@@ -73,3 +74,14 @@ export const ResearchReadResult = Schema.Struct({
   document: ResearchDocument,
 });
 export type ResearchReadResult = typeof ResearchReadResult.Type;
+
+export const ResearchSetArchivedInput = Schema.Struct({
+  id: TrimmedNonEmptyString.check(Schema.isMaxLength(2048)),
+  archived: Schema.Boolean,
+});
+export type ResearchSetArchivedInput = typeof ResearchSetArchivedInput.Type;
+
+export const ResearchSetArchivedResult = Schema.Struct({
+  document: ResearchDocument,
+});
+export type ResearchSetArchivedResult = typeof ResearchSetArchivedResult.Type;

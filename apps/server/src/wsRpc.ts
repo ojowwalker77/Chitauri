@@ -57,7 +57,11 @@ import { ProviderSessionDirectory } from "./provider/Services/ProviderSessionDir
 import { listProviderUsage } from "./providerUsage";
 import { getProviderUsageSnapshot } from "./providerUsageSnapshot";
 import { ProfileStatsQuery } from "./profileStats";
-import { listResearchDocuments, readResearchDocument } from "./research/researchLibrary";
+import {
+  listResearchDocuments,
+  readResearchDocument,
+  setResearchDocumentArchived,
+} from "./research/researchLibrary";
 import { ServerEnvironment } from "./environment/Services/ServerEnvironment";
 import { ServerLifecycleEvents } from "./serverLifecycleEvents";
 import { ServerRuntimeStartup } from "./serverRuntimeStartup";
@@ -965,6 +969,19 @@ export const makeWsRpcLayer = () =>
               ),
             ),
             "Failed to read research document",
+          ),
+        [WS_METHODS.researchSetArchived]: (input) =>
+          rpcEffect(
+            Effect.promise(() =>
+              setResearchDocumentArchived(config.baseDir, input.id, input.archived),
+            ).pipe(
+              Effect.flatMap((result) =>
+                result
+                  ? Effect.succeed(result)
+                  : Effect.fail(new WsRpcError({ message: "Research document was not found." })),
+              ),
+            ),
+            "Failed to update research archive state",
           ),
         [WS_METHODS.shellOpenInEditor]: (input) =>
           rpcEffect(open.openInEditor(input), "Failed to open editor"),

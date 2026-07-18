@@ -115,6 +115,8 @@ import type {
   ResearchListResult,
   ResearchReadInput,
   ResearchReadResult,
+  ResearchSetArchivedInput,
+  ResearchSetArchivedResult,
 } from "./research";
 import type {
   ServerConfig,
@@ -351,6 +353,7 @@ export interface NativeApi {
   research: {
     list: (input?: ResearchListInput) => Promise<ResearchListResult>;
     read: (input: ResearchReadInput) => Promise<ResearchReadResult>;
+    setArchived: (input: ResearchSetArchivedInput) => Promise<ResearchSetArchivedResult>;
   };
   shell: {
     openInEditor: (cwd: string, editor: EditorId) => Promise<void>;

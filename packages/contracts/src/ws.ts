@@ -118,7 +118,7 @@ import {
   ProviderSkillsCatalogInput,
 } from "./providerDiscovery";
 import { ProviderCompactThreadInput } from "./provider";
-import { ResearchListInput, ResearchReadInput } from "./research";
+import { ResearchListInput, ResearchReadInput, ResearchSetArchivedInput } from "./research";
 
 // ── WebSocket RPC Method Names ───────────────────────────────────────
 
@@ -145,6 +145,7 @@ export const WS_METHODS = {
   // Durable research library
   researchList: "research.list",
   researchRead: "research.read",
+  researchSetArchived: "research.setArchived",
 
   // Shell methods
   shellOpenInEditor: "shell.openInEditor",
@@ -318,6 +319,7 @@ const WebSocketRequestBody = Schema.Union([
   // Research library
   tagRequestBody(WS_METHODS.researchList, ResearchListInput),
   tagRequestBody(WS_METHODS.researchRead, ResearchReadInput),
+  tagRequestBody(WS_METHODS.researchSetArchived, ResearchSetArchivedInput),
 
   // Shell methods
   tagRequestBody(WS_METHODS.shellOpenInEditor, OpenInEditorInput),
