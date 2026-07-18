@@ -246,6 +246,7 @@ import {
 import { ComposerQueuedHeader } from "./chat/ComposerQueuedHeader";
 import { ComposerLiveChangesHeader } from "./chat/ComposerLiveChangesHeader";
 import { Button } from "./ui/button";
+import { DisclosureChevron } from "./ui/DisclosureChevron";
 import { DisclosureRegion } from "./ui/DisclosureRegion";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import { Skeleton } from "./ui/skeleton";
@@ -853,6 +854,11 @@ interface ChatViewProps {
   surfaceTitle?: string;
   /** Adds surface-specific context to provider messages without changing the visible draft. */
   transformOutgoingPrompt?: (prompt: string) => string;
+  /** Keeps a secondary surface's agent composer available without competing with its content. */
+  composerDisclosure?: {
+    label: string;
+    description: string;
+  };
 }
 
 function normalizeRestoredQueuedPrompt(value: string): string {
@@ -898,6 +904,7 @@ export default function ChatView({
   transcriptContent,
   surfaceTitle,
   transformOutgoingPrompt,
+  composerDisclosure,
 }: ChatViewProps) {
   const markThreadVisited = useStore((store) => store.markThreadVisited);
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
@@ -921,6 +928,10 @@ export default function ChatView({
   const queryClient = useQueryClient();
   const isEditorRail = presentationMode === "editor";
   const isInactiveSplitPane = surfaceMode === "split" && !isFocusedPane;
+  const [composerDisclosureRequestedOpen, setComposerDisclosureRequestedOpen] = useState(false);
+  useEffect(() => {
+    setComposerDisclosureRequestedOpen(false);
+  }, [composerDisclosure?.label, threadId]);
   const composerDraft = useComposerThreadDraft(threadId);
   const prompt = composerDraft.prompt;
   const composerSketchpad = composerDraft.sketchpad;
@@ -2381,6 +2392,16 @@ export default function ChatView({
     latestTurnSettled &&
     hasActionableProposedPlan(activeProposedPlan);
   const activePendingApproval = pendingApprovals[0] ?? null;
+  const composerDisclosureForcedOpen =
+    composerDisclosure !== undefined &&
+    (isConnecting ||
+      phase === "running" ||
+      activePendingApproval !== null ||
+      pendingUserInputs.length > 0);
+  const composerDisclosureOpen =
+    composerDisclosure === undefined ||
+    composerDisclosureRequestedOpen ||
+    composerDisclosureForcedOpen;
   const serverAcknowledgedLocalDispatch = useMemo(
     () =>
       hasServerAcknowledgedLocalDispatch({
@@ -3474,6 +3495,11 @@ export default function ChatView({
   );
 
   const focusComposer = useCallback(() => {
+    if (composerDisclosure && !composerDisclosureOpen) {
+      pendingComposerFocusRef.current = true;
+      setComposerDisclosureRequestedOpen(true);
+      return;
+    }
     // Secondary chrome is deferred during thread switches; replay focus once it
     // mounts. A disabled editor (dispatch connecting, pending approval) cannot
     // take focus either, so keep the request pending until it re-enables.
@@ -3484,7 +3510,7 @@ export default function ChatView({
     }
     pendingComposerFocusRef.current = false;
     editor.focusAtEnd();
-  }, [secondaryChromeReady, isComposerEditorDisabled]);
+  }, [composerDisclosure, composerDisclosureOpen, secondaryChromeReady, isComposerEditorDisabled]);
   const toggleComposerFocus = useCallback(() => {
     const editor = composerEditorRef.current;
     if (secondaryChromeReady && editor?.isFocused()) {
@@ -3510,20 +3536,35 @@ export default function ChatView({
     sketchpadOpenByThreadId[threadId] !== undefined || hasSketchpadContent(composerSketchpad);
   const setSketchpadOpen = useCallback(
     (open: boolean) => {
+      if (open && composerDisclosure && !composerDisclosureOpen) {
+        setComposerDisclosureRequestedOpen(true);
+      }
       setSketchpadOpenByThreadId((current) =>
         current[threadId] === open ? current : { ...current, [threadId]: open },
       );
       window.requestAnimationFrame(() => {
-        if (open) sketchpadPanelRef.current?.focus();
-        else scheduleComposerFocus();
+        if (open) {
+          window.requestAnimationFrame(() => sketchpadPanelRef.current?.focus());
+        } else scheduleComposerFocus();
       });
     },
-    [scheduleComposerFocus, threadId],
+    [composerDisclosure, composerDisclosureOpen, scheduleComposerFocus, threadId],
   );
   const toggleSketchpad = useCallback(() => {
     if (isComposerApprovalState || pendingUserInputs.length > 0) return;
+    if (composerDisclosure && !composerDisclosureOpen) {
+      setSketchpadOpen(true);
+      return;
+    }
     setSketchpadOpen(!isSketchpadOpen);
-  }, [isComposerApprovalState, isSketchpadOpen, pendingUserInputs.length, setSketchpadOpen]);
+  }, [
+    composerDisclosure,
+    composerDisclosureOpen,
+    isComposerApprovalState,
+    isSketchpadOpen,
+    pendingUserInputs.length,
+    setSketchpadOpen,
+  ]);
   const onSketchpadDocumentChange = useCallback(
     (document: SketchpadDocument | null) => {
       discardPromptHistoryNavigationForComposerMutation();
@@ -5545,6 +5586,7 @@ export default function ChatView({
     handleTraitsPickerOpenChange,
     hasRightDockPanes,
     isComposerApprovalState,
+    pendingUserInputs.length,
     setTerminalWorkspaceTab,
     surfaceMode,
     scheduleComposerFocus,
@@ -9403,6 +9445,46 @@ export default function ChatView({
       </div>
     );
 
+  const composerSectionWithDisclosure = composerDisclosure ? (
+    <div className="w-full">
+      <div className={COMPOSER_COLUMN_FRAME_CLASS_NAME}>
+        <button
+          type="button"
+          aria-expanded={composerDisclosureOpen}
+          onClick={() => {
+            if (composerDisclosureForcedOpen) return;
+            const nextOpen = !composerDisclosureRequestedOpen;
+            setComposerDisclosureRequestedOpen(nextOpen);
+            if (nextOpen) {
+              window.requestAnimationFrame(() => scheduleComposerFocus());
+            }
+          }}
+          className="group flex min-h-11 w-full items-center gap-3 rounded-xl border border-panel-border bg-panel px-3.5 py-2 text-left shadow-xs transition-[background-color,border-color,scale] duration-press ease-out hover:border-border hover:bg-hover active:scale-[0.98] motion-reduce:transition-none"
+        >
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-selected text-muted-foreground group-hover:text-foreground">
+            <PencilIcon className="size-3.5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-medium text-foreground">
+              {composerDisclosure.label}
+            </span>
+            <span className="block truncate text-[11px] text-muted-foreground">
+              {composerDisclosureForcedOpen
+                ? "Finish the active agent interaction before collapsing"
+                : composerDisclosure.description}
+            </span>
+          </span>
+          <DisclosureChevron open={composerDisclosureOpen} className="size-4" />
+        </button>
+      </div>
+      <DisclosureRegion open={composerDisclosureOpen} contentClassName="pt-2">
+        {composerSection}
+      </DisclosureRegion>
+    </div>
+  ) : (
+    composerSection
+  );
+
   return (
     <div
       className={cn(
@@ -9657,8 +9739,9 @@ export default function ChatView({
 
                 <div
                   className={cn(
-                    "relative z-10 -mt-5 w-full shrink-0 overflow-visible pt-0 sm:pt-0",
+                    "relative z-10 w-full shrink-0 overflow-visible",
                     CHAT_COLUMN_GUTTER_CLASS_NAME,
+                    composerDisclosure ? "pt-2" : "-mt-5 pt-0 sm:pt-0",
                     // A trailing BranchToolbar only renders for legacy git threads; otherwise the
                     // composer is the last element, so give it a comfortable bottom margin.
                     isGitRepo ? "pb-0.5" : "pb-3 sm:pb-4",
@@ -9666,7 +9749,7 @@ export default function ChatView({
                   // Match the transcript's right inset so the composer stays aligned with chat
                   // content (and clear of the docked Environment overlay).
                 >
-                  {composerSection}
+                  {composerSectionWithDisclosure}
                 </div>
                 {secondaryChromeReady && (isGitRepo || relocateComposerLeadingControls) ? (
                   <div className={CHAT_COLUMN_GUTTER_CLASS_NAME}>

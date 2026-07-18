@@ -74,6 +74,23 @@ import {
   GitHubWorkListInput,
   GitHubWorkListResult,
 } from "./github";
+import {
+  CloudDiscoverProjectInput,
+  CloudError,
+  CloudInventoryResult,
+  CloudListBindingsInput,
+  CloudListBindingsResult,
+  CloudListContextsInput,
+  CloudListContextsResult,
+  CloudProjectBinding,
+  CloudProjectDiscoveryResult,
+  CloudQueryLogsInput,
+  CloudQueryLogsResult,
+  CloudResourceDetailInput,
+  CloudResourceDetailResult,
+  CloudSearchResourcesInput,
+  CloudUpsertBindingInput,
+} from "./cloud";
 import { KeybindingRule } from "./keybindings";
 import {
   ClientOrchestrationCommand,
@@ -93,6 +110,8 @@ import {
   ResearchListResult,
   ResearchReadInput,
   ResearchReadResult,
+  ResearchSetArchivedInput,
+  ResearchSetArchivedResult,
 } from "./research";
 import {
   WorkspaceHandoffThreadInput,
@@ -393,6 +412,12 @@ export const WsResearchReadRpc = Rpc.make(WS_METHODS.researchRead, {
   error: WsRpcError,
 });
 
+export const WsResearchSetArchivedRpc = Rpc.make(WS_METHODS.researchSetArchived, {
+  payload: ResearchSetArchivedInput,
+  success: ResearchSetArchivedResult,
+  error: WsRpcError,
+});
+
 export const WsShellOpenInEditorRpc = Rpc.make(WS_METHODS.shellOpenInEditor, {
   payload: OpenInEditorInput,
   success: Schema.Void,
@@ -587,6 +612,48 @@ export const WsGitHubWorkItemActionRpc = Rpc.make(WS_METHODS.githubWorkItemActio
   payload: GitHubWorkItemActionInput,
   success: GitHubWorkItemActionResult,
   error: WsRpcError,
+});
+
+export const WsCloudListContextsRpc = Rpc.make(WS_METHODS.cloudListContexts, {
+  payload: CloudListContextsInput,
+  success: CloudListContextsResult,
+  error: CloudError,
+});
+
+export const WsCloudDiscoverProjectRpc = Rpc.make(WS_METHODS.cloudDiscoverProject, {
+  payload: CloudDiscoverProjectInput,
+  success: CloudProjectDiscoveryResult,
+  error: CloudError,
+});
+
+export const WsCloudListBindingsRpc = Rpc.make(WS_METHODS.cloudListBindings, {
+  payload: CloudListBindingsInput,
+  success: CloudListBindingsResult,
+  error: CloudError,
+});
+
+export const WsCloudUpsertBindingRpc = Rpc.make(WS_METHODS.cloudUpsertBinding, {
+  payload: CloudUpsertBindingInput,
+  success: CloudProjectBinding,
+  error: CloudError,
+});
+
+export const WsCloudSearchResourcesRpc = Rpc.make(WS_METHODS.cloudSearchResources, {
+  payload: CloudSearchResourcesInput,
+  success: CloudInventoryResult,
+  error: CloudError,
+});
+
+export const WsCloudResourceDetailRpc = Rpc.make(WS_METHODS.cloudResourceDetail, {
+  payload: CloudResourceDetailInput,
+  success: CloudResourceDetailResult,
+  error: CloudError,
+});
+
+export const WsCloudQueryLogsRpc = Rpc.make(WS_METHODS.cloudQueryLogs, {
+  payload: CloudQueryLogsInput,
+  success: CloudQueryLogsResult,
+  error: CloudError,
 });
 
 export const WsTerminalOpenRpc = Rpc.make(WS_METHODS.terminalOpen, {
@@ -924,6 +991,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsFilesystemBrowseRpc,
   WsResearchListRpc,
   WsResearchReadRpc,
+  WsResearchSetArchivedRpc,
   WsShellOpenInEditorRpc,
   WsGitGithubRepositoryRpc,
   WsGitStatusRpc,
@@ -956,6 +1024,13 @@ export const WsRpcGroup = RpcGroup.make(
   WsGitHubWorkItemDetailRpc,
   WsGitHubPullRequestDiffRpc,
   WsGitHubWorkItemActionRpc,
+  WsCloudListContextsRpc,
+  WsCloudDiscoverProjectRpc,
+  WsCloudListBindingsRpc,
+  WsCloudUpsertBindingRpc,
+  WsCloudSearchResourcesRpc,
+  WsCloudResourceDetailRpc,
+  WsCloudQueryLogsRpc,
   WsTerminalOpenRpc,
   WsTerminalWriteRpc,
   WsTerminalAckOutputRpc,

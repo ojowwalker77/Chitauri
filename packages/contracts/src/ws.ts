@@ -67,6 +67,14 @@ import {
   GitHubWorkListInput,
 } from "./github";
 import {
+  CloudDiscoverProjectInput,
+  CloudListBindingsInput,
+  CloudQueryLogsInput,
+  CloudResourceDetailInput,
+  CloudSearchResourcesInput,
+  CloudUpsertBindingInput,
+} from "./cloud";
+import {
   TerminalAckOutputInput,
   TerminalClearInput,
   TerminalCloseInput,
@@ -118,7 +126,7 @@ import {
   ProviderSkillsCatalogInput,
 } from "./providerDiscovery";
 import { ProviderCompactThreadInput } from "./provider";
-import { ResearchListInput, ResearchReadInput } from "./research";
+import { ResearchListInput, ResearchReadInput, ResearchSetArchivedInput } from "./research";
 
 // ── WebSocket RPC Method Names ───────────────────────────────────────
 
@@ -145,6 +153,7 @@ export const WS_METHODS = {
   // Durable research library
   researchList: "research.list",
   researchRead: "research.read",
+  researchSetArchived: "research.setArchived",
 
   // Shell methods
   shellOpenInEditor: "shell.openInEditor",
@@ -183,6 +192,15 @@ export const WS_METHODS = {
   githubWorkItemDetail: "github.workItemDetail",
   githubPullRequestDiff: "github.pullRequestDiff",
   githubWorkItemAction: "github.workItemAction",
+
+  // Repository-aware cloud workbench
+  cloudListContexts: "cloud.listContexts",
+  cloudDiscoverProject: "cloud.discoverProject",
+  cloudListBindings: "cloud.listBindings",
+  cloudUpsertBinding: "cloud.upsertBinding",
+  cloudSearchResources: "cloud.searchResources",
+  cloudResourceDetail: "cloud.resourceDetail",
+  cloudQueryLogs: "cloud.queryLogs",
 
   // Terminal methods
   terminalOpen: "terminal.open",
@@ -318,6 +336,7 @@ const WebSocketRequestBody = Schema.Union([
   // Research library
   tagRequestBody(WS_METHODS.researchList, ResearchListInput),
   tagRequestBody(WS_METHODS.researchRead, ResearchReadInput),
+  tagRequestBody(WS_METHODS.researchSetArchived, ResearchSetArchivedInput),
 
   // Shell methods
   tagRequestBody(WS_METHODS.shellOpenInEditor, OpenInEditorInput),
@@ -361,6 +380,15 @@ const WebSocketRequestBody = Schema.Union([
   ...GitHubWorkItemActionInput.mapMembers(
     Tuple.map(Schema.fieldsAssign({ _tag: Schema.tag(WS_METHODS.githubWorkItemAction) })),
   ).members,
+
+  // Repository-aware cloud workbench
+  tagRequestBody(WS_METHODS.cloudListContexts, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.cloudDiscoverProject, CloudDiscoverProjectInput),
+  tagRequestBody(WS_METHODS.cloudListBindings, CloudListBindingsInput),
+  tagRequestBody(WS_METHODS.cloudUpsertBinding, CloudUpsertBindingInput),
+  tagRequestBody(WS_METHODS.cloudSearchResources, CloudSearchResourcesInput),
+  tagRequestBody(WS_METHODS.cloudResourceDetail, CloudResourceDetailInput),
+  tagRequestBody(WS_METHODS.cloudQueryLogs, CloudQueryLogsInput),
 
   // Terminal methods
   tagRequestBody(WS_METHODS.terminalOpen, TerminalOpenInput),

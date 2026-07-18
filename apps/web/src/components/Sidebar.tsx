@@ -4,10 +4,11 @@
 
 import {
   ArchiveIcon,
-  BrainIcon,
+  BooksIcon,
   CheckCircle2Icon,
   ChevronDownIcon,
   ChevronRightIcon,
+  CloudIcon,
   CopyIcon,
   ExternalLinkIcon,
   FolderIcon,
@@ -1122,6 +1123,7 @@ export default function Sidebar() {
   const isOnSettings = routePathname === "/settings";
   const isOnResearch = routePathname.startsWith("/research");
   const isOnGitHub = routePathname === "/github";
+  const isOnCloud = routePathname === "/cloud";
   const { settings: appSettings, updateSettings } = useAppSettings();
   // Rootless chats can be hidden independently from the project thread list.
   const chatsSectionVisible = appSettings.showChatsSection;
@@ -2117,9 +2119,9 @@ export default function Sidebar() {
   );
 
   const navigateToProjectSurface = useCallback(
-    (surface: "research" | "github") => {
+    (surface: "research" | "github" | "cloud") => {
       const rawRouteProjectFilter =
-        (isOnResearch || isOnGitHub) && typeof routeSearch.project === "string"
+        (isOnResearch || isOnGitHub || isOnCloud) && typeof routeSearch.project === "string"
           ? routeSearch.project
           : null;
       const routeProjectFilter =
@@ -2131,12 +2133,13 @@ export default function Sidebar() {
           : null;
       const project = routeProjectFilter ?? currentProjectShortcutTargetId ?? "all";
       void navigate({
-        to: surface === "research" ? "/research" : "/github",
+        to: surface === "research" ? "/research" : surface === "github" ? "/github" : "/cloud",
         search: { project },
       });
     },
     [
       currentProjectShortcutTargetId,
+      isOnCloud,
       isOnGitHub,
       isOnResearch,
       navigate,
@@ -6077,9 +6080,9 @@ export default function Sidebar() {
                           : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME
                       }
                     >
-                      <SidebarGlyph icon={BrainIcon} variant="leading" />
+                      <SidebarGlyph icon={BooksIcon} variant="leading" />
                     </SidebarLeadingIcon>
-                    <span className="truncate">Research</span>
+                    <span className="truncate">Research Library</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
@@ -6105,6 +6108,31 @@ export default function Sidebar() {
                       <SidebarGlyph icon={GitHubIcon} variant="leading" />
                     </SidebarLeadingIcon>
                     <span className="truncate">GitHub</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    size="sm"
+                    aria-current={isOnCloud ? "page" : undefined}
+                    className={cn(
+                      SIDEBAR_HEADER_ROW_CLASS_NAME,
+                      isOnCloud
+                        ? SIDEBAR_ROW_ACTIVE_CLASS_NAME
+                        : cn(SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME, SIDEBAR_ROW_HOVER_CLASS_NAME),
+                    )}
+                    onClick={() => navigateToProjectSurface("cloud")}
+                  >
+                    <SidebarLeadingIcon
+                      size="sm"
+                      tone={
+                        isOnCloud
+                          ? "text-[var(--sidebar-accent-foreground)]"
+                          : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME
+                      }
+                    >
+                      <SidebarGlyph icon={CloudIcon} variant="leading" />
+                    </SidebarLeadingIcon>
+                    <span className="truncate">Cloud</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

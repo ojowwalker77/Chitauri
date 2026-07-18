@@ -497,6 +497,19 @@ describe("wsNativeApi", () => {
     });
   });
 
+  it("forwards research archive changes to the websocket research method", async () => {
+    requestMock.mockResolvedValue(undefined);
+    const { createWsNativeApi } = await import("./wsNativeApi");
+
+    const api = createWsNativeApi();
+    await api.research.setArchived({ id: "research-1", archived: true });
+
+    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.researchSetArchived, {
+      id: "research-1",
+      archived: true,
+    });
+  });
+
   it("forwards local preview grant creation to the websocket project method", async () => {
     requestMock.mockResolvedValue({
       grant: "grant-token",
@@ -621,6 +634,18 @@ describe("wsNativeApi", () => {
       { actionId: "action-1", cwd: "/repo", action: "commit" },
       { timeoutMs: null },
     );
+  });
+
+  it("forwards Cloud reads through the typed websocket method", async () => {
+    requestMock.mockResolvedValue({ bindings: [] });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+
+    const api = createWsNativeApi();
+    await api.cloud.listBindings({ projectId: ProjectId.makeUnsafe("project-cloud") });
+
+    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.cloudListBindings, {
+      projectId: "project-cloud",
+    });
   });
 
   it("forwards full-thread diff requests to the orchestration websocket method", async () => {

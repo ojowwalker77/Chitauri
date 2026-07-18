@@ -88,6 +88,21 @@ import type {
   GitHubWorkListResult,
 } from "./github";
 import type {
+  CloudDiscoverProjectInput,
+  CloudInventoryResult,
+  CloudListBindingsInput,
+  CloudListBindingsResult,
+  CloudListContextsResult,
+  CloudProjectBinding,
+  CloudProjectDiscoveryResult,
+  CloudQueryLogsInput,
+  CloudQueryLogsResult,
+  CloudResourceDetailInput,
+  CloudResourceDetailResult,
+  CloudSearchResourcesInput,
+  CloudUpsertBindingInput,
+} from "./cloud";
+import type {
   ProjectCreateLocalFilePreviewGrantInput,
   ProjectCreateLocalFilePreviewGrantResult,
   ProjectDevServerEvent,
@@ -115,6 +130,8 @@ import type {
   ResearchListResult,
   ResearchReadInput,
   ResearchReadResult,
+  ResearchSetArchivedInput,
+  ResearchSetArchivedResult,
 } from "./research";
 import type {
   ServerConfig,
@@ -351,6 +368,7 @@ export interface NativeApi {
   research: {
     list: (input?: ResearchListInput) => Promise<ResearchListResult>;
     read: (input: ResearchReadInput) => Promise<ResearchReadResult>;
+    setArchived: (input: ResearchSetArchivedInput) => Promise<ResearchSetArchivedResult>;
   };
   shell: {
     openInEditor: (cwd: string, editor: EditorId) => Promise<void>;
@@ -406,6 +424,15 @@ export interface NativeApi {
     workItemDetail: (input: GitHubWorkItemDetailInput) => Promise<GitHubWorkItemDetailResult>;
     pullRequestDiff: (input: GitHubPullRequestDiffInput) => Promise<GitHubPullRequestDiffResult>;
     workItemAction: (input: GitHubWorkItemActionInput) => Promise<GitHubWorkItemActionResult>;
+  };
+  cloud: {
+    listContexts: () => Promise<CloudListContextsResult>;
+    discoverProject: (input: CloudDiscoverProjectInput) => Promise<CloudProjectDiscoveryResult>;
+    listBindings: (input: CloudListBindingsInput) => Promise<CloudListBindingsResult>;
+    upsertBinding: (input: CloudUpsertBindingInput) => Promise<CloudProjectBinding>;
+    searchResources: (input: CloudSearchResourcesInput) => Promise<CloudInventoryResult>;
+    resourceDetail: (input: CloudResourceDetailInput) => Promise<CloudResourceDetailResult>;
+    queryLogs: (input: CloudQueryLogsInput) => Promise<CloudQueryLogsResult>;
   };
   contextMenu: {
     show: <T extends string>(
