@@ -67,6 +67,14 @@ import {
   GitHubWorkListInput,
 } from "./github";
 import {
+  CloudDiscoverProjectInput,
+  CloudListBindingsInput,
+  CloudQueryLogsInput,
+  CloudResourceDetailInput,
+  CloudSearchResourcesInput,
+  CloudUpsertBindingInput,
+} from "./cloud";
+import {
   TerminalAckOutputInput,
   TerminalClearInput,
   TerminalCloseInput,
@@ -183,6 +191,15 @@ export const WS_METHODS = {
   githubWorkItemDetail: "github.workItemDetail",
   githubPullRequestDiff: "github.pullRequestDiff",
   githubWorkItemAction: "github.workItemAction",
+
+  // Repository-aware cloud workbench
+  cloudListContexts: "cloud.listContexts",
+  cloudDiscoverProject: "cloud.discoverProject",
+  cloudListBindings: "cloud.listBindings",
+  cloudUpsertBinding: "cloud.upsertBinding",
+  cloudSearchResources: "cloud.searchResources",
+  cloudResourceDetail: "cloud.resourceDetail",
+  cloudQueryLogs: "cloud.queryLogs",
 
   // Terminal methods
   terminalOpen: "terminal.open",
@@ -361,6 +378,15 @@ const WebSocketRequestBody = Schema.Union([
   ...GitHubWorkItemActionInput.mapMembers(
     Tuple.map(Schema.fieldsAssign({ _tag: Schema.tag(WS_METHODS.githubWorkItemAction) })),
   ).members,
+
+  // Repository-aware cloud workbench
+  tagRequestBody(WS_METHODS.cloudListContexts, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.cloudDiscoverProject, CloudDiscoverProjectInput),
+  tagRequestBody(WS_METHODS.cloudListBindings, CloudListBindingsInput),
+  tagRequestBody(WS_METHODS.cloudUpsertBinding, CloudUpsertBindingInput),
+  tagRequestBody(WS_METHODS.cloudSearchResources, CloudSearchResourcesInput),
+  tagRequestBody(WS_METHODS.cloudResourceDetail, CloudResourceDetailInput),
+  tagRequestBody(WS_METHODS.cloudQueryLogs, CloudQueryLogsInput),
 
   // Terminal methods
   tagRequestBody(WS_METHODS.terminalOpen, TerminalOpenInput),

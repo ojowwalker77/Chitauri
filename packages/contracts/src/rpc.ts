@@ -74,6 +74,23 @@ import {
   GitHubWorkListInput,
   GitHubWorkListResult,
 } from "./github";
+import {
+  CloudDiscoverProjectInput,
+  CloudError,
+  CloudInventoryResult,
+  CloudListBindingsInput,
+  CloudListBindingsResult,
+  CloudListContextsInput,
+  CloudListContextsResult,
+  CloudProjectBinding,
+  CloudProjectDiscoveryResult,
+  CloudQueryLogsInput,
+  CloudQueryLogsResult,
+  CloudResourceDetailInput,
+  CloudResourceDetailResult,
+  CloudSearchResourcesInput,
+  CloudUpsertBindingInput,
+} from "./cloud";
 import { KeybindingRule } from "./keybindings";
 import {
   ClientOrchestrationCommand,
@@ -589,6 +606,48 @@ export const WsGitHubWorkItemActionRpc = Rpc.make(WS_METHODS.githubWorkItemActio
   error: WsRpcError,
 });
 
+export const WsCloudListContextsRpc = Rpc.make(WS_METHODS.cloudListContexts, {
+  payload: CloudListContextsInput,
+  success: CloudListContextsResult,
+  error: CloudError,
+});
+
+export const WsCloudDiscoverProjectRpc = Rpc.make(WS_METHODS.cloudDiscoverProject, {
+  payload: CloudDiscoverProjectInput,
+  success: CloudProjectDiscoveryResult,
+  error: CloudError,
+});
+
+export const WsCloudListBindingsRpc = Rpc.make(WS_METHODS.cloudListBindings, {
+  payload: CloudListBindingsInput,
+  success: CloudListBindingsResult,
+  error: CloudError,
+});
+
+export const WsCloudUpsertBindingRpc = Rpc.make(WS_METHODS.cloudUpsertBinding, {
+  payload: CloudUpsertBindingInput,
+  success: CloudProjectBinding,
+  error: CloudError,
+});
+
+export const WsCloudSearchResourcesRpc = Rpc.make(WS_METHODS.cloudSearchResources, {
+  payload: CloudSearchResourcesInput,
+  success: CloudInventoryResult,
+  error: CloudError,
+});
+
+export const WsCloudResourceDetailRpc = Rpc.make(WS_METHODS.cloudResourceDetail, {
+  payload: CloudResourceDetailInput,
+  success: CloudResourceDetailResult,
+  error: CloudError,
+});
+
+export const WsCloudQueryLogsRpc = Rpc.make(WS_METHODS.cloudQueryLogs, {
+  payload: CloudQueryLogsInput,
+  success: CloudQueryLogsResult,
+  error: CloudError,
+});
+
 export const WsTerminalOpenRpc = Rpc.make(WS_METHODS.terminalOpen, {
   payload: TerminalOpenInput,
   success: TerminalSessionSnapshot,
@@ -956,6 +1015,13 @@ export const WsRpcGroup = RpcGroup.make(
   WsGitHubWorkItemDetailRpc,
   WsGitHubPullRequestDiffRpc,
   WsGitHubWorkItemActionRpc,
+  WsCloudListContextsRpc,
+  WsCloudDiscoverProjectRpc,
+  WsCloudListBindingsRpc,
+  WsCloudUpsertBindingRpc,
+  WsCloudSearchResourcesRpc,
+  WsCloudResourceDetailRpc,
+  WsCloudQueryLogsRpc,
   WsTerminalOpenRpc,
   WsTerminalWriteRpc,
   WsTerminalAckOutputRpc,

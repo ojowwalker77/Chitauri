@@ -29,6 +29,7 @@ import {
   TbChevronRight as IconChevronRight,
   TbChevronUp as IconChevronUp,
   TbCircleCheck as IconCircleCheck,
+  TbCloud as IconCloud,
   TbColumns2 as IconColumns2,
   TbDots as IconDots,
   TbDownload as IconDownload,
@@ -155,6 +156,7 @@ export const CircleQuestionIcon: LucideIcon = centralIconWrapper("circle-questio
 export const ArrowUpCircleIcon: LucideIcon = centralIconWrapper("arrow-up-circle");
 export const CloudUploadIcon = centralIconWrapper("cloud-upload");
 export const CloudSyncIcon = centralIconWrapper("cloud-sync");
+export const CloudIcon = adaptIcon(IconCloud);
 export const Columns2Icon = adaptIcon(IconColumns2);
 export const ChangesIcon = centralIconWrapper("changes");
 export const CopyIcon = centralIconWrapper("square-behind-square-6");
