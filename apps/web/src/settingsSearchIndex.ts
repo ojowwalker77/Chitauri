@@ -32,6 +32,24 @@ export function settingsSearchEntryTarget(entry: SettingsSearchEntry): string | 
 // section, so the sidebar cannot read row text at runtime; keep this list in sync when rows
 // are added, renamed, hidden conditionally, or represented as panel-level results.
 export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
+  {
+    id: "appsnap:enable",
+    section: "appsnap",
+    title: "Enable AppSnap",
+    keywords: "macOS window capture left option right option shortcut permissions",
+  },
+  {
+    id: "appsnap:sound",
+    section: "appsnap",
+    title: "Capture sound",
+    keywords: "audio confirmation preview AppSnap",
+  },
+  {
+    id: "appsnap:permissions",
+    section: "appsnap",
+    title: "macOS permissions",
+    keywords: "Input Monitoring Screen Recording recheck privacy system settings",
+  },
   // ── General ────────────────────────────────────────────────────────────────
   {
     id: "general:default-provider",

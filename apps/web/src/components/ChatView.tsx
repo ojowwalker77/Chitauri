@@ -125,9 +125,13 @@ import {
   buildComposerImageAttachmentsFromFiles,
   buildUploadComposerAttachments,
   cloneComposerImageAttachment,
+  effectiveComposerAttachmentCount,
+  findPendingBlobComposerAttachments,
   formatOutgoingComposerPrompt,
+  hydratePendingBlobComposerAttachments,
   readFileAsDataUrl,
 } from "../lib/composerSend";
+import { stageComposerImageAttachments } from "../lib/composerImagePersistence";
 import { reconcileDeletedThreadFromClient } from "../lib/deletedThreadClientReconciliation";
 import { dispatchThreadRename } from "../lib/threadRename";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
@@ -1007,9 +1011,6 @@ export default function ChatView({
   );
   const setComposerDraftSkills = useComposerDraftStore((store) => store.setSkills);
   const setComposerDraftMentions = useComposerDraftStore((store) => store.setMentions);
-  const clearComposerDraftPersistedAttachments = useComposerDraftStore(
-    (store) => store.clearPersistedAttachments,
-  );
   const syncComposerDraftPersistedAttachments = useComposerDraftStore(
     (store) => store.syncPersistedAttachments,
   );
@@ -4802,6 +4803,27 @@ export default function ChatView({
   }, [threadId]);
 
   useEffect(() => {
+    const pending = findPendingBlobComposerAttachments({
+      persistedAttachments: composerDraft.persistedAttachments,
+      images: composerImages,
+    });
+    if (pending.length === 0) return;
+    let cancelled = false;
+    void hydratePendingBlobComposerAttachments(pending).then((hydrated) => {
+      if (cancelled) {
+        for (const image of hydrated) URL.revokeObjectURL(image.previewUrl);
+        return;
+      }
+      if (hydrated.length > 0) {
+        useComposerDraftStore.getState().addImages(threadId, hydrated);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [composerDraft.persistedAttachments, composerImages, threadId]);
+
+  useEffect(() => {
     if (!activeThread?.id) return;
     if (activeThread.messages.length === 0) {
       return;
@@ -4917,131 +4939,39 @@ export default function ChatView({
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      if (composerImages.length === 0) {
-        clearComposerDraftPersistedAttachments(threadId);
-        return;
-      }
-      const getPersistedAttachmentsForThread = () =>
-        useComposerDraftStore.getState().draftsByThreadId[threadId]?.persistedAttachments ?? [];
-      try {
-        const currentPersistedAttachments = getPersistedAttachmentsForThread();
-        const existingPersistedById = new Map(
-          currentPersistedAttachments.map((attachment) => [attachment.id, attachment]),
-        );
-        const stagedAttachmentById = new Map<string, PersistedComposerImageAttachment>();
-        await Promise.all(
-          composerImages.map(async (image) => {
-            try {
-              const dataUrl = await readFileAsDataUrl(image.file);
-              stagedAttachmentById.set(image.id, {
-                id: image.id,
-                name: image.name,
-                mimeType: image.mimeType,
-                sizeBytes: image.sizeBytes,
-                dataUrl,
-              });
-            } catch {
-              const existingPersisted = existingPersistedById.get(image.id);
-              if (existingPersisted) {
-                stagedAttachmentById.set(image.id, existingPersisted);
-              }
-            }
+      const currentDraft = useComposerDraftStore.getState().draftsByThreadId[threadId];
+      const tasks: Promise<unknown>[] = [];
+      if (composerImages.length > 0) {
+        tasks.push(
+          stageComposerImageAttachments({
+            threadId,
+            images: composerImages,
+            existing: currentDraft?.persistedAttachments ?? [],
+            sync: (attachments) => syncComposerDraftPersistedAttachments(threadId, attachments),
           }),
         );
-        const serialized = Array.from(stagedAttachmentById.values());
-        if (cancelled) {
-          return;
-        }
-        // Stage attachments in persisted draft state first so persist middleware can write them.
-        syncComposerDraftPersistedAttachments(threadId, serialized);
-      } catch {
-        const currentImageIds = new Set(composerImages.map((image) => image.id));
-        const fallbackPersistedAttachments = getPersistedAttachmentsForThread();
-        const fallbackPersistedIds = fallbackPersistedAttachments
-          .map((attachment) => attachment.id)
-          .filter((id) => currentImageIds.has(id));
-        const fallbackPersistedIdSet = new Set(fallbackPersistedIds);
-        const fallbackAttachments = fallbackPersistedAttachments.filter((attachment) =>
-          fallbackPersistedIdSet.has(attachment.id),
-        );
-        if (cancelled) {
-          return;
-        }
-        syncComposerDraftPersistedAttachments(threadId, fallbackAttachments);
       }
+      if (composerPromptHistorySavedDraftImages?.length) {
+        tasks.push(
+          stageComposerImageAttachments({
+            threadId,
+            images: composerPromptHistorySavedDraftImages,
+            existing: currentDraft?.promptHistorySavedDraft?.persistedAttachments ?? [],
+            sync: (attachments) =>
+              syncComposerDraftPromptHistorySavedDraftPersistedAttachments(threadId, attachments),
+          }),
+        );
+      }
+      await Promise.allSettled(tasks);
+      if (cancelled) return;
     })();
     return () => {
       cancelled = true;
     };
   }, [
-    clearComposerDraftPersistedAttachments,
     composerImages,
-    syncComposerDraftPersistedAttachments,
-    threadId,
-  ]);
-
-  useEffect(() => {
-    if (
-      !composerPromptHistorySavedDraftImages ||
-      composerPromptHistorySavedDraftImages.length === 0
-    ) {
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      const getPersistedAttachmentsForThread = () =>
-        useComposerDraftStore.getState().draftsByThreadId[threadId]?.promptHistorySavedDraft
-          ?.persistedAttachments ?? [];
-      try {
-        const currentPersistedAttachments = getPersistedAttachmentsForThread();
-        const existingPersistedById = new Map(
-          currentPersistedAttachments.map((attachment) => [attachment.id, attachment]),
-        );
-        const stagedAttachmentById = new Map<string, PersistedComposerImageAttachment>();
-        await Promise.all(
-          composerPromptHistorySavedDraftImages.map(async (image) => {
-            try {
-              const dataUrl = await readFileAsDataUrl(image.file);
-              stagedAttachmentById.set(image.id, {
-                id: image.id,
-                name: image.name,
-                mimeType: image.mimeType,
-                sizeBytes: image.sizeBytes,
-                dataUrl,
-              });
-            } catch {
-              const existingPersisted = existingPersistedById.get(image.id);
-              if (existingPersisted) {
-                stagedAttachmentById.set(image.id, existingPersisted);
-              }
-            }
-          }),
-        );
-        if (cancelled) {
-          return;
-        }
-        syncComposerDraftPromptHistorySavedDraftPersistedAttachments(
-          threadId,
-          Array.from(stagedAttachmentById.values()),
-        );
-      } catch {
-        const currentImageIds = new Set(
-          composerPromptHistorySavedDraftImages.map((image) => image.id),
-        );
-        const fallbackAttachments = getPersistedAttachmentsForThread().filter((attachment) =>
-          currentImageIds.has(attachment.id),
-        );
-        if (cancelled) {
-          return;
-        }
-        syncComposerDraftPromptHistorySavedDraftPersistedAttachments(threadId, fallbackAttachments);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
     composerPromptHistorySavedDraftImages,
+    syncComposerDraftPersistedAttachments,
     syncComposerDraftPromptHistorySavedDraftPersistedAttachments,
     threadId,
   ]);
@@ -5525,14 +5455,9 @@ export default function ChatView({
 
       const { images: nextImages, error } = buildComposerImageAttachmentsFromFiles({
         files,
-        existingAttachmentCount: (() => {
-          const currentDraft = useComposerDraftStore.getState().draftsByThreadId[activeThreadId];
-          return (
-            (currentDraft?.images.length ?? 0) +
-            (currentDraft?.files.length ?? 0) +
-            (currentDraft?.assistantSelections.length ?? 0)
-          );
-        })(),
+        existingAttachmentCount: effectiveComposerAttachmentCount(
+          useComposerDraftStore.getState().draftsByThreadId[activeThreadId],
+        ),
       });
 
       if (nextImages.length === 1 && nextImages[0]) {
@@ -5569,14 +5494,9 @@ export default function ChatView({
 
       const { files: nextFiles, error } = buildComposerFileAttachmentsFromFiles({
         files,
-        existingAttachmentCount: (() => {
-          const currentDraft = useComposerDraftStore.getState().draftsByThreadId[activeThreadId];
-          return (
-            (currentDraft?.images.length ?? 0) +
-            (currentDraft?.files.length ?? 0) +
-            (currentDraft?.assistantSelections.length ?? 0)
-          );
-        })(),
+        existingAttachmentCount: effectiveComposerAttachmentCount(
+          useComposerDraftStore.getState().draftsByThreadId[activeThreadId],
+        ),
       });
 
       if (nextFiles.length > 0) {
@@ -5843,6 +5763,24 @@ export default function ChatView({
       queuedChatTurn === null ? (composerEditorRef.current?.readSnapshot() ?? null) : null;
     let promptForSend = queuedChatTurn?.prompt ?? liveComposerSnapshot?.value ?? promptRef.current;
     let composerImagesForSend = queuedChatTurn?.images ?? composerImages;
+    if (queuedChatTurn === null) {
+      const currentDraft = useComposerDraftStore.getState().draftsByThreadId[activeThread.id];
+      const pendingBlobAttachments = findPendingBlobComposerAttachments({
+        persistedAttachments: currentDraft?.persistedAttachments ?? [],
+        images: composerImagesForSend,
+      });
+      if (pendingBlobAttachments.length > 0) {
+        const hydratedImages = await hydratePendingBlobComposerAttachments(pendingBlobAttachments);
+        if (hydratedImages.length > 0) {
+          useComposerDraftStore.getState().addImages(activeThread.id, hydratedImages);
+          const existingIds = new Set(composerImagesForSend.map((image) => image.id));
+          composerImagesForSend = [
+            ...composerImagesForSend,
+            ...hydratedImages.filter((image) => !existingIds.has(image.id)),
+          ];
+        }
+      }
+    }
     const composerFilesForSend = queuedChatTurn?.files ?? composerFiles;
     const composerAssistantSelectionsForSend =
       queuedChatTurn?.assistantSelections ?? composerAssistantSelections;

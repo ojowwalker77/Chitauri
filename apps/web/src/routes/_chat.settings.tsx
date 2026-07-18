@@ -11,6 +11,7 @@ import {
   type ThreadId,
   type ThreadMarkerColor,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
+  type DesktopAppSnapState,
 } from "@t3tools/contracts";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -126,6 +127,8 @@ import {
   serverWorktreesQueryOptions,
 } from "../lib/serverReactQuery";
 import { cn, isMacPlatform } from "../lib/utils";
+import { createLatestAppSnapRequestGuard } from "../appSnap.logic";
+import { playAppSnapSound } from "../lib/appSnapSound";
 import { unarchiveThreadFromClient } from "../lib/threadArchive";
 import { resolveProviderDiscoveryCwd } from "../lib/providerDiscovery";
 import { ensureNativeApi, readNativeApi } from "../nativeApi";
@@ -735,6 +738,8 @@ function SettingsRouteView() {
 
   const { theme, setTheme } = useTheme();
   const { settings, defaults, updateSettings, resetSettings } = useAppSettings();
+  const [appSnapState, setAppSnapState] = useState<DesktopAppSnapState | null>(null);
+  const appSnapRequestGuardRef = useRef(createLatestAppSnapRequestGuard());
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const queryClient = useQueryClient();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
@@ -898,6 +903,34 @@ function SettingsRouteView() {
     activeSection === "appearance" && settingsTarget === SETTINGS_TARGETS.chatHeaderControls,
     chatHeaderControlsRef,
   );
+
+  useEffect(() => {
+    if (activeSection !== "appsnap") return;
+    const bridge = window.desktopBridge?.appSnap;
+    if (!bridge) {
+      setAppSnapState(null);
+      return;
+    }
+    let disposed = false;
+    const request = appSnapRequestGuardRef.current.begin();
+    const unsubscribe = bridge.onState((state) => {
+      if (!disposed) setAppSnapState(state);
+    });
+    void bridge
+      .getState()
+      .then((state) => {
+        if (!disposed && appSnapRequestGuardRef.current.isCurrent(request)) {
+          setAppSnapState(state);
+        }
+      })
+      .catch((error) => {
+        if (!disposed) console.warn("[appsnap] Could not read settings state", error);
+      });
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
+  }, [activeSection]);
 
   // Sidebar search deep-links to an individual row via its `settingRowAnchorId`. The active
   // panel renders synchronously with this section change, so scroll once the row has mounted.
@@ -1088,6 +1121,8 @@ function SettingsRouteView() {
     defaults.enableSystemTaskCompletionNotifications
       ? ["Desktop notifications"]
       : []),
+    ...(settings.enableAppSnap !== defaults.enableAppSnap ? ["AppSnap"] : []),
+    ...(settings.appSnapPlaySound !== defaults.appSnapPlaySound ? ["AppSnap sound"] : []),
     ...(settings.enableAssistantStreaming !== defaults.enableAssistantStreaming
       ? ["Assistant output"]
       : []),
@@ -1640,6 +1675,174 @@ function SettingsRouteView() {
           />
         }
       />
+    );
+  };
+
+  const updateAppSnapEnabled = async (enabled: boolean) => {
+    const request = appSnapRequestGuardRef.current.begin();
+    updateSettings({ enableAppSnap: enabled });
+    const bridge = window.desktopBridge?.appSnap;
+    if (!bridge) return;
+    try {
+      let state = await bridge.setEnabled(enabled);
+      if (
+        enabled &&
+        state.supported &&
+        (state.inputMonitoringPermission !== "granted" ||
+          state.screenRecordingPermission !== "granted")
+      ) {
+        state = await bridge.requestPermissions();
+      }
+      if (appSnapRequestGuardRef.current.isCurrent(request)) setAppSnapState(state);
+    } catch (error) {
+      if (!appSnapRequestGuardRef.current.isCurrent(request)) return;
+      toastManager.add({
+        type: "error",
+        title: "Could not update AppSnap",
+        description: error instanceof Error ? error.message : "The desktop helper did not respond.",
+      });
+    }
+  };
+
+  const recheckAppSnapPermissions = async () => {
+    const bridge = window.desktopBridge?.appSnap;
+    if (!bridge) return;
+    const request = appSnapRequestGuardRef.current.begin();
+    try {
+      const state = await bridge.getState();
+      if (appSnapRequestGuardRef.current.isCurrent(request)) setAppSnapState(state);
+    } catch (error) {
+      if (!appSnapRequestGuardRef.current.isCurrent(request)) return;
+      toastManager.add({
+        type: "error",
+        title: "Could not recheck AppSnap permissions",
+        description: error instanceof Error ? error.message : "The desktop helper did not respond.",
+      });
+    }
+  };
+
+  const appSnapPermissionLabel = (permission: DesktopAppSnapState["inputMonitoringPermission"]) =>
+    permission === "not-determined"
+      ? "Not requested"
+      : permission.charAt(0).toUpperCase() + permission.slice(1);
+
+  const renderAppSnapPanel = () => {
+    const supported = appSnapState?.supported === true;
+    return (
+      <div className="space-y-6">
+        <SettingsCard>
+          <div className="p-4">
+            <p className="text-sm font-medium text-foreground">Capture a window into your task</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+              Press left Option and right Option together while another app is frontmost. TeaCode
+              captures only that selected window and places it in your most recent task for 60
+              seconds, or starts a fresh task.
+            </p>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              Nothing you type is recorded. The capture stays on this device until you explicitly
+              send the message.
+            </p>
+          </div>
+        </SettingsCard>
+
+        <SettingsSection title="Capture">
+          <SettingsRow
+            title="Enable AppSnap"
+            description={
+              appSnapState === null
+                ? "Available in the TeaCode macOS desktop app."
+                : appSnapState.message || "Listen passively for the two-Option-key shortcut."
+            }
+            status={appSnapState?.status ?? "Unavailable"}
+            resetAction={
+              settings.enableAppSnap !== defaults.enableAppSnap ? (
+                <SettingResetButton
+                  label="AppSnap"
+                  onClick={() => void updateAppSnapEnabled(defaults.enableAppSnap)}
+                />
+              ) : null
+            }
+            control={
+              <Switch
+                checked={supported && settings.enableAppSnap}
+                disabled={!supported}
+                onCheckedChange={(checked) => void updateAppSnapEnabled(Boolean(checked))}
+                aria-label="Enable AppSnap"
+              />
+            }
+          />
+          <SettingsRow
+            title="Shortcut"
+            description="The physical left and right Option keys must be held together."
+            control={<kbd className="text-xs text-muted-foreground">left ⌥ + right ⌥</kbd>}
+          />
+          <SettingsRow
+            title="Destination"
+            description="Uses the task you interacted with in the last 60 seconds; otherwise opens a fresh task. Consecutive captures stay together."
+          />
+          <SettingsRow
+            title="Capture sound"
+            description="Play a short local confirmation after a new capture is safely attached."
+            resetAction={
+              settings.appSnapPlaySound !== defaults.appSnapPlaySound ? (
+                <SettingResetButton
+                  label="AppSnap sound"
+                  onClick={() => updateSettings({ appSnapPlaySound: defaults.appSnapPlaySound })}
+                />
+              ) : null
+            }
+            control={
+              <div className="flex items-center gap-2">
+                <Button size="xs" variant="outline" onClick={() => void playAppSnapSound()}>
+                  Preview
+                </Button>
+                <Switch
+                  checked={settings.appSnapPlaySound}
+                  onCheckedChange={(checked) =>
+                    updateSettings({ appSnapPlaySound: Boolean(checked) })
+                  }
+                  aria-label="Play AppSnap capture sound"
+                />
+              </div>
+            }
+          />
+        </SettingsSection>
+
+        <SettingsSection title="macOS permissions">
+          <SettingsRow
+            title="Input Monitoring"
+            description="Used only to detect the simultaneous physical Option keys."
+            control={
+              <span className="text-xs text-muted-foreground">
+                {appSnapPermissionLabel(appSnapState?.inputMonitoringPermission ?? "unknown")}
+              </span>
+            }
+          />
+          <SettingsRow
+            title="Screen Recording"
+            description="Used only for the selected frontmost window at the moment of the shortcut."
+            control={
+              <span className="text-xs text-muted-foreground">
+                {appSnapPermissionLabel(appSnapState?.screenRecordingPermission ?? "unknown")}
+              </span>
+            }
+          />
+          <SettingsRow
+            title="Recheck permissions"
+            description="Refresh TeaCode after changing access in System Settings."
+            control={
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={!supported}
+                onClick={() => void recheckAppSnapPermissions()}
+              >
+                Recheck
+              </Button>
+            }
+          />
+        </SettingsSection>
+      </div>
     );
   };
 
@@ -3394,6 +3597,8 @@ function SettingsRouteView() {
         return renderAppearancePanel();
       case "profile":
         return <ProfileSettingsPanel />;
+      case "appsnap":
+        return renderAppSnapPanel();
       case "agents":
         return (
           <>

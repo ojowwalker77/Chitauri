@@ -8,11 +8,17 @@ export const MICROPHONE_USAGE_DESCRIPTION =
 export const MAC_ENTITLEMENTS_PATH = "apps/desktop/resources/entitlements.mac.plist";
 export const MAC_INHERITED_ENTITLEMENTS_PATH =
   "apps/desktop/resources/entitlements.mac.inherit.plist";
+export const MAC_APPSNAP_HELPER_STAGE_PATH =
+  "apps/desktop/native/appsnap/build/teacode-appsnap-helper";
+export const MAC_APPSNAP_HELPER_ASAR_EXCLUSION = "!apps/desktop/native/appsnap/build/**";
+export const MAC_APPSNAP_HELPER_BUNDLE_PATH = "Contents/Helpers/teacode-appsnap-helper";
 const MAC_DMG_ICON_PATH = "icon.icns";
 export const NODE_PTY_ASAR_UNPACK_GLOBS = ["node_modules/node-pty/**"] as const;
 
 export interface DesktopPlatformBuildConfig {
   readonly asarUnpack?: ReadonlyArray<string>;
+  readonly extraFiles?: ReadonlyArray<Record<string, string>>;
+  readonly files?: ReadonlyArray<string>;
   readonly linux?: Record<string, unknown>;
   readonly mac?: Record<string, unknown>;
   readonly win?: Record<string, unknown>;
@@ -32,6 +38,13 @@ export interface DesktopNativeBuildHostInput {
 }
 
 export function validateDesktopNativeBuildHost(input: DesktopNativeBuildHostInput): string | null {
+  if (input.platform === "mac" && input.hostPlatform !== "darwin") {
+    return [
+      "macOS desktop artifacts include the native Swift AppSnap helper.",
+      `Build mac/${input.arch} on macOS so the helper can be compiled and signed.`,
+      `Current host is ${input.hostPlatform}/${input.hostArch}.`,
+    ].join(" ");
+  }
   if (input.platform !== "linux") return null;
   if (input.arch === "universal") {
     return "Linux desktop artifacts support x64 or arm64 builds, not universal builds.";
@@ -58,12 +71,25 @@ export function createDesktopPlatformBuildConfig(
       hardenedRuntime: true,
       entitlements: MAC_ENTITLEMENTS_PATH,
       entitlementsInherit: MAC_INHERITED_ENTITLEMENTS_PATH,
+      binaries: [MAC_APPSNAP_HELPER_BUNDLE_PATH],
+      // @electron/universal must preserve the helper's existing lipo output.
+      x64ArchFiles: MAC_APPSNAP_HELPER_BUNDLE_PATH,
       extendInfo: {
         NSMicrophoneUsageDescription: MICROPHONE_USAGE_DESCRIPTION,
       },
     } satisfies Record<string, unknown>;
 
-    return { ...nativePackaging, mac };
+    return {
+      ...nativePackaging,
+      files: ["**/*", MAC_APPSNAP_HELPER_ASAR_EXCLUSION],
+      extraFiles: [
+        {
+          from: MAC_APPSNAP_HELPER_STAGE_PATH,
+          to: "Helpers/teacode-appsnap-helper",
+        },
+      ],
+      mac,
+    };
   }
 
   if (input.platform === "linux") {

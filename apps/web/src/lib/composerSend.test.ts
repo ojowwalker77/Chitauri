@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildComposerFileAttachmentsFromFiles,
   buildComposerImageAttachmentsFromFiles,
+  effectiveComposerAttachmentCount,
+  findPendingBlobComposerAttachments,
 } from "./composerSend";
 
 describe("composerSend attachment builders", () => {
@@ -70,5 +72,57 @@ describe("composerSend attachment builders", () => {
     expect(result.error).toBe(
       `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`,
     );
+  });
+
+  it("counts durable images that have not hydrated yet", () => {
+    expect(
+      effectiveComposerAttachmentCount({
+        images: [{ id: "hydrated" }],
+        files: [{}],
+        assistantSelections: [{}],
+        persistedAttachments: [{ id: "hydrated" }, { id: "pending" }],
+      }),
+    ).toBe(4);
+  });
+
+  it("finds only pending IndexedDB-backed images", () => {
+    expect(
+      findPendingBlobComposerAttachments({
+        images: [
+          {
+            id: "hydrated",
+            type: "image",
+            name: "hydrated.png",
+            mimeType: "image/png",
+            sizeBytes: 1,
+            previewUrl: "blob:hydrated",
+            file: new File([], "hydrated.png"),
+          },
+        ],
+        persistedAttachments: [
+          {
+            id: "hydrated",
+            name: "hydrated.png",
+            mimeType: "image/png",
+            sizeBytes: 1,
+            blobKey: "thread:hydrated",
+          },
+          {
+            id: "pending",
+            name: "pending.png",
+            mimeType: "image/png",
+            sizeBytes: 1,
+            blobKey: "thread:pending",
+          },
+          {
+            id: "legacy-data-url",
+            name: "legacy.png",
+            mimeType: "image/png",
+            sizeBytes: 1,
+            dataUrl: "data:image/png;base64,aQ==",
+          },
+        ],
+      }),
+    ).toEqual([expect.objectContaining({ id: "pending", blobKey: "thread:pending" })]);
   });
 });
