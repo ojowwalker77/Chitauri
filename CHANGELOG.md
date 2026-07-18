@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.8.0 - 2026-07-18
+
+### Added
+
+- Added a composer sketchpad: sketch shapes, notes, and connectors on a canvas above the composer and attach the drawing to your message as an image.
+- Added a repository-aware cloud workbench: browse cloud resources (AWS/GCP) bound to your repositories, inspect resource detail and logs, and hand an investigation to an agent in a thread.
+- Added AppSnap with a welcome dialog and per-app icons.
+- The GitHub surface is now **Git Workbench**: the detail view gains a proper title hero (author, age, status), icon meta rows for pull requests (branch with diffstat, reviewers, comments, checks), a collapsible description, colored diffstats in the list, and a per-item refresh. Issues gain **Triage this issue** and pull requests **Review this** alongside **Work on this**.
+
+### Changed
+
+- Tighter corner radii across the app — the base radius drops from 10px to 8px and every oversized one-off follows the scale. Rounded, not square.
+- Sliding panels (environment card, drawers, sidebar off-canvas) animate at 220ms instead of 300ms; every remaining transition and ambient loop now respects reduced-motion preferences.
+- Provider icons keep their brand identity again (Claude's coral is back); chrome stays monochrome.
+- The design system (`Design.md`) now specifies motion (attention-budget rules, duration tokens) and feedback (every wait shows a loading state).
+
+### Fixed
+
+- Killed the orange composer focus ring for good: text inputs no longer receive the global focus outline (it was overriding the composer's own styles at the cascade-layer level), and stored themes carrying a retired accent (orange/coral/gold) now migrate to the current default even when customized.
+- Waits that used to look frozen now show progress: starting agent work from Git Workbench, thread handoffs, terminal startup ("Connecting…"), cloud investigations, and switching into a thread whose history is still loading (skeleton instead of the empty "send a message" prompt).
+
 ## 0.7.0 - 2026-07-17
 
 ### Changed
