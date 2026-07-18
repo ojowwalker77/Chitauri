@@ -27,10 +27,10 @@ import { type DraftThreadState } from "../composerDraftStore";
 import { Schema } from "effect";
 import {
   filterTerminalContextsWithText,
-  deriveDisplayedUserMessageState,
   stripInlineTerminalContextPlaceholders,
   type TerminalContextDraft,
 } from "../lib/terminalContext";
+import { deriveDisplayedUserMessageState } from "../lib/composerMessageContext";
 import { filterPastedTextsWithText, type PastedTextDraft } from "../lib/composerPastedText";
 import {
   humanizeSubagentStatus,
@@ -787,6 +787,7 @@ export function deriveComposerSendState(options: {
   fileCount: number;
   assistantSelectionCount: number;
   fileCommentCount: number;
+  sketchpadElementCount?: number;
   terminalContexts: ReadonlyArray<TerminalContextDraft>;
   pastedTexts: ReadonlyArray<PastedTextDraft>;
 }): {
@@ -812,6 +813,7 @@ export function deriveComposerSendState(options: {
       options.fileCount > 0 ||
       options.assistantSelectionCount > 0 ||
       options.fileCommentCount > 0 ||
+      (options.sketchpadElementCount ?? 0) > 0 ||
       sendableTerminalContexts.length > 0 ||
       sendablePastedTexts.length > 0,
   };

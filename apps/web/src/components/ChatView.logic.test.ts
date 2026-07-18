@@ -858,6 +858,21 @@ describe("deriveComposerSendState", () => {
 
     expect(state.hasSendableContent).toBe(true);
   });
+
+  it("treats a sketch without prompt text as sendable content", () => {
+    const state = deriveComposerSendState({
+      prompt: "",
+      imageCount: 0,
+      fileCount: 0,
+      assistantSelectionCount: 0,
+      fileCommentCount: 0,
+      sketchpadElementCount: 1,
+      terminalContexts: [],
+      pastedTexts: [],
+    });
+
+    expect(state.hasSendableContent).toBe(true);
+  });
 });
 
 describe("buildExpiredTerminalContextToastCopy", () => {

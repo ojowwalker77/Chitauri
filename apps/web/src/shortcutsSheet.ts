@@ -116,6 +116,11 @@ const AVAILABLE_NOW_DEFINITIONS: readonly ShortcutDefinition[] = [
     description: "Focus or blur the chat prompt composer.",
   },
   {
+    command: "composer.sketchpad.toggle",
+    label: "Toggle sketchpad",
+    description: "Open or close the spatial sketchpad attached to the composer.",
+  },
+  {
     command: "terminal.toggle",
     label: "Toggle terminal",
     description: "Show or hide the terminal surface for the active thread.",

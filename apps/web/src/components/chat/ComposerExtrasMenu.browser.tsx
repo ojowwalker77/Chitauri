@@ -19,6 +19,7 @@ async function mountMenu(props?: {
   const onAddPhotos = vi.fn();
   const onToggleFastMode = vi.fn();
   const onSetPlanMode = vi.fn();
+  const onToggleSketchpad = vi.fn();
   const host = document.createElement("div");
   document.body.append(host);
   const screen = await render(
@@ -26,9 +27,12 @@ async function mountMenu(props?: {
       interactionMode={props?.interactionMode ?? "default"}
       supportsFastMode={props?.supportsFastMode ?? true}
       fastModeEnabled={props?.fastModeEnabled ?? false}
+      sketchpadOpen={false}
+      sketchpadElementCount={0}
       onAddPhotos={onAddPhotos}
       onToggleFastMode={onToggleFastMode}
       onSetPlanMode={onSetPlanMode}
+      onToggleSketchpad={onToggleSketchpad}
     />,
     { container: host },
   );
@@ -44,6 +48,7 @@ async function mountMenu(props?: {
     onAddPhotos,
     onToggleFastMode,
     onSetPlanMode,
+    onToggleSketchpad,
   };
 }
 
@@ -83,6 +88,15 @@ describe("ComposerExtrasMenu", () => {
       expect(text).toContain("Fast");
       expect(text).not.toContain("Plugins");
     });
+  });
+
+  it("toggles the sketchpad from the overflow menu", async () => {
+    await using menu = await mountMenu();
+
+    await page.getByLabelText("Composer extras").click();
+    await page.getByText("Sketchpad").click();
+
+    expect(menu.onToggleSketchpad).toHaveBeenCalledTimes(1);
   });
 
   it("wires the plan and speed controls", async () => {
