@@ -21,6 +21,21 @@ const restartDebounceMs = 120;
 const childTreeGracePeriodMs = 1_200;
 const staleComputerUseGracePeriodMs = 300;
 
+function buildAppSnapHelper() {
+  if (process.platform !== "darwin") return;
+  const helperArch = process.arch === "x64" ? "x64" : "arm64";
+  const result = spawnSync(
+    process.execPath,
+    ["scripts/build-appsnap-helper.mjs", "--mode", "development", "--arch", helperArch],
+    { cwd: desktopDir, stdio: "inherit" },
+  );
+  if (result.status !== 0) {
+    throw new Error(`AppSnap helper build failed with status ${result.status ?? "unknown"}.`);
+  }
+}
+
+buildAppSnapHelper();
+
 await waitOn({
   resources: [`tcp:${port}`, ...requiredFiles.map((filePath) => `file:${filePath}`)],
 });

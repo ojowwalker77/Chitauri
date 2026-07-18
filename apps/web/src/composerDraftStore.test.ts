@@ -430,6 +430,60 @@ describe("composerDraftStore prompt history saved draft", () => {
     resetComposerDraftStore();
   });
 
+  it("removes a retried AppSnap from live and prompt-history slots without duplicates", () => {
+    const store = useComposerDraftStore.getState();
+    const source = {
+      kind: "appsnap" as const,
+      captureId: "capture-retry",
+      capturedAt: "2026-07-17T00:00:00.000Z",
+      appName: "Safari",
+      windowTitle: "TeaCode",
+    };
+    const savedImage = {
+      ...makeImage({ id: "saved-capture", previewUrl: "blob:saved-capture" }),
+      source,
+    };
+    store.addImage(threadId, savedImage);
+    void store.syncPersistedAttachments(threadId, [
+      {
+        id: savedImage.id,
+        name: savedImage.name,
+        mimeType: savedImage.mimeType,
+        sizeBytes: savedImage.sizeBytes,
+        blobKey: `${threadId}:${savedImage.id}`,
+        source,
+      },
+    ]);
+    const draft = useComposerDraftStore.getState().draftsByThreadId[threadId]!;
+    store.setPromptHistorySavedDraft(
+      threadId,
+      captureComposerPromptHistorySavedDraft({ threadId, draft, prompt: "draft" }),
+    );
+    const liveImage = {
+      ...makeImage({ id: "live-capture", previewUrl: "blob:live-capture" }),
+      source,
+    };
+    store.addImage(threadId, liveImage);
+    void store.syncPersistedAttachments(threadId, [
+      {
+        id: liveImage.id,
+        name: liveImage.name,
+        mimeType: liveImage.mimeType,
+        sizeBytes: liveImage.sizeBytes,
+        blobKey: `${threadId}:${liveImage.id}`,
+        source,
+      },
+    ]);
+
+    store.removeAppSnapCapture(source.captureId);
+
+    const after = useComposerDraftStore.getState().draftsByThreadId[threadId];
+    expect(after?.images).toEqual([]);
+    expect(after?.persistedAttachments).toEqual([]);
+    expect(after?.promptHistorySavedDraft?.images).toEqual([]);
+    expect(after?.promptHistorySavedDraft?.persistedAttachments).toEqual([]);
+  });
+
   it("moves composer attachments into the prompt-history snapshot while browsing", () => {
     const store = useComposerDraftStore.getState();
     const image = makeImage({ id: "img-history", previewUrl: "blob:history" });
@@ -1002,7 +1056,7 @@ describe("composerDraftStore syncPersistedAttachments", () => {
     removeLocalStorageItem(COMPOSER_DRAFT_STORAGE_KEY);
   });
 
-  it("treats malformed persisted draft storage as empty", async () => {
+  it("keeps staged metadata when malformed storage cannot be verified", async () => {
     const image = makeImage({
       id: "img-persisted",
       previewUrl: "blob:persisted",
@@ -1023,7 +1077,7 @@ describe("composerDraftStore syncPersistedAttachments", () => {
       Schema.Unknown,
     );
 
-    useComposerDraftStore.getState().syncPersistedAttachments(threadId, [
+    const result = await useComposerDraftStore.getState().syncPersistedAttachments(threadId, [
       {
         id: image.id,
         name: image.name,
@@ -1032,14 +1086,22 @@ describe("composerDraftStore syncPersistedAttachments", () => {
         dataUrl: image.previewUrl,
       },
     ]);
-    await Promise.resolve();
 
+    expect(result).toBe("unverified");
     expect(
       useComposerDraftStore.getState().draftsByThreadId[threadId]?.persistedAttachments,
-    ).toEqual([]);
+    ).toEqual([
+      {
+        id: image.id,
+        name: image.name,
+        mimeType: image.mimeType,
+        sizeBytes: image.sizeBytes,
+        dataUrl: image.previewUrl,
+      },
+    ]);
     expect(
       useComposerDraftStore.getState().draftsByThreadId[threadId]?.nonPersistedImageIds,
-    ).toEqual([image.id]);
+    ).toEqual([]);
   });
 });
 

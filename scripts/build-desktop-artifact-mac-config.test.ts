@@ -2,6 +2,9 @@ import { assert, describe, it } from "@effect/vitest";
 
 import {
   createDesktopPlatformBuildConfig,
+  MAC_APPSNAP_HELPER_ASAR_EXCLUSION,
+  MAC_APPSNAP_HELPER_BUNDLE_PATH,
+  MAC_APPSNAP_HELPER_STAGE_PATH,
   MAC_ENTITLEMENTS_PATH,
   MAC_INHERITED_ENTITLEMENTS_PATH,
   MICROPHONE_USAGE_DESCRIPTION,
@@ -25,6 +28,15 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.equal(mac.hardenedRuntime, true);
     assert.equal(mac.entitlements, MAC_ENTITLEMENTS_PATH);
     assert.equal(mac.entitlementsInherit, MAC_INHERITED_ENTITLEMENTS_PATH);
+    assert.deepStrictEqual(mac.binaries, [MAC_APPSNAP_HELPER_BUNDLE_PATH]);
+    assert.equal(mac.x64ArchFiles, MAC_APPSNAP_HELPER_BUNDLE_PATH);
+    assert.deepStrictEqual(config.files, ["**/*", MAC_APPSNAP_HELPER_ASAR_EXCLUSION]);
+    assert.deepStrictEqual(config.extraFiles, [
+      {
+        from: MAC_APPSNAP_HELPER_STAGE_PATH,
+        to: "Helpers/teacode-appsnap-helper",
+      },
+    ]);
     assert.equal(extendInfo.NSMicrophoneUsageDescription, MICROPHONE_USAGE_DESCRIPTION);
   });
 
@@ -101,6 +113,26 @@ describe("createDesktopPlatformBuildConfig", () => {
     });
 
     assert.ok(issue?.includes("Build linux/x64 on a matching Linux host"));
+  });
+
+  it("requires macOS to build the native AppSnap helper", () => {
+    assert.equal(
+      validateDesktopNativeBuildHost({
+        platform: "mac",
+        arch: "universal",
+        hostPlatform: "darwin",
+        hostArch: "arm64",
+      }),
+      null,
+    );
+
+    const issue = validateDesktopNativeBuildHost({
+      platform: "mac",
+      arch: "arm64",
+      hostPlatform: "linux",
+      hostArch: "x64",
+    });
+    assert.ok(issue?.includes("Build mac/arm64 on macOS"));
   });
 
   it("uses the validated TeaCode production icon sources", () => {

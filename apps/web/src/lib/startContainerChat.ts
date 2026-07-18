@@ -4,10 +4,12 @@
 // Layer: Web orchestration helper
 // Exports: startContainerChat plus its result type.
 
-import type { ProjectId } from "@t3tools/contracts";
+import type { ProjectId, ThreadId } from "@t3tools/contracts";
 import type { NewThreadOptions } from "./threadBootstrap";
 
-export type StartContainerChatResult = { ok: true } | { ok: false; error: string };
+export type StartContainerChatResult =
+  | { ok: true; threadId: ThreadId }
+  | { ok: false; error: string };
 
 /**
  * Resolves (creating if needed) the backing container project, then starts a thread inside it.
@@ -15,7 +17,7 @@ export type StartContainerChatResult = { ok: true } | { ok: false; error: string
  */
 export async function startContainerChat(input: {
   readonly ensureProjectId: () => Promise<ProjectId | null>;
-  readonly handleNewThread: (projectId: ProjectId, options?: NewThreadOptions) => Promise<unknown>;
+  readonly handleNewThread: (projectId: ProjectId, options?: NewThreadOptions) => Promise<ThreadId>;
   readonly fresh?: boolean | undefined;
   readonly errorLabel: string;
 }): Promise<StartContainerChatResult> {
@@ -26,8 +28,8 @@ export async function startContainerChat(input: {
     }
     const threadOptions: NewThreadOptions | undefined =
       input.fresh === true ? { fresh: true, envMode: "local", worktreePath: null } : undefined;
-    await input.handleNewThread(projectId, threadOptions);
-    return { ok: true };
+    const threadId = await input.handleNewThread(projectId, threadOptions);
+    return { ok: true, threadId };
   } catch (error) {
     return {
       ok: false,

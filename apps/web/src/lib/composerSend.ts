@@ -19,7 +19,11 @@ import type {
   ComposerAssistantSelectionAttachment,
   ComposerFileAttachment,
   ComposerImageAttachment,
+  PersistedComposerImageAttachment,
 } from "../composerDraftStore";
+import { readComposerImageBlob } from "./composerImageBlobStore";
+import { normalizeComposerImageSource } from "./composerImageSource";
+import { hasSketchpadContent, type SketchpadDocument } from "./composerSketchpad";
 import { randomUUID } from "./utils";
 
 export const IMAGE_SIZE_LIMIT_LABEL = `${Math.round(
@@ -222,4 +226,72 @@ export async function buildUploadComposerAttachments(input: {
       dataUrl: await readFileAsDataUrl(file.file),
     })),
   ]);
+}
+
+interface AttachmentIdCarrier {
+  id: string;
+}
+
+interface EffectiveComposerAttachmentCountDraft {
+  images?: ReadonlyArray<AttachmentIdCarrier>;
+  files?: ReadonlyArray<unknown>;
+  assistantSelections?: ReadonlyArray<unknown>;
+  persistedAttachments?: ReadonlyArray<AttachmentIdCarrier>;
+  sketchpad?: SketchpadDocument | null;
+}
+
+export function effectiveComposerAttachmentCount(
+  draft: EffectiveComposerAttachmentCountDraft | undefined,
+): number {
+  if (!draft) return 0;
+  const hydratedImageIds = new Set((draft.images ?? []).map((image) => image.id));
+  const pendingPersistedCount = (draft.persistedAttachments ?? []).filter(
+    (attachment) => !hydratedImageIds.has(attachment.id),
+  ).length;
+  return (
+    (draft.images?.length ?? 0) +
+    (draft.files?.length ?? 0) +
+    (draft.assistantSelections?.length ?? 0) +
+    pendingPersistedCount +
+    (hasSketchpadContent(draft.sketchpad) ? 1 : 0)
+  );
+}
+
+export function findPendingBlobComposerAttachments(input: {
+  persistedAttachments: ReadonlyArray<PersistedComposerImageAttachment>;
+  images: ReadonlyArray<ComposerImageAttachment>;
+}): PersistedComposerImageAttachment[] {
+  const hydratedImageIds = new Set(input.images.map((image) => image.id));
+  return input.persistedAttachments.filter(
+    (attachment) => Boolean(attachment.blobKey) && !hydratedImageIds.has(attachment.id),
+  );
+}
+
+export async function hydratePendingBlobComposerAttachments(
+  pending: ReadonlyArray<PersistedComposerImageAttachment>,
+): Promise<ComposerImageAttachment[]> {
+  const hydrated = await Promise.all(
+    pending.map(async (attachment): Promise<ComposerImageAttachment | null> => {
+      if (!attachment.blobKey) return null;
+      try {
+        const file = await readComposerImageBlob(attachment.blobKey);
+        if (!file) return null;
+        const source = normalizeComposerImageSource(attachment.source);
+        return {
+          type: "image",
+          id: attachment.id,
+          name: attachment.name,
+          mimeType: attachment.mimeType,
+          sizeBytes: attachment.sizeBytes,
+          previewUrl: URL.createObjectURL(file),
+          file,
+          ...(source ? { source } : {}),
+        };
+      } catch (error) {
+        console.warn("[composer] Could not hydrate a pending image before send", error);
+        return null;
+      }
+    }),
+  );
+  return hydrated.filter((image): image is ComposerImageAttachment => image !== null);
 }

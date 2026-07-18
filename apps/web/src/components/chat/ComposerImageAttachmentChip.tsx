@@ -28,6 +28,67 @@ export const ComposerImageAttachmentChip = memo(function ComposerImageAttachment
   onExpandImage,
   onRemoveImage,
 }: ComposerImageAttachmentChipProps) {
+  const previewImage = () => {
+    const preview = buildExpandedImagePreview(images, image.id);
+    if (preview) onExpandImage(preview);
+  };
+
+  if (image.source?.kind === "appsnap") {
+    const sourceTitle = image.source.windowTitle || image.source.appName || "Captured window";
+    return (
+      <div className="group relative w-64 shrink-0">
+        <button
+          type="button"
+          className="flex h-16 w-full overflow-hidden rounded-xl border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-secondary)] text-left transition-colors hover:border-[color:var(--color-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={`Preview ${image.name}`}
+          onClick={previewImage}
+        >
+          <div className="size-16 shrink-0 overflow-hidden border-r border-[color:var(--color-border-light)]">
+            <img src={image.previewUrl} alt={image.name} className="size-full object-cover" />
+          </div>
+          <div className="flex min-w-0 flex-1 items-center gap-2 px-3 pr-8">
+            {image.source.appIconDataUrl ? (
+              <img
+                src={image.source.appIconDataUrl}
+                alt=""
+                className="size-5 shrink-0 rounded-[5px]"
+              />
+            ) : (
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-[5px] bg-muted text-[9px] font-semibold text-muted-foreground">
+                {(image.source.appName || "A").slice(0, 1).toUpperCase()}
+              </span>
+            )}
+            <span className="min-w-0">
+              <span className="block truncate text-xs font-medium text-foreground">
+                {sourceTitle}
+              </span>
+              <span className="block truncate text-[11px] text-muted-foreground">
+                {image.source.appName || "AppSnap"}
+              </span>
+            </span>
+          </div>
+        </button>
+        {nonPersisted && (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <DraftAttachmentWarningIcon variant="badge" className="absolute bottom-1 left-1" />
+              }
+            />
+            <TooltipPopup side="top" className="max-w-64 whitespace-normal leading-tight">
+              {DRAFT_ATTACHMENT_WARNING_DESCRIPTION}
+            </TooltipPopup>
+          </Tooltip>
+        )}
+        <AttachmentRemoveButton
+          size="md"
+          label={`Remove ${image.name}`}
+          onRemove={() => onRemoveImage(image.id)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="group relative shrink-0">
       <button
@@ -35,11 +96,7 @@ export const ComposerImageAttachmentChip = memo(function ComposerImageAttachment
         className="block size-16 overflow-hidden rounded-xl border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-secondary)] transition-colors hover:border-[color:var(--color-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={`Preview ${image.name}`}
         title={image.name}
-        onClick={() => {
-          const preview = buildExpandedImagePreview(images, image.id);
-          if (!preview) return;
-          onExpandImage(preview);
-        }}
+        onClick={previewImage}
       >
         {image.previewUrl ? (
           <img src={image.previewUrl} alt={image.name} className="size-full object-cover" />
