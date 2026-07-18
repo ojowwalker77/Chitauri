@@ -473,6 +473,15 @@ export function createWsNativeApi(): NativeApi {
       pullRequestDiff: (input) => transport.request(WS_METHODS.githubPullRequestDiff, input),
       workItemAction: (input) => transport.request(WS_METHODS.githubWorkItemAction, input),
     },
+    cloud: {
+      listContexts: () => transport.request(WS_METHODS.cloudListContexts),
+      discoverProject: (input) => transport.request(WS_METHODS.cloudDiscoverProject, input),
+      listBindings: (input) => transport.request(WS_METHODS.cloudListBindings, input),
+      upsertBinding: (input) => transport.request(WS_METHODS.cloudUpsertBinding, input),
+      searchResources: (input) => transport.request(WS_METHODS.cloudSearchResources, input),
+      resourceDetail: (input) => transport.request(WS_METHODS.cloudResourceDetail, input),
+      queryLogs: (input) => transport.request(WS_METHODS.cloudQueryLogs, input),
+    },
     contextMenu: {
       show: async <T extends string>(
         items: readonly ContextMenuItem<T>[],

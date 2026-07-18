@@ -3,6 +3,7 @@ import { stat as statPath } from "node:fs/promises";
 
 import {
   CommandId,
+  CloudError,
   DEFAULT_TERMINAL_ID,
   ORCHESTRATION_WS_METHODS,
   ThreadId,
@@ -38,6 +39,8 @@ import { GitCore, type GitCoreShape } from "./git/Services/GitCore";
 import { GitManager } from "./git/Services/GitManager";
 import { GitStatusBroadcaster } from "./git/Services/GitStatusBroadcaster";
 import { GitHubWorkbench } from "./github/Services/GitHubWorkbench";
+import { CloudWorkbench } from "./cloud/Services/CloudWorkbench";
+import { CloudOperationError } from "./cloud/Errors";
 import { TextGeneration } from "./git/Services/TextGeneration";
 import { Keybindings } from "./keybindings";
 import { createLocalPreviewGrant } from "./localImageFiles";
@@ -284,6 +287,24 @@ function toWsRpcError(cause: unknown, fallbackMessage: string) {
       });
 }
 
+function toCloudRpcError(cause: unknown, fallbackMessage: string) {
+  if (cause instanceof CloudError) return cause;
+  if (cause instanceof CloudOperationError) {
+    return new CloudError({
+      code: cause.code,
+      message: cause.detail,
+      retryable: cause.retryable,
+      setupInstruction: cause.setupInstruction ?? null,
+    });
+  }
+  return new CloudError({
+    code: "provider_error",
+    message: cause instanceof Error && cause.message.length > 0 ? cause.message : fallbackMessage,
+    retryable: true,
+    setupInstruction: null,
+  });
+}
+
 const failLiveUiStreamForSnapshotResync = (report: LiveUiStreamDropReport) =>
   Effect.fail(
     new WsRpcError({
@@ -364,6 +385,7 @@ export const makeWsRpcLayer = () =>
       const gitManager = yield* GitManager;
       const gitStatusBroadcaster = yield* GitStatusBroadcaster;
       const githubWorkbench = yield* GitHubWorkbench;
+      const cloudWorkbench = yield* CloudWorkbench;
       const keybindings = yield* Keybindings;
       const open = yield* Open;
       const orchestrationEngine = yield* OrchestrationEngineService;
@@ -786,6 +808,8 @@ export const makeWsRpcLayer = () =>
 
       const rpcEffect = <A, E, R>(effect: Effect.Effect<A, E, R>, fallbackMessage: string) =>
         effect.pipe(Effect.mapError((cause) => toWsRpcError(cause, fallbackMessage)));
+      const cloudRpcEffect = <A, E, R>(effect: Effect.Effect<A, E, R>, fallbackMessage: string) =>
+        effect.pipe(Effect.mapError((cause) => toCloudRpcError(cause, fallbackMessage)));
 
       return WsRpcGroup.of({
         [ORCHESTRATION_WS_METHODS.dispatchCommand]: (command) =>
@@ -1044,6 +1068,26 @@ export const makeWsRpcLayer = () =>
           rpcEffect(githubWorkbench.pullRequestDiff(input), "Failed to load pull request diff"),
         [WS_METHODS.githubWorkItemAction]: (input) =>
           rpcEffect(githubWorkbench.workItemAction(input), "Failed to update GitHub item"),
+        [WS_METHODS.cloudListContexts]: () =>
+          cloudRpcEffect(cloudWorkbench.listContexts(), "Failed to inspect cloud identities"),
+        [WS_METHODS.cloudDiscoverProject]: (input) =>
+          cloudRpcEffect(
+            cloudWorkbench.discoverProject(input),
+            "Failed to inspect repository infrastructure",
+          ),
+        [WS_METHODS.cloudListBindings]: (input) =>
+          cloudRpcEffect(cloudWorkbench.listBindings(input), "Failed to load cloud bindings"),
+        [WS_METHODS.cloudUpsertBinding]: (input) =>
+          cloudRpcEffect(cloudWorkbench.upsertBinding(input), "Failed to save cloud binding"),
+        [WS_METHODS.cloudSearchResources]: (input) =>
+          cloudRpcEffect(cloudWorkbench.searchResources(input), "Failed to search cloud resources"),
+        [WS_METHODS.cloudResourceDetail]: (input) =>
+          cloudRpcEffect(
+            cloudWorkbench.resourceDetail(input),
+            "Failed to load cloud resource detail",
+          ),
+        [WS_METHODS.cloudQueryLogs]: (input) =>
+          cloudRpcEffect(cloudWorkbench.queryLogs(input), "Failed to query cloud logs"),
         [WS_METHODS.gitListBranches]: (input) =>
           rpcEffect(git.listBranches(input), "Failed to list branches"),
         [WS_METHODS.gitCreateWorktree]: (input) =>
