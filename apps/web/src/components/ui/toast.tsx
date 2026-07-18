@@ -69,7 +69,7 @@ function isArchiveUndoToast(toast: ToastObject<ThreadToastData>): boolean {
 // toast root no-drag so Electron titlebar hit testing cannot swallow clicks.
 const ARCHIVE_UNDO_TOAST_SURFACE_CLASS_NAME = cn(
   APP_TOOLTIP_SURFACE_CLASS_NAME,
-  "absolute w-max max-w-[min(calc(100vw-2rem),28rem)] rounded-[11px] [--notification-fg:var(--popover-foreground)] [-webkit-app-region:no-drag]",
+  "absolute w-max max-w-[min(calc(100vw-2rem),28rem)] rounded-[8px] [--notification-fg:var(--popover-foreground)] [-webkit-app-region:no-drag]",
 );
 
 const ARCHIVE_UNDO_TOAST_LINK_CLASS_NAME =
@@ -347,7 +347,7 @@ function ArchiveUndoToastSurface({
       />
       <Toast.Content
         className={cn(
-          "pointer-events-auto relative flex items-center gap-2 overflow-hidden px-3.5 py-2 text-[length:var(--app-font-size-ui-sm,13px)] leading-normal transition-opacity duration-250 data-expanded:opacity-100",
+          "pointer-events-auto relative flex items-center gap-2 overflow-hidden px-3.5 py-2 text-[length:var(--app-font-size-ui-sm,13px)] leading-normal transition-opacity duration-250 data-expanded:opacity-100 motion-reduce:transition-none",
           hideCollapsedContent &&
             "not-data-expanded:pointer-events-none not-data-expanded:opacity-0",
         )}
@@ -400,7 +400,7 @@ function ToastSurface({
   return (
     <Toast.Content
       className={cn(
-        "pointer-events-auto relative flex overflow-hidden transition-opacity duration-250 data-expanded:opacity-100",
+        "pointer-events-auto relative flex overflow-hidden transition-opacity duration-250 data-expanded:opacity-100 motion-reduce:transition-none",
         compact
           ? "items-center gap-2 px-3 py-2 pr-1.5 text-[12.5px] font-medium leading-normal"
           : "items-start gap-2 px-3.5 py-3 pr-10 text-[12.5px] font-medium",

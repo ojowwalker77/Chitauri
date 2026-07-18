@@ -108,7 +108,7 @@ export const SubagentCardList = memo(function SubagentCardList({
   return (
     <div
       className={cn(
-        "space-y-[5px] rounded-[14px] border border-panel-border bg-panel",
+        "space-y-[5px] rounded-[10px] border border-panel-border bg-panel",
         compact ? "px-2.5 py-2" : "px-3 py-[9px]",
       )}
     >

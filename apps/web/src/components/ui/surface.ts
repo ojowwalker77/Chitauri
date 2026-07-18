@@ -14,7 +14,7 @@ export const PANEL_SECTION_DIVIDER_CLASS_NAME = "border-panel-border";
 
 /** Inset content well used by diffs, code, and grouped content inside a panel. */
 export const INSET_WELL_SURFACE_CLASS_NAME =
-  "overflow-hidden rounded-[11px] border border-panel-border bg-[var(--well)]";
+  "overflow-hidden rounded-[8px] border border-panel-border bg-[var(--well)]";
 
 /** Transient elevation role. Shadows are reserved for overlays only. */
 export const OVERLAY_SURFACE_CLASS_NAME =

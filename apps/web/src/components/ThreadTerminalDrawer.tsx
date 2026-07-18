@@ -25,6 +25,7 @@ import {
 } from "../types";
 import { cn } from "~/lib/utils";
 import { PANEL_SURFACE_CLASS_NAME } from "./ui/surface";
+import { Spinner } from "./ui/spinner";
 import {
   type TerminalChromeActionItem,
   TerminalSidebar,
@@ -92,17 +93,28 @@ function getTerminalSelectionRect(mountElement: HTMLElement): DOMRect | null {
 }
 
 function TerminalRuntimeStatusOverlay({ status }: { status: TerminalRuntimeStatus }) {
-  if (status !== "error") return null;
+  if (status !== "error" && status !== "connecting") return null;
 
   return (
     <div
       className={cn(
         "pointer-events-none absolute left-1 top-1 z-10 inline-flex h-6 max-w-[calc(100%-0.5rem)] items-center gap-1.5 rounded border px-2 text-[11px] leading-none",
-        "border-destructive/30 bg-panel text-destructive",
+        status === "error"
+          ? "border-destructive/30 bg-panel text-destructive"
+          : "border-border bg-panel text-muted-foreground",
       )}
     >
-      <TriangleAlertIcon className="size-3" />
-      <span className="truncate">Error</span>
+      {status === "error" ? (
+        <>
+          <TriangleAlertIcon className="size-3" />
+          <span className="truncate">Error</span>
+        </>
+      ) : (
+        <>
+          <Spinner className="size-3" />
+          <span className="truncate">Connecting…</span>
+        </>
+      )}
     </div>
   );
 }

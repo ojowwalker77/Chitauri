@@ -7,7 +7,7 @@
 export const SIDEBAR_ROW_HEIGHT_CLASS_NAME =
   "min-h-[var(--app-density-row-height,1.75rem)] h-[var(--app-density-row-height,1.75rem)]";
 
-export const SIDEBAR_ROW_RADIUS_CLASS_NAME = "rounded-[10px]";
+export const SIDEBAR_ROW_RADIUS_CLASS_NAME = "rounded-[8px]";
 
 export const SIDEBAR_ROW_PADDING_CLASS_NAME =
   "px-2.5 py-[var(--app-density-row-padding-y,0.125rem)]";

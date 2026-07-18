@@ -339,7 +339,7 @@ function ResourceRow(props: {
       type="button"
       onClick={props.onSelect}
       className={cn(
-        "flex w-full items-start gap-2.5 rounded-[10px] px-2.5 py-2 text-left outline-none transition-[background-color,scale] duration-press ease-out focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98] motion-reduce:active:scale-100",
+        "flex w-full items-start gap-2.5 rounded-[8px] px-2.5 py-2 text-left outline-none transition-[background-color,scale] duration-press ease-out focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98] motion-reduce:active:scale-100",
         props.selected ? "bg-selected" : "hover:bg-hover",
       )}
     >
@@ -415,6 +415,7 @@ function CloudWorkbenchRoute() {
   const [logQuery, setLogQuery] = useState("");
   const [logRangeMinutes, setLogRangeMinutes] = useState(15);
   const [selectedLogIds, setSelectedLogIds] = useState<Set<string>>(new Set());
+  const [startingInvestigation, setStartingInvestigation] = useState(false);
   const [debouncedResourceQuery] = useDebouncedValue(resourceQuery, { wait: 300 });
 
   const bindings = bindingsQuery.data?.bindings ?? EMPTY_BINDINGS;
@@ -639,7 +640,8 @@ function CloudWorkbenchRoute() {
   };
 
   const startInvestigation = async () => {
-    if (!detail || !selectedBindingProject) return;
+    if (startingInvestigation || !detail || !selectedBindingProject) return;
+    setStartingInvestigation(true);
     try {
       const threadId = await handleNewThread(selectedBindingProject.id, { fresh: true });
       const selectedLogs = (logsMutation.data?.entries ?? []).filter((entry) =>
@@ -660,6 +662,8 @@ function CloudWorkbenchRoute() {
         description: errorMessage(error),
         timeout: 6000,
       });
+    } finally {
+      setStartingInvestigation(false);
     }
   };
 
@@ -974,8 +978,17 @@ function CloudWorkbenchRoute() {
                             {detail.resource.externalId}
                           </p>
                         </div>
-                        <Button size="sm" onClick={() => void startInvestigation()}>
-                          <SparklesIcon /> Investigate in thread
+                        <Button
+                          size="sm"
+                          disabled={startingInvestigation}
+                          onClick={() => void startInvestigation()}
+                        >
+                          {startingInvestigation ? (
+                            <Spinner className="size-3.5" />
+                          ) : (
+                            <SparklesIcon />
+                          )}{" "}
+                          Investigate in thread
                         </Button>
                       </div>
                       <div className="mt-3 flex gap-1">

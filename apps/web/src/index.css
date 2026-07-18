@@ -142,7 +142,9 @@
   --transition-duration-tooltip: 160ms;
   --transition-duration-menu: 200ms;
   --transition-duration-disclosure: 220ms;
-  --transition-duration-sheet: 300ms;
+  /* Sheets match disclosures: a sliding panel is something the user asked for, so
+     it must not make them wait — 220ms keeps travel visible without a pause. */
+  --transition-duration-sheet: 220ms;
 }
 
 @layer base {
@@ -187,7 +189,7 @@
     overflow: hidden;
     background: var(--app-sidebar-surface);
     border: 1px solid var(--sidebar-border);
-    border-radius: 14px;
+    border-radius: 10px;
     box-shadow: none;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -202,7 +204,7 @@
   .app-sidebar-surface [data-slot="sidebar-menu-button"],
   .app-sidebar-surface [data-slot="sidebar-menu-sub-button"],
   .app-sidebar-surface [data-thread-item] {
-    border-radius: 10px;
+    border-radius: 8px;
     transition-duration: 140ms;
   }
 
@@ -362,7 +364,7 @@
 
 :root {
   color-scheme: light;
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   --radius-user-message: var(--radius-2xl);
   --font-ui-family: "Inter", sans-serif;
   --font-mono-family: "0xProto", monospace;
@@ -506,6 +508,16 @@ body {
 :focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+/* Design.md §4: focused text inputs and the composer get no colored ring — the
+   surface border darkening carries focus. This rule is intentionally unlayered:
+   the global :focus-visible above outranks layered utilities (like the editor's
+   focus:outline-none), so the exception must live at the same cascade level. */
+[contenteditable="true"]:focus-visible,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus-visible,
+textarea:focus-visible {
+  outline: none;
 }
 
 /* Electron-only native cue: a restrained wallpaper sliver doubles as the
@@ -876,7 +888,7 @@ label:has(> select#reasoning-effort) select {
 .chat-markdown pre {
   max-width: 100%;
   overflow-x: auto;
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   background: var(--app-chat-code-surface);
   padding: 0.5rem 0.6rem;
   font-family: var(--font-chat-code-family);
@@ -894,7 +906,7 @@ label:has(> select#reasoning-effort) select {
 .chat-markdown .chat-markdown-codeblock {
   margin: 0.65rem 0;
   overflow: hidden;
-  border-radius: 0.65rem;
+  border-radius: 0.5rem;
   background: var(--app-chat-code-surface);
 }
 
@@ -1137,7 +1149,7 @@ label:has(> select#reasoning-effort) select {
   gap: 0.5rem;
   padding: 0.75rem 0.875rem;
   border: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
-  border-radius: 0.875rem;
+  border-radius: 0.625rem;
   background: var(--panel);
   /* The box lives inside the file viewer, which sets the monospace code font on
      its content; reset to the normal UI font so the comment chrome reads as app
@@ -1377,7 +1389,7 @@ label:has(> select#reasoning-effort) select {
   min-height: 0;
   gap: 0.6rem;
   padding: 0.6rem 0.75rem;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   background: color-mix(in srgb, var(--muted) 35%, transparent);
 }
@@ -1564,7 +1576,7 @@ label:has(> select#reasoning-effort) select {
   margin: 0;
   border: 0;
   padding: 0;
-  border-radius: 0.85rem;
+  border-radius: 0.625rem;
   overflow: hidden;
   background: color-mix(in srgb, var(--muted) 55%, transparent);
   cursor: zoom-in;
@@ -2552,4 +2564,14 @@ diffs-container {
   display: inline-block;
   color: var(--foreground);
   background: none;
+}
+
+/* Reduced motion: stop ambient loops that have no interaction meaning. The static
+   element still reads as its state (skeleton block, running dot) without the loop. */
+@media (prefers-reduced-motion: reduce) {
+  .terminal-running-indicator__dot,
+  .chat-generated-image__skeleton,
+  .animate-skeleton {
+    animation: none;
+  }
 }

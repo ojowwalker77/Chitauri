@@ -442,16 +442,29 @@ function haveSameChromePalette(left: ChromeTheme, right: ChromeTheme): boolean {
   );
 }
 
+/** Accents retired by the monochrome design system (Design.md §2): orange, coral, gold. */
+const LEGACY_ACCENT_COLORS: ReadonlySet<string> = new Set(["#fb923c", "#d97757", "#a96f35"]);
+
 function migrateLegacyDefaultChromeTheme(theme: ChromeTheme, variant: ThemeVariant): ChromeTheme {
-  if (!haveSameChromePalette(theme, LEGACY_DEFAULT_CHROME_THEME_BY_VARIANT[variant])) {
-    return theme;
+  if (haveSameChromePalette(theme, LEGACY_DEFAULT_CHROME_THEME_BY_VARIANT[variant])) {
+    return {
+      ...DEFAULT_CHROME_THEME_BY_VARIANT[variant],
+      fonts: theme.fonts,
+      opaqueWindows: theme.opaqueWindows,
+    };
   }
 
-  return {
-    ...DEFAULT_CHROME_THEME_BY_VARIANT[variant],
-    fonts: theme.fonts,
-    opaqueWindows: theme.opaqueWindows,
-  };
+  // Stored themes that diverged from the legacy default (contrast tweaks, custom
+  // semantic colors) still carry the retired accent, which paints focus rings and
+  // selection. Migrate the accent alone and keep the rest of the customization.
+  if (LEGACY_ACCENT_COLORS.has(theme.accent)) {
+    return {
+      ...theme,
+      accent: DEFAULT_CHROME_THEME_BY_VARIANT[variant].accent,
+    };
+  }
+
+  return theme;
 }
 
 export function normalizeThemeState(value: unknown): ThemeState {

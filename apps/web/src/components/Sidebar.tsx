@@ -6107,7 +6107,7 @@ export default function Sidebar() {
                     >
                       <SidebarGlyph icon={GitHubIcon} variant="leading" />
                     </SidebarLeadingIcon>
-                    <span className="truncate">GitHub</span>
+                    <span className="truncate">Git Workbench</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>

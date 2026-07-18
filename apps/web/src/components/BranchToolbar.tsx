@@ -44,6 +44,7 @@ import {
 import { ProviderUsagePanelContent } from "./ProviderUsagePanelContent";
 import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
 import { Button } from "./ui/button";
+import { Spinner } from "./ui/spinner";
 import { Collapsible, CollapsiblePanel } from "./ui/collapsible";
 import {
   Menu,
@@ -259,8 +260,12 @@ export default function BranchToolbar({
 
   if (!activeThreadId || !activeProject) return null;
 
+  // Handoff runs multi-second git work after the menu closes; the trigger glyph
+  // is the only chrome still visible, so it carries the in-flight signal.
   const envGlyph = (className: string) =>
-    environmentPresentation.mode === "local" ? (
+    handoffBusy ? (
+      <Spinner className={className} />
+    ) : environmentPresentation.mode === "local" ? (
       <CentralIcon name="macbook-air" className={className} />
     ) : (
       <WorktreeGlyph className={className} />

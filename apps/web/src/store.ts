@@ -69,6 +69,9 @@ export interface AppState {
   turnDiffIdsByThreadId?: Record<ThreadId, TurnId[]>;
   turnDiffSummaryByThreadId?: Record<ThreadId, Record<TurnId, Thread["turnDiffSummaries"][number]>>;
   deletedThreadIdsById?: Record<ThreadId, true>;
+  /** Threads whose full detail snapshot has been applied at least once this session.
+      Lets the transcript distinguish "thread is empty" from "history not loaded yet". */
+  threadDetailSyncedById?: Record<ThreadId, true>;
 }
 
 type ReadModelProject = OrchestrationReadModel["projects"][number];
@@ -157,6 +160,7 @@ const initialState: AppState = {
   turnDiffIdsByThreadId: {},
   turnDiffSummaryByThreadId: {},
   deletedThreadIdsById: {},
+  threadDetailSyncedById: {},
 };
 const persistedExpandedProjectCwds = new Set<string>();
 const persistedProjectOrderCwds: string[] = [];
@@ -2428,6 +2432,8 @@ function removeThreadState(state: AppState, threadId: ThreadId): AppState {
     state.turnDiffSummaryByThreadId ?? EMPTY_TURN_DIFF_BY_THREAD;
   const { [threadId]: _removedSummary, ...sidebarThreadSummaryById } =
     state.sidebarThreadSummaryById;
+  const { [threadId]: _removedDetailSynced, ...threadDetailSyncedById } =
+    state.threadDetailSyncedById ?? {};
   const nextThreadIds = (state.threadIds ?? EMPTY_THREAD_IDS).filter((id) => id !== threadId);
   const nextThreads = state.threads.filter((thread) => thread.id !== threadId);
 
@@ -2454,6 +2460,7 @@ function removeThreadState(state: AppState, threadId: ThreadId): AppState {
     turnDiffIdsByThreadId,
     turnDiffSummaryByThreadId,
     sidebarThreadSummaryById,
+    threadDetailSyncedById,
     threads: nextThreads,
   };
 }
@@ -4054,7 +4061,7 @@ function syncServerThreadDetailWithOptions(
     options?.updateThreadArray === false
       ? mergeReadModelThreadDetailWithLiveHotPath(thread, previousThread)
       : thread;
-  return commitThreadProjection(
+  const nextState = commitThreadProjection(
     writeThreadState(
       state,
       normalizeThreadFromReadModel(nextThreadDetail, previousThread),
@@ -4066,6 +4073,16 @@ function syncServerThreadDetailWithOptions(
       updateSidebarSummary: false,
     },
   );
+  if (nextState.threadDetailSyncedById?.[thread.id] === true) {
+    return nextState;
+  }
+  return {
+    ...nextState,
+    threadDetailSyncedById: {
+      ...(nextState.threadDetailSyncedById ?? {}),
+      [thread.id]: true,
+    },
+  };
 }
 
 export function syncServerThreadDetail(state: AppState, thread: ReadModelThread): AppState {

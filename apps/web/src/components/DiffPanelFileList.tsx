@@ -149,7 +149,7 @@ const DiffPanelFileRow = memo(function DiffPanelFileRow(props: {
   return (
     <div
       data-diff-file-path={filePath}
-      className="diff-render-file mb-2 overflow-hidden rounded-[11px] border border-panel-border bg-[#101010] first:mt-2 last:mb-0"
+      className="diff-render-file mb-2 overflow-hidden rounded-[8px] border border-panel-border bg-[#101010] first:mt-2 last:mb-0"
       onClickCapture={handleClickCapture}
     >
       <FileDiffCard

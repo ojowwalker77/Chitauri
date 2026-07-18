@@ -79,11 +79,14 @@ export function findProjectForGitHubItem(
 
 export function buildGitHubAgentPrompt(
   item: GitHubWorkItemSummary,
-  intent: "work" | "review" | "fix_ci",
+  intent: "work" | "review" | "fix_ci" | "triage",
 ): string {
   const target = `${item.repository.nameWithOwner}#${item.number}`;
   if (intent === "review") {
     return `$Splus PR Review\n\nReview pull request ${target}: ${item.title}\n\nUse the checked-out PR as the source of truth. Run the full Splus PR Review workflow and post the verified review to GitHub.\n\n${item.url}`;
+  }
+  if (intent === "triage") {
+    return `Triage GitHub issue ${target}: ${item.title}. Read the issue and the relevant code, then assess: is it reproducible, what is the root cause area, how severe is it, and is it a duplicate of existing work. Produce a short triage verdict (validity, severity, affected area, suggested labels) and a concrete plan to fix or a reason to close. Do not post to GitHub or change issue state without my explicit approval.\n\n${item.url}`;
   }
   if (intent === "fix_ci") {
     return `Diagnose and fix the failing CI for pull request ${target}: ${item.title}. Inspect the exact failing checks and logs first, make the smallest robust fix, run focused verification, and leave all GitHub posting or merging for my explicit approval.\n\n${item.url}`;

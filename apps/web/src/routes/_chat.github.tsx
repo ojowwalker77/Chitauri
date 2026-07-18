@@ -7,7 +7,7 @@ import type {
 } from "@t3tools/contracts";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 import ChatMarkdown from "~/components/ChatMarkdown";
 import { DiffPanelPatchViewport } from "~/components/DiffPanelPatchViewport";
@@ -21,6 +21,8 @@ import {
   CHAT_SURFACE_HEADER_PADDING_X_CLASS,
 } from "~/components/chat/chatHeaderControls";
 import { Button } from "~/components/ui/button";
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "~/components/ui/collapsible";
+import { disclosureChevronClassName } from "~/lib/disclosureMotion";
 import {
   Dialog,
   DialogDescription,
@@ -56,14 +58,17 @@ import {
   ArrowLeftIcon,
   ArrowUpRightIcon,
   CheckCircle2Icon,
+  ChevronRightIcon,
   CircleAlertIcon,
   ExternalLinkIcon,
+  EyeIcon,
+  GitBranchIcon,
   GitHubIcon,
   GitMergeIcon,
   GitPullRequestIcon,
+  ListChecksIcon,
   ListTodoIcon,
   MessageCircleIcon,
-  PlayIcon,
   PlusIcon,
   RefreshCwIcon,
   SearchIcon,
@@ -88,7 +93,8 @@ export const Route = createFileRoute("/_chat/github")({
 });
 
 type DetailTab = "summary" | "timeline" | "code";
-type ComposerMode = "comment" | "review" | null;
+type ComposerMode = "comment" | null;
+type AgentIntent = "work" | "review" | "triage";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "GitHub request failed.";
@@ -141,7 +147,7 @@ function WorkListRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        "group flex w-full items-start gap-2.5 rounded-[10px] px-2.5 py-2 text-left outline-none transition-[background-color,scale] duration-press ease-out focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.96] motion-reduce:active:scale-100",
+        "group flex w-full items-start gap-2.5 rounded-[8px] px-2.5 py-2 text-left outline-none transition-[background-color,scale] duration-press ease-out focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.96] motion-reduce:active:scale-100",
         selected ? "bg-selected" : "hover:bg-hover",
       )}
     >
@@ -153,6 +159,12 @@ function WorkListRow({
           {item.isDraft ? <span>Draft</span> : null}
           <span>·</span>
           <span className="shrink-0">{formatRelativeTime(item.updatedAt)}</span>
+          {item.kind === "pull_request" && (item.additions != null || item.deletions != null) ? (
+            <span className="shrink-0">
+              <span className="text-success">+{item.additions ?? 0}</span>{" "}
+              <span className="text-destructive">−{item.deletions ?? 0}</span>
+            </span>
+          ) : null}
           <span className="ml-auto">
             <StatusDot status={item.checkStatus} />
           </span>
@@ -188,15 +200,19 @@ function EmptyList({ loading, error }: { loading: boolean; error: unknown }) {
 function DetailHeader({
   detail,
   tab,
+  refreshing,
   onBack,
   onTabChange,
   onOpenExternal,
+  onRefresh,
 }: {
   detail: GitHubWorkItemDetail;
   tab: DetailTab;
+  refreshing: boolean;
   onBack: () => void;
   onTabChange: (tab: DetailTab) => void;
   onOpenExternal: () => void;
+  onRefresh: () => void;
 }) {
   const tabs: ReadonlyArray<{ value: DetailTab; label: string }> = [
     { value: "summary", label: "Summary" },
@@ -204,47 +220,52 @@ function DetailHeader({
     ...(detail.item.kind === "pull_request" ? ([{ value: "code", label: "Code" }] as const) : []),
   ];
   return (
-    <div className="border-b border-border/70">
-      <div className="flex min-h-12 items-center gap-2 px-4 py-2">
+    <div className="flex min-h-12 items-center gap-2 border-b border-border/70 px-3 py-1.5">
+      <div className="flex min-w-0 flex-1 basis-0 items-center gap-2">
         <Button
           size="icon-xs"
           variant="ghost"
-          aria-label="Back to GitHub work list"
+          aria-label="Back to work list"
           className="md:hidden"
           onClick={onBack}
         >
           <ArrowLeftIcon />
         </Button>
         <ItemGlyph item={detail.item} />
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-[15px] font-semibold text-foreground">
-            {detail.item.title}
-          </h1>
-          <p className="truncate text-[11px] text-muted-foreground">
-            {detail.item.repository.nameWithOwner} #{detail.item.number} · {detail.item.state}
-            {detail.item.isDraft ? " · draft" : ""}
-          </p>
-        </div>
-        <Button size="icon-xs" variant="ghost" aria-label="Open in GitHub" onClick={onOpenExternal}>
-          <ArrowUpRightIcon />
-        </Button>
+        <span className="truncate text-[13px] font-medium text-foreground">
+          {detail.item.title}
+        </span>
       </div>
-      <div className="flex items-center gap-1 px-4">
+      <div className="flex shrink-0 items-center gap-1">
         {tabs.map((entry) => (
           <button
             key={entry.value}
             type="button"
             onClick={() => onTabChange(entry.value)}
             className={cn(
-              "h-8 rounded-[10px] border px-3 text-xs transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
+              "h-8 rounded-[8px] px-3 text-xs transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
               tab === entry.value
-                ? "border-transparent bg-selected text-foreground"
-                : "border-transparent text-muted-foreground hover:bg-hover hover:text-foreground",
+                ? "bg-selected text-foreground"
+                : "text-muted-foreground hover:bg-hover hover:text-foreground",
             )}
           >
             {entry.label}
           </button>
         ))}
+      </div>
+      <div className="flex min-w-0 flex-1 basis-0 items-center justify-end gap-1">
+        <Button size="icon-xs" variant="ghost" aria-label="Open in GitHub" onClick={onOpenExternal}>
+          <ArrowUpRightIcon />
+        </Button>
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          aria-label="Refresh this item"
+          disabled={refreshing}
+          onClick={onRefresh}
+        >
+          {refreshing ? <Spinner className="size-3.5" /> : <RefreshCwIcon />}
+        </Button>
       </div>
     </div>
   );
@@ -275,6 +296,72 @@ function Stat({
   );
 }
 
+function workItemStatusText(item: GitHubWorkItemSummary): string {
+  if (item.state === "merged") return "Merged";
+  if (item.state === "closed") return "Closed";
+  if (item.kind === "pull_request") {
+    return item.isDraft ? "Draft" : "Ready for review";
+  }
+  return "Open";
+}
+
+function checksSummaryText(detail: GitHubWorkItemDetail): string {
+  if (detail.checks.length === 0) return "No CI checks";
+  const failing = detail.checks.filter(
+    (check) => check.status === "failure" || check.status === "cancelled",
+  ).length;
+  if (failing > 0) {
+    return `${detail.checks.length} checks · ${failing} failing`;
+  }
+  const pending = detail.checks.filter((check) => check.status === "pending").length;
+  if (pending > 0) {
+    return `${detail.checks.length} checks · ${pending} running`;
+  }
+  return "All checks passing";
+}
+
+function MetaRow({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: typeof GitBranchIcon;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 py-1 text-[13px]">
+      <span className="flex w-28 shrink-0 items-center gap-2 text-muted-foreground">
+        <Icon className="size-3.5" />
+        {label}
+      </span>
+      <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-foreground">
+        {children}
+      </span>
+    </div>
+  );
+}
+
+function DetailHero({ item }: { item: GitHubWorkItemSummary }) {
+  return (
+    <header>
+      <h1 className="text-[22px] font-semibold leading-7 tracking-[-0.01em] text-foreground">
+        {item.title}
+      </h1>
+      <p className="mt-1.5 flex items-center gap-1.5 text-[13px] text-muted-foreground">
+        {item.author?.avatarUrl ? (
+          <img src={item.author.avatarUrl} alt="" className="size-4 rounded-full" />
+        ) : null}
+        <span className="text-foreground">{item.author?.login ?? "Unknown"}</span>
+        <span>·</span>
+        <span>{formatRelativeTime(item.updatedAt)}</span>
+        <span>·</span>
+        <span>{workItemStatusText(item)}</span>
+      </p>
+    </header>
+  );
+}
+
 function SummaryView({
   detail,
   cwd,
@@ -287,30 +374,51 @@ function SummaryView({
   onRerunCheck: (runId: number) => void;
 }) {
   const item = detail.item;
+  const [descriptionOpen, setDescriptionOpen] = useState(true);
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 px-5 py-5">
-      <section className="grid gap-x-8 gap-y-1 rounded-xl border border-border/70 bg-background/35 p-4 sm:grid-cols-2">
-        {item.kind === "pull_request" ? (
-          <>
-            <Stat
-              label="Branch"
-              value={`${detail.headBranch ?? "?"} → ${detail.baseBranch ?? "?"}`}
-            />
-            <Stat label="Mergeability" value={detail.mergeability ?? "Unknown"} />
-            <Stat label="Review" value={item.reviewDecision ?? "No decision"} />
-            <Stat
-              label="Checks"
-              value={item.checkStatus ?? (detail.checks.length > 0 ? "Unknown" : "No checks")}
-              {...(item.checkStatus === "success"
-                ? { tone: "success" as const }
-                : item.checkStatus === "failure"
-                  ? { tone: "danger" as const }
-                  : {})}
-            />
-            <Stat label="Files" value={String(item.changedFiles ?? "—")} />
-            <Stat label="Diff" value={`+${item.additions ?? "—"} −${item.deletions ?? "—"}`} />
-          </>
-        ) : (
+    <div className="mx-auto w-full max-w-3xl space-y-6 px-6 py-6">
+      <DetailHero item={item} />
+      {item.kind === "pull_request" ? (
+        <section className="space-y-0.5">
+          <MetaRow icon={GitBranchIcon} label="Branch">
+            <span className="truncate">{detail.headBranch ?? "?"}</span>
+            <ChevronRightIcon className="size-3 shrink-0 text-faint" />
+            <span className="shrink-0">{detail.baseBranch ?? "?"}</span>
+            {item.additions != null || item.deletions != null ? (
+              <span className="ml-1 shrink-0">
+                <span className="text-success">+{item.additions ?? 0}</span>{" "}
+                <span className="text-destructive">−{item.deletions ?? 0}</span>
+              </span>
+            ) : null}
+          </MetaRow>
+          <MetaRow icon={EyeIcon} label="Reviewers">
+            {detail.reviewers.length > 0
+              ? detail.reviewers
+                  .map(
+                    (reviewer) =>
+                      `${reviewer.actor.login}${reviewer.state ? ` · ${reviewer.state.toLowerCase()}` : ""}`,
+                  )
+                  .join(", ")
+              : "No reviewers"}
+          </MetaRow>
+          <MetaRow icon={MessageCircleIcon} label="Comments">
+            {item.commentsCount > 0
+              ? `${item.commentsCount} comment${item.commentsCount === 1 ? "" : "s"}`
+              : "No comments"}
+          </MetaRow>
+          <MetaRow icon={CircleAlertIcon} label="Checks">
+            <span
+              className={cn(
+                item.checkStatus === "failure" && "text-destructive",
+                item.checkStatus === "success" && "text-success",
+              )}
+            >
+              {checksSummaryText(detail)}
+            </span>
+          </MetaRow>
+        </section>
+      ) : (
+        <section className="grid gap-x-8 gap-y-1 rounded-xl border border-border/70 bg-background/35 p-4 sm:grid-cols-2">
           <>
             <Stat label="Author" value={item.author?.login ?? "Unknown"} />
             <Stat label="State" value={item.state} />
@@ -320,26 +428,8 @@ function SummaryView({
             />
             <Stat label="Milestone" value={detail.milestone?.title ?? "None"} />
           </>
-        )}
-      </section>
-
-      {detail.reviewers.length > 0 ? (
-        <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Reviewers
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {detail.reviewers.map((reviewer) => (
-              <span
-                key={reviewer.actor.login}
-                className="rounded-full border border-border px-2 py-1 text-[11px]"
-              >
-                {reviewer.actor.login} · {reviewer.state?.toLowerCase() ?? "pending"}
-              </span>
-            ))}
-          </div>
         </section>
-      ) : null}
+      )}
 
       {detail.checks.length > 0 ? (
         <section>
@@ -401,20 +491,25 @@ function SummaryView({
         </div>
       ) : null}
 
-      <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <Collapsible open={descriptionOpen} onOpenChange={setDescriptionOpen}>
+        <CollapsibleTrigger className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
           Description
-        </h2>
-        {detail.body.trim() ? (
-          <ChatMarkdown
-            text={detail.body}
-            cwd={cwd ?? undefined}
-            className="text-sm leading-relaxed"
-          />
-        ) : (
-          <p className="text-sm text-muted-foreground">No description.</p>
-        )}
-      </section>
+          <ChevronRightIcon className={disclosureChevronClassName(descriptionOpen)} />
+        </CollapsibleTrigger>
+        <CollapsiblePanel>
+          <div className="pt-3">
+            {detail.body.trim() ? (
+              <ChatMarkdown
+                text={detail.body}
+                cwd={cwd ?? undefined}
+                className="text-sm leading-relaxed"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">No description.</p>
+            )}
+          </div>
+        </CollapsiblePanel>
+      </Collapsible>
     </div>
   );
 }
@@ -516,59 +611,23 @@ function CodeView({ detail, cwd }: { detail: GitHubWorkItemDetail; cwd: string |
 }
 
 function ActionComposer({
-  mode,
   pending,
-  canSubmitDecision,
   onCancel,
   onSubmit,
 }: {
-  mode: Exclude<ComposerMode, null>;
   pending: boolean;
-  canSubmitDecision: boolean;
   onCancel: () => void;
-  onSubmit: (body: string, verdict: "comment" | "approve" | "request_changes") => void;
+  onSubmit: (body: string) => void;
 }) {
   const [body, setBody] = useState("");
-  const [verdict, setVerdict] = useState<"comment" | "approve" | "request_changes">("comment");
   return (
     <div className="border-t border-border/70 bg-background/95 p-3">
-      {mode === "review" ? (
-        <div className="mb-2">
-          <div className="flex gap-1">
-            {(
-              [
-                "comment",
-                ...(canSubmitDecision ? (["approve", "request_changes"] as const) : []),
-              ] as const
-            ).map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setVerdict(value)}
-                className={cn(
-                  "rounded-md px-2 py-1 text-[11px] capitalize",
-                  verdict === value
-                    ? "bg-foreground text-background"
-                    : "bg-muted text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {value.replaceAll("_", " ")}
-              </button>
-            ))}
-          </div>
-          {!canSubmitDecision ? (
-            <p className="mt-1.5 text-[11px] text-muted-foreground">
-              GitHub only allows a comment review on your own pull request.
-            </p>
-          ) : null}
-        </div>
-      ) : null}
       <Textarea
         autoFocus
         size="sm"
         value={body}
         onChange={(event) => setBody(event.target.value)}
-        placeholder={mode === "review" ? "Review summary" : "Write a comment"}
+        placeholder="Write a comment"
       />
       <div className="mt-2 flex justify-end gap-2">
         <Button size="xs" variant="ghost" onClick={onCancel} disabled={pending}>
@@ -576,10 +635,10 @@ function ActionComposer({
         </Button>
         <Button
           size="xs"
-          onClick={() => onSubmit(body, verdict)}
+          onClick={() => onSubmit(body)}
           disabled={pending || body.trim().length === 0}
         >
-          {pending ? "Posting…" : mode === "review" ? "Submit review" : "Post comment"}
+          {pending ? "Posting…" : "Post comment"}
         </Button>
       </div>
     </div>
@@ -682,6 +741,9 @@ function GitHubWorkbenchRoute() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>("summary");
   const [composerMode, setComposerMode] = useState<ComposerMode>(null);
+  // Preparing a PR worktree is a slow git/network operation; the action buttons
+  // must show it in flight and refuse double-starts.
+  const [startingAgentIntent, setStartingAgentIntent] = useState<AgentIntent | null>(null);
   const [createIssueOpen, setCreateIssueOpen] = useState(false);
 
   const connectionQueries = useQueries({
@@ -821,7 +883,10 @@ function GitHubWorkbenchRoute() {
         }
       : null;
 
-  const startAgent = async (intent: "work" | "review" | "fix_ci") => {
+  const startAgent = async (intent: AgentIntent) => {
+    if (startingAgentIntent !== null) {
+      return;
+    }
     if (!selectedItem || !selectedProject) {
       toastManager.add({
         type: "warning",
@@ -831,6 +896,7 @@ function GitHubWorkbenchRoute() {
       });
       return;
     }
+    setStartingAgentIntent(intent);
     try {
       let branch: string | null = null;
       let worktreePath: string | null = null;
@@ -858,6 +924,8 @@ function GitHubWorkbenchRoute() {
         description: errorMessage(error),
         timeout: 6000,
       });
+    } finally {
+      setStartingAgentIntent(null);
     }
   };
 
@@ -901,9 +969,9 @@ function GitHubWorkbenchRoute() {
           >
             <SidebarHeaderNavigationControls />
             <GitHubIcon className="size-4 text-foreground" />
-            <span className="text-[14px] font-[590] tracking-[-0.005em]">GitHub</span>
+            <span className="text-[14px] font-[590] tracking-[-0.005em]">Git Workbench</span>
             <RepositoryProjectFilter
-              ariaLabel="GitHub repository"
+              ariaLabel="Git Workbench repository"
               projects={attachedProjects}
               selectedProject={selectedAttachedProject}
               onValueChange={updateProjectFilter}
@@ -918,7 +986,7 @@ function GitHubWorkbenchRoute() {
               <Button
                 size="icon-xs"
                 variant="ghost"
-                aria-label="Refresh GitHub"
+                aria-label="Refresh Git Workbench"
                 onClick={() =>
                   void queryClient.invalidateQueries({ queryKey: ["github-workbench"] })
                 }
@@ -979,7 +1047,7 @@ function GitHubWorkbenchRoute() {
                         type="button"
                         onClick={() => changeView(option.value)}
                         className={cn(
-                          "h-8 shrink-0 rounded-[9px] px-2.5 text-[12px] transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
+                          "h-8 shrink-0 rounded-[7px] px-2.5 text-[12px] transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
                           view === option.value
                             ? "bg-selected text-foreground"
                             : "text-muted-foreground hover:bg-hover hover:text-foreground",
@@ -989,7 +1057,7 @@ function GitHubWorkbenchRoute() {
                       </button>
                     ))}
                   </div>
-                  <div className="mt-2 flex items-center rounded-[10px] border border-panel-border bg-[var(--well)] px-2">
+                  <div className="mt-2 flex items-center rounded-[8px] border border-panel-border bg-[var(--well)] px-2">
                     <SearchIcon className="size-3.5 text-muted-foreground" />
                     <Input
                       unstyled
@@ -1054,144 +1122,116 @@ function GitHubWorkbenchRoute() {
                     <DetailHeader
                       detail={detail}
                       tab={detailTab}
+                      refreshing={detailQuery.isFetching}
                       onBack={() => setSelectedId(null)}
                       onTabChange={setDetailTab}
                       onOpenExternal={() =>
                         void ensureNativeApi().shell.openExternal(detail.item.url)
                       }
+                      onRefresh={() => void detailQuery.refetch()}
                     />
                     <div className="flex flex-wrap items-center gap-1.5 border-b border-border/70 px-3 py-2">
-                      <Button size="xs" onClick={() => void startAgent("work")}>
-                        <SparklesIcon /> Work on this
+                      <Button
+                        size="xs"
+                        disabled={startingAgentIntent !== null}
+                        onClick={() => void startAgent("work")}
+                      >
+                        {startingAgentIntent === "work" ? (
+                          <Spinner className="size-3.5" />
+                        ) : (
+                          <SparklesIcon />
+                        )}{" "}
+                        Work on this
                       </Button>
                       {detail.item.kind === "pull_request" ? (
                         <Button
                           size="xs"
                           variant="outline"
+                          disabled={startingAgentIntent !== null}
                           onClick={() => void startAgent("review")}
                         >
-                          <GitPullRequestIcon /> Agent review
+                          {startingAgentIntent === "review" ? (
+                            <Spinner className="size-3.5" />
+                          ) : (
+                            <GitPullRequestIcon />
+                          )}{" "}
+                          Review this
                         </Button>
-                      ) : null}
-                      {detail.item.checkStatus === "failure" ? (
+                      ) : (
                         <Button
                           size="xs"
                           variant="outline"
-                          onClick={() => void startAgent("fix_ci")}
+                          disabled={startingAgentIntent !== null}
+                          onClick={() => void startAgent("triage")}
                         >
-                          <CircleAlertIcon /> Fix CI
+                          {startingAgentIntent === "triage" ? (
+                            <Spinner className="size-3.5" />
+                          ) : (
+                            <ListChecksIcon />
+                          )}{" "}
+                          Triage this issue
                         </Button>
-                      ) : null}
-                      <Button size="xs" variant="ghost" onClick={() => setComposerMode("comment")}>
-                        <MessageCircleIcon /> Comment
-                      </Button>
-                      {detail.item.kind === "pull_request" ? (
-                        <Button size="xs" variant="ghost" onClick={() => setComposerMode("review")}>
-                          <CheckCircle2Icon /> Review
-                        </Button>
-                      ) : null}
-                      {detail.item.isDraft && target ? (
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          onClick={() =>
-                            void runAction({ action: "ready", ...target, kind: "pull_request" })
-                          }
-                        >
-                          <PlayIcon /> Ready
-                        </Button>
-                      ) : null}
-                      {target ? (
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          onClick={() =>
-                            void runAction({
-                              action: "assign_self",
-                              ...target,
-                              assigned: !detail.item.assignees.some(
+                      )}
+                      {detail.item.kind === "issue" ? (
+                        <>
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            onClick={() => setComposerMode("comment")}
+                          >
+                            <MessageCircleIcon /> Comment
+                          </Button>
+                          {target ? (
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              onClick={() =>
+                                void runAction({
+                                  action: "assign_self",
+                                  ...target,
+                                  assigned: !detail.item.assignees.some(
+                                    (actor) => actor.login === selectedItemConnection?.account,
+                                  ),
+                                })
+                              }
+                            >
+                              {detail.item.assignees.some(
                                 (actor) => actor.login === selectedItemConnection?.account,
-                              ),
-                            })
-                          }
-                        >
-                          {detail.item.assignees.some(
-                            (actor) => actor.login === selectedItemConnection?.account,
-                          )
-                            ? "Unassign me"
-                            : "Assign me"}
-                        </Button>
+                              )
+                                ? "Unassign me"
+                                : "Assign me"}
+                            </Button>
+                          ) : null}
+                          {target ? (
+                            <div className="ml-auto">
+                              <Button
+                                size="xs"
+                                variant={
+                                  detail.item.state === "open" ? "destructive-outline" : "outline"
+                                }
+                                onClick={async () => {
+                                  const nextState =
+                                    detail.item.state === "open" ? "closed" : "open";
+                                  const confirmed =
+                                    nextState === "open" ||
+                                    (await ensureNativeApi().dialogs.confirm(
+                                      `Close issue #${detail.item.number}?`,
+                                    ));
+                                  if (confirmed)
+                                    void runAction({
+                                      action: "set_state",
+                                      ...target,
+                                      state: nextState,
+                                      closeReason: nextState === "closed" ? "completed" : null,
+                                    });
+                                }}
+                              >
+                                {detail.item.state === "open" ? "Close" : "Reopen"}
+                              </Button>
+                            </div>
+                          ) : null}
+                        </>
                       ) : null}
-                      <div className="ml-auto flex gap-1">
-                        {detail.item.kind === "pull_request" && target ? (
-                          <Button
-                            size="xs"
-                            variant="outline"
-                            onClick={() =>
-                              void runAction({
-                                action: "update_branch",
-                                ...target,
-                                kind: "pull_request",
-                              })
-                            }
-                          >
-                            <RefreshCwIcon /> Update branch
-                          </Button>
-                        ) : null}
-                        {target ? (
-                          <Button
-                            size="xs"
-                            variant={
-                              detail.item.state === "open" ? "destructive-outline" : "outline"
-                            }
-                            onClick={async () => {
-                              const nextState = detail.item.state === "open" ? "closed" : "open";
-                              const confirmed =
-                                nextState === "open" ||
-                                (await ensureNativeApi().dialogs.confirm(
-                                  `Close ${detail.item.kind === "pull_request" ? "pull request" : "issue"} #${detail.item.number}?`,
-                                ));
-                              if (confirmed)
-                                void runAction({
-                                  action: "set_state",
-                                  ...target,
-                                  state: nextState,
-                                  closeReason:
-                                    detail.item.kind === "issue" && nextState === "closed"
-                                      ? "completed"
-                                      : null,
-                                });
-                            }}
-                          >
-                            {detail.item.state === "open" ? "Close" : "Reopen"}
-                          </Button>
-                        ) : null}
-                        {detail.item.kind === "pull_request" &&
-                        detail.item.state === "open" &&
-                        detail.headSha &&
-                        target ? (
-                          <Button
-                            size="xs"
-                            onClick={async () => {
-                              const confirmed = await ensureNativeApi().dialogs.confirm(
-                                `Squash and merge #${detail.item.number} at ${detail.headSha?.slice(0, 8)}?`,
-                              );
-                              if (confirmed)
-                                void runAction({
-                                  action: "merge",
-                                  ...target,
-                                  kind: "pull_request",
-                                  method: "squash",
-                                  deleteBranch: true,
-                                  auto: false,
-                                  expectedHeadSha: detail.headSha!,
-                                });
-                            }}
-                          >
-                            <GitMergeIcon /> Merge
-                          </Button>
-                        ) : null}
-                      </div>
                     </div>
                     <div className="min-h-0 flex-1 overflow-y-auto">
                       {detailTab === "summary" ? (
@@ -1227,25 +1267,11 @@ function GitHubWorkbenchRoute() {
                     </div>
                     {composerMode ? (
                       <ActionComposer
-                        mode={composerMode}
                         pending={actionMutation.isPending}
-                        canSubmitDecision={
-                          detail.item.author?.login !== selectedItemConnection?.account
-                        }
                         onCancel={() => setComposerMode(null)}
-                        onSubmit={(body, verdict) => {
+                        onSubmit={(body) => {
                           if (!target) return;
-                          void runAction(
-                            composerMode === "review"
-                              ? {
-                                  action: "review",
-                                  ...target,
-                                  kind: "pull_request",
-                                  verdict,
-                                  body: body.trim(),
-                                }
-                              : { action: "comment", ...target, body: body.trim() },
-                          );
+                          void runAction({ action: "comment", ...target, body: body.trim() });
                         }}
                       />
                     ) : null}

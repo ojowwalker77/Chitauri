@@ -1677,7 +1677,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     </button>
                   );
                   return (
-                    <div className="mt-1 mb-4 overflow-hidden rounded-[0.65rem] border border-[color:var(--color-border-light)] dark:border-[color:color-mix(in_srgb,var(--color-border-light)_55%,transparent)]">
+                    <div className="mt-1 mb-4 overflow-hidden rounded-[0.5rem] border border-[color:var(--color-border-light)] dark:border-[color:color-mix(in_srgb,var(--color-border-light)_55%,transparent)]">
                       <div
                         className={cn(
                           "flex items-center justify-between gap-3 bg-[var(--app-user-message-background)] px-3 py-1.5",

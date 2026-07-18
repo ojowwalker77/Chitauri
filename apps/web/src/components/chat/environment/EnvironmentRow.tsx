@@ -24,7 +24,7 @@ import {
  * trigger and a plain button row are visually identical.
  */
 export const ENVIRONMENT_ROW_CLASS_NAME = cn(
-  "flex min-h-[38px] w-full cursor-pointer items-center gap-2 rounded-[10px] px-2.5 py-1 text-left",
+  "flex min-h-[38px] w-full cursor-pointer items-center gap-2 rounded-[8px] px-2.5 py-1 text-left",
   "text-[length:var(--app-font-size-ui,14px)] font-normal text-[var(--color-text-foreground)]",
   "outline-none transition-colors",
   "hover:bg-[var(--color-background-elevated-secondary)]",
@@ -100,7 +100,7 @@ export function EnvironmentCollapsibleSection({
     <Collapsible open={open} onOpenChange={setOpen} className="flex flex-col">
       <CollapsibleTrigger
         className={cn(
-          "group/section flex min-h-[38px] w-full items-center justify-between gap-2 rounded-[10px] px-2.5 py-1 text-left",
+          "group/section flex min-h-[38px] w-full items-center justify-between gap-2 rounded-[8px] px-2.5 py-1 text-left",
           "outline-none transition-colors",
           "hover:bg-[var(--color-background-elevated-secondary)]",
           "focus-visible:bg-[var(--color-background-elevated-secondary)]",
