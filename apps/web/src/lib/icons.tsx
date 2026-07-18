@@ -19,6 +19,7 @@ import {
   TbArrowsUpDown as IconArrowsUpDown,
   TbBell as IconBell,
   TbBolt as IconBolt,
+  TbBooks as IconBooks,
   TbBrain as IconBrain,
   TbBug as IconBug,
   TbCamera as IconCamera,
@@ -178,6 +179,7 @@ export const PaletteIcon = adaptIcon(IconPalette);
 export const PaperclipIcon = adaptIcon(IconPaperclip);
 export const AdjustmentsIcon = adaptIcon(IconAdjustments);
 export const ArchiveIcon = adaptIcon(IconArchive);
+export const BooksIcon = adaptIcon(IconBooks);
 export const BrainIcon = adaptIcon(IconBrain);
 export const FileIcon = adaptIcon(IconFile);
 export const FlagIcon = adaptIcon(IconFlag);

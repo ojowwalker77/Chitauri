@@ -4,7 +4,7 @@
 
 import {
   ArchiveIcon,
-  BrainIcon,
+  BooksIcon,
   CheckCircle2Icon,
   ChevronDownIcon,
   ChevronRightIcon,
@@ -6077,9 +6077,9 @@ export default function Sidebar() {
                           : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME
                       }
                     >
-                      <SidebarGlyph icon={BrainIcon} variant="leading" />
+                      <SidebarGlyph icon={BooksIcon} variant="leading" />
                     </SidebarLeadingIcon>
-                    <span className="truncate">Research</span>
+                    <span className="truncate">Research Library</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>

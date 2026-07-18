@@ -497,6 +497,19 @@ describe("wsNativeApi", () => {
     });
   });
 
+  it("forwards research archive changes to the websocket research method", async () => {
+    requestMock.mockResolvedValue(undefined);
+    const { createWsNativeApi } = await import("./wsNativeApi");
+
+    const api = createWsNativeApi();
+    await api.research.setArchived({ id: "research-1", archived: true });
+
+    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.researchSetArchived, {
+      id: "research-1",
+      archived: true,
+    });
+  });
+
   it("forwards local preview grant creation to the websocket project method", async () => {
     requestMock.mockResolvedValue({
       grant: "grant-token",

@@ -93,6 +93,8 @@ import {
   ResearchListResult,
   ResearchReadInput,
   ResearchReadResult,
+  ResearchSetArchivedInput,
+  ResearchSetArchivedResult,
 } from "./research";
 import {
   WorkspaceHandoffThreadInput,
@@ -390,6 +392,12 @@ export const WsResearchListRpc = Rpc.make(WS_METHODS.researchList, {
 export const WsResearchReadRpc = Rpc.make(WS_METHODS.researchRead, {
   payload: ResearchReadInput,
   success: ResearchReadResult,
+  error: WsRpcError,
+});
+
+export const WsResearchSetArchivedRpc = Rpc.make(WS_METHODS.researchSetArchived, {
+  payload: ResearchSetArchivedInput,
+  success: ResearchSetArchivedResult,
   error: WsRpcError,
 });
 
@@ -924,6 +932,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsFilesystemBrowseRpc,
   WsResearchListRpc,
   WsResearchReadRpc,
+  WsResearchSetArchivedRpc,
   WsShellOpenInEditorRpc,
   WsGitGithubRepositoryRpc,
   WsGitStatusRpc,

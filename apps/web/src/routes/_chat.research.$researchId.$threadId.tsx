@@ -2,7 +2,7 @@
 // Purpose: Research reader backed by a real TeaCode thread and composer.
 
 import { ThreadId, type ProjectId } from "@t3tools/contracts";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
@@ -31,6 +31,8 @@ import {
   buildResearchImplementationPrompt,
   buildResearchRevisionPrompt,
   researchDetailQueryOptions,
+  setResearchArchived,
+  updateResearchArchiveCaches,
 } from "./-research.shared";
 
 export const Route = createFileRoute("/_chat/research/$researchId/$threadId")({
@@ -54,6 +56,7 @@ function ResearchDetailRoute() {
   const { researchId, threadId: rawThreadId } = Route.useParams();
   const threadId = ThreadId.makeUnsafe(rawThreadId);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const query = useQuery(researchDetailQueryOptions(researchId));
   const { settings } = useAppSettings();
   const [applying, setApplying] = useState(false);
@@ -67,6 +70,23 @@ function ResearchDetailRoute() {
     projectId ? state.projects.find((candidate) => candidate.id === projectId) : undefined,
   );
   const document = query.data?.document ?? null;
+  const archiveMutation = useMutation({
+    mutationFn: setResearchArchived,
+    onSuccess: (result, input) => {
+      updateResearchArchiveCaches(queryClient, result);
+      toastManager.add({
+        type: "success",
+        title: input.archived ? "Research archived" : "Research restored",
+      });
+    },
+    onError: (error, input) => {
+      toastManager.add({
+        type: "error",
+        title: input.archived ? "Could not archive research" : "Could not restore research",
+        description: error instanceof Error ? error.message : "The archive state did not change.",
+      });
+    },
+  });
 
   const modelSelection = useMemo(
     () =>
@@ -173,7 +193,13 @@ function ResearchDetailRoute() {
   };
 
   const transcriptContent = document ? (
-    <ResearchDocumentView document={document} applying={applying} onApply={applyInNewThread} />
+    <ResearchDocumentView
+      document={document}
+      applying={applying}
+      archiving={archiveMutation.isPending}
+      onApply={applyInNewThread}
+      onArchiveChange={(archived) => archiveMutation.mutate({ id: document.id, archived })}
+    />
   ) : query.isError ? (
     <ResearchStatus
       message={query.error instanceof Error ? query.error.message : "Research could not be loaded."}
@@ -189,7 +215,11 @@ function ResearchDetailRoute() {
         <ChatView
           threadId={threadId}
           transcriptContent={transcriptContent}
-          surfaceTitle={document?.title ?? "Research"}
+          surfaceTitle={document?.title ?? "Research Library"}
+          composerDisclosure={{
+            label: "Polish with agent",
+            description: "Open the composer for larger revisions",
+          }}
           {...(document
             ? {
                 transformOutgoingPrompt: (prompt: string) =>

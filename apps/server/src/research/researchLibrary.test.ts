@@ -9,6 +9,7 @@ import {
   listResearchDocuments,
   readResearchDocument,
   researchPlansRoot,
+  setResearchDocumentArchived,
 } from "./researchLibrary";
 
 describe("research library", () => {
@@ -17,6 +18,7 @@ describe("research library", () => {
     const documentDir = join(researchPlansRoot(baseDir), "chitauri", "2026-07-15");
     await mkdir(documentDir, { recursive: true });
     await writeFile(join(documentDir, "streaming-plan.md"), "# Streaming plan\n", "utf8");
+    await writeFile(join(documentDir, "legacy-brief.html"), "<h1>Legacy brief</h1>\n", "utf8");
     await writeFile(
       join(documentDir, "streaming-plan.research.json"),
       JSON.stringify({
@@ -57,7 +59,20 @@ describe("research library", () => {
 
     const document = await readResearchDocument(baseDir, listed.documents[0]!.id);
     expect(document?.content).toBe("# Streaming plan\n");
+    expect(document?.archivedAt).toBeNull();
     expect(document?.references[1]).toMatchObject({ kind: "url", label: "Codex docs" });
+
+    const archived = await setResearchDocumentArchived(baseDir, listed.documents[0]!.id, true);
+    expect(archived?.document.archivedAt).toEqual(expect.any(String));
+    expect(await readFile(join(documentDir, "streaming-plan.md"), "utf8")).toBe(
+      "# Streaming plan\n",
+    );
+
+    const restored = await setResearchDocumentArchived(baseDir, listed.documents[0]!.id, false);
+    expect(restored?.document.archivedAt).toBeNull();
+    expect(
+      JSON.parse(await readFile(join(documentDir, "streaming-plan.research.json"), "utf8")),
+    ).toMatchObject({ archivedAt: null, title: "Reliable streaming" });
   });
 
   it("rejects invalid ids instead of reading outside the plans root", async () => {
@@ -66,12 +81,29 @@ describe("research library", () => {
     expect(await readResearchDocument(baseDir, traversalId)).toBeNull();
   });
 
+  it("does not overwrite a malformed manifest while archiving", async () => {
+    const baseDir = await mkdtemp(join(tmpdir(), "chitauri-research-"));
+    const documentDir = join(researchPlansRoot(baseDir), "chitauri", "2026-07-15");
+    const manifestPath = join(documentDir, "malformed.research.json");
+    await mkdir(documentDir, { recursive: true });
+    await writeFile(join(documentDir, "malformed.md"), "# Keep me\n", "utf8");
+    await writeFile(manifestPath, "{not-json", "utf8");
+
+    const listed = await listResearchDocuments(baseDir);
+    await expect(
+      setResearchDocumentArchived(baseDir, listed.documents[0]!.id, true),
+    ).rejects.toThrow();
+    expect(await readFile(manifestPath, "utf8")).toBe("{not-json");
+  });
+
   it("installs and refreshes the managed research skill without replacing a user-owned copy", async () => {
     const baseDir = await mkdtemp(join(tmpdir(), "chitauri-research-"));
     const skillPath = await ensureManagedResearchSkill(baseDir);
     const managed = await readFile(skillPath, "utf8");
     expect(managed).toContain("name: research");
     expect(managed).toContain(researchPlansRoot(baseDir));
+    expect(managed).toContain("Research documents MUST use Markdown");
+    expect(managed).not.toContain(".html");
 
     await writeFile(
       skillPath,

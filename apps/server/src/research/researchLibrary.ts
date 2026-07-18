@@ -10,6 +10,7 @@ import type {
   ResearchDocumentSummary,
   ResearchListResult,
   ResearchReference,
+  ResearchSetArchivedResult,
 } from "@t3tools/contracts";
 
 import { parseManagedWorktreeWorkspaceRoot } from "../workspace/managedWorktree";
@@ -69,6 +70,19 @@ async function readManifest(
     return { value: isRecord(parsed) ? parsed : null, path };
   } catch {
     return { value: null, path: null };
+  }
+}
+
+async function readManifestForUpdate(path: string): Promise<JsonRecord> {
+  try {
+    const parsed = JSON.parse(await fs.readFile(path, "utf8")) as unknown;
+    if (!isRecord(parsed)) {
+      throw new Error(`Research manifest must contain a JSON object: ${path}`);
+    }
+    return parsed;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
+    throw error;
   }
 }
 
@@ -157,7 +171,7 @@ async function loadDocument(input: {
   if (!isPathInside(resolvedPlansRoot, resolvedDocumentPath)) return null;
 
   const extension = nodePath.extname(resolvedDocumentPath).toLowerCase();
-  if (extension !== ".md" && extension !== ".html") return null;
+  if (extension !== ".md") return null;
 
   let stat: Awaited<ReturnType<typeof fs.stat>>;
   try {
@@ -185,7 +199,7 @@ async function loadDocument(input: {
     id: encodeDocumentId(storagePath),
     title,
     summary: optionalString(manifest?.summary ?? manifest?.description),
-    format: extension === ".html" ? "html" : "markdown",
+    format: "markdown",
     repositoryName:
       optionalString(repository?.name ?? manifest?.repositoryName) ?? repositoryName ?? "Research",
     repositoryRoot: placement.repositoryRoot,
@@ -193,6 +207,7 @@ async function loadDocument(input: {
     branch: optionalString(repository?.branch ?? manifest?.branch),
     createdAt: optionalString(manifest?.createdAt) ?? stat.birthtime.toISOString(),
     updatedAt: optionalString(manifest?.updatedAt) ?? stat.mtime.toISOString(),
+    archivedAt: optionalString(manifest?.archivedAt),
     storagePath: storagePath.split(nodePath.sep).join("/"),
     referenceCount: references.length,
     tags: normalizeTags(manifest),
@@ -217,8 +232,7 @@ async function collectDocumentPaths(dir: string, depth = 0): Promise<string[]> {
       const path = nodePath.join(dir, entry.name);
       if (entry.isDirectory()) return collectDocumentPaths(path, depth + 1);
       if (!entry.isFile()) return [];
-      const extension = nodePath.extname(entry.name).toLowerCase();
-      return extension === ".md" || extension === ".html" ? [path] : [];
+      return nodePath.extname(entry.name).toLowerCase() === ".md" ? [path] : [];
     }),
   );
   return nested.flat();
@@ -266,11 +280,45 @@ export async function readResearchDocument(
   });
 }
 
+export async function setResearchDocumentArchived(
+  chitauriBaseDir: string,
+  id: string,
+  archived: boolean,
+): Promise<ResearchSetArchivedResult | null> {
+  const plansRoot = researchPlansRoot(chitauriBaseDir);
+  const storagePath = decodeDocumentId(id);
+  if (!storagePath || nodePath.isAbsolute(storagePath)) return null;
+
+  const documentPath = nodePath.join(plansRoot, storagePath);
+  const document = await loadDocument({ plansRoot, documentPath, includeContent: true });
+  if (!document) return null;
+
+  const manifestPath = documentManifestPath(documentPath);
+  const manifest = await readManifestForUpdate(manifestPath);
+  const nextManifest = {
+    ...manifest,
+    archivedAt: archived ? new Date().toISOString() : null,
+  } satisfies JsonRecord;
+  const temporaryManifestPath = `${manifestPath}.tmp-${process.pid}-${Date.now()}`;
+  try {
+    await fs.writeFile(temporaryManifestPath, `${JSON.stringify(nextManifest, null, 2)}\n`, {
+      encoding: "utf8",
+      flag: "wx",
+    });
+    await fs.rename(temporaryManifestPath, manifestPath);
+  } finally {
+    await fs.rm(temporaryManifestPath, { force: true }).catch(() => undefined);
+  }
+
+  const updated = await loadDocument({ plansRoot, documentPath, includeContent: true });
+  return updated ? { document: updated } : null;
+}
+
 function researchSkillMarkdown(chitauriBaseDir: string): string {
   const plansRoot = researchPlansRoot(chitauriBaseDir);
   return `---
 name: research
-description: Create or substantially revise a durable TeaCode research plan. Use when the user invokes /research, asks to research a repository before implementation, wants an implementation plan saved for later, or asks for a polished Markdown or HTML research artifact with clickable sources.
+description: Create or substantially revise a durable Markdown TeaCode research plan. Use when the user invokes /research, asks to research a repository before implementation, wants an implementation plan saved for later, or asks for a polished research artifact with clickable sources.
 ---
 
 ${MANAGED_SKILL_MARKER}
@@ -283,10 +331,12 @@ Research the real repository before writing conclusions. Save the durable result
 
 Write exactly one document and one sibling manifest below:
 
-\`${plansRoot}/<repo-slug>/<YYYY-MM-DD>/<document-slug>.md\` or \`.html\`
+\`${plansRoot}/<repo-slug>/<YYYY-MM-DD>/<document-slug>.md\`
 \`${plansRoot}/<repo-slug>/<YYYY-MM-DD>/<document-slug>.research.json\`
 
 Use lowercase filesystem-safe slugs. Create missing directories. Never save secrets, credentials, raw environment dumps, or private tokens.
+
+Research documents MUST use Markdown. Do not create or save HTML research artifacts, even when the user asks for diagrams or a highly visual presentation. Express those ideas with clear Markdown headings, tables, lists, code blocks, and links instead.
 
 ## Document quality
 
@@ -294,10 +344,8 @@ Use lowercase filesystem-safe slugs. Create missing directories. Never save secr
 - Lead with the recommended direction, then explain architecture, UX, risks, sequence, and verification.
 - Name concrete files, symbols, commands, and product behavior where useful.
 - Make the plan executable by a fresh implementation agent without replaying the research.
-- Use Markdown for direct technical plans.
-- Use a self-contained HTML document when diagrams, comparisons, flows, or visual hierarchy materially improve understanding.
-
-For HTML, include all CSS inline, make it responsive and printable, use semantic HTML, accessible contrast, restrained motion with reduced-motion support, excellent typography, and polished cards/tables/diagrams. Do not include JavaScript, forms, tracking, remote fonts, or framework/CDN dependencies. TeaCode renders HTML in a script-disabled sandbox.
+- Use only Markdown, with a concise table of contents for long documents and tables only when they make comparisons easier to scan.
+- Prefer compact diagrams expressed as fenced text when spatial relationships materially improve understanding.
 
 ## Manifest object
 
@@ -310,6 +358,7 @@ Write valid JSON with this shape:
   "summary": "One-sentence decision-oriented summary",
   "createdAt": "ISO-8601 timestamp",
   "updatedAt": "ISO-8601 timestamp",
+  "archivedAt": null,
   "repository": {
     "name": "repository-name",
     "root": "/absolute/project/root",
@@ -333,6 +382,8 @@ Write valid JSON with this shape:
 \`repository.root\` MUST be the main repository checkout (the folder the user added as a project), never a temporary or linked worktree (for example anything under \`.teacode/worktrees\` or the legacy \`.chitauri/worktrees\`). If you are running inside a worktree, resolve the main checkout with \`git rev-parse --path-format=absolute --git-common-dir\` (the root is its parent directory), put that in \`root\`, and put the worktree you are working in under \`worktree\`.
 
 Allowed reference kinds are \`file\`, \`url\`, \`command\`, \`issue\`, \`pull-request\`, and \`other\`. Use absolute paths for file references and HTTPS URLs for web references. Omit \`line\` when it does not apply. Use JSON \`null\` for an unavailable worktree or branch.
+
+New research MUST set \`archivedAt\` to JSON \`null\`. When revising an existing manifest, preserve its current \`archivedAt\` value unless the user explicitly asks to change the archive state.
 
 ## Finish
 

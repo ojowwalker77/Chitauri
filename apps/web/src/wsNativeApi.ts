@@ -396,6 +396,7 @@ export function createWsNativeApi(): NativeApi {
     research: {
       list: (input = {}) => transport.request(WS_METHODS.researchList, input),
       read: (input) => transport.request(WS_METHODS.researchRead, input),
+      setArchived: (input) => transport.request(WS_METHODS.researchSetArchived, input),
     },
     shell: {
       openInEditor: (cwd, editor) =>

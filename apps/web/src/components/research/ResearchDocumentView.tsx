@@ -1,5 +1,5 @@
 // FILE: ResearchDocumentView.tsx
-// Purpose: Polished Markdown/HTML research reader with a clickable reference rail.
+// Purpose: Reading-first Markdown research view with direct editing and a clickable reference rail.
 // Layer: Web research presentation
 
 import type { ResearchDocument, ResearchReference } from "@t3tools/contracts";
@@ -9,14 +9,16 @@ import { Button } from "~/components/ui/button";
 import { toastManager } from "~/components/ui/toast";
 import { openInPreferredEditor } from "~/editorPreferences";
 import {
+  ArchiveIcon,
   ArrowUpRightIcon,
   ExternalLinkIcon,
   FileIcon,
   GitBranchIcon,
   HammerIcon,
   LinkIcon,
+  PencilIcon,
+  RotateCcwIcon,
 } from "~/lib/icons";
-import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
 
 function formattedDate(value: string): string {
@@ -116,23 +118,39 @@ function ReferenceRail({ references }: { references: readonly ResearchReference[
 export function ResearchDocumentView({
   document,
   applying,
+  archiving,
   onApply,
+  onArchiveChange,
 }: {
   document: ResearchDocument;
   applying: boolean;
+  archiving: boolean;
   onApply: () => void;
+  onArchiveChange: (archived: boolean) => void;
 }) {
   const markdownCwd = document.worktreePath ?? document.repositoryRoot ?? undefined;
+  const editMarkdown = async () => {
+    try {
+      await openInPreferredEditor(ensureNativeApi(), document.documentPath);
+    } catch (error) {
+      toastManager.add({
+        type: "error",
+        title: "Could not open Markdown editor",
+        description: error instanceof Error ? error.message : document.documentPath,
+      });
+    }
+  };
+
   return (
     <div className="research-document-scroll min-h-0 flex-1 overflow-y-auto bg-background">
       <div className="mx-auto grid w-full max-w-[92rem] gap-6 px-4 pb-16 pt-5 sm:px-6 lg:px-8 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <article className="min-w-0 overflow-hidden rounded-xl border border-panel-border bg-panel">
           <header className="flex flex-col gap-5 px-6 pb-6 pt-7 sm:px-9 sm:pt-9 lg:px-12">
-            <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex flex-wrap items-start justify-between gap-5">
               <div className="min-w-0 flex-1">
                 <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                   <span className="rounded-full bg-selected px-2.5 py-1 font-medium">
-                    {document.format === "html" ? "Interactive brief" : "Research plan"}
+                    {document.archivedAt ? "Archived Markdown" : "Markdown research"}
                   </span>
                   <span>{document.repositoryName}</span>
                   {document.branch ? (
@@ -151,16 +169,41 @@ export function ResearchDocumentView({
                   </p>
                 ) : null}
               </div>
-              <Button
-                type="button"
-                onClick={onApply}
-                disabled={applying}
-                className="min-h-10 shrink-0 gap-2 pl-3.5 pr-3"
-              >
-                <HammerIcon className="size-4" />
-                {applying ? "Starting…" : "Apply in new thread"}
-                <ArrowUpRightIcon className="size-3.5" />
-              </Button>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  onClick={() => void editMarkdown()}
+                  className="min-h-10 gap-2 px-3.5"
+                >
+                  <PencilIcon className="size-4" />
+                  Edit Markdown
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onApply}
+                  disabled={applying}
+                  className="min-h-10 gap-2 pl-3.5 pr-3"
+                >
+                  <HammerIcon className="size-4" />
+                  {applying ? "Starting…" : "Apply in new thread"}
+                  <ArrowUpRightIcon className="size-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onArchiveChange(document.archivedAt === null)}
+                  disabled={archiving}
+                  className="min-h-10 gap-2 px-3"
+                >
+                  {document.archivedAt ? (
+                    <RotateCcwIcon className={archiving ? "size-4 animate-spin" : "size-4"} />
+                  ) : (
+                    <ArchiveIcon className={archiving ? "size-4 animate-pulse" : "size-4"} />
+                  )}
+                  {document.archivedAt ? "Restore" : "Archive"}
+                </Button>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/60 pt-4 text-[11px] text-muted-foreground">
               <span className="tabular-nums">Updated {formattedDate(document.updatedAt)}</span>
@@ -173,29 +216,14 @@ export function ResearchDocumentView({
             </div>
           </header>
 
-          <div
-            className={cn(
-              "border-t border-border/60",
-              document.format === "html" && "bg-muted/20 p-2 sm:p-3",
-            )}
-          >
-            {document.format === "html" ? (
-              <iframe
-                title={document.title}
-                srcDoc={document.content}
-                sandbox=""
-                referrerPolicy="no-referrer"
-                className="h-[max(46rem,calc(100vh-15rem))] w-full rounded-[16px] bg-white outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+          <div className="border-t border-border/60">
+            <div className="mx-auto max-w-4xl px-6 py-8 sm:px-9 sm:py-10 lg:px-12">
+              <ChatMarkdown
+                text={document.content}
+                cwd={markdownCwd}
+                className="research-markdown text-[15px] leading-7 sm:text-base"
               />
-            ) : (
-              <div className="mx-auto max-w-4xl px-6 py-8 sm:px-9 sm:py-10 lg:px-12">
-                <ChatMarkdown
-                  text={document.content}
-                  cwd={markdownCwd}
-                  className="research-markdown text-[15px] leading-7 sm:text-base"
-                />
-              </div>
-            )}
+            </div>
           </div>
         </article>
         <ReferenceRail references={document.references} />
