@@ -166,6 +166,25 @@ export function createActiveDraftThreadSnapshot(
   };
 }
 
+/**
+ * Promotion (first send) does not erase the project's draft-thread mapping, so a thread that has
+ * already started running still looks like a reusable draft. Reusing it makes "New thread" navigate
+ * to the thread you are already on — a dead button. Treat such a draft as consumed.
+ *
+ * Terminal-first drafts intentionally own a server thread before their first turn, so server
+ * existence alone must not disqualify them.
+ */
+export function isConsumedDraftThread(input: {
+  entryPoint: ThreadPrimarySurface;
+  hasLatestTurn: boolean;
+  hasServerThread: boolean;
+}): boolean {
+  if (input.hasLatestTurn) {
+    return true;
+  }
+  return input.entryPoint === "terminal" ? false : input.hasServerThread;
+}
+
 // Decide whether we should reuse a stored draft, the current route draft, or create a fresh one.
 export function resolveThreadBootstrapPlan(input: {
   entryPoint: ThreadPrimarySurface;

@@ -118,7 +118,9 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain('class="relative" style="height:');
     expect(markup).toContain('data-timeline-row-kind="message"');
     expect(markup).toContain('data-assistant-provider="codex"');
-    expect(markup).toContain("✳");
+    // The header renders the provider's own brand mark, not a generic glyph.
+    expect(markup).toContain('role="img"');
+    expect(markup).not.toContain("✳");
     expect(markup).toContain(">Codex<");
   }, 10_000);
 

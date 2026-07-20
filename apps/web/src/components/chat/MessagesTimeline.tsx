@@ -141,6 +141,7 @@ import {
   USER_MESSAGE_BUBBLE_SHELL_CHROME_CLASS_NAME,
 } from "./chatTypography";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
+import { ProviderIcon } from "../ProviderIcon";
 import { DisclosureRegion } from "../ui/DisclosureRegion";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { disclosureContentClassName } from "~/lib/disclosureMotion";
@@ -264,11 +265,20 @@ function AssistantMessageHeader(props: {
       className="mb-2.5 flex items-center gap-2 font-system-ui text-[12px] text-muted-foreground"
       data-assistant-provider={props.provider ?? "unknown"}
     >
-      <span
-        aria-hidden="true"
-        className="flex size-5 shrink-0 items-center justify-center text-[16px] font-semibold leading-none text-muted-foreground"
-      >
-        ✳
+      <span className="flex size-5 shrink-0 items-center justify-center">
+        <ProviderIcon
+          provider={props.provider}
+          tone="header"
+          className="size-3.5"
+          fallback={
+            <span
+              aria-hidden="true"
+              className="text-[16px] font-semibold leading-none text-muted-foreground"
+            >
+              ✳
+            </span>
+          }
+        />
       </span>
       <span className="font-medium text-foreground/92">{providerLabel}</span>
       <span aria-hidden="true" className="text-muted-foreground/45">

@@ -7,6 +7,7 @@ import {
   createActiveThreadSnapshot,
   createFreshDraftThreadSeed,
   hasDraftContextOverrides,
+  isConsumedDraftThread,
   resolveInheritedThreadContext,
   resolveTerminalThreadCreationState,
   resolveThreadBootstrapPlan,
@@ -113,6 +114,25 @@ describe("threadBootstrap", () => {
         routeThreadId: THREAD_ID,
       }),
     ).toBe(false);
+  });
+
+  it("treats promoted chat drafts as consumed but keeps empty terminal drafts reusable", () => {
+    expect(
+      isConsumedDraftThread({ entryPoint: "chat", hasLatestTurn: false, hasServerThread: true }),
+    ).toBe(true);
+    expect(
+      isConsumedDraftThread({ entryPoint: "chat", hasLatestTurn: false, hasServerThread: false }),
+    ).toBe(false);
+    expect(
+      isConsumedDraftThread({
+        entryPoint: "terminal",
+        hasLatestTurn: false,
+        hasServerThread: true,
+      }),
+    ).toBe(false);
+    expect(
+      isConsumedDraftThread({ entryPoint: "terminal", hasLatestTurn: true, hasServerThread: true }),
+    ).toBe(true);
   });
 
   it("resolves bootstrap precedence as route draft, then stored draft, then fresh", () => {
