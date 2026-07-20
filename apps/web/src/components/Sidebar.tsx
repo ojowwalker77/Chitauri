@@ -4435,10 +4435,10 @@ export default function Sidebar() {
   // Shared section header keeps sidebar list spacing and typography consistent.
   function renderListSectionHeader(label: string, toolbar: ReactNode) {
     return (
-      <div className="group/project-header relative my-1">
+      <div className="group/project-header relative mt-1.5 mb-0.5">
         <div
           className={cn(
-            "flex min-h-7 w-full min-w-0 items-center px-2 py-1 pr-[4.75rem]",
+            "flex min-h-6 w-full min-w-0 items-center px-2 py-0.5 pr-[4.75rem]",
             SIDEBAR_SECTION_LABEL_CLASS_NAME,
           )}
         >
@@ -4455,8 +4455,8 @@ export default function Sidebar() {
       return null;
     }
     return (
-      <div className="mb-3" data-sidebar-tree-section="pinned">
-        <div className="my-1 flex min-h-7 items-center px-2 py-1">
+      <div className="mb-1.5" data-sidebar-tree-section="pinned">
+        <div className="mt-1.5 mb-0.5 flex min-h-6 items-center px-2 py-0.5">
           <span className={SIDEBAR_SECTION_LABEL_CLASS_NAME}>Pinned</span>
         </div>
         <div className="flex flex-col gap-0.5">
@@ -5893,8 +5893,8 @@ export default function Sidebar() {
           </SidebarGroup>
         ) : (
           <>
-            <SidebarGroup className="px-1.5 py-1.5" data-sidebar-tree-section="projects">
-              <SidebarMenu className="mb-2 gap-0.5" aria-label="Project tools">
+            <SidebarGroup className="px-1.5 py-1" data-sidebar-tree-section="projects">
+              <SidebarMenu className="mb-1 gap-0.5" aria-label="Project tools">
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     size="sm"
@@ -6092,7 +6092,7 @@ export default function Sidebar() {
           </>
         )}
         {!isOnSettings && chatsSectionVisible ? (
-          <SidebarGroup className="px-1.5 pt-1 pb-2">
+          <SidebarGroup className="px-1.5 pt-0.5 pb-1.5">
             <div className="group/collapsible">
               <div className="group/project-header relative">
                 <SidebarMenuButton
@@ -6200,7 +6200,7 @@ export default function Sidebar() {
         ) : null}
       </SidebarContent>
 
-      <SidebarFooter className="gap-2 p-2 font-system-ui">
+      <SidebarFooter className="gap-1 p-1.5 font-system-ui">
         <SidebarMenu>
           <SidebarMenuItem>
             <div className="flex flex-col gap-1">

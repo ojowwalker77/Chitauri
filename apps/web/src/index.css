@@ -184,9 +184,8 @@
      border is on the seam side — no card radius, no surrounding inset. */
   .app-sidebar-surface {
     --app-sidebar-surface: var(--panel);
-    --app-density-row-height: 2.375rem;
-    --app-density-row-padding-y: 0rem;
-    --app-density-row-gap: 0.5rem;
+    /* Row metrics come from the density scale (`getDensityCssVariables`) so the
+       sidebar honors the UI density setting instead of pinning its own height. */
     overflow: hidden;
     background: var(--app-sidebar-surface);
     border: 0;

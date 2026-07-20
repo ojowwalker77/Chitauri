@@ -13,6 +13,7 @@ import {
   createActiveDraftThreadSnapshot,
   createActiveThreadSnapshot,
   createFreshDraftThreadSeed,
+  isConsumedDraftThread,
   resolveTerminalThreadCreationState,
   resolveThreadBootstrapPlan,
   type NewThreadOptions,
@@ -113,10 +114,30 @@ export function useHandleNewThread() {
         clearProjectDraftThreadId(projectId, entryPoint);
       }
 
-      const storedDraftThreadCandidate = getDraftThreadByProjectId(projectId, entryPoint);
-      const latestActiveDraftThreadCandidate: DraftThreadState | null = focusedThreadId
-        ? getDraftThread(focusedThreadId)
-        : null;
+      // Read the live store: a draft whose thread has since been promoted (sent) is no longer a
+      // reusable draft, even though the project mapping still points at it.
+      const isDraftThreadConsumed = (candidateThreadId: ThreadId): boolean => {
+        const store = useStore.getState();
+        return isConsumedDraftThread({
+          entryPoint,
+          hasLatestTurn: store.sidebarThreadSummaryById[candidateThreadId]?.latestTurn != null,
+          hasServerThread: store.threads.some((thread) => thread.id === candidateThreadId),
+        });
+      };
+
+      const storedDraftThreadCandidateRaw = getDraftThreadByProjectId(projectId, entryPoint);
+      let storedDraftThreadCandidate = storedDraftThreadCandidateRaw;
+      if (
+        storedDraftThreadCandidateRaw &&
+        isDraftThreadConsumed(storedDraftThreadCandidateRaw.threadId)
+      ) {
+        clearProjectDraftThreadId(projectId, entryPoint);
+        storedDraftThreadCandidate = null;
+      }
+      const latestActiveDraftThreadCandidate: DraftThreadState | null =
+        focusedThreadId && !isDraftThreadConsumed(focusedThreadId)
+          ? getDraftThread(focusedThreadId)
+          : null;
       const storedDraftThread = !shouldForceFreshThread ? storedDraftThreadCandidate : null;
       const latestActiveDraftThread: DraftThreadState | null = !shouldForceFreshThread
         ? latestActiveDraftThreadCandidate
