@@ -81,7 +81,6 @@ describe("orchestration projector", () => {
           model: "gpt-5-codex",
         },
         runtimeMode: "full-access",
-        interactionMode: "default",
         envMode: "local",
         workspaceId: null,
         branch: null,
@@ -164,7 +163,6 @@ describe("orchestration projector", () => {
               model: "openai/gpt-5.5",
             },
             runtimeMode: "approval-required",
-            interactionMode: "default",
             createdAt: turnRequestedAt,
           },
         }),
@@ -176,7 +174,6 @@ describe("orchestration projector", () => {
       model: "openai/gpt-5.5",
     });
     expect(next.threads[0]?.runtimeMode).toBe("approval-required");
-    expect(next.threads[0]?.interactionMode).toBe("default");
     expect(next.threads[0]?.updatedAt).toBe(turnRequestedAt);
   });
 
@@ -231,7 +228,6 @@ describe("orchestration projector", () => {
               model: "openai/gpt-5",
             },
             runtimeMode: "approval-required",
-            interactionMode: "default",
             createdAt: turnRequestedAt,
           },
         }),

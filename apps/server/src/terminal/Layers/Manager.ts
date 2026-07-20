@@ -186,8 +186,20 @@ function isProviderSessionBusy(session: TerminalSessionState, now: number): bool
   return now - lastInputAt <= PROVIDER_INPUT_ACTIVITY_GRACE_MS;
 }
 
+/**
+ * Only the last 256 characters survive, so collapsing the whole batch is wasted
+ * work: a 128 KB flush ran five full regex passes and allocated five intermediate
+ * strings to produce a 256-char signature. Escape sequences and whitespace can
+ * collapse hard, so keep a generous tail window rather than exactly 256.
+ */
+const PROVIDER_OUTPUT_SIGNATURE_SCAN_WINDOW = 4096;
+
 function normalizeProviderOutputSignature(visibleText: string): string {
-  return visibleText
+  return (
+    visibleText.length > PROVIDER_OUTPUT_SIGNATURE_SCAN_WINDOW
+      ? visibleText.slice(-PROVIDER_OUTPUT_SIGNATURE_SCAN_WINDOW)
+      : visibleText
+  )
     .replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, "")
     .replace(/\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g, "")
     .replace(/\u001b[P^_].*?(?:\u001b\\|\u0007|\u009c)/g, "")

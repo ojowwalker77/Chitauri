@@ -198,7 +198,6 @@ layer("035_NormalizeLegacyModelSelectionOptions", (it) => {
               options: [{ id: "reasoningEffort", value: "xhigh" }],
             },
             runtimeMode: "full-access",
-            interactionMode: "default",
             branch: null,
             worktreePath: null,
             createdAt: now,

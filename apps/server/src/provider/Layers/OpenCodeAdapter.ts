@@ -62,7 +62,7 @@ import {
   type OpenCodeServerConnection,
 } from "../opencodeRuntime.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
-import { extractProposedPlanMarkdown, withProviderPlanModePrompt } from "../planMode.ts";
+import { extractProposedPlanMarkdown } from "../proposedPlan.ts";
 
 type OpenCodeCompatibleProvider = Extract<ProviderKind, "opencode" | "kilo">;
 
@@ -76,7 +76,6 @@ interface OpenCodeCompatibleAdapterConfig {
   readonly cliModelSource: string;
   readonly fallbackModelSource: string;
   readonly defaultAgent: string;
-  readonly planAgent: string;
   readonly cliSpec: OpenCodeCompatibleCliSpec;
 }
 
@@ -90,7 +89,6 @@ const OPENCODE_ADAPTER_CONFIG: OpenCodeCompatibleAdapterConfig = {
   cliModelSource: "opencode-cli",
   fallbackModelSource: "opencode",
   defaultAgent: "build",
-  planAgent: "plan",
   cliSpec: OPENCODE_CLI_SPEC,
 };
 
@@ -104,7 +102,6 @@ const KILO_ADAPTER_CONFIG: OpenCodeCompatibleAdapterConfig = {
   cliModelSource: "kilo-cli",
   fallbackModelSource: "kilo",
   defaultAgent: "code",
-  planAgent: "plan",
   cliSpec: KILO_CLI_SPEC,
 };
 
@@ -154,7 +151,6 @@ interface OpenCodeSessionContext {
   activeTurnSawToolCallFinish: boolean;
   activeTurnSawFinalAssistant: boolean;
   activeTurnToolCallIdleWatchdogStarted: boolean;
-  activeInteractionMode: "default" | "plan" | undefined;
   activeAgent: string | undefined;
   activeVariant: string | undefined;
   readonly stopped: Ref.Ref<boolean>;
@@ -687,7 +683,6 @@ function clearActiveTurnState(context: OpenCodeSessionContext): void {
   context.activeTurnSawToolCallFinish = false;
   context.activeTurnSawFinalAssistant = false;
   context.activeTurnToolCallIdleWatchdogStarted = false;
-  context.activeInteractionMode = undefined;
   context.activeAgent = undefined;
   context.activeVariant = undefined;
   context.latestTurnCostUsd = undefined;
@@ -1958,10 +1953,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           if (itemId !== part.id) {
             context.completedAssistantPartIds.add(part.id);
           }
-          const proposedPlanMarkdown =
-            context.activeInteractionMode === "plan"
-              ? extractProposedPlanMarkdown(latestText)
-              : undefined;
+          const proposedPlanMarkdown = extractProposedPlanMarkdown(latestText);
           if (proposedPlanMarkdown && turnId) {
             yield* emit({
               ...buildEventBase({
@@ -2039,10 +2031,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             }
             context.completedAssistantPartIds.add(nextTextItemId);
             context.completedAssistantPartIds.add(part.id);
-            const proposedPlanMarkdown =
-              context.activeInteractionMode === "plan"
-                ? extractProposedPlanMarkdown(latestText)
-                : undefined;
+            const proposedPlanMarkdown = extractProposedPlanMarkdown(latestText);
             if (proposedPlanMarkdown) {
               yield* emit({
                 ...buildEventBase({
@@ -3802,7 +3791,6 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             activeTurnSawToolCallFinish: false,
             activeTurnSawFinalAssistant: false,
             activeTurnToolCallIdleWatchdogStarted: false,
-            activeInteractionMode: undefined,
             activeAgent: undefined,
             activeVariant: undefined,
             stopped: yield* Ref.make(false),
@@ -3848,10 +3836,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           });
         }
 
-        const baseText = withProviderPlanModePrompt({
-          text: input.input?.trim() ?? "",
-          interactionMode: input.interactionMode,
-        }).trim();
+        const baseText = input.input?.trim() ?? "";
         const text =
           appendFileAttachmentsPromptBlock({
             text: baseText,
@@ -3891,12 +3876,9 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         context.activeTurnSawToolCallFinish = false;
         context.activeTurnSawFinalAssistant = false;
         context.activeTurnToolCallIdleWatchdogStarted = false;
-        context.activeInteractionMode = input.interactionMode === "plan" ? "plan" : "default";
-        // Always pin TeaCode's interaction mode to OpenCode's primary agent.
-        // Otherwise a user config with default agent=plan can trap default turns in plan mode.
-        context.activeAgent =
-          agent ??
-          (input.interactionMode === "plan" ? adapterConfig.planAgent : adapterConfig.defaultAgent);
+        // Always pin TeaCode turns to OpenCode's primary agent. Otherwise a user
+        // config with default agent=plan can trap turns in OpenCode's plan agent.
+        context.activeAgent = agent ?? adapterConfig.defaultAgent;
         context.activeVariant = variant;
         updateProviderSession(
           context,

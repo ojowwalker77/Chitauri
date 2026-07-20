@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.9.0 - 2026-07-20
+
+### Added
+
+- New threads now start in a fresh worktree branched off the remote default branch. TeaCode fetches the primary remote first, so a thread begins from the pushed tip of `main` instead of whatever your checkout happened to sit on — no more "select a base branch" before you can send. The Local/New worktree control and the branch picker still override it per thread, and Git Workbench pull requests keep checking out the PR's own branch. Offline repositories fall back to the last known remote tip rather than blocking the send.
+- Added an optional canvas background behind the chat (London, Rio, San Francisco, Tokyo) and a sidebar position setting for docking the thread list on the right. Both live in Settings; the theme colour is layered over the image so text keeps its contrast.
+
+### Changed
+
+- The terminal is now code-split: xterm and its seven addons (~794 kB) no longer sit in the static import closure of every thread route, so opening a chat is cheaper when you never open a terminal. `scripts/measure-critical-path.mjs` measures the boot and route closures so bundle regressions show up as a number.
+- The orchestration projection pipeline only runs the projectors that actually branch on an event, instead of paying a savepoint and a `projection_state` write per projector per event.
+- The sidebar stopped two idle polling loops: a per-workspace 60s git refresh (freshness is event-driven; the timer was only ever a safety net) and a once-a-minute GitHub round trip for every stored pull request.
+- A new thread no longer inherits its environment mode from the previously active thread — it follows the setting, so "new thread" means the same thing every time.
+
+### Removed
+
+- Removed the cloud workbench (AWS/GCP resource browsing and the bound-repository investigations), the in-app PDF viewer, the composer sketchpad, and plan mode. Each carried a large dependency and code surface for a flow that had not earned it; dropping them takes the AWS SDKs, `google-auth-library`, and `pdfjs-dist` out of the install entirely.
+
 ## 0.8.0 - 2026-07-18
 
 ### Added

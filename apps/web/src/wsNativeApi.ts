@@ -68,6 +68,16 @@ function omitNullUserInputAnswers(
 const terminalEventListeners = new Set<(payload: TerminalEvent) => void>();
 const projectDevServerEventListeners = new Set<(payload: ProjectDevServerEvent) => void>();
 const orchestrationDomainEventListeners = new Set<(payload: OrchestrationEvent) => void>();
+/**
+ * The domain-event firehose is a strict superset of the shell and thread-detail
+ * streams the app actually consumes, and nothing in the product registers an
+ * `onDomainEvent` listener. Subscribing to it unconditionally still made the
+ * server encode, frame and ship every orchestration event a second time — on a
+ * streaming turn that is thousands of extra Schema encodes, WS frames and client
+ * parses, delivered into an empty listener set. Attach the channel only while a
+ * listener actually exists so the cost is paid only if someone opts in.
+ */
+let orchestrationDomainEventUnsubscribe: (() => void) | null = null;
 const orchestrationShellEventListeners = new Set<(payload: OrchestrationShellStreamItem) => void>();
 const orchestrationThreadEventListeners = new Set<
   (payload: OrchestrationThreadStreamItem) => void
@@ -299,16 +309,8 @@ export function createWsNativeApi(): NativeApi {
       }
     }
   });
-  transport.subscribe(ORCHESTRATION_WS_CHANNELS.domainEvent, (message) => {
-    const payload = message.data;
-    for (const listener of orchestrationDomainEventListeners) {
-      try {
-        listener(payload);
-      } catch {
-        // Swallow listener errors
-      }
-    }
-  });
+  // NOTE: no eager subscribe for ORCHESTRATION_WS_CHANNELS.domainEvent — see
+  // orchestrationDomainEventUnsubscribe. It attaches on the first listener.
   transport.subscribe(ORCHESTRATION_WS_CHANNELS.shellEvent, (message) => {
     const payload = message.data;
     for (const listener of orchestrationShellEventListeners) {
@@ -473,15 +475,6 @@ export function createWsNativeApi(): NativeApi {
       pullRequestDiff: (input) => transport.request(WS_METHODS.githubPullRequestDiff, input),
       workItemAction: (input) => transport.request(WS_METHODS.githubWorkItemAction, input),
     },
-    cloud: {
-      listContexts: () => transport.request(WS_METHODS.cloudListContexts),
-      discoverProject: (input) => transport.request(WS_METHODS.cloudDiscoverProject, input),
-      listBindings: (input) => transport.request(WS_METHODS.cloudListBindings, input),
-      upsertBinding: (input) => transport.request(WS_METHODS.cloudUpsertBinding, input),
-      searchResources: (input) => transport.request(WS_METHODS.cloudSearchResources, input),
-      resourceDetail: (input) => transport.request(WS_METHODS.cloudResourceDetail, input),
-      queryLogs: (input) => transport.request(WS_METHODS.cloudQueryLogs, input),
-    },
     contextMenu: {
       show: async <T extends string>(
         items: readonly ContextMenuItem<T>[],
@@ -599,8 +592,25 @@ export function createWsNativeApi(): NativeApi {
         transport.request<void>(ORCHESTRATION_WS_METHODS.unsubscribeThread, input),
       onDomainEvent: (callback) => {
         orchestrationDomainEventListeners.add(callback);
+        orchestrationDomainEventUnsubscribe ??= transport.subscribe(
+          ORCHESTRATION_WS_CHANNELS.domainEvent,
+          (message) => {
+            const payload = message.data;
+            for (const listener of orchestrationDomainEventListeners) {
+              try {
+                listener(payload);
+              } catch {
+                // Swallow listener errors
+              }
+            }
+          },
+        );
         return () => {
           orchestrationDomainEventListeners.delete(callback);
+          if (orchestrationDomainEventListeners.size === 0) {
+            orchestrationDomainEventUnsubscribe?.();
+            orchestrationDomainEventUnsubscribe = null;
+          }
         };
       },
       onShellEvent: (callback) => {
@@ -635,6 +645,7 @@ export function resetWsNativeApiForTest(): void {
   gitActionProgressListeners.clear();
   terminalEventListeners.clear();
   projectDevServerEventListeners.clear();
+  orchestrationDomainEventUnsubscribe = null;
   orchestrationDomainEventListeners.clear();
   orchestrationShellEventListeners.clear();
   orchestrationThreadEventListeners.clear();
@@ -651,6 +662,7 @@ if (import.meta.hot) {
     gitActionProgressListeners.clear();
     terminalEventListeners.clear();
     projectDevServerEventListeners.clear();
+    orchestrationDomainEventUnsubscribe = null;
     orchestrationDomainEventListeners.clear();
     orchestrationShellEventListeners.clear();
     orchestrationThreadEventListeners.clear();

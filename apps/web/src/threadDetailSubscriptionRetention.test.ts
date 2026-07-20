@@ -94,7 +94,6 @@ describe("threadDetailSubscriptionRetention", () => {
           projectId: "project-1" as never,
           title: "Busy thread",
           modelSelection: { provider: "codex", model: "gpt-5.4" },
-          interactionMode: "default",
           envMode: "local",
           branch: null,
           worktreePath: null,

@@ -250,14 +250,23 @@ function flushPendingWrites(entry: TerminalRuntimeEntry): void {
   entry.pendingWrites.length = 0;
   entry.pendingWriteLength = 0;
   entry.pendingWriteBytes = 0;
-  entry.terminal.write(combined, () => {
-    acknowledgeParsedOutput(entry, byteLength);
-    observeTerminalWriteParsed({
-      runtimeKey: entry.runtimeKey,
-      bytes: byteLength,
-      queuedAt,
+  try {
+    entry.terminal.write(combined, () => {
+      acknowledgeParsedOutput(entry, byteLength);
+      observeTerminalWriteParsed({
+        runtimeKey: entry.runtimeKey,
+        bytes: byteLength,
+        queuedAt,
+      });
     });
-  });
+  } catch {
+    // xterm throws and discards once its internal pending buffer passes 50 MB.
+    // The callback never fires in that case, so the bytes would stay unacked and
+    // the server's flow control would pause this PTY until its 10s watchdog gave
+    // up. Dropped pixels are recoverable (the server keeps scrollback history);
+    // a stalled ACK stream is not, so account for the bytes either way.
+    acknowledgeParsedOutput(entry, byteLength);
+  }
 }
 
 function scheduleWrite(entry: TerminalRuntimeEntry, data: string, byteLength: number): void {
@@ -754,7 +763,10 @@ export function createRuntimeEntry(config: TerminalRuntimeConfig): TerminalRunti
 
   const fitAddon = new FitAddon();
   const clipboardAddon = new ClipboardAddon();
-  const imageAddon = new ImageAddon();
+  // Defaults are storageLimit 128 MB and pixelLimit 16 MPx *per terminal*, so six
+  // open terminals carry a 768 MB image-cache ceiling. Inline images in a coding
+  // agent's terminal are occasional and small; cap them well below the default.
+  const imageAddon = new ImageAddon({ storageLimit: 16, pixelLimit: 4_194_304 });
   const searchAddon = new SearchAddon();
   const unicode11Addon = new Unicode11Addon();
   const terminalOptions: ChitauriTerminalOptions = {

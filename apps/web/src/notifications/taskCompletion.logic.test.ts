@@ -25,7 +25,6 @@ function makeThread(overrides: Partial<Thread>): Thread {
     title: "Polish notifications",
     modelSelection: { provider: "codex", model: "gpt-5.4-mini" },
     runtimeMode: "full-access",
-    interactionMode: "default",
     session: {
       provider: "codex",
       status: "running",

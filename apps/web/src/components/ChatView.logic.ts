@@ -389,7 +389,6 @@ export function buildLocalDraftThread(
     title: draftThread.entryPoint === "terminal" ? "New terminal" : "New thread",
     modelSelection: fallbackModelSelection,
     runtimeMode: draftThread.runtimeMode,
-    interactionMode: draftThread.interactionMode,
     session: null,
     messages: [],
     error,
@@ -787,7 +786,6 @@ export function deriveComposerSendState(options: {
   fileCount: number;
   assistantSelectionCount: number;
   fileCommentCount: number;
-  sketchpadElementCount?: number;
   terminalContexts: ReadonlyArray<TerminalContextDraft>;
   pastedTexts: ReadonlyArray<PastedTextDraft>;
 }): {
@@ -813,7 +811,6 @@ export function deriveComposerSendState(options: {
       options.fileCount > 0 ||
       options.assistantSelectionCount > 0 ||
       options.fileCommentCount > 0 ||
-      (options.sketchpadElementCount ?? 0) > 0 ||
       sendableTerminalContexts.length > 0 ||
       sendablePastedTexts.length > 0,
   };

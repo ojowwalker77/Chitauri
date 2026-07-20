@@ -40,6 +40,23 @@ const makeProjectionStateRepository = Effect.gen(function* () {
       `,
   });
 
+  // Cursor advances for projectors that skipped an event are batched into one
+  // multi-row upsert so a single projected event never costs one statement per projector.
+  const upsertProjectionStateRows = (rows: ReadonlyArray<ProjectionState>) =>
+    sql`
+      INSERT INTO projection_state ${sql.insert(
+        rows.map((row) => ({
+          projector: row.projector,
+          last_applied_sequence: row.lastAppliedSequence,
+          updated_at: row.updatedAt,
+        })),
+      )}
+      ON CONFLICT (projector)
+      DO UPDATE SET
+        last_applied_sequence = excluded.last_applied_sequence,
+        updated_at = excluded.updated_at
+    `;
+
   const getProjectionStateRow = SqlSchema.findOneOption({
     Request: GetProjectionStateInput,
     Result: ProjectionState,
@@ -84,6 +101,14 @@ const makeProjectionStateRepository = Effect.gen(function* () {
       Effect.mapError(toPersistenceSqlError("ProjectionStateRepository.upsert:query")),
     );
 
+  const upsertMany: ProjectionStateRepositoryShape["upsertMany"] = (rows) =>
+    rows.length === 0
+      ? Effect.void
+      : upsertProjectionStateRows(rows).pipe(
+          Effect.asVoid,
+          Effect.mapError(toPersistenceSqlError("ProjectionStateRepository.upsertMany:query")),
+        );
+
   const getByProjector: ProjectionStateRepositoryShape["getByProjector"] = (input) =>
     getProjectionStateRow(input).pipe(
       Effect.mapError(toPersistenceSqlError("ProjectionStateRepository.getByProjector:query")),
@@ -104,6 +129,7 @@ const makeProjectionStateRepository = Effect.gen(function* () {
 
   return {
     upsert,
+    upsertMany,
     getByProjector,
     listAll,
     minLastAppliedSequence,

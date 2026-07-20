@@ -406,7 +406,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           title: command.title,
           modelSelection: command.modelSelection,
           runtimeMode: command.runtimeMode,
-          interactionMode: command.interactionMode,
           envMode: command.envMode,
           branch: command.branch,
           worktreePath: command.worktreePath,
@@ -487,7 +486,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           title: command.title,
           modelSelection: command.modelSelection,
           runtimeMode: command.runtimeMode,
-          interactionMode: command.interactionMode,
           envMode: command.envMode,
           branch: command.branch,
           worktreePath: command.worktreePath,
@@ -591,7 +589,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           title: command.title,
           modelSelection: command.modelSelection,
           runtimeMode: command.runtimeMode,
-          interactionMode: command.interactionMode,
           envMode: command.envMode,
           branch: command.branch,
           worktreePath: command.worktreePath,
@@ -1049,29 +1046,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       };
     }
 
-    case "thread.interaction-mode.set": {
-      yield* requireThread({
-        readModel,
-        command,
-        threadId: command.threadId,
-      });
-      const occurredAt = nowIso();
-      return {
-        ...withEventBase({
-          aggregateKind: "thread",
-          aggregateId: command.threadId,
-          occurredAt,
-          commandId: command.commandId,
-        }),
-        type: "thread.interaction-mode-set",
-        payload: {
-          threadId: command.threadId,
-          interactionMode: command.interactionMode,
-          updatedAt: occurredAt,
-        },
-      };
-    }
-
     case "thread.turn.start": {
       const targetThread = yield* requireThread({
         readModel,
@@ -1141,7 +1115,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         assistantDeliveryMode: command.assistantDeliveryMode ?? DEFAULT_ASSISTANT_DELIVERY_MODE,
         dispatchMode,
         runtimeMode: command.runtimeMode,
-        interactionMode: command.interactionMode,
         ...(sourceProposedPlan !== undefined ? { sourceProposedPlan } : {}),
         createdAt: command.createdAt,
       } as const;
@@ -1213,7 +1186,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           assistantDeliveryMode: command.assistantDeliveryMode ?? DEFAULT_ASSISTANT_DELIVERY_MODE,
           dispatchMode: command.dispatchMode ?? "queue",
           runtimeMode: command.runtimeMode,
-          interactionMode: command.interactionMode,
           ...(command.sourceProposedPlan !== undefined
             ? { sourceProposedPlan: command.sourceProposedPlan }
             : {}),
@@ -1397,7 +1369,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
             ? { assistantDeliveryMode: command.assistantDeliveryMode }
             : {}),
           runtimeMode: command.runtimeMode,
-          interactionMode: command.interactionMode,
           createdAt: command.createdAt,
         },
       };

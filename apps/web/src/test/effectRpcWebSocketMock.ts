@@ -129,7 +129,6 @@ export function createShellSnapshotFromReadModel(
         projectId: thread.projectId,
         title: thread.title,
         modelSelection: thread.modelSelection,
-        interactionMode: thread.interactionMode,
         runtimeMode: thread.runtimeMode,
         envMode: thread.envMode,
         branch: thread.branch,

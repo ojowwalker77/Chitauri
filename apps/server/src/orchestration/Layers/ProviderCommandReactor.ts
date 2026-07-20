@@ -849,7 +849,6 @@ const make = Effect.gen(function* () {
     readonly modelSelection?: ModelSelection;
     readonly providerOptions?: ProviderStartOptions;
     readonly runtimeMode?: RuntimeMode;
-    readonly interactionMode?: "default" | "plan";
     readonly dispatchMode?: "queue" | "steer";
     readonly createdAt: string;
   }) {
@@ -979,7 +978,6 @@ const make = Effect.gen(function* () {
         ...(input.skills !== undefined ? { skills: input.skills } : {}),
         ...(input.mentions !== undefined ? { mentions: input.mentions } : {}),
         ...(modelForTurn !== undefined ? { modelSelection: modelForTurn } : {}),
-        ...(input.interactionMode !== undefined ? { interactionMode: input.interactionMode } : {}),
       });
 
     const captureMessageStartCheckpoint = Effect.gen(function* () {
@@ -1031,7 +1029,6 @@ const make = Effect.gen(function* () {
         ...(input.skills !== undefined ? { skills: input.skills } : {}),
         ...(input.mentions !== undefined ? { mentions: input.mentions } : {}),
         ...(modelForTurn !== undefined ? { modelSelection: modelForTurn } : {}),
-        ...(input.interactionMode !== undefined ? { interactionMode: input.interactionMode } : {}),
       });
     } else {
       yield* captureMessageStartCheckpoint;
@@ -1481,7 +1478,6 @@ const make = Effect.gen(function* () {
       ...(event.payload.reviewTarget !== undefined
         ? { reviewTarget: event.payload.reviewTarget }
         : {}),
-      interactionMode: event.payload.interactionMode,
       dispatchMode: immediateDispatchMode,
       createdAt: event.payload.createdAt,
     }).pipe(
@@ -1555,7 +1551,6 @@ const make = Effect.gen(function* () {
             : {}),
           dispatchMode: nextQueuedTurn.dispatchMode,
           runtimeMode: nextQueuedTurn.runtimeMode,
-          interactionMode: nextQueuedTurn.interactionMode,
           ...(nextQueuedTurn.sourceProposedPlan !== undefined
             ? { sourceProposedPlan: nextQueuedTurn.sourceProposedPlan }
             : {}),
@@ -1875,7 +1870,6 @@ const make = Effect.gen(function* () {
         : {}),
       dispatchMode: "queue",
       runtimeMode: payload.runtimeMode,
-      interactionMode: payload.interactionMode,
       createdAt: payload.createdAt,
     });
   });

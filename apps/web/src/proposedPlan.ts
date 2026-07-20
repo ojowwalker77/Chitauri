@@ -74,21 +74,26 @@ export function buildPlanImplementationPrompt(planMarkdown: string): string {
   return `PLEASE IMPLEMENT THIS PLAN:\n${planMarkdown.trim()}`;
 }
 
+/**
+ * Resolve what a plan follow-up submission actually sends. Typed feedback is
+ * sent verbatim (refine the plan); an empty draft means "implement it", which is
+ * the only case that attributes the turn to the source plan.
+ */
 export function resolvePlanFollowUpSubmission(input: { draftText: string; planMarkdown: string }): {
   text: string;
-  interactionMode: "default" | "plan";
+  isImplementation: boolean;
 } {
   const trimmedDraftText = input.draftText.trim();
   if (trimmedDraftText.length > 0) {
     return {
       text: trimmedDraftText,
-      interactionMode: "plan",
+      isImplementation: false,
     };
   }
 
   return {
     text: buildPlanImplementationPrompt(input.planMarkdown),
-    interactionMode: "default",
+    isImplementation: true,
   };
 }
 

@@ -33,7 +33,6 @@ function makeDraftThread(partial?: Partial<DraftThreadState>): DraftThreadState 
     projectId: PROJECT_ID,
     createdAt: "2026-04-05T10:00:00.000Z",
     runtimeMode: "approval-required",
-    interactionMode: "default",
     entryPoint: "terminal",
     branch: "feature/terminal-bootstrap",
     worktreePath: "/repo/.worktrees/terminal-bootstrap",
@@ -64,9 +63,7 @@ function makeComposerDraftState(
     },
     activeProvider: "claudeAgent",
     runtimeMode: null,
-    interactionMode: null,
     ...partial,
-    sketchpad: partial?.sketchpad ?? null,
   };
 }
 
@@ -155,7 +152,6 @@ describe("threadBootstrap", () => {
           projectId: PROJECT_ID,
           modelSelection: modelSelection("codex", "gpt-5"),
           runtimeMode: "full-access",
-          interactionMode: "default",
         },
         PROJECT_ID,
       ),
@@ -163,7 +159,6 @@ describe("threadBootstrap", () => {
       projectId: PROJECT_ID,
       modelSelection: modelSelection("codex", "gpt-5"),
       runtimeMode: "full-access",
-      interactionMode: "default",
       envMode: undefined,
       lastKnownPr: null,
     });
@@ -236,13 +231,13 @@ describe("threadBootstrap", () => {
     expect(
       createFreshDraftThreadSeed({
         createdAt: "2026-04-05T10:00:00.000Z",
+        defaultEnvMode: "worktree",
         entryPoint: "terminal",
         options: {
           branch: "feature/new-terminal",
           worktreePath: "/repo/.worktrees/new-terminal",
           envMode: "worktree",
           runtimeMode: "approval-required",
-          interactionMode: "plan",
         },
       }),
     ).toEqual({
@@ -251,21 +246,53 @@ describe("threadBootstrap", () => {
       worktreePath: "/repo/.worktrees/new-terminal",
       envMode: "worktree",
       runtimeMode: "approval-required",
-      interactionMode: "plan",
       lastKnownPr: null,
       entryPoint: "terminal",
     });
   });
 
+  it("seeds a fresh thread with the default env mode when the caller does not pick one", () => {
+    expect(
+      createFreshDraftThreadSeed({
+        createdAt: "2026-04-05T10:00:00.000Z",
+        defaultEnvMode: "worktree",
+        entryPoint: "chat",
+        options: undefined,
+      }),
+    ).toMatchObject({ envMode: "worktree", branch: null, worktreePath: null });
+  });
+
+  it("keeps an explicit local override ahead of the default env mode", () => {
+    expect(
+      createFreshDraftThreadSeed({
+        createdAt: "2026-04-05T10:00:00.000Z",
+        defaultEnvMode: "worktree",
+        entryPoint: "chat",
+        options: { envMode: "local" },
+      }),
+    ).toMatchObject({ envMode: "local" });
+  });
+
+  it("treats a caller-pinned worktree path as worktree mode regardless of the default", () => {
+    expect(
+      createFreshDraftThreadSeed({
+        createdAt: "2026-04-05T10:00:00.000Z",
+        defaultEnvMode: "local",
+        entryPoint: "chat",
+        options: { branch: "pr-42", worktreePath: "/repo/.worktrees/pr-42" },
+      }),
+    ).toMatchObject({ envMode: "worktree", worktreePath: "/repo/.worktrees/pr-42" });
+  });
+
   it("prefers draft state when resolving terminal creation payloads", () => {
     expect(
       resolveTerminalThreadCreationState({
+        defaultEnvMode: "worktree",
         activeDraftThread: null,
         activeThread: {
           projectId: PROJECT_ID,
           modelSelection: modelSelection("codex", "gpt-5"),
           runtimeMode: "full-access",
-          interactionMode: "default",
         },
         draftComposerState: makeComposerDraftState(),
         draftThread: makeDraftThread(),
@@ -278,7 +305,6 @@ describe("threadBootstrap", () => {
         effort: "max",
       }),
       runtimeMode: "approval-required",
-      interactionMode: "default",
       envMode: "worktree",
       branch: "feature/terminal-bootstrap",
       worktreePath: "/repo/.worktrees/terminal-bootstrap",
@@ -286,53 +312,15 @@ describe("threadBootstrap", () => {
     });
   });
 
-  it("does not inherit plan mode from the previously active thread for a fresh creation", () => {
-    expect(
-      resolveTerminalThreadCreationState({
-        activeDraftThread: null,
-        activeThread: {
-          projectId: PROJECT_ID,
-          modelSelection: modelSelection("codex", "gpt-5"),
-          runtimeMode: "full-access",
-          interactionMode: "plan",
-        },
-        draftComposerState: makeComposerDraftState(),
-        draftThread: null,
-        options: undefined,
-        projectDefaultModelSelection: modelSelection("codex", "gpt-5.4"),
-        projectId: PROJECT_ID,
-      }).interactionMode,
-    ).toBe("default");
-  });
-
-  it("preserves explicit draft plan mode when resolving terminal creation payloads", () => {
-    expect(
-      resolveTerminalThreadCreationState({
-        activeDraftThread: null,
-        activeThread: {
-          projectId: PROJECT_ID,
-          modelSelection: modelSelection("codex", "gpt-5"),
-          runtimeMode: "full-access",
-          interactionMode: "default",
-        },
-        draftComposerState: makeComposerDraftState(),
-        draftThread: makeDraftThread({ interactionMode: "plan" }),
-        options: undefined,
-        projectDefaultModelSelection: modelSelection("codex", "gpt-5.4"),
-        projectId: PROJECT_ID,
-      }).interactionMode,
-    ).toBe("plan");
-  });
-
   it("clears inherited worktree state when an explicit local env override is requested", () => {
     expect(
       resolveTerminalThreadCreationState({
+        defaultEnvMode: "worktree",
         activeDraftThread: null,
         activeThread: {
           projectId: PROJECT_ID,
           modelSelection: modelSelection("codex", "gpt-5"),
           runtimeMode: "full-access",
-          interactionMode: "default",
           envMode: "worktree",
         },
         draftComposerState: makeComposerDraftState(),

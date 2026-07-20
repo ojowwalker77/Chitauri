@@ -30,6 +30,16 @@ const setup = Layer.effectDiscard(
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
     yield* sql`PRAGMA journal_mode = WAL;`;
+    // SQLite defaults to synchronous = FULL, which under WAL fsyncs on every
+    // commit. The orchestration engine opens one transaction per command, and a
+    // streaming turn issues one command per token delta — so FULL costs a few
+    // thousand fsyncs per turn, serialized on the single connection and blocking
+    // every concurrent read (including the UI's snapshot queries).
+    //
+    // Under WAL, NORMAL is still crash-safe for process death; only an OS crash
+    // or power loss can lose the most recent commits. That is the same tradeoff
+    // the durable-segment transcript design already accepts.
+    yield* sql`PRAGMA synchronous = NORMAL;`;
     yield* sql`PRAGMA foreign_keys = ON;`;
     yield* runMigrations();
   }),

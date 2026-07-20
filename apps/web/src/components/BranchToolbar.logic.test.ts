@@ -64,6 +64,30 @@ describe("resolveBranchToolbarValue", () => {
     ).toBe("main");
   });
 
+  it("shows the repository default branch for an uncreated worktree, not the checkout", () => {
+    expect(
+      resolveBranchToolbarValue({
+        envMode: "worktree",
+        activeWorktreePath: null,
+        activeThreadBranch: null,
+        currentGitBranch: "feature/elsewhere",
+        defaultBranch: "main",
+      }),
+    ).toBe("main");
+  });
+
+  it("keeps an explicit base branch ahead of the repository default", () => {
+    expect(
+      resolveBranchToolbarValue({
+        envMode: "worktree",
+        activeWorktreePath: null,
+        activeThreadBranch: "feature/base",
+        currentGitBranch: "feature/elsewhere",
+        defaultBranch: "main",
+      }),
+    ).toBe("feature/base");
+  });
+
   it("keeps an explicitly selected worktree base branch", () => {
     expect(
       resolveBranchToolbarValue({

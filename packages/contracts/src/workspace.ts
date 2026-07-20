@@ -54,7 +54,11 @@ export type WorkspaceThreadMode = typeof WorkspaceThreadMode.Type;
 /** Server-side first-send operation. The browser never sequences Git + thread metadata. */
 export const WorkspaceProvisionThreadWorktreeInput = Schema.Struct({
   threadId: ThreadId,
-  baseBranch: TrimmedNonEmptyString,
+  /**
+   * Base to branch from. `null` asks the server for the repository default:
+   * fetch the primary remote, then branch off `<remote>/<default-branch>`.
+   */
+  baseBranch: Schema.NullOr(TrimmedNonEmptyString),
   newBranch: TrimmedNonEmptyString,
 });
 export type WorkspaceProvisionThreadWorktreeInput =

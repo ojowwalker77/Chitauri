@@ -150,6 +150,14 @@ export function gitResolvePullRequestQueryOptions(input: {
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    // A PR merged from the GitHub UI produces no local event, and every
+    // invalidator of this key is triggered by an action inside TeaCode — so
+    // without a timer this query has no refresh path at all. That does not just
+    // stale the sidebar glyph: the merged-PR automations (auto-archive thread,
+    // auto-delete local branch) are driven off this result and would never fire.
+    // Matches GIT_STATUS_REFETCH_INTERVAL_MS rather than the old per-call-site
+    // 60s, which was a request per thread per minute against GitHub.
+    refetchInterval: GIT_STATUS_REFETCH_INTERVAL_MS,
   });
 }
 

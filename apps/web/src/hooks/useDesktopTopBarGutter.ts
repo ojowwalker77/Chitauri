@@ -9,6 +9,7 @@ import {
 } from "@t3tools/shared/desktopChrome";
 import { useLayoutEffect } from "react";
 
+import { useAppSettings } from "~/appSettings";
 import { isElectron } from "~/env";
 import { useSidebar } from "~/components/ui/sidebar";
 import { isMacPlatform, isWindowsPlatform } from "~/lib/utils";
@@ -36,12 +37,18 @@ export function shouldReserveDesktopTopBarTrafficLightGutter(input: {
   isMacDesktop: boolean;
   sidebarOpen: boolean;
   isMobile: boolean;
+  /** Window edge the sidebar docks against. Only a left sidebar can shield the lights. */
+  sidebarSide?: "left" | "right";
 }): boolean {
   if (!input.isElectron) return false;
   if (!input.isMacDesktop) return false;
   // Mobile drawers float above content rather than reserving a column,
   // so the chat header always owns the left edge in that mode.
   if (input.isMobile) return true;
+  // The traffic lights are always top-LEFT. A sidebar docked to the right edge
+  // never covers them, so the next surface still has to reserve the gutter even
+  // while that sidebar is open.
+  if ((input.sidebarSide ?? "left") === "right") return true;
   return !input.sidebarOpen;
 }
 
@@ -99,12 +106,14 @@ export function useSyncDesktopTopBarTrafficLightGutterZoom(): void {
  */
 export function useDesktopTopBarTrafficLightGutterClassName(): string | null {
   const { isMobile, open } = useSidebar();
+  const { settings } = useAppSettings();
   const isMacDesktop = typeof navigator !== "undefined" ? isMacPlatform(navigator.platform) : false;
   return shouldReserveDesktopTopBarTrafficLightGutter({
     isElectron,
     isMacDesktop,
     sidebarOpen: open,
     isMobile,
+    sidebarSide: settings.sidebarPosition,
   })
     ? DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CLASS
     : null;

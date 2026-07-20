@@ -123,7 +123,7 @@ export function resolveEditorLabel(editorId: EditorId, platform: string): string
   }
 
   if (editorId === "system-default") {
-    // macOS PDFs open in Preview by default; Windows/Linux use whatever viewer is
+    // macOS routes most documents to Preview; Windows/Linux use whatever app is
     // registered as the system handler, so keep the label generic off-Mac.
     return isMacPlatform(platform) ? "Preview" : "Default app";
   }

@@ -8,6 +8,8 @@ import {
   goForwardInAppHistory,
   resolveAppNavigationState,
 } from "../appNavigation";
+import { useAppSettings } from "../appSettings";
+import { appBackgroundImageCss } from "../lib/appBackgrounds";
 import ShortcutsDialog from "../components/ShortcutsDialog";
 import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
 import ThreadSidebar from "../components/Sidebar";
@@ -452,16 +454,20 @@ function ChatRouteLayout() {
   });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const resolvedSidebarOpen = isEditorView ? false : sidebarOpen;
+  const { settings } = useAppSettings();
+  const sidebarSide = settings.sidebarPosition;
 
-  // The thread sidebar always lives on the left; the right dock is a separate surface.
+  // Docked, not floating: the panel runs the full window height and meets the
+  // canvas on a hairline, so `variant="sidebar"` (no inset padding, no radius,
+  // no card border) rather than the inset `floating` card.
   const sidebarElement = (
     <Sidebar
-      side="left"
-      variant="floating"
+      side={sidebarSide}
+      variant="sidebar"
       collapsible="offcanvas"
       // Match the right dock's soft drawer slide (shared token) instead of the
       // shell's default `ease-linear`. Applied to the container + gap in lockstep.
-      className={cn("text-foreground md:p-3", SIDEBAR_OFFCANVAS_MOTION_CLASS)}
+      className={cn("text-foreground", SIDEBAR_OFFCANVAS_MOTION_CLASS)}
       gapClassName={cn(SIDEBAR_GAP_CLASS, SIDEBAR_OFFCANVAS_MOTION_CLASS)}
       innerClassName={SIDEBAR_INNER_CLASS}
       transparentSurface
@@ -471,12 +477,22 @@ function ChatRouteLayout() {
     </Sidebar>
   );
 
-  // The resize rail remains in the gap between the floating sidebar panel and the
-  // flat main canvas. It is interaction-only and paints no divider.
+  // Optional decorative canvas image. Applied here (not on <body>) so it stays
+  // behind the chat column only and never runs under the docked sidebar.
+  const canvasBackgroundImage = appBackgroundImageCss(settings.appBackground);
+
+  // The resize rail sits on the seam between the sidebar and the main canvas.
+  // It is interaction-only and paints no divider, so it has to follow the side.
   const mainContentShell = (
-    <div className="claude-main-shell relative flex h-svh min-h-0 min-w-0 flex-1">
+    <div
+      className="claude-main-shell relative flex h-svh min-h-0 min-w-0 flex-1"
+      data-app-background={settings.appBackground === "none" ? undefined : "image"}
+      {...(canvasBackgroundImage
+        ? { style: { backgroundImage: canvasBackgroundImage } as CSSProperties }
+        : {})}
+    >
       {isEditorView ? null : (
-        <SidebarInstanceProvider side="left" resizable={THREAD_SIDEBAR_RESIZABLE}>
+        <SidebarInstanceProvider side={sidebarSide} resizable={THREAD_SIDEBAR_RESIZABLE}>
           <SidebarRail placement="content-seam" />
         </SidebarInstanceProvider>
       )}
@@ -490,14 +506,26 @@ function ChatRouteLayout() {
       open={resolvedSidebarOpen}
       onOpenChange={setSidebarOpen}
       className="chitauri-anthropic-shell isolate overflow-hidden bg-[var(--app-shell-background)]"
-      data-sidebar-side="left"
+      data-sidebar-side={sidebarSide}
       style={{ "--sidebar-width": `${THREAD_SIDEBAR_DEFAULT_WIDTH}px` } as CSSProperties}
     >
       {isElectron ? <div aria-hidden="true" className="desktop-window-drag-strip" /> : null}
       <ThreadRetentionMaintenanceToast />
       <ChatRouteGlobalShortcuts />
-      {sidebarElement}
-      {mainContentShell}
+      {/* The shell is a flex row and the sidebar's width is reserved by an in-flow
+          gap element, so the panel has to be ordered on the side it docks to —
+          the fixed container alone would leave the gap on the wrong edge. */}
+      {sidebarSide === "left" ? (
+        <>
+          {sidebarElement}
+          {mainContentShell}
+        </>
+      ) : (
+        <>
+          {mainContentShell}
+          {sidebarElement}
+        </>
+      )}
     </SidebarProvider>
   );
 }

@@ -61,7 +61,6 @@ function thread(overrides: Partial<Thread> = {}): Thread {
     title: "Environment panel",
     modelSelection: { provider: "codex", model: "gpt-5.4-mini" },
     runtimeMode: "full-access",
-    interactionMode: "default",
     session: null,
     messages: [],
     proposedPlans: [],

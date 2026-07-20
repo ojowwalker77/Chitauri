@@ -24,7 +24,6 @@ import {
   type ThreadTerminalPresentationMode,
 } from "../types";
 import { cn } from "~/lib/utils";
-import { PANEL_SURFACE_CLASS_NAME } from "./ui/surface";
 import { Spinner } from "./ui/spinner";
 import {
   type TerminalChromeActionItem,
@@ -32,6 +31,7 @@ import {
   TerminalWorkspaceTabBar,
 } from "./terminal/TerminalChrome";
 import { resolveThreadTerminalLayout } from "./terminal/TerminalLayout";
+import { terminalDrawerShellClassName } from "./terminal/terminalDrawerShell";
 import {
   resolveTerminalSelectionActionPosition,
   shouldHandleTerminalSelectionMouseUp,
@@ -41,6 +41,7 @@ import {
   buildTerminalRuntimeKey,
   terminalRuntimeRegistry,
 } from "./terminal/terminalRuntimeRegistry";
+import { isTerminalRuntimeThreadDisposed } from "./terminal/terminalRuntimeHandle";
 import type {
   TerminalRuntimeConfig,
   TerminalRuntimeStatus,
@@ -246,7 +247,10 @@ function TerminalViewport({
 
   useEffect(() => {
     const mount = containerRef.current;
-    if (!mount || !runtimeCwdReady) {
+    // This module is lazily loaded, so the thread can be deleted while the chunk
+    // is still in flight. Attaching then would open a PTY for a thread the
+    // server has already torn down, with nothing left to reap it.
+    if (!mount || !runtimeCwdReady || isTerminalRuntimeThreadDisposed(threadId)) {
       terminalRef.current = null;
       setTerminalInstance(null);
       setSearchAddonInstance(null);
@@ -458,7 +462,7 @@ function TerminalViewport({
   );
 }
 
-interface ThreadTerminalDrawerProps {
+export interface ThreadTerminalDrawerProps {
   threadId: ThreadId;
   cwd: string;
   runtimeEnv?: Record<string, string>;
@@ -661,13 +665,7 @@ export default function ThreadTerminalDrawer({
 
   return (
     <aside
-      className={cn(
-        PANEL_SURFACE_CLASS_NAME,
-        "thread-terminal-drawer relative flex min-w-0 flex-col",
-        isWorkspaceMode
-          ? "m-3 h-[calc(100%_-_1.5rem)] min-h-0 w-[calc(100%_-_1.5rem)]"
-          : "mx-3 mb-3 w-[calc(100%_-_1.5rem)] shrink-0",
-      )}
+      className={terminalDrawerShellClassName(presentationMode)}
       style={isWorkspaceMode ? undefined : { height: `${drawerHeight}px` }}
     >
       {!isWorkspaceMode ? (

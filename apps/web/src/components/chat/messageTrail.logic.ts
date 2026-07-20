@@ -28,11 +28,63 @@ export interface MessageTrailItem {
 /** Hard cap so a pathological paste can't bloat the hover-card payload. */
 const MAX_PREVIEW_LENGTH = 280;
 
+/**
+ * How much raw text we collapse before giving up on the fast path. Whitespace
+ * runs shrink, so a window can under-fill the cap; 8x leaves room for prose
+ * while keeping the regex bounded regardless of message size.
+ */
+const PREVIEW_SCAN_WINDOW = MAX_PREVIEW_LENGTH * 8;
+
 function normalizePreview(text: string): string {
+  // The cap is applied *after* collapsing, so a naive implementation scans and
+  // reallocates the entire message body to produce at most 280 characters.
+  // Collapse a bounded window first and only fall back to the full scan when
+  // that window couldn't fill the cap (whitespace-dominated text).
+  if (text.length > PREVIEW_SCAN_WINDOW) {
+    const windowed = text.slice(0, PREVIEW_SCAN_WINDOW).replace(/\s+/g, " ").trim();
+    // Strictly greater, matching the full-scan branch below. At exactly
+    // MAX_PREVIEW_LENGTH the text fits and must NOT get an ellipsis — `>=` here
+    // appended one to any message whose collapsed prefix landed on exactly 280.
+    if (windowed.length > MAX_PREVIEW_LENGTH) {
+      return `${windowed.slice(0, MAX_PREVIEW_LENGTH).trimEnd()}…`;
+    }
+  }
   const collapsed = text.replace(/\s+/g, " ").trim();
   return collapsed.length > MAX_PREVIEW_LENGTH
     ? `${collapsed.slice(0, MAX_PREVIEW_LENGTH).trimEnd()}…`
     : collapsed;
+}
+
+/**
+ * Previews are re-derived on every store flush (10x/second while streaming) for
+ * every message in the transcript, so this cache is what keeps the cost bounded
+ * to the tail message.
+ *
+ * Keyed on message id + text, NOT on the message object: two live paths hand us
+ * a freshly allocated object every derive — `stripProposedPlanBlocksFromText`
+ * spreads every assistant message in a turn that has a proposed plan, and the
+ * attachment-preview handoff spreads while in flight — so an identity-keyed
+ * WeakMap had a 0% hit rate on exactly the threads that need it most.
+ *
+ * The text comparison is cheap in the common case: while streaming, the length
+ * changes on every delta, so a mismatch is rejected on the length check.
+ */
+const MAX_CACHED_PREVIEWS = 1_000;
+const previewByMessageId = new Map<string, { readonly text: string; readonly preview: string }>();
+
+function cachedPreview(messageId: string, text: string): string {
+  const cached = previewByMessageId.get(messageId);
+  if (cached !== undefined && cached.text === text) {
+    return cached.preview;
+  }
+  const preview = normalizePreview(text);
+  // Map iterates in insertion order, so the first key is the oldest.
+  if (!cached && previewByMessageId.size >= MAX_CACHED_PREVIEWS) {
+    const oldest = previewByMessageId.keys().next();
+    if (!oldest.done) previewByMessageId.delete(oldest.value);
+  }
+  previewByMessageId.set(messageId, { text, preview });
+  return preview;
 }
 
 /**
@@ -58,13 +110,13 @@ export function deriveMessageTrailItems(
       items.push({
         id: entry.message.id,
         ordinal: items.length + 1,
-        preview: normalizePreview(entry.message.text),
+        preview: cachedPreview(entry.message.id, entry.message.text),
         responsePreview: "",
         attachmentCount: entry.message.attachments?.length ?? 0,
       });
       currentTurnIndex = items.length - 1;
     } else if (role === "assistant" && currentTurnIndex >= 0) {
-      const responsePreview = normalizePreview(entry.message.text);
+      const responsePreview = cachedPreview(entry.message.id, entry.message.text);
       if (responsePreview !== "") {
         items[currentTurnIndex]!.responsePreview = responsePreview;
       }

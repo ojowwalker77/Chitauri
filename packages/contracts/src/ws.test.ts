@@ -114,46 +114,6 @@ it.effect("accepts GitHub actions without confusing the RPC and action discrimin
   }),
 );
 
-it.effect("accepts bounded Cloud inventory requests", () =>
-  Effect.gen(function* () {
-    const parsed = yield* decode(WebSocketRequest, {
-      id: "req-cloud-inventory-1",
-      body: {
-        _tag: WS_METHODS.cloudSearchResources,
-        bindingId: "binding-1",
-        query: "api",
-        types: [],
-        states: [],
-        ownership: ["exact", "probable"],
-        cursor: null,
-        limit: 50,
-      },
-    });
-    assert.strictEqual(parsed.body._tag, WS_METHODS.cloudSearchResources);
-  }),
-);
-
-it.effect("rejects Cloud inventory requests above the page cap", () =>
-  Effect.gen(function* () {
-    const exit = yield* Effect.exit(
-      decode(WebSocketRequest, {
-        id: "req-cloud-inventory-invalid",
-        body: {
-          _tag: WS_METHODS.cloudSearchResources,
-          bindingId: "binding-1",
-          query: null,
-          types: [],
-          states: [],
-          ownership: [],
-          cursor: null,
-          limit: 101,
-        },
-      }),
-    );
-    assert.strictEqual(exit._tag, "Failure");
-  }),
-);
-
 it.effect("accepts project script discovery requests", () =>
   Effect.gen(function* () {
     const parsed = yield* decode(WebSocketRequest, {

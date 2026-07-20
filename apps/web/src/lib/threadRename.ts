@@ -8,7 +8,6 @@ import {
   type ModelSelection,
   type OrchestrationThreadPullRequest,
   type ProjectId,
-  type ProviderInteractionMode,
   type RuntimeMode,
   type ThreadId,
 } from "@t3tools/contracts";
@@ -28,7 +27,6 @@ export async function dispatchThreadRename(input: {
         projectId: ProjectId;
         modelSelection: ModelSelection;
         runtimeMode: RuntimeMode;
-        interactionMode: ProviderInteractionMode;
         envMode: DraftThreadEnvMode;
         branch: string | null;
         worktreePath: string | null;
@@ -60,7 +58,6 @@ export async function dispatchThreadRename(input: {
         title: trimmed,
         modelSelection: input.createIfMissing.modelSelection,
         runtimeMode: input.createIfMissing.runtimeMode,
-        interactionMode: input.createIfMissing.interactionMode,
         envMode: input.createIfMissing.envMode,
         branch: input.createIfMissing.branch,
         worktreePath: input.createIfMissing.worktreePath,

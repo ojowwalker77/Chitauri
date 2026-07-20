@@ -3,12 +3,16 @@
 //          (chat drawer, workspace page, right-dock pane): a stable id factory and
 //          the dispose + server-close + fallback routine that was duplicated verbatim.
 // Layer: Web terminal runtime helpers
-// Depends on: terminalRuntimeRegistry (xterm instances), NativeApi terminal channel.
+// Depends on: terminalRuntimeHandle (xterm-free registry access), NativeApi terminal channel.
+//
+// Note: this module is imported by light callers (ChatView, useTerminalSurfaceController)
+// that must not pull the ~794 kB xterm stack into their chunk, so it reaches the
+// runtime registry through terminalRuntimeHandle rather than importing it directly.
 
 import { type NativeApi } from "@t3tools/contracts";
 
 import { randomUUID } from "~/lib/utils";
-import { terminalRuntimeRegistry } from "./terminalRuntimeRegistry";
+import { disposeTerminalRuntime } from "./terminalRuntimeHandle";
 
 // Stable, collision-resistant id for a new terminal pane/tab/split.
 export function randomTerminalId(): string {
@@ -26,7 +30,7 @@ export function disposeAndCloseTerminalSession(input: {
   clearHistoryBeforeClose?: boolean;
 }): void {
   const { api, threadId, terminalId } = input;
-  terminalRuntimeRegistry.disposeTerminal(threadId, terminalId);
+  disposeTerminalRuntime(threadId, terminalId);
 
   const fallbackExitWrite = () =>
     api?.terminal.write({ threadId, terminalId, data: "exit\n" }).catch(() => undefined);

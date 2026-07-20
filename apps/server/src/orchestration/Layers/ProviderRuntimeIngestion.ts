@@ -2088,7 +2088,6 @@ const make = Effect.gen(function* () {
               }),
               modelSelection: resolvedModelSelection ?? parentThread.modelSelection,
               runtimeMode: parentThread.runtimeMode,
-              interactionMode: parentThread.interactionMode,
               envMode: parentThread.envMode,
               branch: parentThread.branch,
               worktreePath: parentThread.worktreePath,

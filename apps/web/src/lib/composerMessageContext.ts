@@ -14,7 +14,6 @@ import {
   type ParsedPastedTextEntry,
   type PastedTextDraft,
 } from "./composerPastedText";
-import { appendSketchpadContextToPrompt, type SketchpadDocument } from "./composerSketchpad";
 import {
   appendFileCommentsToPrompt,
   extractTrailingFileComments,
@@ -30,11 +29,7 @@ import {
   type TerminalContextDraft,
 } from "./terminalContext";
 
-const TRAILING_SKETCHPAD_CONTEXT_PATTERN =
-  /\n*(<sketchpad_context version="(\d+)">\n[\s\S]*?\n<\/sketchpad_context>)\s*$/u;
-
 const TRAILING_SERIALIZED_COMPOSER_BLOCK_PATTERNS = [
-  TRAILING_SKETCHPAD_CONTEXT_PATTERN,
   /\n*(<pasted_text>\n[\s\S]*?\n<\/pasted_text>)\s*$/u,
   /\n*(<file_comments>\n[\s\S]*?\n<\/file_comments>)\s*$/u,
   /\n*(<terminal_context>\n[\s\S]*?\n<\/terminal_context>)\s*$/u,
@@ -50,7 +45,6 @@ export interface DisplayedUserMessageState {
   assistantSelections: ParsedAssistantSelectionEntry[];
   fileComments: ParsedFileCommentEntry[];
   pastedTexts: ParsedPastedTextEntry[];
-  sketchpad?: { version: number };
 }
 
 export function appendComposerMessageContext(input: {
@@ -59,34 +53,17 @@ export function appendComposerMessageContext(input: {
   terminalContexts: ReadonlyArray<TerminalContextDraft>;
   fileComments: ReadonlyArray<FileCommentDraft>;
   pastedTexts: ReadonlyArray<PastedTextDraft>;
-  sketchpad: SketchpadDocument | null;
 }): string {
-  return appendSketchpadContextToPrompt(
-    appendPastedTextsToPrompt(
-      appendFileCommentsToPrompt(
-        appendTerminalContextsToPrompt(
-          appendAssistantSelectionsToPrompt(input.prompt, input.assistantSelections),
-          input.terminalContexts,
-        ),
-        input.fileComments,
+  return appendPastedTextsToPrompt(
+    appendFileCommentsToPrompt(
+      appendTerminalContextsToPrompt(
+        appendAssistantSelectionsToPrompt(input.prompt, input.assistantSelections),
+        input.terminalContexts,
       ),
-      input.pastedTexts,
+      input.fileComments,
     ),
-    input.sketchpad,
+    input.pastedTexts,
   );
-}
-
-export function extractTrailingSketchpadContext(prompt: string): {
-  promptText: string;
-  metadata: { version: number } | null;
-} {
-  const match = TRAILING_SKETCHPAD_CONTEXT_PATTERN.exec(prompt);
-  if (!match) return { promptText: prompt, metadata: null };
-  const version = Number(match[2]);
-  return {
-    promptText: prompt.slice(0, match.index).replace(/\n+$/u, ""),
-    metadata: Number.isFinite(version) ? { version } : null,
-  };
 }
 
 export function appendOriginalComposerPromptBlocks(input: {
@@ -118,8 +95,7 @@ export function deriveDisplayedUserMessageState(
   prompt: string,
   options?: { hideImageOnlyBootstrapPrompt?: boolean },
 ): DisplayedUserMessageState {
-  const extractedSketchpad = extractTrailingSketchpadContext(prompt);
-  const extractedPastedTexts = extractTrailingPastedTexts(extractedSketchpad.promptText);
+  const extractedPastedTexts = extractTrailingPastedTexts(prompt);
   const extractedFileComments = extractTrailingFileComments(extractedPastedTexts.promptText);
   const extractedContexts = extractTrailingTerminalContexts(extractedFileComments.promptText);
   const extractedAssistantSelections = extractTrailingAssistantSelections(
@@ -139,6 +115,5 @@ export function deriveDisplayedUserMessageState(
     assistantSelections: extractedAssistantSelections.selections,
     fileComments: extractedFileComments.comments,
     pastedTexts: extractedPastedTexts.pastedTexts,
-    ...(extractedSketchpad.metadata ? { sketchpad: extractedSketchpad.metadata } : {}),
   };
 }

@@ -42,6 +42,30 @@ export const ProjectionThreadMessage = Schema.Struct({
 });
 export type ProjectionThreadMessage = typeof ProjectionThreadMessage.Type;
 
+/**
+ * Streaming delta write for an already-projected message.
+ *
+ * Mirrors every column the full upsert touches on a streaming
+ * `thread.message-sent` delta, except `text` (appended in SQL) and `createdAt`
+ * (the upsert always keeps the persisted value once a row exists).
+ */
+export const AppendProjectionThreadMessageTextInput = Schema.Struct({
+  messageId: MessageId,
+  threadId: ThreadId,
+  turnId: Schema.NullOr(TurnId),
+  role: OrchestrationMessageRole,
+  textDelta: Schema.String,
+  attachments: Schema.optional(Schema.Array(ChatAttachment)),
+  skills: Schema.optional(Schema.Array(ProviderSkillReference)),
+  mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
+  dispatchMode: Schema.optional(TurnDispatchMode),
+  dispatchOrigin: Schema.optional(MessageDispatchOrigin),
+  source: OrchestrationMessageSource,
+  updatedAt: IsoDateTime,
+});
+export type AppendProjectionThreadMessageTextInput =
+  typeof AppendProjectionThreadMessageTextInput.Type;
+
 export const ListProjectionThreadMessagesInput = Schema.Struct({
   threadId: ThreadId,
 });
@@ -69,6 +93,20 @@ export interface ProjectionThreadMessageRepositoryShape {
   readonly upsert: (
     message: ProjectionThreadMessage,
   ) => Effect.Effect<void, ProjectionRepositoryError>;
+
+  /**
+   * Append a streaming text delta onto an existing projected message.
+   *
+   * Runs as a single `UPDATE ... SET text = text || ?` so building an n-character
+   * message from k deltas stays O(n) instead of re-reading and rewriting the whole
+   * row per delta.
+   *
+   * Returns `false` when no row exists yet for `messageId`; the caller must then
+   * fall back to {@link ProjectionThreadMessageRepositoryShape.upsert}.
+   */
+  readonly appendStreamingText: (
+    input: AppendProjectionThreadMessageTextInput,
+  ) => Effect.Effect<boolean, ProjectionRepositoryError>;
 
   /**
    * Read a projected thread message by id.

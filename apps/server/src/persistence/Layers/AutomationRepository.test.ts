@@ -42,7 +42,6 @@ const permissionSnapshot = {
     model: "gpt-5-codex",
   },
   runtimeMode: "approval-required",
-  interactionMode: "default",
   worktreeMode: "worktree",
   allowedCapabilities: ["send-turn", "create-worktree"],
   createdAt: "2026-06-16T10:00:00.000Z",

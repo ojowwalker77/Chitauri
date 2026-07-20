@@ -11,7 +11,6 @@ import {
   EventId,
   type ProviderComposerCapabilities,
   type ProviderApprovalDecision,
-  type ProviderInteractionMode,
   type ProviderListModelsResult,
   type ProviderRuntimeEvent,
   type ProviderSession,
@@ -145,12 +144,6 @@ const XAI_API_BASE_URL = "https://api.x.ai/v1";
 const ACP_PLAN_MODE_ALIASES = ["plan"];
 const ACP_IMPLEMENT_MODE_ALIASES = ["code", "agent", "default", "chat", "implement"];
 const ACP_APPROVAL_MODE_ALIASES = ["ask"];
-const GROK_PLAN_MODE_PROMPT_PREFIX = [
-  "TeaCode Grok plan mode is active.",
-  "Do not implement or mutate files in this turn.",
-  "Do not ask follow-up questions or wait for confirmation; if scope is ambiguous, choose a reasonable default and state the assumption in the plan.",
-  "When ready, create the final implementation plan.",
-].join("\n");
 
 const collectStreamAsString = <E>(stream: Stream.Stream<Uint8Array, E>): Effect.Effect<string, E> =>
   Stream.runFold(
@@ -286,7 +279,6 @@ interface GrokSessionContext {
   readonly pendingUserInputs: Map<ApprovalRequestId, PendingUserInput>;
   readonly turns: Array<{ id: TurnId; items: Array<unknown> }>;
   lastPlanFingerprint: string | undefined;
-  activeInteractionMode: ProviderInteractionMode | undefined;
   activeTurnId: TurnId | undefined;
   activeTurnHadAssistantContent: boolean;
   readonly activeAssistantItemsWithContent: Set<string>;
@@ -359,7 +351,6 @@ function clearGrokActiveTurn(ctx: GrokSessionContext, turnId: TurnId): boolean {
   ctx.activeAssistantItemsWithContent.clear();
   ctx.activeTurnFailedToolDetail = undefined;
   ctx.activePromptFiber = undefined;
-  ctx.activeInteractionMode = undefined;
   const { activeTurnId: _activeTurnId, ...session } = ctx.session;
   ctx.session = session;
   return true;
@@ -615,20 +606,6 @@ function settlePendingUserInputsAsEmptyAnswers(
   );
 }
 
-function withGrokPlanModePrompt(input: {
-  readonly text: string;
-  readonly interactionMode?: ProviderInteractionMode;
-}): string {
-  if (input.interactionMode !== "plan") {
-    return input.text;
-  }
-
-  const text = input.text.trim();
-  return text.length > 0
-    ? `${GROK_PLAN_MODE_PROMPT_PREFIX}\n\nUser request:\n${text}`
-    : GROK_PLAN_MODE_PROMPT_PREFIX;
-}
-
 function normalizeModeSearchText(mode: AcpSessionMode): string {
   return [mode.id, mode.name, mode.description]
     .filter((value): value is string => typeof value === "string" && value.length > 0)
@@ -663,17 +640,12 @@ function isPlanMode(mode: AcpSessionMode): boolean {
 }
 
 function resolveRequestedModeId(input: {
-  readonly interactionMode: ProviderInteractionMode | undefined;
   readonly runtimeMode: RuntimeMode;
   readonly modeState: AcpSessionModeState | undefined;
 }): string | undefined {
   const modeState = input.modeState;
   if (!modeState) {
     return undefined;
-  }
-
-  if (input.interactionMode === "plan") {
-    return findModeByAliases(modeState.availableModes, ACP_PLAN_MODE_ALIASES)?.id;
   }
 
   if (input.runtimeMode === "approval-required") {
@@ -696,7 +668,6 @@ function resolveRequestedModeId(input: {
 function applyRequestedSessionConfiguration<E>(input: {
   readonly runtime: AcpSessionRuntimeShape;
   readonly runtimeMode: RuntimeMode;
-  readonly interactionMode: ProviderInteractionMode | undefined;
   readonly modelSelection:
     | {
         readonly model: string;
@@ -719,7 +690,6 @@ function applyRequestedSessionConfiguration<E>(input: {
     }
 
     const requestedModeId = resolveRequestedModeId({
-      interactionMode: input.interactionMode,
       runtimeMode: input.runtimeMode,
       modeState: yield* input.runtime.getModeState,
     });
@@ -1284,7 +1254,6 @@ export function makeGrokAdapter(
             pendingUserInputs,
             turns: [],
             lastPlanFingerprint: undefined,
-            activeInteractionMode: undefined,
             activeTurnId: undefined,
             activeTurnHadAssistantContent: false,
             activeAssistantItemsWithContent: new Set(),
@@ -1550,7 +1519,6 @@ export function makeGrokAdapter(
             yield* applyRequestedSessionConfiguration({
               runtime: acp,
               runtimeMode: input.runtimeMode,
-              interactionMode: undefined,
               modelSelection: grokModelSelection,
               mapError: ({ cause, method }) =>
                 mapAcpToAdapterError(PROVIDER, input.threadId, method, cause),
@@ -1721,7 +1689,6 @@ export function makeGrokAdapter(
         yield* applyRequestedSessionConfiguration({
           runtime: ctx.acp,
           runtimeMode: ctx.session.runtimeMode,
-          interactionMode: input.interactionMode,
           modelSelection:
             model === undefined
               ? undefined
@@ -1734,14 +1701,7 @@ export function makeGrokAdapter(
         });
         const promptParts: Array<EffectAcpSchema.ContentBlock> = [];
         const promptText = appendFileAttachmentsPromptBlock({
-          text: input.input?.trim()
-            ? withGrokPlanModePrompt({
-                text: input.input.trim(),
-                ...(input.interactionMode !== undefined
-                  ? { interactionMode: input.interactionMode }
-                  : {}),
-              })
-            : undefined,
+          text: input.input?.trim() ? input.input.trim() : undefined,
           attachments: input.attachments,
           attachmentsDir: serverConfig.attachmentsDir,
           include: "all-files",
@@ -1812,7 +1772,6 @@ export function makeGrokAdapter(
         // Late-event attribution only matters between turns; once a new turn
         // dispatches, stragglers from older turns are stale enough to drop.
         ctx.turnToolCallIds.clear();
-        ctx.activeInteractionMode = input.interactionMode;
         ctx.lastPlanFingerprint = undefined;
         ctx.lastTurnActivityAt = Date.now();
         const { lastError: _lastError, ...sessionWithoutLastError } = ctx.session;

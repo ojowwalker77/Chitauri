@@ -8,7 +8,6 @@ import {
   type ModelSelection,
   type OrchestrationThreadPullRequest,
   type ProjectId,
-  type ProviderInteractionMode,
   type ProviderKind,
   type RuntimeMode,
   type ThreadEnvironmentMode,
@@ -21,14 +20,13 @@ import {
   type DraftThreadState,
   resolvePreferredComposerModelSelection,
 } from "../composerDraftStore";
-import { DEFAULT_INTERACTION_MODE, type Thread, type ThreadPrimarySurface } from "../types";
+import { type Thread, type ThreadPrimarySurface } from "../types";
 
 export interface NewThreadOptions {
   branch?: string | null;
   worktreePath?: string | null;
   envMode?: DraftThreadEnvMode;
   runtimeMode?: RuntimeMode;
-  interactionMode?: ProviderInteractionMode;
   lastKnownPr?: OrchestrationThreadPullRequest | null;
   entryPoint?: ThreadPrimarySurface;
   provider?: ProviderKind;
@@ -73,7 +71,6 @@ interface ActiveThreadSnapshot {
   projectId: ProjectId;
   modelSelection: ModelSelection;
   runtimeMode: RuntimeMode;
-  interactionMode: ProviderInteractionMode;
   envMode?: ThreadEnvironmentMode | undefined;
   lastKnownPr?: OrchestrationThreadPullRequest | null;
 }
@@ -99,6 +96,8 @@ export type ThreadBootstrapPlan = DraftReusePlanStored | DraftReusePlanRoute | D
 interface ResolveTerminalThreadCreationStateInput {
   activeDraftThread: DraftThreadState | null;
   activeThread: ActiveThreadSnapshot | null;
+  /** `settings.defaultThreadEnvMode`; applies unless the caller overrides it. */
+  defaultEnvMode: DraftThreadEnvMode;
   defaultProvider?: ProviderKind | null | undefined;
   draftComposerState: ComposerThreadDraftState | null;
   draftThread: DraftThreadState | null;
@@ -110,7 +109,6 @@ interface ResolveTerminalThreadCreationStateInput {
 export interface TerminalThreadCreationState {
   branch: string | null;
   envMode: DraftThreadEnvMode;
-  interactionMode: ProviderInteractionMode;
   lastKnownPr: OrchestrationThreadPullRequest | null;
   modelSelection: ModelSelection;
   runtimeMode: RuntimeMode;
@@ -121,7 +119,6 @@ export interface TerminalThreadCreationState {
 export function createActiveThreadSnapshot(
   activeThread:
     | {
-        interactionMode: ProviderInteractionMode;
         modelSelection: ModelSelection;
         projectId: ProjectId;
         runtimeMode: RuntimeMode;
@@ -139,7 +136,6 @@ export function createActiveThreadSnapshot(
     projectId: activeThread.projectId,
     modelSelection: activeThread.modelSelection,
     runtimeMode: activeThread.runtimeMode,
-    interactionMode: activeThread.interactionMode,
     envMode: activeThread.envMode,
     lastKnownPr: activeThread.lastKnownPr ?? null,
   };
@@ -157,7 +153,6 @@ export function createActiveDraftThreadSnapshot(
     projectId: activeDraftThread.projectId,
     createdAt: activeDraftThread.createdAt,
     runtimeMode: activeDraftThread.runtimeMode,
-    interactionMode: activeDraftThread.interactionMode,
     entryPoint: activeDraftThread.entryPoint,
     branch: activeDraftThread.branch,
     worktreePath: activeDraftThread.worktreePath,
@@ -201,6 +196,8 @@ export function resolveThreadBootstrapPlan(input: {
 // Build the initial draft-thread metadata for a brand new thread bootstrap.
 export function createFreshDraftThreadSeed(input: {
   createdAt: string;
+  /** `settings.defaultThreadEnvMode`; applies unless the caller overrides it. */
+  defaultEnvMode: DraftThreadEnvMode;
   entryPoint: ThreadPrimarySurface;
   options: NewThreadOptions | undefined;
 }): Omit<DraftThreadState, "projectId"> {
@@ -208,9 +205,11 @@ export function createFreshDraftThreadSeed(input: {
     createdAt: input.createdAt,
     branch: input.options?.branch ?? null,
     worktreePath: input.options?.worktreePath ?? null,
-    envMode: input.options?.envMode ?? "local",
+    // A pinned worktree path (Git Workbench pull requests) is worktree mode by
+    // construction, whatever the setting says.
+    envMode:
+      input.options?.envMode ?? (input.options?.worktreePath ? "worktree" : input.defaultEnvMode),
     runtimeMode: input.options?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
-    interactionMode: input.options?.interactionMode ?? DEFAULT_INTERACTION_MODE,
     lastKnownPr: input.options?.lastKnownPr ?? null,
     entryPoint: input.entryPoint,
   };
@@ -223,7 +222,6 @@ export function hasDraftContextOverrides(options?: NewThreadOptions): boolean {
     options?.worktreePath !== undefined ||
     options?.envMode !== undefined ||
     options?.runtimeMode !== undefined ||
-    options?.interactionMode !== undefined ||
     options?.lastKnownPr !== undefined
   );
 }
@@ -236,7 +234,6 @@ export function buildDraftThreadContextPatch(
   branch?: string | null;
   entryPoint: ThreadPrimarySurface;
   envMode?: DraftThreadEnvMode;
-  interactionMode?: ProviderInteractionMode;
   lastKnownPr?: OrchestrationThreadPullRequest | null;
   runtimeMode?: RuntimeMode;
   worktreePath?: string | null;
@@ -253,7 +250,6 @@ export function buildDraftThreadContextPatch(
       : {}),
     ...(options?.envMode !== undefined ? { envMode: options.envMode } : {}),
     ...(options?.runtimeMode !== undefined ? { runtimeMode: options.runtimeMode } : {}),
-    ...(options?.interactionMode !== undefined ? { interactionMode: options.interactionMode } : {}),
     ...(options?.lastKnownPr !== undefined ? { lastKnownPr: options.lastKnownPr } : {}),
     entryPoint,
   };
@@ -286,16 +282,14 @@ export function resolveTerminalThreadCreationState(
   const hasExplicitEnvModeOverride =
     input.options !== undefined && Object.hasOwn(input.options, "envMode");
   const explicitEnvMode: DraftThreadEnvMode | undefined = hasExplicitEnvModeOverride
-    ? (input.options?.envMode ?? "local")
+    ? (input.options?.envMode ?? input.defaultEnvMode)
     : undefined;
+  // A caller that pins a worktree path (Git Workbench opening a pull request)
+  // is already in worktree mode. Everything else follows the setting rather
+  // than inheriting from whatever the previous thread happened to use, so
+  // "new thread" means the same thing every time.
   const inheritedEnvMode =
-    input.draftThread?.envMode !== undefined
-      ? input.draftThread.envMode
-      : input.activeThread?.projectId === input.projectId
-        ? input.activeThread.envMode
-        : input.activeDraftThread?.projectId === input.projectId
-          ? input.activeDraftThread.envMode
-          : undefined;
+    input.draftThread?.envMode !== undefined ? input.draftThread.envMode : undefined;
 
   return {
     modelSelection: resolvePreferredComposerModelSelection({
@@ -314,10 +308,6 @@ export function resolveTerminalThreadCreationState(
         ? input.activeDraftThread.runtimeMode
         : null) ??
       DEFAULT_RUNTIME_MODE,
-    interactionMode:
-      // Plan mode is an explicit composer/thread choice. Do not copy it from
-      // the previously active thread into a fresh session bootstrap.
-      input.draftThread?.interactionMode ?? DEFAULT_INTERACTION_MODE,
     lastKnownPr:
       input.draftThread?.lastKnownPr ??
       (input.activeThread?.projectId === input.projectId
@@ -328,8 +318,8 @@ export function resolveTerminalThreadCreationState(
         : null) ??
       null,
     envMode: hasExplicitEnvModeOverride
-      ? (explicitEnvMode ?? "local")
-      : (inheritedEnvMode ?? "local"),
+      ? (explicitEnvMode ?? input.defaultEnvMode)
+      : (inheritedEnvMode ?? input.defaultEnvMode),
     branch:
       input.options?.branch !== undefined
         ? (input.options.branch ?? null)

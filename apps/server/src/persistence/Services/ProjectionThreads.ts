@@ -16,7 +16,6 @@ import {
   ThreadMarkers,
   ThreadHandoff,
   ProjectId,
-  ProviderInteractionMode,
   RuntimeMode,
   ThreadEnvironmentMode,
   ThreadId,
@@ -34,7 +33,6 @@ export const ProjectionThread = Schema.Struct({
   title: Schema.String,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
-  interactionMode: ProviderInteractionMode,
   envMode: ThreadEnvironmentMode,
   // Compatibility link. The legacy path/branch fields below remain populated
   // while callers roll over to the durable workspace record.

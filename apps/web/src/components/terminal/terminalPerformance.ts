@@ -24,12 +24,21 @@ declare global {
 const TERMINAL_PERF_STORAGE_KEY = "teacode:terminal-perf";
 const MAX_TERMINAL_PERF_SAMPLES = 200;
 
+// Resolved once. This gate is checked on every parsed write — roughly 60x/second
+// per streaming terminal — and a synchronous localStorage read at that rate is a
+// real main-thread cost for a debug flag that cannot change without a reload.
+let terminalPerfEnabledCache: boolean | null = null;
+
 function terminalPerfEnabled(): boolean {
-  try {
-    return window.localStorage.getItem(TERMINAL_PERF_STORAGE_KEY) === "1";
-  } catch {
-    return false;
+  if (terminalPerfEnabledCache !== null) {
+    return terminalPerfEnabledCache;
   }
+  try {
+    terminalPerfEnabledCache = window.localStorage.getItem(TERMINAL_PERF_STORAGE_KEY) === "1";
+  } catch {
+    terminalPerfEnabledCache = false;
+  }
+  return terminalPerfEnabledCache;
 }
 
 function getTerminalPerfStore() {

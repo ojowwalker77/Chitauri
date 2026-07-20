@@ -1,7 +1,7 @@
 // FILE: DockTerminalPane.tsx
 // Purpose: Render an independent terminal workspace inside the right dock for a host thread.
 // Layer: Chat right-dock UI
-// Depends on: useTerminalSurfaceController (shared store wiring), ThreadTerminalDrawer.
+// Depends on: useTerminalSurfaceController (shared store wiring), LazyThreadTerminalDrawer.
 //
 // The dock terminal set is isolated from the bottom drawer via a synthetic scope id
 // (dockTerminalThreadId), so the two never share xterm instances. All store wiring is
@@ -16,7 +16,7 @@ import { dockTerminalThreadId } from "~/lib/dockTerminalScope";
 import { projectScriptRuntimeEnv } from "~/projectScripts";
 import { useStore } from "~/store";
 import { createProjectSelector, createThreadSelector } from "~/storeSelectors";
-import ThreadTerminalDrawer from "../ThreadTerminalDrawer";
+import ThreadTerminalDrawer from "../terminal/LazyThreadTerminalDrawer";
 
 export function DockTerminalPane(props: {
   hostThreadId: ThreadId;

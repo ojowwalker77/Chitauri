@@ -3,7 +3,6 @@ import { EventId, type OrchestrationThreadActivity, TurnId } from "@t3tools/cont
 
 import {
   deriveContextWindowSelectionStatus,
-  deriveContextWindowMeterDisplay,
   deriveCumulativeCostUsd,
   deriveLatestContextWindowSnapshot,
   deriveSelectedContextWindowSnapshot,
@@ -98,11 +97,7 @@ describe("contextWindow", () => {
     ]);
 
     expect(snapshot?.remainingTokens).toBe(128_000);
-    expect(deriveContextWindowMeterDisplay(snapshot!)).toMatchObject({
-      hasReliableTokenRatio: true,
-      tokenUsageLabel: "0",
-      compactLabel: "0%",
-    });
+    expect(snapshot?.usedTokens).toBe(0);
   });
 
   it("does not infer remaining tokens from percent-only usage", () => {
@@ -194,14 +189,9 @@ describe("contextWindow", () => {
     ]);
 
     expect(percentOnly).not.toBeNull();
-    expect(deriveContextWindowMeterDisplay(percentOnly!)).toMatchObject({
-      usedPercentageLabel: "5.8%",
-      tokenUsageLabel: "0",
-      hasReliableTokenRatio: false,
-      normalizedPercentage: 5.8,
-      compactLabel: "6%",
-      ariaLabel: "Context window 5.8% used",
-    });
+    expect(percentOnly?.usedPercentage).toBe(5.8);
+    expect(percentOnly?.usedTokens).toBe(0);
+    expect(percentOnly?.remainingTokens).toBeNull();
   });
 
   it("formats context window selection labels for Claude options", () => {

@@ -43,6 +43,7 @@ import {
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  type AppBackground,
   type AppSettings,
   type TaskListDisplayMode,
   DEFAULT_UI_DENSITY,
@@ -60,6 +61,7 @@ import {
   patchCustomModels,
   useAppSettings,
 } from "../appSettings";
+import { APP_BACKGROUND_LABELS } from "../lib/appBackgrounds";
 import { APP_VERSION } from "../branding";
 import { useDesktopTopBarTrafficLightGutterClassName } from "../hooks/useDesktopTopBarGutter";
 import { useProviderModelCatalog } from "../hooks/useProviderModelCatalog";
@@ -303,6 +305,19 @@ const SIDEBAR_THREAD_SORT_ORDER_LABELS = {
   updated_at: "Recently active",
   created_at: "Newest first",
 } as const;
+
+const SIDEBAR_POSITION_LABELS = {
+  left: "Left",
+  right: "Right",
+} as const;
+
+const APP_BACKGROUND_OPTIONS = [
+  "none",
+  "london",
+  "rio",
+  "sf",
+  "tokyo",
+] as const satisfies ReadonlyArray<AppBackground>;
 
 type InstallBinarySettingsKey =
   | "claudeBinaryPath"
@@ -1104,6 +1119,8 @@ function SettingsRouteView() {
     ...(settings.sidebarThreadSortOrder !== defaults.sidebarThreadSortOrder
       ? ["Thread sort order"]
       : []),
+    ...(settings.sidebarPosition !== defaults.sidebarPosition ? ["Sidebar position"] : []),
+    ...(settings.appBackground !== defaults.appBackground ? ["Background"] : []),
     ...(settings.showChatsSection !== defaults.showChatsSection ? ["Chats section"] : []),
     ...(settings.uiDensity !== defaults.uiDensity ? ["UI density"] : []),
     ...(settings.highlightColor !== defaults.highlightColor ? ["Highlight color"] : []),
@@ -1889,7 +1906,7 @@ function SettingsRouteView() {
 
         <SettingsRow
           title="New threads"
-          description="Pick the default workspace mode for newly created draft threads."
+          description="Workspace mode for newly created threads. New worktree fetches the remote and branches off the default branch; Local works in the checkout you already have."
           resetAction={
             settings.defaultThreadEnvMode !== defaults.defaultThreadEnvMode ? (
               <SettingResetButton
@@ -1984,6 +2001,61 @@ function SettingsRouteView() {
                 {SIDEBAR_PROJECT_SORT_ORDER_LABELS.manual}
               </SelectItem>
             </SettingsSelectControl>
+          }
+        />
+
+        <SettingsRow
+          title="Background"
+          description="Optional image behind the chat canvas. The theme colour is layered over it so text keeps its contrast."
+          resetAction={
+            settings.appBackground !== defaults.appBackground ? (
+              <SettingResetButton
+                label="background"
+                onClick={() => updateSettings({ appBackground: defaults.appBackground })}
+              />
+            ) : null
+          }
+          control={
+            <SettingsSelectControl
+              value={settings.appBackground}
+              onValueChange={(value) => {
+                const next = APP_BACKGROUND_OPTIONS.find((option) => option === value);
+                if (!next) return;
+                updateSettings({ appBackground: next });
+              }}
+              ariaLabel="Canvas background"
+              valueContent={APP_BACKGROUND_LABELS[settings.appBackground]}
+            >
+              {APP_BACKGROUND_OPTIONS.map((option) => (
+                <SelectItem hideIndicator key={option} value={option}>
+                  {APP_BACKGROUND_LABELS[option]}
+                </SelectItem>
+              ))}
+            </SettingsSelectControl>
+          }
+        />
+
+        <SettingsRow
+          title="Sidebar position"
+          description="Which side of the window the main sidebar docks against."
+          resetAction={
+            settings.sidebarPosition !== defaults.sidebarPosition ? (
+              <SettingResetButton
+                label="sidebar position"
+                onClick={() => updateSettings({ sidebarPosition: defaults.sidebarPosition })}
+              />
+            ) : null
+          }
+          control={
+            <SettingsSegmentedControl
+              value={settings.sidebarPosition}
+              onValueChange={(value) => updateSettings({ sidebarPosition: value })}
+              ariaLabel="Sidebar position"
+              options={[
+                { value: "left", label: SIDEBAR_POSITION_LABELS.left },
+                { value: "right", label: SIDEBAR_POSITION_LABELS.right },
+              ]}
+            />
           }
         />
 

@@ -1,4 +1,4 @@
-import { MessageId, ThreadId } from "@t3tools/contracts";
+import { MessageId, ThreadId, TurnId } from "@t3tools/contracts";
 import { assert, it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
 
@@ -203,6 +203,88 @@ layer("ProjectionThreadMessageRepository", (it) => {
       const rows = yield* repository.listByThreadId({ threadId });
       assert.equal(rows.length, 1);
       assert.equal(rows[0]?.dispatchMode, "steer");
+    }),
+  );
+
+  it.effect("reports a miss when appending to a message that does not exist yet", () =>
+    Effect.gen(function* () {
+      const repository = yield* ProjectionThreadMessageRepository;
+
+      const appended = yield* repository.appendStreamingText({
+        messageId: MessageId.makeUnsafe("message-append-missing"),
+        threadId: ThreadId.makeUnsafe("thread-append-missing"),
+        turnId: null,
+        role: "assistant",
+        textDelta: "first delta",
+        source: "native",
+        updatedAt: "2026-02-28T19:40:00.000Z",
+      });
+
+      assert.equal(appended, false);
+      const rows = yield* repository.listByThreadId({
+        threadId: ThreadId.makeUnsafe("thread-append-missing"),
+      });
+      assert.deepEqual(rows, []);
+    }),
+  );
+
+  it.effect("appends streaming deltas in place and preserves untouched columns", () =>
+    Effect.gen(function* () {
+      const repository = yield* ProjectionThreadMessageRepository;
+      const threadId = ThreadId.makeUnsafe("thread-append-streaming");
+      const messageId = MessageId.makeUnsafe("message-append-streaming");
+      const turnId = TurnId.makeUnsafe("turn-append-streaming");
+      const createdAt = "2026-02-28T19:41:00.000Z";
+      const attachments = [
+        {
+          type: "image" as const,
+          id: "thread-append-streaming-att-1",
+          name: "example.png",
+          mimeType: "image/png",
+          sizeBytes: 5,
+        },
+      ];
+
+      yield* repository.upsert({
+        messageId,
+        threadId,
+        turnId,
+        role: "assistant",
+        text: "Hel",
+        attachments,
+        dispatchOrigin: "automation",
+        isStreaming: true,
+        source: "native",
+        createdAt,
+        updatedAt: createdAt,
+      });
+
+      const deltas = ["lo, ", "wor", "ld", "!"];
+      yield* Effect.forEach(
+        deltas,
+        (delta, index) =>
+          repository.appendStreamingText({
+            messageId,
+            threadId,
+            turnId: null,
+            role: "assistant",
+            textDelta: delta,
+            source: "native",
+            updatedAt: `2026-02-28T19:41:0${index + 1}.000Z`,
+          }),
+        { concurrency: 1 },
+      );
+
+      const rows = yield* repository.listByThreadId({ threadId });
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0]?.text, "Hello, world!");
+      // A delta must not clear the turn id, attachments, dispatch origin or created_at.
+      assert.equal(rows[0]?.turnId, turnId);
+      assert.deepEqual(rows[0]?.attachments, attachments);
+      assert.equal(rows[0]?.dispatchOrigin, "automation");
+      assert.equal(rows[0]?.isStreaming, true);
+      assert.equal(rows[0]?.createdAt, createdAt);
+      assert.equal(rows[0]?.updatedAt, "2026-02-28T19:41:04.000Z");
     }),
   );
 

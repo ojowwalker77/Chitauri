@@ -318,7 +318,6 @@ export function projectEvent(
             title: payload.title,
             modelSelection: payload.modelSelection,
             runtimeMode: payload.runtimeMode,
-            interactionMode: payload.interactionMode,
             envMode: payload.envMode,
             branch: payload.branch,
             worktreePath: payload.worktreePath,
@@ -629,6 +628,8 @@ export function projectEvent(
         })),
       );
 
+    // Retired: plan mode is gone, but historical rows must still decode and
+    // advance the thread's updatedAt so replays stay faithful.
     case "thread.interaction-mode-set":
       return decodeForEvent(
         ThreadInteractionModeSetPayload,
@@ -639,7 +640,6 @@ export function projectEvent(
         Effect.map((payload) => ({
           ...nextBase,
           threads: updateThread(nextBase.threads, payload.threadId, {
-            interactionMode: payload.interactionMode,
             updatedAt: payload.updatedAt,
           }),
         })),
@@ -670,7 +670,6 @@ export function projectEvent(
             threads: updateThread(nextBase.threads, payload.threadId, {
               ...modelSelectionPatch,
               runtimeMode: payload.runtimeMode,
-              interactionMode: payload.interactionMode,
               updatedAt: payload.createdAt,
             }),
           };

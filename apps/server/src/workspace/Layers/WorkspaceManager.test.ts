@@ -92,8 +92,8 @@ layer("WorkspaceManager", (it) => {
         VALUES ('project-1', 'project', 'Project', '/tmp/project', '[]', 0, '2026-07-17T00:00:00.000Z', '2026-07-17T00:00:00.000Z', NULL)
       `;
       yield* sql`
-        INSERT INTO projection_threads (thread_id, project_id, title, model_selection_json, runtime_mode, interaction_mode, env_mode, created_at, updated_at, deleted_at)
-        VALUES ('thread-1', 'project-1', 'Thread', '{"provider":"codex","model":"gpt-5.4"}', 'full-access', 'default', 'local', '2026-07-17T00:00:00.000Z', '2026-07-17T00:00:00.000Z', NULL)
+        INSERT INTO projection_threads (thread_id, project_id, title, model_selection_json, runtime_mode, env_mode, created_at, updated_at, deleted_at)
+        VALUES ('thread-1', 'project-1', 'Thread', '{"provider":"codex","model":"gpt-5.4"}', 'full-access', 'local', '2026-07-17T00:00:00.000Z', '2026-07-17T00:00:00.000Z', NULL)
       `;
       yield* manager.provision({
         workspaceId: "workspace-1" as never,
@@ -173,10 +173,10 @@ layer("WorkspaceManager", (it) => {
         VALUES ('project-shared', 'project', 'Shared', '/tmp/project', '[]', 0, '2026-07-17T00:00:00.000Z', '2026-07-17T00:00:00.000Z', NULL)
       `;
         yield* sql`
-        INSERT INTO projection_threads (thread_id, project_id, title, model_selection_json, runtime_mode, interaction_mode, env_mode, created_at, updated_at, deleted_at)
+        INSERT INTO projection_threads (thread_id, project_id, title, model_selection_json, runtime_mode, env_mode, created_at, updated_at, deleted_at)
         VALUES
-          ('thread-seat', 'project-shared', 'Seat', '{"provider":"codex","model":"gpt-5.4"}', 'full-access', 'default', 'local', '2026-07-17T00:00:00.000Z', '2026-07-17T00:00:00.000Z', NULL),
-          ('thread-agent', 'project-shared', 'Agent', '{"provider":"codex","model":"gpt-5.4"}', 'full-access', 'default', 'local', '2026-07-17T00:00:00.000Z', '2026-07-17T00:00:00.000Z', NULL)
+          ('thread-seat', 'project-shared', 'Seat', '{"provider":"codex","model":"gpt-5.4"}', 'full-access', 'local', '2026-07-17T00:00:00.000Z', '2026-07-17T00:00:00.000Z', NULL),
+          ('thread-agent', 'project-shared', 'Agent', '{"provider":"codex","model":"gpt-5.4"}', 'full-access', 'local', '2026-07-17T00:00:00.000Z', '2026-07-17T00:00:00.000Z', NULL)
       `;
         yield* sql`
         INSERT INTO workspaces (workspace_id, project_id, owner_thread_id, kind, state, retention_policy, workspace_root, path, branch, ref, created_at, updated_at, retired_at)

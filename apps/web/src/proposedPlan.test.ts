@@ -64,7 +64,7 @@ describe("stripDisplayedPlanMarkdown", () => {
 });
 
 describe("resolvePlanFollowUpSubmission", () => {
-  it("switches to default mode when implementing the ready plan without extra text", () => {
+  it("implements the ready plan when the draft is empty", () => {
     expect(
       resolvePlanFollowUpSubmission({
         draftText: "   ",
@@ -72,11 +72,11 @@ describe("resolvePlanFollowUpSubmission", () => {
       }),
     ).toEqual({
       text: "PLEASE IMPLEMENT THIS PLAN:\n## Ship it\n\n- step 1",
-      interactionMode: "default",
+      isImplementation: true,
     });
   });
 
-  it("stays in plan mode when the user adds a follow-up prompt", () => {
+  it("sends typed feedback verbatim to refine the plan", () => {
     expect(
       resolvePlanFollowUpSubmission({
         draftText: "Refine step 2 first",
@@ -84,7 +84,7 @@ describe("resolvePlanFollowUpSubmission", () => {
       }),
     ).toEqual({
       text: "Refine step 2 first",
-      interactionMode: "plan",
+      isImplementation: false,
     });
   });
 });

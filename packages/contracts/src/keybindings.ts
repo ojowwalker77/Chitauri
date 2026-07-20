@@ -28,7 +28,6 @@ const STATIC_KEYBINDING_COMMANDS = [
   "browser.toggle",
   "diff.toggle",
   "composer.focus.toggle",
-  "composer.sketchpad.toggle",
   "modelPicker.toggle",
   "traitsPicker.toggle",
   "settings.usage",

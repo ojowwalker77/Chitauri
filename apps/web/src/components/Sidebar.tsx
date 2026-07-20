@@ -8,7 +8,6 @@ import {
   CheckCircle2Icon,
   ChevronDownIcon,
   ChevronRightIcon,
-  CloudIcon,
   CopyIcon,
   ExternalLinkIcon,
   FolderIcon,
@@ -152,19 +151,7 @@ import { CHAT_SURFACE_HEADER_HEIGHT_CLASS } from "./chat/chatHeaderControls";
 import { ProviderIcon } from "./ProviderIcon";
 import { SidebarLeadingControls } from "./SidebarHeaderNavigationControls";
 import { ProjectSidebarIcon } from "./ProjectSidebarIcon";
-import { ThreadHoverCardContent } from "./ThreadHoverCardContent";
-import { ProjectHoverCardContent } from "./ProjectHoverCardContent";
-import {
-  SIDEBAR_HOVER_CARD_POPUP_PROPS,
-  SIDEBAR_HOVER_CARD_SURFACE_CLASS_NAME,
-  SIDEBAR_HOVER_CARD_TRIGGER_PROPS,
-} from "./sidebarHoverCardStyles";
-import {
-  abbreviateHomePath,
-  createProjectHoverCardAnchor,
-  createThreadHoverCardAnchor,
-} from "./sidebarHoverCardAnchors";
-import { PreviewCard, PreviewCardPopup, PreviewCardTrigger } from "./ui/preview-card";
+import { abbreviateHomePath } from "./sidebarHoverCardAnchors";
 import { SidebarIconButton } from "./SidebarIconButton";
 import { SidebarLeadingIcon } from "./SidebarLeadingIcon";
 import { SidebarMetaChipStack } from "./SidebarMetaChip";
@@ -176,7 +163,7 @@ import { ThreadPinToggleButton } from "./ThreadPinToggleButton";
 import { ThreadRunningSpinner } from "./ThreadRunningSpinner";
 import { RenameDialog } from "./RenameDialog";
 import { RenameThreadDialog } from "./RenameThreadDialog";
-import { terminalRuntimeRegistry } from "./terminal/terminalRuntimeRegistry";
+import { disposeTerminalRuntimeThread } from "./terminal/terminalRuntimeHandle";
 import {
   SidebarSearchPalette,
   type ImportProviderKind,
@@ -279,7 +266,6 @@ import {
   resolveSettingsBackTarget,
   type SettingsBackTarget,
   resolveSidebarNewThreadEnvMode,
-  resolveThreadHoverCardMetadata,
   resolveThreadRowClassName,
   resolveThreadRowTrailingReserveClass,
   resolveThreadStatusPill,
@@ -531,20 +517,6 @@ function SidebarStatusTrailingGlyph({ status }: { status: ThreadStatusPill }) {
   }
   return (
     <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", status.dotClass)} />
-  );
-}
-
-/** Pulsing green dot shown before a project name while a dev run is live. */
-function ProjectRunIndicatorDot({ className }: { className?: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      title="Dev server running"
-      className={cn(
-        "size-1.5 shrink-0 rounded-full bg-success motion-safe:animate-pulse",
-        className,
-      )}
-    />
   );
 }
 
@@ -1123,7 +1095,6 @@ export default function Sidebar() {
   const isOnSettings = routePathname === "/settings";
   const isOnResearch = routePathname.startsWith("/research");
   const isOnGitHub = routePathname === "/github";
-  const isOnCloud = routePathname === "/cloud";
   const { settings: appSettings, updateSettings } = useAppSettings();
   // Rootless chats can be hidden independently from the project thread list.
   const chatsSectionVisible = appSettings.showChatsSection;
@@ -2119,9 +2090,9 @@ export default function Sidebar() {
   );
 
   const navigateToProjectSurface = useCallback(
-    (surface: "research" | "github" | "cloud") => {
+    (surface: "research" | "github") => {
       const rawRouteProjectFilter =
-        (isOnResearch || isOnGitHub || isOnCloud) && typeof routeSearch.project === "string"
+        (isOnResearch || isOnGitHub) && typeof routeSearch.project === "string"
           ? routeSearch.project
           : null;
       const routeProjectFilter =
@@ -2133,13 +2104,12 @@ export default function Sidebar() {
           : null;
       const project = routeProjectFilter ?? currentProjectShortcutTargetId ?? "all";
       void navigate({
-        to: surface === "research" ? "/research" : surface === "github" ? "/github" : "/cloud",
+        to: surface === "research" ? "/research" : "/github",
         search: { project },
       });
     },
     [
       currentProjectShortcutTargetId,
-      isOnCloud,
       isOnGitHub,
       isOnResearch,
       navigate,
@@ -2256,7 +2226,6 @@ export default function Sidebar() {
           title,
           modelSelection,
           runtimeMode: appSettings.defaultRuntimeMode,
-          interactionMode: "default",
           envMode: resolveSidebarNewThreadEnvMode({
             defaultEnvMode: appSettings.defaultThreadEnvMode,
           }),
@@ -2429,7 +2398,7 @@ export default function Sidebar() {
       }
 
       try {
-        terminalRuntimeRegistry.disposeThread(threadId);
+        disposeTerminalRuntimeThread(threadId);
         await api.terminal.close({ threadId, deleteHistory: true });
       } catch {
         // Terminal may already be closed
@@ -4161,12 +4130,13 @@ export default function Sidebar() {
     ],
     [threadGitTargets],
   );
+  // Inherit the git layer's deliberately relaxed cadence instead of stomping it
+  // with a per-workspace 60s timer: freshness here is event-driven (turn
+  // lifecycle + file-change domain events), and the timer is only a safety net
+  // for out-of-band edits. One entry per distinct workspace, so a 60s interval
+  // meant N requests/minute forever, including while idle.
   const threadGitStatusQueries = useQueries({
-    queries: threadGitStatusCwds.map((cwd) => ({
-      ...gitStatusQueryOptions(cwd),
-      staleTime: 30_000,
-      refetchInterval: 60_000,
-    })),
+    queries: threadGitStatusCwds.map((cwd) => gitStatusQueryOptions(cwd)),
   });
   const threadStoredPrTargets = useMemo(
     () =>
@@ -4179,15 +4149,16 @@ export default function Sidebar() {
       ),
     [threadGitTargets],
   );
+  // Each of these is a network round trip to GitHub. Polling every stored PR
+  // once a minute forever is the single largest idle-cost item in the sidebar;
+  // the resolved PR for a thread changes rarely and is re-fetched on demand.
   const threadStoredPrQueries = useQueries({
-    queries: threadStoredPrTargets.map((target) => ({
-      ...gitResolvePullRequestQueryOptions({
+    queries: threadStoredPrTargets.map((target) =>
+      gitResolvePullRequestQueryOptions({
         cwd: target.cwd,
         reference: target.lastKnownPr.url,
       }),
-      staleTime: 30_000,
-      refetchInterval: 60_000,
-    })),
+    ),
   });
   const prByThreadId = useMemo(() => {
     const statusByCwd = new Map<string, GitStatusResult>();
@@ -4534,62 +4505,6 @@ export default function Sidebar() {
     );
   }
 
-  // Shared rich hover card for thread/chat rows. Worktree metadata is resolved
-  // once here so pinned and nested rows stay visually and semantically identical.
-  function renderThreadHoverCardPopup(thread: SidebarThreadSummary, hoverAnchorId: string) {
-    const hoverProject = projectById.get(thread.projectId) ?? null;
-    const hoverMetadata = resolveThreadHoverCardMetadata({
-      thread,
-      project: hoverProject,
-    });
-    return (
-      <TooltipPopup
-        {...SIDEBAR_HOVER_CARD_POPUP_PROPS}
-        // Zero the viewport's px-2 py-1 inset so the card's own padding matches
-        // the project PreviewCard (which has no viewport). The var also drives
-        // the viewport width calc, so setting it to 0 keeps the content full-width.
-        viewportClassName="[--viewport-inline-padding:0px] py-0"
-        anchor={createThreadHoverCardAnchor(hoverAnchorId)}
-        className={cn(SIDEBAR_HOVER_CARD_SURFACE_CLASS_NAME, "whitespace-normal leading-tight")}
-      >
-        <ThreadHoverCardContent
-          title={thread.title}
-          timeLabel={formatRelativeTime(thread.updatedAt ?? thread.createdAt)}
-          projectName={hoverMetadata.projectName}
-          projectCwd={hoverMetadata.projectCwd}
-          sourceProjectName={hoverMetadata.sourceProjectName}
-          branch={hoverMetadata.branch}
-          worktreeName={hoverMetadata.worktreeName}
-        />
-      </TooltipPopup>
-    );
-  }
-
-  // Interactive hover card for project/folder rows: name + pin toggle, chat
-  // count, path, and an "Edit project" action. Rendered inside a PreviewCard so
-  // its controls stay reachable when the pointer moves into the card.
-  function renderProjectHoverCardPopup(
-    project: (typeof sortedProjects)[number],
-    chatCount: number,
-  ) {
-    return (
-      <PreviewCardPopup
-        {...SIDEBAR_HOVER_CARD_POPUP_PROPS}
-        anchor={createProjectHoverCardAnchor(project.id)}
-        className={SIDEBAR_HOVER_CARD_SURFACE_CLASS_NAME}
-      >
-        <ProjectHoverCardContent
-          name={project.name}
-          isPinned={pinnedProjectIdSet.has(project.id)}
-          chatCount={chatCount}
-          path={abbreviateHomePath(project.cwd, homeDir)}
-          onTogglePin={() => toggleProjectPinned(project.id)}
-          onEditProject={() => void handleProjectContextMenuAction(project.id, "rename")}
-        />
-      </PreviewCardPopup>
-    );
-  }
-
   function renderPinnedThreadRow(thread: SidebarThreadSummary) {
     const threadTerminalState = selectThreadTerminalState(terminalStateByThreadId, thread.id);
     const threadEntryPoint = threadTerminalState.entryPoint;
@@ -4630,122 +4545,115 @@ export default function Sidebar() {
       threadId: thread.id,
     });
     return (
-      <Tooltip key={thread.id}>
-        <TooltipTrigger
-          {...SIDEBAR_HOVER_CARD_TRIGGER_PROPS}
-          render={
-            <div
-              data-thread-hover-anchor={hoverAnchorId}
-              className="group/thread-row relative w-full"
-            />
-          }
+      <div
+        key={thread.id}
+        data-thread-hover-anchor={hoverAnchorId}
+        className="group/thread-row relative w-full"
+      >
+        {leadingPrStatus ? (
+          <ThreadPrStatusBadge
+            prStatus={leadingPrStatus}
+            onOpen={openPrLink}
+            className="pointer-events-auto absolute left-1.5 top-1/2 z-30 size-5 -translate-y-1/2"
+          />
+        ) : null}
+        <div
+          role="button"
+          tabIndex={0}
+          data-thread-item
+          className={cn(
+            SIDEBAR_HEADER_ROW_CLASS_NAME,
+            // Match the normal thread row: a flex row whose title claims all free
+            // space, with a trailing reserve that grows only for the badges actually
+            // present — instead of a rigid grid that permanently fenced off a
+            // timestamp-era column and squeezed the title/project even when wide.
+            "relative h-auto min-h-10 gap-1.5 py-1 transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
+            leadingPrStatus && "pl-8",
+            resolveThreadRowTrailingReserveClass({
+              metaChipCount: isActive ? rightMetaChips.length : 0,
+              hasTrailingGlyph: hasTrailingStatusGlyph,
+              hasStatusLabel: showStatusLabel,
+            }),
+            isActive
+              ? SIDEBAR_ROW_ACTIVE_CLASS_NAME
+              : cn(SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME, SIDEBAR_ROW_HOVER_CLASS_NAME),
+          )}
+          onPointerDown={(event) => primeThreadActivation(event, thread.id)}
+          onClick={() => activateThreadFromSidebarIntent(thread.id)}
+          onDoubleClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            openRenameThreadDialog(thread.id);
+          }}
+          onPointerUp={(event) => handleThreadRenamePointerUp(event, thread.id)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              activateThreadFromSidebarIntent(thread.id);
+            }
+          }}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            void handleThreadContextMenu(thread.id, {
+              x: event.clientX,
+              y: event.clientY,
+            });
+          }}
         >
-          {leadingPrStatus ? (
-            <ThreadPrStatusBadge
-              prStatus={leadingPrStatus}
-              onOpen={openPrLink}
-              className="pointer-events-auto absolute left-1.5 top-1/2 z-30 size-5 -translate-y-1/2"
+          {threadEntryPoint === "terminal" ? (
+            <SidebarGlyph icon={TerminalIcon} variant="chrome" />
+          ) : showThreadProviderAvatar ? (
+            <ProviderAvatarWithTerminal
+              provider={thread.modelSelection.provider ?? thread.session?.provider}
+              handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
+              handoffTooltip={handoffBadgeLabel}
+              terminalStatus={terminalStatus}
+              terminalCount={terminalCount}
             />
           ) : null}
-          <div
-            role="button"
-            tabIndex={0}
-            data-thread-item
-            className={cn(
-              SIDEBAR_HEADER_ROW_CLASS_NAME,
-              // Match the normal thread row: a flex row whose title claims all free
-              // space, with a trailing reserve that grows only for the badges actually
-              // present — instead of a rigid grid that permanently fenced off a
-              // timestamp-era column and squeezed the title/project even when wide.
-              "relative h-auto min-h-10 gap-1.5 py-1 transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
-              leadingPrStatus && "pl-8",
-              resolveThreadRowTrailingReserveClass({
-                metaChipCount: isActive ? rightMetaChips.length : 0,
-                hasTrailingGlyph: hasTrailingStatusGlyph,
-                hasStatusLabel: showStatusLabel,
-              }),
-              isActive
-                ? SIDEBAR_ROW_ACTIVE_CLASS_NAME
-                : cn(SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME, SIDEBAR_ROW_HOVER_CLASS_NAME),
-            )}
-            onPointerDown={(event) => primeThreadActivation(event, thread.id)}
-            onClick={() => activateThreadFromSidebarIntent(thread.id)}
-            onDoubleClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              openRenameThreadDialog(thread.id);
-            }}
-            onPointerUp={(event) => handleThreadRenamePointerUp(event, thread.id)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                activateThreadFromSidebarIntent(thread.id);
-              }
-            }}
-            onContextMenu={(event) => {
-              event.preventDefault();
-              void handleThreadContextMenu(thread.id, {
-                x: event.clientX,
-                y: event.clientY,
-              });
-            }}
-          >
-            {threadEntryPoint === "terminal" ? (
-              <SidebarGlyph icon={TerminalIcon} variant="chrome" />
-            ) : showThreadProviderAvatar ? (
-              <ProviderAvatarWithTerminal
-                provider={thread.modelSelection.provider ?? thread.session?.provider}
-                handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
-                handoffTooltip={handoffBadgeLabel}
-                terminalStatus={terminalStatus}
-                terminalCount={terminalCount}
-              />
-            ) : null}
-            <div className="grid min-w-0 flex-1 gap-0.5 text-left">
-              <div className="flex min-w-0 items-center gap-1.5">
-                <span
-                  className={cn(
-                    "min-w-0 flex-1 truncate text-[length:calc(var(--app-font-size-ui,12px)+0.5px)] leading-5",
-                    isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
-                  )}
-                  data-testid={`thread-title-${thread.id}`}
-                >
-                  {isSubagentThread ? (
-                    <SidebarSubagentLabel
-                      threadId={thread.id}
-                      parentThreadId={thread.parentThreadId}
-                      agentId={thread.subagentAgentId}
-                      nickname={thread.subagentNickname}
-                      role={thread.subagentRole}
-                      title={thread.title}
-                    />
-                  ) : (
-                    thread.title
-                  )}
-                </span>
-              </div>
-            </div>
-            <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
-              {renderThreadRowTrailingCluster({
-                isSubagentThread,
-                threadJumpLabel,
-                threadJumpLabelParts,
-                rightMetaChips: isActive ? rightMetaChips : [],
-                threadStatus,
-                statusPresentation: showStatusLabel ? "label" : "glyph",
-                timestampToneClassName: "text-muted-foreground/38",
-                hoverActions: renderThreadHoverActions({
-                  threadId: thread.id,
-                  toneClassName: "text-muted-foreground/42",
-                  isPinned: true,
-                  compact: isSubagentThread,
-                }),
-              })}
+          <div className="grid min-w-0 flex-1 gap-0.5 text-left">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span
+                className={cn(
+                  "min-w-0 flex-1 truncate text-[length:calc(var(--app-font-size-ui,12px)+0.5px)] leading-5",
+                  isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
+                )}
+                data-testid={`thread-title-${thread.id}`}
+              >
+                {isSubagentThread ? (
+                  <SidebarSubagentLabel
+                    threadId={thread.id}
+                    parentThreadId={thread.parentThreadId}
+                    agentId={thread.subagentAgentId}
+                    nickname={thread.subagentNickname}
+                    role={thread.subagentRole}
+                    title={thread.title}
+                  />
+                ) : (
+                  thread.title
+                )}
+              </span>
             </div>
           </div>
-        </TooltipTrigger>
-        {renderThreadHoverCardPopup(thread, hoverAnchorId)}
-      </Tooltip>
+          <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
+            {renderThreadRowTrailingCluster({
+              isSubagentThread,
+              threadJumpLabel,
+              threadJumpLabelParts,
+              rightMetaChips: isActive ? rightMetaChips : [],
+              threadStatus,
+              statusPresentation: showStatusLabel ? "label" : "glyph",
+              timestampToneClassName: "text-muted-foreground/38",
+              hoverActions: renderThreadHoverActions({
+                threadId: thread.id,
+                toneClassName: "text-muted-foreground/42",
+                isPinned: true,
+                compact: isSubagentThread,
+              }),
+            })}
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -4839,115 +4747,100 @@ export default function Sidebar() {
             className="pointer-events-auto absolute left-1.5 top-1/2 z-30 size-5 -translate-y-1/2"
           />
         ) : null}
-        <Tooltip>
-          <TooltipTrigger
-            {...SIDEBAR_HOVER_CARD_TRIGGER_PROPS}
-            render={
-              <SidebarMenuSubButton
-                render={<div role="button" tabIndex={0} />}
-                data-thread-entry-point={threadEntryPoint}
-                size="sm"
-                isActive={isActive}
-                className={cn(
-                  resolveThreadRowClassName({
-                    isActive,
-                    isSelected,
-                  }),
-                  isProjectTreeThread && "!h-8 !min-h-8 py-0",
-                  leadingPrStatus ? "pl-8" : topLevel && !isSubagentThread ? "pl-2" : null,
-                  isSubagentThread
-                    ? "pr-7.5"
-                    : resolveThreadRowTrailingReserveClass({
-                        metaChipCount:
-                          showCompactMeta && !isProjectTreeThread ? rightMetaChips.length : 0,
-                        hasTrailingGlyph: Boolean(threadStatus) || Boolean(threadJumpLabel),
-                        hasStatusLabel: false,
-                      }),
-                )}
-                draggable
-                onDragStart={(event) => {
-                  const dragImage = event.currentTarget as HTMLElement | null;
-                  event.dataTransfer.effectAllowed = "move";
-                  if (dragImage) {
-                    const rect = dragImage.getBoundingClientRect();
-                    event.dataTransfer.setDragImage(
-                      dragImage,
-                      Math.max(0, event.clientX - rect.left),
-                      Math.max(0, event.clientY - rect.top),
-                    );
-                  }
-                }}
-                onClick={(event) => {
-                  handleThreadClick(event, thread.id, orderedProjectThreadIds, {
-                    isActive,
-                    canToggleSubagents,
-                  });
-                }}
-                onPointerDown={(event) => primeThreadActivation(event, thread.id)}
-                onDoubleClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  openRenameThreadDialog(thread.id);
-                }}
-                onPointerUp={(event) => handleThreadRenamePointerUp(event, thread.id)}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter" && event.key !== " ") return;
-                  event.preventDefault();
-                  activateThreadFromSidebarIntent(thread.id);
-                }}
-                onContextMenu={(event) => {
-                  event.preventDefault();
-                  if (selectedThreadIds.size > 0 && selectedThreadIds.has(thread.id)) {
-                    void handleMultiSelectContextMenu({
-                      x: event.clientX,
-                      y: event.clientY,
-                    });
-                  } else {
-                    if (selectedThreadIds.size > 0) {
-                      clearSelection();
-                    }
-                    void handleThreadContextMenu(thread.id, {
-                      x: event.clientX,
-                      y: event.clientY,
-                    });
-                  }
-                }}
-              />
+        <SidebarMenuSubButton
+          render={<div role="button" tabIndex={0} />}
+          data-thread-entry-point={threadEntryPoint}
+          size="sm"
+          isActive={isActive}
+          className={cn(
+            resolveThreadRowClassName({
+              isActive,
+              isSelected,
+            }),
+            isProjectTreeThread && "!h-8 !min-h-8 py-0",
+            leadingPrStatus ? "pl-8" : topLevel && !isSubagentThread ? "pl-2" : null,
+            isSubagentThread
+              ? "pr-7.5"
+              : resolveThreadRowTrailingReserveClass({
+                  metaChipCount:
+                    showCompactMeta && !isProjectTreeThread ? rightMetaChips.length : 0,
+                  hasTrailingGlyph: Boolean(threadStatus) || Boolean(threadJumpLabel),
+                  hasStatusLabel: false,
+                }),
+          )}
+          draggable
+          onDragStart={(event) => {
+            const dragImage = event.currentTarget as HTMLElement | null;
+            event.dataTransfer.effectAllowed = "move";
+            if (dragImage) {
+              const rect = dragImage.getBoundingClientRect();
+              event.dataTransfer.setDragImage(
+                dragImage,
+                Math.max(0, event.clientX - rect.left),
+                Math.max(0, event.clientY - rect.top),
+              );
             }
-          >
-            {isSubagentThread ? (
+          }}
+          onClick={(event) => {
+            handleThreadClick(event, thread.id, orderedProjectThreadIds, {
+              isActive,
+              canToggleSubagents,
+            });
+          }}
+          onPointerDown={(event) => primeThreadActivation(event, thread.id)}
+          onDoubleClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            openRenameThreadDialog(thread.id);
+          }}
+          onPointerUp={(event) => handleThreadRenamePointerUp(event, thread.id)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            activateThreadFromSidebarIntent(thread.id);
+          }}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            if (selectedThreadIds.size > 0 && selectedThreadIds.has(thread.id)) {
+              void handleMultiSelectContextMenu({
+                x: event.clientX,
+                y: event.clientY,
+              });
+            } else {
+              if (selectedThreadIds.size > 0) {
+                clearSelection();
+              }
+              void handleThreadContextMenu(thread.id, {
+                x: event.clientX,
+                y: event.clientY,
+              });
+            }
+          }}
+        >
+          {isSubagentThread ? (
+            <span
+              aria-hidden="true"
+              className="relative inline-flex h-3.5 w-[18px] shrink-0 items-center"
+              style={{ marginLeft: `${subagentIndentPx}px` }}
+            >
+              <span className="absolute left-1.5 top-0 bottom-0 w-px rounded-full bg-border/35" />
+              <span className="absolute left-1.5 top-1/2 h-px w-2.5 -translate-y-1/2 bg-border/35" />
               <span
-                aria-hidden="true"
-                className="relative inline-flex h-3.5 w-[18px] shrink-0 items-center"
-                style={{ marginLeft: `${subagentIndentPx}px` }}
-              >
-                <span className="absolute left-1.5 top-0 bottom-0 w-px rounded-full bg-border/35" />
-                <span className="absolute left-1.5 top-1/2 h-px w-2.5 -translate-y-1/2 bg-border/35" />
-                <span
-                  className="absolute left-1.5 top-1/2 size-[5px] -translate-x-1/2 -translate-y-1/2 rounded-full"
-                  style={{ backgroundColor: subagentPresentation?.accentColor }}
-                />
-              </span>
-            ) : threadEntryPoint === "terminal" ? (
-              isProjectTreeThread ? (
-                <span className="inline-flex size-[26px] shrink-0 items-center justify-center text-muted-foreground/85">
-                  <SidebarGlyph icon={TerminalIcon} variant="chrome" />
-                </span>
-              ) : (
+                className="absolute left-1.5 top-1/2 size-[5px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+                style={{ backgroundColor: subagentPresentation?.accentColor }}
+              />
+            </span>
+          ) : threadEntryPoint === "terminal" ? (
+            isProjectTreeThread ? (
+              <span className="inline-flex size-[26px] shrink-0 items-center justify-center text-muted-foreground/85">
                 <SidebarGlyph icon={TerminalIcon} variant="chrome" />
-              )
-            ) : showThreadProviderAvatar ? (
-              isProjectTreeThread ? (
-                <span className="inline-flex size-[26px] shrink-0 items-center justify-center text-muted-foreground/85">
-                  <ProviderAvatarWithTerminal
-                    provider={thread.modelSelection.provider ?? thread.session?.provider}
-                    handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
-                    handoffTooltip={handoffBadgeLabel}
-                    terminalStatus={terminalStatus}
-                    terminalCount={terminalCount}
-                  />
-                </span>
-              ) : (
+              </span>
+            ) : (
+              <SidebarGlyph icon={TerminalIcon} variant="chrome" />
+            )
+          ) : showThreadProviderAvatar ? (
+            isProjectTreeThread ? (
+              <span className="inline-flex size-[26px] shrink-0 items-center justify-center text-muted-foreground/85">
                 <ProviderAvatarWithTerminal
                   provider={thread.modelSelection.provider ?? thread.session?.provider}
                   handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
@@ -4955,93 +4848,100 @@ export default function Sidebar() {
                   terminalStatus={terminalStatus}
                   terminalCount={terminalCount}
                 />
-              )
-            ) : null}
-            <div
-              className={cn(
-                "flex min-w-0 flex-1 items-center text-left",
-                isSubagentThread ? "gap-[5px]" : "gap-1.5",
-              )}
-            >
-              <div className="flex min-w-0 items-center gap-1.5">
-                <span
-                  className={cn(
-                    "min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,12px)]",
-                    // Inactive thread names share the resting label color with
-                    // project/folder headers; the active row still pops via its
-                    // background + full-foreground color from resolveThreadRowClassName.
-                    isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
-                    isSubagentThread ? "leading-[18px] text-foreground/80" : "leading-5",
-                  )}
-                >
-                  {isSubagentThread ? (
-                    <SidebarSubagentLabel
-                      threadId={thread.id}
-                      parentThreadId={thread.parentThreadId}
-                      agentId={thread.subagentAgentId}
-                      nickname={thread.subagentNickname}
-                      role={thread.subagentRole}
-                      title={thread.title}
-                      roleClassName="text-muted-foreground/42"
-                    />
-                  ) : (
-                    thread.title
-                  )}
+              </span>
+            ) : (
+              <ProviderAvatarWithTerminal
+                provider={thread.modelSelection.provider ?? thread.session?.provider}
+                handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
+                handoffTooltip={handoffBadgeLabel}
+                terminalStatus={terminalStatus}
+                terminalCount={terminalCount}
+              />
+            )
+          ) : null}
+          <div
+            className={cn(
+              "flex min-w-0 flex-1 items-center text-left",
+              isSubagentThread ? "gap-[5px]" : "gap-1.5",
+            )}
+          >
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span
+                className={cn(
+                  "min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,12px)]",
+                  // Inactive thread names share the resting label color with
+                  // project/folder headers; the active row still pops via its
+                  // background + full-foreground color from resolveThreadRowClassName.
+                  isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
+                  isSubagentThread ? "leading-[18px] text-foreground/80" : "leading-5",
+                )}
+              >
+                {isSubagentThread ? (
+                  <SidebarSubagentLabel
+                    threadId={thread.id}
+                    parentThreadId={thread.parentThreadId}
+                    agentId={thread.subagentAgentId}
+                    nickname={thread.subagentNickname}
+                    role={thread.subagentRole}
+                    title={thread.title}
+                    roleClassName="text-muted-foreground/42"
+                  />
+                ) : (
+                  thread.title
+                )}
+              </span>
+            </div>
+          </div>
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 pr-1">
+            {canToggleSubagents ? (
+              <button
+                type="button"
+                data-thread-selection-safe
+                aria-label={`${isExpanded ? "Collapse" : "Expand"} ${childCountLabel}`}
+                title={childCountLabel}
+                className={cn(
+                  "inline-flex h-5 min-w-5 items-center justify-center gap-0.5 rounded-full border px-[5px] transition-colors",
+                  toggleButtonClassName,
+                )}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  toggleSubagentParent(thread.id);
+                }}
+              >
+                <span className="text-[11px] font-medium leading-none tabular-nums">
+                  {childCount}
                 </span>
-              </div>
-            </div>
-            <div className="ml-auto flex shrink-0 items-center gap-1.5 pr-1">
-              {canToggleSubagents ? (
-                <button
-                  type="button"
-                  data-thread-selection-safe
-                  aria-label={`${isExpanded ? "Collapse" : "Expand"} ${childCountLabel}`}
-                  title={childCountLabel}
-                  className={cn(
-                    "inline-flex h-5 min-w-5 items-center justify-center gap-0.5 rounded-full border px-[5px] transition-colors",
-                    toggleButtonClassName,
-                  )}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    toggleSubagentParent(thread.id);
-                  }}
-                >
-                  <span className="text-[11px] font-medium leading-none tabular-nums">
-                    {childCount}
-                  </span>
-                  {isExpanded ? (
-                    <SidebarGlyph icon={ChevronDownIcon} variant="chevron" />
-                  ) : (
-                    <SidebarGlyph icon={ChevronRightIcon} variant="chevron" />
-                  )}
-                </button>
-              ) : null}
-            </div>
-            <div className={cn("absolute top-1/2 flex -translate-y-1/2 items-center", "right-1.5")}>
-              {renderThreadRowTrailingCluster({
-                isSubagentThread,
-                threadJumpLabel,
-                threadJumpLabelParts,
-                rightMetaChips: showCompactMeta && !isProjectTreeThread ? rightMetaChips : [],
-                threadStatus,
-                statusPresentation: "glyph",
-                timestampToneClassName: isSubagentThread
-                  ? isHighlighted
-                    ? "text-foreground/38 dark:text-foreground/46"
-                    : "text-muted-foreground/24"
-                  : secondaryMetaClass,
-                hoverActions: renderThreadHoverActions({
-                  threadId: thread.id,
-                  toneClassName: secondaryMetaClass,
-                  isPinned,
-                  compact: isSubagentThread,
-                }),
-              })}
-            </div>
-          </TooltipTrigger>
-          {renderThreadHoverCardPopup(thread, hoverAnchorId)}
-        </Tooltip>
+                {isExpanded ? (
+                  <SidebarGlyph icon={ChevronDownIcon} variant="chevron" />
+                ) : (
+                  <SidebarGlyph icon={ChevronRightIcon} variant="chevron" />
+                )}
+              </button>
+            ) : null}
+          </div>
+          <div className={cn("absolute top-1/2 flex -translate-y-1/2 items-center", "right-1.5")}>
+            {renderThreadRowTrailingCluster({
+              isSubagentThread,
+              threadJumpLabel,
+              threadJumpLabelParts,
+              rightMetaChips: showCompactMeta && !isProjectTreeThread ? rightMetaChips : [],
+              threadStatus,
+              statusPresentation: "glyph",
+              timestampToneClassName: isSubagentThread
+                ? isHighlighted
+                  ? "text-foreground/38 dark:text-foreground/46"
+                  : "text-muted-foreground/24"
+                : secondaryMetaClass,
+              hoverActions: renderThreadHoverActions({
+                threadId: thread.id,
+                toneClassName: secondaryMetaClass,
+                isPinned,
+                compact: isSubagentThread,
+              }),
+            })}
+          </div>
+        </SidebarMenuSubButton>
       </SidebarMenuSubItem>
     );
   }
@@ -5076,16 +4976,11 @@ export default function Sidebar() {
       canShowLessThreads,
     } = projectSidebarData;
     const projectFolderIconClassName = isProjectPinned ? "opacity-0" : undefined;
-    const projectRun = projectRunsByProjectId[project.id] ?? null;
-    const projectRunServer = projectRunServerByProjectId.get(project.id) ?? null;
-    // A project reads as "running" when TeaCode tracks a run for it or when a
-    // local server (possibly started outside TeaCode) is attributed by cwd.
-    const isProjectRunning = projectRun !== null || projectRunServer !== null;
     // The "open dev server" affordance now lives in the project context menu, so
     // the hover toolbar always reserves space for the three thread actions. The
     // reserve lives on the *name* container (not the button) so only the truncating
-    // name yields to the overlay toolbar; the trailing run dot stays put and fades
-    // in place instead of sliding left. Focus is read from the group because the
+    // name yields to the overlay toolbar; the trailing meta cluster stays put and
+    // fades in place instead of sliding left. Focus is read from the group because the
     // name container itself is not focusable — the row's button is.
     const projectToolbarReserveClassName =
       "group-hover/project-header:pr-[4.75rem] group-has-[:focus-visible]/project-header:pr-[4.75rem]";
@@ -5093,148 +4988,136 @@ export default function Sidebar() {
 
     return (
       <div className="group/collapsible" data-sidebar-tree-project={project.id}>
-        <PreviewCard>
-          <PreviewCardTrigger
-            {...SIDEBAR_HOVER_CARD_TRIGGER_PROPS}
-            render={
-              <div
-                className="group/project-header relative"
-                data-project-hover-anchor={project.id}
-              />
-            }
+        <div className="group/project-header relative" data-project-hover-anchor={project.id}>
+          <SidebarMenuButton
+            ref={isManualProjectSorting ? dragHandleProps?.setActivatorNodeRef : undefined}
+            size="sm"
+            className={cn(
+              SIDEBAR_HEADER_ROW_CLASS_NAME,
+              "!h-9 !min-h-9 py-0 hover:bg-[var(--sidebar-accent)] group-hover/project-header:bg-[var(--sidebar-accent)] group-hover/project-header:text-[var(--sidebar-accent-foreground)]",
+              isManualProjectSorting ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
+            )}
+            {...(isManualProjectSorting && dragHandleProps ? dragHandleProps.attributes : {})}
+            {...(isManualProjectSorting && dragHandleProps ? dragHandleProps.listeners : {})}
+            onPointerDownCapture={handleProjectTitlePointerDownCapture}
+            onClick={(event) => handleProjectTitleClick(event, project.id)}
+            onKeyDown={(event) => handleProjectTitleKeyDown(event, project.id)}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              void handleProjectContextMenu(project.id, {
+                x: event.clientX,
+                y: event.clientY,
+              });
+            }}
           >
-            <SidebarMenuButton
-              ref={isManualProjectSorting ? dragHandleProps?.setActivatorNodeRef : undefined}
+            <SidebarLeadingIcon
               size="sm"
-              className={cn(
-                SIDEBAR_HEADER_ROW_CLASS_NAME,
-                "!h-9 !min-h-9 py-0 hover:bg-[var(--sidebar-accent)] group-hover/project-header:bg-[var(--sidebar-accent)] group-hover/project-header:text-[var(--sidebar-accent-foreground)]",
-                isManualProjectSorting ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
-              )}
-              {...(isManualProjectSorting && dragHandleProps ? dragHandleProps.attributes : {})}
-              {...(isManualProjectSorting && dragHandleProps ? dragHandleProps.listeners : {})}
-              onPointerDownCapture={handleProjectTitlePointerDownCapture}
-              onClick={(event) => handleProjectTitleClick(event, project.id)}
-              onKeyDown={(event) => handleProjectTitleKeyDown(event, project.id)}
-              onContextMenu={(event) => {
-                event.preventDefault();
-                void handleProjectContextMenu(project.id, {
-                  x: event.clientX,
-                  y: event.clientY,
-                });
-              }}
+              tone={SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME}
+              className={projectFolderIconClassName}
             >
-              <SidebarLeadingIcon
-                size="sm"
-                tone={SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME}
-                className={projectFolderIconClassName}
-              >
-                <ProjectSidebarIcon cwd={project.cwd} expanded={project.expanded} />
-              </SidebarLeadingIcon>
-              <div
+              <ProjectSidebarIcon cwd={project.cwd} expanded={project.expanded} />
+            </SidebarLeadingIcon>
+            <div
+              className={cn(
+                "grid min-w-0 flex-1 gap-0.5 overflow-hidden text-left transition-[padding] duration-150 ease-out",
+                projectToolbarReserveClassName,
+              )}
+            >
+              <span
                 className={cn(
-                  "grid min-w-0 flex-1 gap-0.5 overflow-hidden text-left transition-[padding] duration-150 ease-out",
-                  projectToolbarReserveClassName,
+                  "truncate font-system-ui text-[length:calc(var(--app-font-size-ui,12px)+0.5px)] font-normal",
+                  SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
                 )}
               >
-                <span
-                  className={cn(
-                    "truncate font-system-ui text-[length:calc(var(--app-font-size-ui,12px)+0.5px)] font-normal",
-                    SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
-                  )}
-                >
-                  {project.name}
-                </span>
-              </div>
-              {showProjectThreadCount || isProjectRunning || projectActivityRollup ? (
-                <span
-                  aria-label={projectActivityRollup?.status.label}
-                  className={cn(
-                    "ml-auto flex shrink-0 items-center justify-end gap-1.5 self-center",
-                    sidebarHoverRevealHideClassName("project-header"),
-                  )}
-                >
-                  {showProjectThreadCount ? (
-                    <span className="text-[11px] leading-none tabular-nums text-muted-foreground/58">
-                      {allProjectThreadCount}
-                    </span>
-                  ) : null}
-                  {isProjectRunning ? <ProjectRunIndicatorDot /> : null}
-                  {projectActivityRollup ? (
-                    <span title={projectActivityRollup.label}>
-                      <SidebarStatusTrailingGlyph status={projectActivityRollup.status} />
-                    </span>
-                  ) : null}
-                </span>
-              ) : null}
-            </SidebarMenuButton>
-            <button
-              type="button"
-              aria-label={pinActionLabel(project.name, isProjectPinned)}
-              aria-pressed={isProjectPinned}
-              title={pinActionLabel(project.name, isProjectPinned)}
-              className={cn(
-                "sidebar-icon-button absolute left-2 top-1/2 z-20 inline-flex size-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded-sm transition-opacity hover:text-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
-                SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
-                isProjectPinned
-                  ? "pointer-events-auto opacity-100"
-                  : "pointer-events-none opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100",
-              )}
-              onMouseDown={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-              }}
+                {project.name}
+              </span>
+            </div>
+            {showProjectThreadCount || projectActivityRollup ? (
+              <span
+                aria-label={projectActivityRollup?.status.label}
+                className={cn(
+                  "ml-auto flex shrink-0 items-center justify-end gap-1.5 self-center",
+                  sidebarHoverRevealHideClassName("project-header"),
+                )}
+              >
+                {showProjectThreadCount ? (
+                  <span className="text-[11px] leading-none tabular-nums text-muted-foreground/58">
+                    {allProjectThreadCount}
+                  </span>
+                ) : null}
+                {projectActivityRollup ? (
+                  <span title={projectActivityRollup.label}>
+                    <SidebarStatusTrailingGlyph status={projectActivityRollup.status} />
+                  </span>
+                ) : null}
+              </span>
+            ) : null}
+          </SidebarMenuButton>
+          <button
+            type="button"
+            aria-label={pinActionLabel(project.name, isProjectPinned)}
+            aria-pressed={isProjectPinned}
+            title={pinActionLabel(project.name, isProjectPinned)}
+            className={cn(
+              "sidebar-icon-button absolute left-2 top-1/2 z-20 inline-flex size-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded-sm transition-opacity hover:text-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
+              SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
+              isProjectPinned
+                ? "pointer-events-auto opacity-100"
+                : "pointer-events-none opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100",
+            )}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              toggleProjectPinned(project.id);
+            }}
+          >
+            <PinStatusIcon pinned={isProjectPinned} className="size-3.5" />
+          </button>
+          <SidebarSectionToolbar placement="overlay" revealOnHover>
+            <SidebarIconButton
+              icon={TerminalIcon}
+              label={`Create new terminal thread in ${project.name}`}
+              tooltip={
+                newTerminalThreadShortcutLabel
+                  ? `New terminal thread (${newTerminalThreadShortcutLabel})`
+                  : "New terminal thread"
+              }
+              tooltipSide="top"
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                toggleProjectPinned(project.id);
+                void handleNewThread(project.id, {
+                  envMode: resolveSidebarNewThreadEnvMode({
+                    defaultEnvMode: appSettings.defaultThreadEnvMode,
+                  }),
+                  entryPoint: "terminal",
+                });
               }}
-            >
-              <PinStatusIcon pinned={isProjectPinned} className="size-3.5" />
-            </button>
-            <SidebarSectionToolbar placement="overlay" revealOnHover>
-              <SidebarIconButton
-                icon={TerminalIcon}
-                label={`Create new terminal thread in ${project.name}`}
-                tooltip={
-                  newTerminalThreadShortcutLabel
-                    ? `New terminal thread (${newTerminalThreadShortcutLabel})`
-                    : "New terminal thread"
-                }
-                tooltipSide="top"
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  void handleNewThread(project.id, {
-                    envMode: resolveSidebarNewThreadEnvMode({
-                      defaultEnvMode: appSettings.defaultThreadEnvMode,
-                    }),
-                    entryPoint: "terminal",
-                  });
-                }}
-              />
-              <SidebarIconButton
-                icon={NewThreadIcon}
-                label={`Create new thread in ${project.name}`}
-                tooltip={
-                  newThreadShortcutLabel ? `New thread (${newThreadShortcutLabel})` : "New thread"
-                }
-                tooltipSide="top"
-                data-testid="new-thread-button"
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  void handleNewThread(project.id, {
-                    envMode: resolveSidebarNewThreadEnvMode({
-                      defaultEnvMode: appSettings.defaultThreadEnvMode,
-                    }),
-                  });
-                }}
-              />
-            </SidebarSectionToolbar>
-          </PreviewCardTrigger>
-          {renderProjectHoverCardPopup(project, allProjectThreadCount)}
-        </PreviewCard>
+            />
+            <SidebarIconButton
+              icon={NewThreadIcon}
+              label={`Create new thread in ${project.name}`}
+              tooltip={
+                newThreadShortcutLabel ? `New thread (${newThreadShortcutLabel})` : "New thread"
+              }
+              tooltipSide="top"
+              data-testid="new-thread-button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                void handleNewThread(project.id, {
+                  envMode: resolveSidebarNewThreadEnvMode({
+                    defaultEnvMode: appSettings.defaultThreadEnvMode,
+                  }),
+                });
+              }}
+            />
+          </SidebarSectionToolbar>
+        </div>
 
         <div
           className={cn(
@@ -6108,31 +5991,6 @@ export default function Sidebar() {
                       <SidebarGlyph icon={GitHubIcon} variant="leading" />
                     </SidebarLeadingIcon>
                     <span className="truncate">Git Workbench</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    size="sm"
-                    aria-current={isOnCloud ? "page" : undefined}
-                    className={cn(
-                      SIDEBAR_HEADER_ROW_CLASS_NAME,
-                      isOnCloud
-                        ? SIDEBAR_ROW_ACTIVE_CLASS_NAME
-                        : cn(SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME, SIDEBAR_ROW_HOVER_CLASS_NAME),
-                    )}
-                    onClick={() => navigateToProjectSurface("cloud")}
-                  >
-                    <SidebarLeadingIcon
-                      size="sm"
-                      tone={
-                        isOnCloud
-                          ? "text-[var(--sidebar-accent-foreground)]"
-                          : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME
-                      }
-                    >
-                      <SidebarGlyph icon={CloudIcon} variant="leading" />
-                    </SidebarLeadingIcon>
-                    <span className="truncate">Cloud</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

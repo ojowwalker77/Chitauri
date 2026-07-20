@@ -83,7 +83,6 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
           model: "claude-opus-4-6",
         },
         runtimeMode: "full-access",
-        interactionMode: "default",
         envMode: "local",
         branch: null,
         worktreePath: null,

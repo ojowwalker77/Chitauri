@@ -20,8 +20,19 @@ import {
   CHAT_SURFACE_HEADER_HEIGHT_CLASS,
   CHAT_SURFACE_HEADER_PADDING_X_CLASS,
 } from "~/components/chat/chatHeaderControls";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "~/components/ui/collapsible";
+import { SearchInput } from "~/components/ui/search-input";
+import { Skeleton } from "~/components/ui/skeleton";
+import {
+  SegmentedTabs,
+  WorkbenchDetailPane,
+  WorkbenchListPane,
+  WorkbenchRow,
+  WorkbenchSectionLabel,
+  type SegmentedTabOption,
+} from "~/components/workbench/workbenchChrome";
 import { disclosureChevronClassName } from "~/lib/disclosureMotion";
 import {
   Dialog,
@@ -71,7 +82,6 @@ import {
   MessageCircleIcon,
   PlusIcon,
   RefreshCwIcon,
-  SearchIcon,
   SparklesIcon,
   TriangleAlertIcon,
 } from "~/lib/icons";
@@ -147,50 +157,68 @@ function WorkListRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        "group flex w-full items-start gap-2.5 rounded-[8px] px-2.5 py-2 text-left outline-none transition-[background-color,scale] duration-press ease-out focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.96] motion-reduce:active:scale-100",
+        "group flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left outline-none transition-[background-color,scale] duration-press ease-out focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100",
         selected ? "bg-selected" : "hover:bg-hover",
       )}
     >
       <ItemGlyph item={item} />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-medium text-foreground">{item.title}</span>
-        <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <span className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+            {item.title}
+          </span>
+          <StatusDot status={item.checkStatus} />
+        </span>
+        <span className="mt-1 flex items-center gap-1.5 text-[11px] tabular-nums text-muted-foreground">
           <span>#{item.number}</span>
-          {item.isDraft ? <span>Draft</span> : null}
-          <span>·</span>
-          <span className="shrink-0">{formatRelativeTime(item.updatedAt)}</span>
+          <span aria-hidden="true">·</span>
+          <span className="truncate">{formatRelativeTime(item.updatedAt)}</span>
+          {item.isDraft ? (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>Draft</span>
+            </>
+          ) : null}
           {item.kind === "pull_request" && (item.additions != null || item.deletions != null) ? (
-            <span className="shrink-0">
+            <span className="ml-auto shrink-0">
               <span className="text-success">+{item.additions ?? 0}</span>{" "}
               <span className="text-destructive">−{item.deletions ?? 0}</span>
             </span>
           ) : null}
-          <span className="ml-auto">
-            <StatusDot status={item.checkStatus} />
-          </span>
         </span>
       </span>
     </button>
   );
 }
 
+/** Loading is not empty (Design §9): the list skeleton mirrors {@link WorkListRow}'s geometry. */
+function WorkListSkeleton() {
+  return (
+    <div aria-hidden="true" className="space-y-0.5">
+      {[0, 1, 2, 3, 4, 5].map((row) => (
+        <div key={row} className="flex items-start gap-2.5 px-2.5 py-2">
+          <Skeleton className="mt-0.5 size-4 rounded-sm" />
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <Skeleton className={cn("h-3 rounded-sm", row % 3 === 0 ? "w-[58%]" : "w-[76%]")} />
+            <Skeleton className="h-2.5 w-[36%] rounded-sm" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function EmptyList({ loading, error }: { loading: boolean; error: unknown }) {
-  if (loading) {
-    return (
-      <div className="flex flex-1 items-center justify-center gap-2 text-xs text-muted-foreground">
-        <Spinner className="size-4" /> Loading GitHub work…
-      </div>
-    );
-  }
+  if (loading) return <WorkListSkeleton />;
   if (error) {
     return (
-      <div className="m-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+      <div className="m-1.5 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
         {errorMessage(error)}
       </div>
     );
   }
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center text-xs text-muted-foreground">
+    <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-10 text-center text-xs text-muted-foreground">
       <CheckCircle2Icon className="size-5 text-success/80" />
       <p>No matching GitHub work.</p>
     </div>
@@ -199,61 +227,39 @@ function EmptyList({ loading, error }: { loading: boolean; error: unknown }) {
 
 function DetailHeader({
   detail,
-  tab,
   refreshing,
   onBack,
-  onTabChange,
   onOpenExternal,
   onRefresh,
 }: {
   detail: GitHubWorkItemDetail;
-  tab: DetailTab;
   refreshing: boolean;
   onBack: () => void;
-  onTabChange: (tab: DetailTab) => void;
   onOpenExternal: () => void;
   onRefresh: () => void;
 }) {
-  const tabs: ReadonlyArray<{ value: DetailTab; label: string }> = [
-    { value: "summary", label: "Summary" },
-    { value: "timeline", label: "Timeline" },
-    ...(detail.item.kind === "pull_request" ? ([{ value: "code", label: "Code" }] as const) : []),
-  ];
   return (
-    <div className="flex min-h-12 items-center gap-2 border-b border-border/70 px-3 py-1.5">
-      <div className="flex min-w-0 flex-1 basis-0 items-center gap-2">
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label="Back to work list"
-          className="md:hidden"
-          onClick={onBack}
-        >
-          <ArrowLeftIcon />
-        </Button>
-        <ItemGlyph item={detail.item} />
-        <span className="truncate text-[13px] font-medium text-foreground">
-          {detail.item.title}
-        </span>
-      </div>
+    <WorkbenchRow>
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        aria-label="Back to work list"
+        className="md:hidden"
+        onClick={onBack}
+      >
+        <ArrowLeftIcon />
+      </Button>
+      <ItemGlyph item={detail.item} />
+      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+        {detail.item.title}
+      </span>
+      <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+        #{detail.item.number}
+      </span>
+      <Badge variant={workItemStateTone(detail.item)} size="sm" className="shrink-0">
+        {workItemStatusText(detail.item)}
+      </Badge>
       <div className="flex shrink-0 items-center gap-1">
-        {tabs.map((entry) => (
-          <button
-            key={entry.value}
-            type="button"
-            onClick={() => onTabChange(entry.value)}
-            className={cn(
-              "h-8 rounded-[8px] px-3 text-xs transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
-              tab === entry.value
-                ? "bg-selected text-foreground"
-                : "text-muted-foreground hover:bg-hover hover:text-foreground",
-            )}
-          >
-            {entry.label}
-          </button>
-        ))}
-      </div>
-      <div className="flex min-w-0 flex-1 basis-0 items-center justify-end gap-1">
         <Button size="icon-xs" variant="ghost" aria-label="Open in GitHub" onClick={onOpenExternal}>
           <ArrowUpRightIcon />
         </Button>
@@ -267,33 +273,24 @@ function DetailHeader({
           {refreshing ? <Spinner className="size-3.5" /> : <RefreshCwIcon />}
         </Button>
       </div>
-    </div>
+    </WorkbenchRow>
   );
 }
 
-function Stat({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: "success" | "danger" | undefined;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-1 text-xs">
-      <span className="text-muted-foreground">{label}</span>
-      <span
-        className={cn(
-          "min-w-0 truncate text-right text-foreground",
-          tone === "success" && "text-success",
-          tone === "danger" && "text-destructive",
-        )}
-      >
-        {value}
-      </span>
-    </div>
-  );
+function detailTabOptions(
+  detail: GitHubWorkItemDetail,
+): ReadonlyArray<SegmentedTabOption<DetailTab>> {
+  return [
+    { value: "summary", label: "Summary" },
+    { value: "timeline", label: "Timeline" },
+    ...(detail.item.kind === "pull_request" ? ([{ value: "code", label: "Code" }] as const) : []),
+  ];
+}
+
+function workItemStateTone(item: GitHubWorkItemSummary): "success" | "secondary" | "outline" {
+  if (item.state === "merged") return "success";
+  if (item.state === "closed") return "secondary";
+  return item.isDraft ? "secondary" : "outline";
 }
 
 function workItemStatusText(item: GitHubWorkItemSummary): string {
@@ -353,10 +350,10 @@ function DetailHero({ item }: { item: GitHubWorkItemSummary }) {
           <img src={item.author.avatarUrl} alt="" className="size-4 rounded-full" />
         ) : null}
         <span className="text-foreground">{item.author?.login ?? "Unknown"}</span>
-        <span>·</span>
-        <span>{formatRelativeTime(item.updatedAt)}</span>
-        <span>·</span>
-        <span>{workItemStatusText(item)}</span>
+        <span aria-hidden="true">·</span>
+        <span className="tabular-nums">#{item.number}</span>
+        <span aria-hidden="true">·</span>
+        <span>updated {formatRelativeTime(item.updatedAt)}</span>
       </p>
     </header>
   );
@@ -378,65 +375,62 @@ function SummaryView({
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-6 py-6">
       <DetailHero item={item} />
-      {item.kind === "pull_request" ? (
-        <section className="space-y-0.5">
-          <MetaRow icon={GitBranchIcon} label="Branch">
-            <span className="truncate">{detail.headBranch ?? "?"}</span>
-            <ChevronRightIcon className="size-3 shrink-0 text-faint" />
-            <span className="shrink-0">{detail.baseBranch ?? "?"}</span>
-            {item.additions != null || item.deletions != null ? (
-              <span className="ml-1 shrink-0">
-                <span className="text-success">+{item.additions ?? 0}</span>{" "}
-                <span className="text-destructive">−{item.deletions ?? 0}</span>
-              </span>
-            ) : null}
-          </MetaRow>
-          <MetaRow icon={EyeIcon} label="Reviewers">
-            {detail.reviewers.length > 0
-              ? detail.reviewers
-                  .map(
-                    (reviewer) =>
-                      `${reviewer.actor.login}${reviewer.state ? ` · ${reviewer.state.toLowerCase()}` : ""}`,
-                  )
-                  .join(", ")
-              : "No reviewers"}
-          </MetaRow>
-          <MetaRow icon={MessageCircleIcon} label="Comments">
-            {item.commentsCount > 0
-              ? `${item.commentsCount} comment${item.commentsCount === 1 ? "" : "s"}`
-              : "No comments"}
-          </MetaRow>
-          <MetaRow icon={CircleAlertIcon} label="Checks">
-            <span
-              className={cn(
-                item.checkStatus === "failure" && "text-destructive",
-                item.checkStatus === "success" && "text-success",
-              )}
-            >
-              {checksSummaryText(detail)}
-            </span>
-          </MetaRow>
-        </section>
-      ) : (
-        <section className="grid gap-x-8 gap-y-1 rounded-xl border border-border/70 bg-background/35 p-4 sm:grid-cols-2">
+      <section className="space-y-0.5">
+        {item.kind === "pull_request" ? (
           <>
-            <Stat label="Author" value={item.author?.login ?? "Unknown"} />
-            <Stat label="State" value={item.state} />
-            <Stat
-              label="Assignees"
-              value={item.assignees.map((actor) => actor.login).join(", ") || "None"}
-            />
-            <Stat label="Milestone" value={detail.milestone?.title ?? "None"} />
+            <MetaRow icon={GitBranchIcon} label="Branch">
+              <span className="truncate">{detail.headBranch ?? "?"}</span>
+              <ChevronRightIcon className="size-3 shrink-0 text-faint" />
+              <span className="shrink-0">{detail.baseBranch ?? "?"}</span>
+              {item.additions != null || item.deletions != null ? (
+                <span className="ml-1 shrink-0 tabular-nums">
+                  <span className="text-success">+{item.additions ?? 0}</span>{" "}
+                  <span className="text-destructive">−{item.deletions ?? 0}</span>
+                </span>
+              ) : null}
+            </MetaRow>
+            <MetaRow icon={EyeIcon} label="Reviewers">
+              {detail.reviewers.length > 0
+                ? detail.reviewers
+                    .map(
+                      (reviewer) =>
+                        `${reviewer.actor.login}${reviewer.state ? ` · ${reviewer.state.toLowerCase()}` : ""}`,
+                    )
+                    .join(", ")
+                : "No reviewers"}
+            </MetaRow>
+            <MetaRow icon={CircleAlertIcon} label="Checks">
+              <span
+                className={cn(
+                  item.checkStatus === "failure" && "text-destructive",
+                  item.checkStatus === "success" && "text-success",
+                )}
+              >
+                {checksSummaryText(detail)}
+              </span>
+            </MetaRow>
           </>
-        </section>
-      )}
+        ) : (
+          <>
+            <MetaRow icon={ListTodoIcon} label="Assignees">
+              {item.assignees.map((actor) => actor.login).join(", ") || "Unassigned"}
+            </MetaRow>
+            <MetaRow icon={ListChecksIcon} label="Milestone">
+              {detail.milestone?.title ?? "None"}
+            </MetaRow>
+          </>
+        )}
+        <MetaRow icon={MessageCircleIcon} label="Comments">
+          {item.commentsCount > 0
+            ? `${item.commentsCount} comment${item.commentsCount === 1 ? "" : "s"}`
+            : "No comments"}
+        </MetaRow>
+      </section>
 
       {detail.checks.length > 0 ? (
         <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Checks
-          </h2>
-          <div className="divide-y divide-border/60 rounded-xl border border-border/70">
+          <WorkbenchSectionLabel className="mb-2">Checks</WorkbenchSectionLabel>
+          <div className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70">
             {detail.checks.map((check) => (
               <div
                 key={`${check.name}:${check.url ?? ""}`}
@@ -479,16 +473,16 @@ function SummaryView({
       ) : null}
 
       {item.labels.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {item.labels.map((label) => (
-            <span
-              key={label.name}
-              className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground"
-            >
-              {label.name}
-            </span>
-          ))}
-        </div>
+        <section>
+          <WorkbenchSectionLabel className="mb-2">Labels</WorkbenchSectionLabel>
+          <div className="flex flex-wrap gap-1.5">
+            {item.labels.map((label) => (
+              <Badge key={label.name} variant="outline" size="sm">
+                {label.name}
+              </Badge>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       <Collapsible open={descriptionOpen} onOpenChange={setDescriptionOpen}>
@@ -1033,47 +1027,28 @@ function GitHubWorkbenchRoute() {
             </div>
           ) : (
             <div className="flex min-h-0 flex-1">
-              <aside
-                className={cn(
-                  "w-[340px] min-w-[280px] max-w-[42%] shrink-0 flex-col border-r border-border/70 max-md:w-full max-md:max-w-full",
-                  selectedItem ? "hidden md:flex" : "flex",
-                )}
-              >
+              <WorkbenchListPane hidden={selectedItem !== null}>
+                <WorkbenchRow className="gap-0 px-1.5">
+                  <SegmentedTabs
+                    ariaLabel="Git Workbench view"
+                    value={view}
+                    options={GITHUB_WORK_VIEWS}
+                    onValueChange={changeView}
+                  />
+                </WorkbenchRow>
                 <div className="border-b border-border/70 p-3">
-                  <div className="flex gap-1 overflow-x-auto pb-1">
-                    {GITHUB_WORK_VIEWS.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => changeView(option.value)}
-                        className={cn(
-                          "h-8 shrink-0 rounded-[7px] px-2.5 text-[12px] transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
-                          view === option.value
-                            ? "bg-selected text-foreground"
-                            : "text-muted-foreground hover:bg-hover hover:text-foreground",
-                        )}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-2 flex items-center rounded-[8px] border border-panel-border bg-[var(--well)] px-2">
-                    <SearchIcon className="size-3.5 text-muted-foreground" />
-                    <Input
-                      unstyled
-                      type="search"
-                      value={query}
-                      onChange={(event) => setQuery(event.target.value)}
-                      placeholder="Search title, repo, or number"
-                      className="min-h-8"
-                    />
-                  </div>
+                  <SearchInput
+                    type="search"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search title, repo, or number"
+                  />
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
                   {repositoryGroups.length > 0 ? (
                     repositoryGroups.map((group) => (
-                      <section key={group.repository.nameWithOwner} className="mb-2">
-                        <h2 className="sticky top-0 z-10 bg-background/95 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground">
+                      <section key={group.repository.nameWithOwner} className="mb-2 last:mb-0">
+                        <h2 className="sticky top-0 z-10 truncate bg-background px-2.5 pb-1.5 pt-1 text-[11px] font-medium text-muted-foreground">
                           {group.repository.nameWithOwner}
                         </h2>
                         {group.items.map((item) => (
@@ -1095,15 +1070,13 @@ function GitHubWorkbenchRoute() {
                   )}
                 </div>
                 {listSyncedAt ? (
-                  <div className="border-t border-border/70 px-3 py-2 text-[11px] text-muted-foreground">
+                  <div className="shrink-0 border-t border-border/70 px-3 py-2 text-[11px] tabular-nums text-muted-foreground">
                     {visibleItems.length} items · synced {formatRelativeTime(listSyncedAt)}
                   </div>
                 ) : null}
-              </aside>
+              </WorkbenchListPane>
 
-              <main
-                className={cn("min-w-0 flex-1 flex-col", selectedItem ? "flex" : "hidden md:flex")}
-              >
+              <WorkbenchDetailPane hidden={selectedItem === null}>
                 {!selectedItem ? (
                   <div className="flex h-full flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
                     <GitHubIcon className="size-6 opacity-50" />
@@ -1121,91 +1094,55 @@ function GitHubWorkbenchRoute() {
                   <>
                     <DetailHeader
                       detail={detail}
-                      tab={detailTab}
                       refreshing={detailQuery.isFetching}
                       onBack={() => setSelectedId(null)}
-                      onTabChange={setDetailTab}
                       onOpenExternal={() =>
                         void ensureNativeApi().shell.openExternal(detail.item.url)
                       }
                       onRefresh={() => void detailQuery.refetch()}
                     />
-                    <div className="flex flex-wrap items-center gap-1.5 border-b border-border/70 px-3 py-2">
-                      <Button
-                        size="xs"
-                        disabled={startingAgentIntent !== null}
-                        onClick={() => void startAgent("work")}
-                      >
-                        {startingAgentIntent === "work" ? (
-                          <Spinner className="size-3.5" />
-                        ) : (
-                          <SparklesIcon />
-                        )}{" "}
-                        Work on this
-                      </Button>
-                      {detail.item.kind === "pull_request" ? (
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          disabled={startingAgentIntent !== null}
-                          onClick={() => void startAgent("review")}
-                        >
-                          {startingAgentIntent === "review" ? (
-                            <Spinner className="size-3.5" />
-                          ) : (
-                            <GitPullRequestIcon />
-                          )}{" "}
-                          Review this
-                        </Button>
-                      ) : (
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          disabled={startingAgentIntent !== null}
-                          onClick={() => void startAgent("triage")}
-                        >
-                          {startingAgentIntent === "triage" ? (
-                            <Spinner className="size-3.5" />
-                          ) : (
-                            <ListChecksIcon />
-                          )}{" "}
-                          Triage this issue
-                        </Button>
-                      )}
-                      {detail.item.kind === "issue" ? (
-                        <>
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            onClick={() => setComposerMode("comment")}
-                          >
-                            <MessageCircleIcon /> Comment
-                          </Button>
-                          {target ? (
+                    <WorkbenchRow className="gap-1.5 overflow-x-auto px-1.5">
+                      <SegmentedTabs
+                        ariaLabel="Work item section"
+                        value={detailTab}
+                        options={detailTabOptions(detail)}
+                        onValueChange={setDetailTab}
+                        className="shrink-0"
+                      />
+                      <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-3">
+                        {detail.item.kind === "issue" ? (
+                          <>
                             <Button
-                              size="xs"
+                              size="sm"
                               variant="ghost"
-                              onClick={() =>
-                                void runAction({
-                                  action: "assign_self",
-                                  ...target,
-                                  assigned: !detail.item.assignees.some(
-                                    (actor) => actor.login === selectedItemConnection?.account,
-                                  ),
-                                })
-                              }
+                              onClick={() => setComposerMode("comment")}
                             >
-                              {detail.item.assignees.some(
-                                (actor) => actor.login === selectedItemConnection?.account,
-                              )
-                                ? "Unassign me"
-                                : "Assign me"}
+                              <MessageCircleIcon /> Comment
                             </Button>
-                          ) : null}
-                          {target ? (
-                            <div className="ml-auto">
+                            {target ? (
                               <Button
-                                size="xs"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                  void runAction({
+                                    action: "assign_self",
+                                    ...target,
+                                    assigned: !detail.item.assignees.some(
+                                      (actor) => actor.login === selectedItemConnection?.account,
+                                    ),
+                                  })
+                                }
+                              >
+                                {detail.item.assignees.some(
+                                  (actor) => actor.login === selectedItemConnection?.account,
+                                )
+                                  ? "Unassign me"
+                                  : "Assign me"}
+                              </Button>
+                            ) : null}
+                            {target ? (
+                              <Button
+                                size="sm"
                                 variant={
                                   detail.item.state === "open" ? "destructive-outline" : "outline"
                                 }
@@ -1228,11 +1165,52 @@ function GitHubWorkbenchRoute() {
                               >
                                 {detail.item.state === "open" ? "Close" : "Reopen"}
                               </Button>
-                            </div>
-                          ) : null}
-                        </>
-                      ) : null}
-                    </div>
+                            ) : null}
+                          </>
+                        ) : null}
+                        {detail.item.kind === "pull_request" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={startingAgentIntent !== null}
+                            onClick={() => void startAgent("review")}
+                          >
+                            {startingAgentIntent === "review" ? (
+                              <Spinner className="size-3.5" />
+                            ) : (
+                              <GitPullRequestIcon />
+                            )}
+                            Review
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={startingAgentIntent !== null}
+                            onClick={() => void startAgent("triage")}
+                          >
+                            {startingAgentIntent === "triage" ? (
+                              <Spinner className="size-3.5" />
+                            ) : (
+                              <ListChecksIcon />
+                            )}
+                            Triage
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          disabled={startingAgentIntent !== null}
+                          onClick={() => void startAgent("work")}
+                        >
+                          {startingAgentIntent === "work" ? (
+                            <Spinner className="size-3.5" />
+                          ) : (
+                            <SparklesIcon />
+                          )}
+                          Work on this
+                        </Button>
+                      </div>
+                    </WorkbenchRow>
                     <div className="min-h-0 flex-1 overflow-y-auto">
                       {detailTab === "summary" ? (
                         <SummaryView
@@ -1277,7 +1255,7 @@ function GitHubWorkbenchRoute() {
                     ) : null}
                   </>
                 ) : null}
-              </main>
+              </WorkbenchDetailPane>
             </div>
           )}
         </div>

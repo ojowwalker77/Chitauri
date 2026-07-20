@@ -8,8 +8,6 @@ export const BUILT_IN_COMPOSER_SLASH_COMMANDS = [
   "clear",
   "compact",
   "model",
-  "plan",
-  "default",
   "review",
   "fork",
   "status",
@@ -17,6 +15,12 @@ export const BUILT_IN_COMPOSER_SLASH_COMMANDS = [
   "fast",
   "export",
 ] as const;
+
+/**
+ * Commands TeaCode no longer offers. They stay recognized so historical prompts
+ * that used them are not miscounted as skill invocations in profile stats.
+ */
+export const RETIRED_COMPOSER_SLASH_COMMANDS = ["plan", "default"] as const;
 
 export type BuiltInComposerSlashCommand = (typeof BUILT_IN_COMPOSER_SLASH_COMMANDS)[number];
 
@@ -29,4 +33,13 @@ export function isBuiltInComposerSlashCommandName(
 ): value is BuiltInComposerSlashCommand {
   const normalizedValue = normalizeComposerSlashCommandName(value);
   return BUILT_IN_COMPOSER_SLASH_COMMANDS.some((command) => command === normalizedValue);
+}
+
+/** True for any command name TeaCode itself owns today or owned in the past. */
+export function isKnownComposerSlashCommandName(value: string): boolean {
+  const normalizedValue = normalizeComposerSlashCommandName(value);
+  return (
+    isBuiltInComposerSlashCommandName(normalizedValue) ||
+    RETIRED_COMPOSER_SLASH_COMMANDS.some((command) => command === normalizedValue)
+  );
 }

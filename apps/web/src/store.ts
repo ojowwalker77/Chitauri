@@ -385,7 +385,6 @@ function threadShellsEqual(left: ThreadShell | undefined, right: ThreadShell): b
     left.title === right.title &&
     left.modelSelection === right.modelSelection &&
     left.runtimeMode === right.runtimeMode &&
-    left.interactionMode === right.interactionMode &&
     left.error === right.error &&
     left.createdAt === right.createdAt &&
     (left.archivedAt ?? null) === (right.archivedAt ?? null) &&
@@ -433,7 +432,6 @@ function toThreadShell(thread: Thread): ThreadShell {
     title: thread.title,
     modelSelection: thread.modelSelection,
     runtimeMode: thread.runtimeMode,
-    interactionMode: thread.interactionMode,
     error: thread.error,
     createdAt: thread.createdAt,
     archivedAt: thread.archivedAt ?? null,
@@ -1702,7 +1700,6 @@ function normalizeThreadFromReadModel(
     previous.title === incoming.title &&
     previous.modelSelection === modelSelection &&
     previous.runtimeMode === incoming.runtimeMode &&
-    previous.interactionMode === incoming.interactionMode &&
     previous.session === session &&
     previous.messages === messages &&
     previous.proposedPlans === proposedPlans &&
@@ -1749,7 +1746,6 @@ function normalizeThreadFromReadModel(
     title: incoming.title,
     modelSelection,
     runtimeMode: incoming.runtimeMode,
-    interactionMode: incoming.interactionMode,
     session,
     messages,
     proposedPlans,
@@ -1848,7 +1844,6 @@ function normalizeThreadShellSnapshot(
     title: incoming.title,
     modelSelection,
     runtimeMode: incoming.runtimeMode,
-    interactionMode: incoming.interactionMode,
     error,
     createdAt: incoming.createdAt,
     archivedAt: incoming.archivedAt ?? null,
@@ -2144,7 +2139,6 @@ function sidebarThreadSummariesEqual(
     left.projectId === right.projectId &&
     left.title === right.title &&
     left.modelSelection === right.modelSelection &&
-    left.interactionMode === right.interactionMode &&
     left.envMode === right.envMode &&
     left.branch === right.branch &&
     left.worktreePath === right.worktreePath &&
@@ -2186,7 +2180,6 @@ function buildSidebarThreadSummary(
     projectId: thread.projectId,
     title: thread.title,
     modelSelection: thread.modelSelection,
-    interactionMode: thread.interactionMode,
     envMode: thread.envMode,
     branch: thread.branch,
     worktreePath: thread.worktreePath,
@@ -3605,7 +3598,6 @@ function applyOrchestrationEvent(
           if (
             modelSelection === thread.modelSelection &&
             thread.runtimeMode === event.payload.runtimeMode &&
-            thread.interactionMode === event.payload.interactionMode &&
             thread.pendingSourceProposedPlan === event.payload.sourceProposedPlan &&
             (thread.updatedAt ?? thread.createdAt) >= event.payload.createdAt
           ) {
@@ -3615,7 +3607,6 @@ function applyOrchestrationEvent(
             ...thread,
             modelSelection,
             runtimeMode: event.payload.runtimeMode,
-            interactionMode: event.payload.interactionMode,
             pendingSourceProposedPlan: event.payload.sourceProposedPlan,
             updatedAt:
               (thread.updatedAt ?? thread.createdAt) > event.payload.createdAt
@@ -4121,6 +4112,59 @@ export function applyShellEvent(state: AppState, event: OrchestrationShellStream
   }
 }
 
+/**
+ * Batched shell-event reducer.
+ *
+ * The server emits a shell event for every thread-aggregate event, so a streaming
+ * turn produces one per token delta — and each `commitThreadProjection` copies the
+ * `threads` array and the `sidebarThreadSummaryById` map. Applied one at a time
+ * that is O(events x threads) per turn plus one store notification per event.
+ *
+ * Folding a flush window into a single pass lets us write the cheap per-thread
+ * shell projections as we go and commit each touched thread exactly once at the
+ * end — consecutive events in a window almost always touch the same thread, so
+ * the N array/map copies collapse to one.
+ */
+export function applyShellEvents(
+  state: AppState,
+  events: ReadonlyArray<OrchestrationShellStreamEvent>,
+): AppState {
+  if (events.length === 0) return state;
+  if (events.length === 1) return applyShellEvent(state, events[0]!);
+
+  let nextState = state;
+  const threadsPendingCommit = new Set<ThreadId>();
+
+  for (const event of events) {
+    if (event.kind === "thread-upserted") {
+      if (nextState.deletedThreadIdsById?.[event.thread.id] === true) {
+        threadsPendingCommit.delete(event.thread.id);
+        nextState = removeThreadState(nextState, event.thread.id);
+        continue;
+      }
+      nextState = writeThreadShellProjection(
+        nextState,
+        normalizeThreadShellSnapshot(event.thread, getThreadFromState(nextState, event.thread.id)),
+      );
+      threadsPendingCommit.add(event.thread.id);
+      continue;
+    }
+    // Project events and removals are rare and cheap; let the single-event
+    // reducer stay the one definition of what they mean.
+    nextState = applyShellEvent(nextState, event);
+    if (event.kind === "thread-removed") {
+      threadsPendingCommit.delete(event.threadId);
+    }
+  }
+
+  for (const threadId of threadsPendingCommit) {
+    // Defensive by construction: commitThreadProjection no-ops when the thread is
+    // gone from state (e.g. removed by a later project-removed in this batch).
+    nextState = commitThreadProjection(nextState, threadId);
+  }
+  return nextState;
+}
+
 export function syncServerReadModel(state: AppState, readModel: OrchestrationReadModel): AppState {
   rememberProjectUiState(state.projects);
   rememberProjectLocalNames(state.projects);
@@ -4404,6 +4448,7 @@ interface AppStore extends AppState {
   syncServerThreadDetailHotPath: (thread: ReadModelThread) => void;
   syncServerReadModel: (readModel: OrchestrationReadModel) => void;
   applyShellEvent: (event: OrchestrationShellStreamEvent) => void;
+  applyShellEvents: (events: ReadonlyArray<OrchestrationShellStreamEvent>) => void;
   applyOrchestrationEvents: (events: ReadonlyArray<OrchestrationEvent>) => void;
   applyOrchestrationEventsHotPath: (events: ReadonlyArray<OrchestrationEvent>) => void;
   removeDeletedThreadFromClientState: (threadId: ThreadId) => void;
@@ -4427,6 +4472,7 @@ export const useStore = create<AppStore>((set) => ({
     set((state) => syncServerThreadDetailHotPath(state, thread)),
   syncServerReadModel: (readModel) => set((state) => syncServerReadModel(state, readModel)),
   applyShellEvent: (event) => set((state) => applyShellEvent(state, event)),
+  applyShellEvents: (events) => set((state) => applyShellEvents(state, events)),
   applyOrchestrationEvents: (events) => set((state) => applyOrchestrationEvents(state, events)),
   applyOrchestrationEventsHotPath: (events) =>
     set((state) =>

@@ -142,7 +142,6 @@ function ResearchDetailRoute() {
         title: truncateTitle(`Implement · ${document.title}`),
         modelSelection,
         runtimeMode,
-        interactionMode: "default",
         envMode,
         branch,
         worktreePath,
@@ -168,7 +167,6 @@ function ResearchDetailRoute() {
         assistantDeliveryMode: resolveAssistantDeliveryMode(settings),
         dispatchMode: "queue",
         runtimeMode,
-        interactionMode: "default",
         createdAt,
       });
       const snapshot = await api.orchestration.getShellSnapshot();

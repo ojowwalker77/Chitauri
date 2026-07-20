@@ -52,7 +52,7 @@ import {
 } from "../../codexGeneratedImages.ts";
 import { isNonFatalCodexErrorMessage } from "../../codexErrorClassification.ts";
 import { ServerConfig } from "../../config.ts";
-import { extractProposedPlanMarkdown } from "../planMode.ts";
+import { extractProposedPlanMarkdown } from "../proposedPlan.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { ensureChitauriSkillsDir } from "../skillsCatalog.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
@@ -1695,9 +1695,6 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           ...(input.modelSelection?.provider === "codex" && input.modelSelection.options?.fastMode
             ? { serviceTier: "fast" }
             : {}),
-          ...(input.interactionMode !== undefined
-            ? { interactionMode: input.interactionMode }
-            : {}),
           ...(nativeCodexAttachments.length > 0 ? { attachments: nativeCodexAttachments } : {}),
         };
 
@@ -1772,9 +1769,6 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
             : {}),
           ...(input.modelSelection?.provider === "codex" && input.modelSelection.options?.fastMode
             ? { serviceTier: "fast" }
-            : {}),
-          ...(input.interactionMode !== undefined
-            ? { interactionMode: input.interactionMode }
             : {}),
           ...(nativeCodexAttachments.length > 0 ? { attachments: nativeCodexAttachments } : {}),
         };

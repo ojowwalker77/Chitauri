@@ -1,5 +1,4 @@
 import type { ResolvedThreadWorkspaceState } from "@t3tools/shared/threadEnvironment";
-import type { ProviderInteractionMode } from "@t3tools/contracts";
 import type { DraftThreadEnvMode } from "../../composerDraftStore";
 import {
   type ContextWindowSnapshot,
@@ -17,7 +16,6 @@ import {
   DialogPopup,
   DialogTitle,
 } from "../ui/dialog";
-import { ContextWindowMeter } from "./ContextWindowMeter";
 
 function formatRateLimitMessage(rateLimitStatus: RateLimitStatus): string {
   const resetSuffix = rateLimitStatus.resetsAt
@@ -49,7 +47,6 @@ export function ComposerSlashStatusDialog(props: {
   selectedModel: string | null | undefined;
   fastModeEnabled: boolean;
   selectedPromptEffort: string | null;
-  interactionMode: ProviderInteractionMode;
   envMode: DraftThreadEnvMode;
   envState: ResolvedThreadWorkspaceState;
   branch: string | null;
@@ -65,7 +62,6 @@ export function ComposerSlashStatusDialog(props: {
     selectedModel,
     fastModeEnabled,
     selectedPromptEffort,
-    interactionMode,
     envMode,
     envState,
     branch,
@@ -100,12 +96,6 @@ export function ComposerSlashStatusDialog(props: {
               <p className="font-medium text-foreground">{selectedPromptEffort ?? "Default"}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Mode</p>
-              <p className="font-medium text-foreground">
-                {interactionMode === "plan" ? "Plan" : "Default"}
-              </p>
-            </div>
-            <div className="space-y-1">
               <p className="text-xs text-muted-foreground">Environment</p>
               <p className="font-medium text-foreground">
                 {formatEnvironmentLabel(envMode, envState)}
@@ -131,14 +121,6 @@ export function ComposerSlashStatusDialog(props: {
                   </p>
                 ) : null}
               </div>
-              {contextWindow ? (
-                <ContextWindowMeter
-                  usage={contextWindow}
-                  cumulativeCostUsd={cumulativeCostUsd}
-                  activeWindowLabel={activeContextWindowLabel}
-                  pendingWindowLabel={pendingContextWindowLabel}
-                />
-              ) : null}
             </div>
             {contextWindow ? (
               <div className="grid gap-3 text-sm sm:grid-cols-2">
