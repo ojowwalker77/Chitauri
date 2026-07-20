@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.1 - 2026-07-20
+
+### Fixed
+
+- No user-facing changes. The 0.9.0 release build failed its quality gate on a server settings test that still asserted the old `local` default for new threads; the assertion now matches the shipped `worktree` default.
+
 ## 0.9.0 - 2026-07-20
 
 ### Added
