@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.3 - 2026-07-20
+
+### Fixed
+
+- Assistant messages now show the icon of the provider that wrote them (Codex, Claude, Cursor, Grok, Kilo, OpenCode, Pi) instead of one generic glyph for every provider.
+- "New thread" no longer does nothing when the project's most recent thread is the one currently running. Sending the first message promoted the draft into a real thread but left the project's draft mapping pointing at it, so the button re-navigated to the thread you were already viewing.
+
+### Changed
+
+- Tightened sidebar spacing: rows are 30px instead of 38px, with smaller row padding, section headers, group chrome, and footer. The UI density setting now actually applies to the sidebar — it previously pinned its own row height and ignored compact/spacious.
+
 ## 0.9.2 - 2026-07-20
 
 ### Fixed
