@@ -221,7 +221,7 @@ describe("EditorWorkspaceView", () => {
     expect(markup).not.toContain("editor-file-viewer__highlight");
   });
 
-  it("renders PDF files through the in-app PDF viewer instead of the text preview", () => {
+  it("routes PDFs through the shared preview surface instead of a bespoke viewer", () => {
     const queryClient = new QueryClient();
     const markup = renderToStaticMarkup(
       <QueryClientProvider client={queryClient}>
@@ -244,16 +244,16 @@ describe("EditorWorkspaceView", () => {
       </QueryClientProvider>,
     );
 
-    // The custom viewer renders its own surface (here the initial loading state
-    // since document fetch runs in an effect) rather than the browser iframe or
-    // the text preview.
-    expect(markup).toContain('aria-label="Loading PDF..."');
+    // PDFs have no in-app viewer: they take the ordinary file-read path, whose
+    // shared header (breadcrumb + "Open in editor") stays available so the file
+    // can be handed to an external app once the read reports it as binary.
+    expect(markup).toContain('title="docs/spec.pdf"');
+    expect(markup).toContain('aria-label="Open in editor"');
     expect(markup).not.toContain("<iframe");
-    expect(markup).not.toContain("editor-file-viewer__plain");
-    expect(markup).not.toContain("editor-file-viewer__highlight");
+    expect(markup).not.toContain("Loading PDF");
   });
 
-  it("renders scratch-workspace PDF previews without an attached workspace", () => {
+  it("keeps scratch-workspace PDFs on the shared preview surface without a workspace", () => {
     const queryClient = new QueryClient();
     const markup = renderToStaticMarkup(
       <QueryClientProvider client={queryClient}>
@@ -276,8 +276,11 @@ describe("EditorWorkspaceView", () => {
       </QueryClientProvider>,
     );
 
-    expect(markup).toContain('aria-label="Loading PDF..."');
+    // The absolute path still resolves through the local-file preview grant, so
+    // the pane waits on the grant rather than dead-ending on "no workspace".
+    expect(markup).toContain('aria-label="Loading file..."');
     expect(markup).not.toContain("No workspace is attached");
+    expect(markup).not.toContain("Loading PDF");
   });
 
   it("renders scratch-workspace image previews without an attached workspace", () => {

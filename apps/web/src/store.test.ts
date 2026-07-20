@@ -23,6 +23,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   applyShellEvent,
+  applyShellEvents,
   applyOrchestrationEvents,
   applyOrchestrationEventsHotPath,
   collapseProjectsExcept,
@@ -37,7 +38,7 @@ import {
   syncServerThreadDetailHotPath,
   type AppState,
 } from "./store";
-import { DEFAULT_INTERACTION_MODE, DEFAULT_RUNTIME_MODE, type Thread } from "./types";
+import { DEFAULT_RUNTIME_MODE, type Thread } from "./types";
 
 function makeThread(overrides: Partial<Thread> = {}): Thread {
   return {
@@ -50,7 +51,6 @@ function makeThread(overrides: Partial<Thread> = {}): Thread {
       model: "gpt-5-codex",
     },
     runtimeMode: DEFAULT_RUNTIME_MODE,
-    interactionMode: DEFAULT_INTERACTION_MODE,
     session: null,
     messages: [],
     turnDiffSummaries: [],
@@ -157,7 +157,6 @@ function makeReadModelThread(overrides: Partial<OrchestrationReadModel["threads"
       model: "gpt-5.3-codex",
     },
     runtimeMode: DEFAULT_RUNTIME_MODE,
-    interactionMode: DEFAULT_INTERACTION_MODE,
     envMode: "local",
     branch: null,
     worktreePath: null,
@@ -803,7 +802,6 @@ describe("store pure functions", () => {
           model: "gpt-5.3-codex",
         },
         runtimeMode: DEFAULT_RUNTIME_MODE,
-        interactionMode: DEFAULT_INTERACTION_MODE,
         envMode: "worktree",
         branch: "feature/semantic-branch",
         worktreePath: "/tmp/project/.worktrees/semantic-branch",
@@ -917,7 +915,6 @@ describe("store pure functions", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         messageId: MessageId.makeUnsafe("user-message"),
         runtimeMode: "full-access",
-        interactionMode: DEFAULT_INTERACTION_MODE,
         dispatchMode: "queue",
         createdAt: "2026-02-27T00:01:00.000Z",
         sourceProposedPlan,
@@ -1341,7 +1338,6 @@ describe("store pure functions", () => {
           model: "gpt-5.3-codex",
         },
         runtimeMode: DEFAULT_RUNTIME_MODE,
-        interactionMode: DEFAULT_INTERACTION_MODE,
         envMode: "local",
         branch: null,
         worktreePath: null,
@@ -1983,7 +1979,6 @@ describe("store read model sync", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         messageId: MessageId.makeUnsafe("user-message"),
         runtimeMode: "full-access",
-        interactionMode: DEFAULT_INTERACTION_MODE,
         dispatchMode: "queue",
         createdAt: "2026-02-27T00:05:00.000Z",
         sourceProposedPlan,
@@ -2905,7 +2900,6 @@ describe("store read model sync", () => {
           model: "gpt-5.3-codex",
         },
         runtimeMode: DEFAULT_RUNTIME_MODE,
-        interactionMode: DEFAULT_INTERACTION_MODE,
         envMode: "local",
         branch: null,
         worktreePath: null,
@@ -2966,7 +2960,6 @@ describe("store read model sync", () => {
           model: "gpt-5.3-codex",
         },
         runtimeMode: DEFAULT_RUNTIME_MODE,
-        interactionMode: DEFAULT_INTERACTION_MODE,
         envMode: "local",
         branch: null,
         worktreePath: null,
@@ -3015,7 +3008,6 @@ describe("store read model sync", () => {
           model: "gpt-5.3-codex",
         },
         runtimeMode: DEFAULT_RUNTIME_MODE,
-        interactionMode: DEFAULT_INTERACTION_MODE,
         envMode: "local",
         branch: null,
         worktreePath: null,
@@ -3453,5 +3445,97 @@ describe("store read model sync", () => {
     const next = syncServerReadModel(hydratedState, readModel);
 
     expect(next.threads[0]).toBe(thread);
+  });
+});
+
+describe("applyShellEvents (batched shell lane)", () => {
+  // The server emits one shell event per thread-aggregate event, so a streaming turn
+  // produces one per token delta. The batch reducer defers the per-thread commit to
+  // the end of the window; it must stay observationally identical to folding the
+  // single-event reducer, which is the contract these tests pin.
+  function makeShellThread(
+    overrides: Partial<OrchestrationShellSnapshot["threads"][number]> = {},
+  ): OrchestrationShellSnapshot["threads"][number] {
+    return {
+      id: ThreadId.makeUnsafe("thread-1"),
+      projectId: ProjectId.makeUnsafe("project-1"),
+      title: "Thread",
+      modelSelection: { provider: "codex", model: "gpt-5.3-codex" },
+      runtimeMode: DEFAULT_RUNTIME_MODE,
+      envMode: "local",
+      branch: null,
+      worktreePath: null,
+      associatedWorktreePath: null,
+      associatedWorktreeBranch: null,
+      associatedWorktreeRef: null,
+      createBranchFlowCompleted: false,
+      parentThreadId: null,
+      subagentAgentId: null,
+      subagentNickname: null,
+      subagentRole: null,
+      forkSourceThreadId: null,
+      sidechatSourceThreadId: null,
+      lastKnownPr: null,
+      latestTurn: null,
+      createdAt: "2026-02-27T00:00:00.000Z",
+      updatedAt: "2026-02-27T00:00:00.000Z",
+      archivedAt: null,
+      handoff: null,
+      session: null,
+      ...overrides,
+    } as OrchestrationShellSnapshot["threads"][number];
+  }
+
+  const upsert = (sequence: number, title: string, updatedAt: string) =>
+    ({
+      kind: "thread-upserted",
+      sequence,
+      thread: makeShellThread({ title, updatedAt }),
+    }) satisfies OrchestrationShellStreamEvent;
+
+  function foldOneByOne(
+    state: ReturnType<typeof makeState>,
+    events: readonly OrchestrationShellStreamEvent[],
+  ) {
+    return events.reduce((next, event) => applyShellEvent(next, event), state);
+  }
+
+  it("matches one-by-one application for a burst of upserts on the same thread", () => {
+    const initial = makeState(makeThread());
+    const events = [
+      upsert(2, "Thread a", "2026-02-27T00:01:00.000Z"),
+      upsert(3, "Thread b", "2026-02-27T00:02:00.000Z"),
+      upsert(4, "Thread c", "2026-02-27T00:03:00.000Z"),
+    ];
+
+    const batched = applyShellEvents(initial, events);
+    const sequential = foldOneByOne(initial, events);
+
+    expect(batched.threads).toEqual(sequential.threads);
+    expect(batched.sidebarThreadSummaryById).toEqual(sequential.sidebarThreadSummaryById);
+    expect(batched.threads[0]?.title).toBe("Thread c");
+    expect(batched.threads[0]?.updatedAt).toBe("2026-02-27T00:03:00.000Z");
+  });
+
+  it("drops the deferred commit when a later event removes the thread", () => {
+    const initial = makeState(makeThread());
+    const events: OrchestrationShellStreamEvent[] = [
+      upsert(2, "Thread a", "2026-02-27T00:01:00.000Z"),
+      { kind: "thread-removed", sequence: 3, threadId: ThreadId.makeUnsafe("thread-1") },
+    ];
+
+    const batched = applyShellEvents(initial, events);
+    const sequential = foldOneByOne(initial, events);
+
+    expect(batched.threads).toEqual(sequential.threads);
+    expect(batched.threads).toHaveLength(0);
+  });
+
+  it("is a no-op for an empty batch and delegates a single event unchanged", () => {
+    const initial = makeState(makeThread());
+    expect(applyShellEvents(initial, [])).toBe(initial);
+
+    const single = upsert(2, "Thread solo", "2026-02-27T00:01:00.000Z");
+    expect(applyShellEvents(initial, [single])).toEqual(applyShellEvent(initial, single));
   });
 });

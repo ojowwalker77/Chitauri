@@ -93,7 +93,6 @@ import {
   ProviderAdapterValidationError,
   type ProviderAdapterError,
 } from "../Errors.ts";
-import { extractProposedPlanMarkdown, withProviderPlanModePrompt } from "../planMode.ts";
 import { ClaudeAdapter, type ClaudeAdapterShape } from "../Services/ClaudeAdapter.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 
@@ -123,7 +122,6 @@ interface ClaudeResumeState {
 interface ClaudeTurnState {
   readonly turnId: TurnId;
   readonly startedAt: string;
-  readonly interactionMode: "default" | "plan";
   readonly items: Array<unknown>;
   readonly assistantTextBlocks: Map<number, AssistantTextBlockState>;
   readonly assistantTextBlockOrder: Array<AssistantTextBlockState>;
@@ -203,7 +201,6 @@ interface ClaudeSessionContext {
   streamFiber: Fiber.Fiber<void, Error> | undefined;
   readonly startedAt: string;
   readonly basePermissionMode: PermissionMode | undefined;
-  lastInteractionMode: "default" | "plan" | undefined;
   currentApiModelId: string | undefined;
   resumeSessionId: string | undefined;
   readonly pendingApprovals: Map<ApprovalRequestId, PendingApproval>;
@@ -843,10 +840,7 @@ function buildPromptText(input: ProviderSendTurnInput): string {
       : requestedEffort && hasEffortLevel(caps, requestedEffort)
         ? requestedEffort
         : null;
-  return withProviderPlanModePrompt({
-    text: applyClaudePromptEffortPrefix(basePrompt, promptEffort),
-    interactionMode: input.interactionMode,
-  });
+  return applyClaudePromptEffortPrefix(basePrompt, promptEffort);
 }
 
 function buildUserMessage(input: {
@@ -1990,7 +1984,6 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         if (context.interruptRequestedTurnId === turnState.turnId) {
           context.interruptRequestedTurnId = undefined;
         }
-        context.lastInteractionMode = turnState.interactionMode;
         context.turnState = undefined;
         context.session = {
           ...context.session,
@@ -2359,7 +2352,6 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           context.turnState = {
             turnId,
             startedAt,
-            interactionMode: "default",
             items: [],
             assistantTextBlocks: new Map(),
             assistantTextBlockOrder: [],
@@ -2417,19 +2409,6 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
               toolUseId: typeof toolUse.id === "string" ? toolUse.id : undefined,
               rawSource: "claude.sdk.message",
               rawMethod: "claude/assistant",
-              rawPayload: message,
-            });
-          }
-
-          const taggedPlanMarkdown =
-            context.turnState?.interactionMode === "plan"
-              ? extractProposedPlanMarkdown(extractTextContent(content))
-              : undefined;
-          if (taggedPlanMarkdown) {
-            yield* emitProposedPlanCompleted(context, {
-              planMarkdown: taggedPlanMarkdown,
-              rawSource: "claude.sdk.message",
-              rawMethod: "claude/assistant/proposed-plan-block",
               rawPayload: message,
             });
           }
@@ -3449,7 +3428,6 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           streamFiber: undefined,
           startedAt,
           basePermissionMode: permissionMode,
-          lastInteractionMode: undefined,
           currentApiModelId: apiModelId,
           resumeSessionId: sessionId,
           pendingApprovals,
@@ -3562,20 +3540,12 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           }
         }
 
-        // Apply interaction mode on every turn so sticky SDK permission state
-        // cannot leak plan mode across service/recovery paths that omit it.
-        const effectiveInteractionMode = input.interactionMode ?? "default";
-        if (effectiveInteractionMode === "plan") {
+        // Re-pin the session's permission mode on every turn so sticky SDK state
+        // (e.g. Claude entering plan mode on its own) cannot leak across turns.
+        const basePermissionMode = context.basePermissionMode;
+        if (basePermissionMode !== undefined) {
           yield* Effect.tryPromise({
-            try: () => context.query.setPermissionMode("plan"),
-            catch: (cause) => toRequestError(input.threadId, "turn/setPermissionMode", cause),
-          });
-        } else if (
-          context.basePermissionMode !== undefined ||
-          context.lastInteractionMode === "plan"
-        ) {
-          yield* Effect.tryPromise({
-            try: () => context.query.setPermissionMode(context.basePermissionMode ?? "default"),
+            try: () => context.query.setPermissionMode(basePermissionMode),
             catch: (cause) => toRequestError(input.threadId, "turn/setPermissionMode", cause),
           });
         }
@@ -3584,7 +3554,6 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         const turnState: ClaudeTurnState = {
           turnId,
           startedAt: yield* nowIso,
-          interactionMode: effectiveInteractionMode,
           items: [],
           assistantTextBlocks: new Map(),
           assistantTextBlockOrder: [],

@@ -121,7 +121,9 @@ describe("splitPromptIntoComposerSegments", () => {
   });
 
   it("keeps built-in slash commands as plain text", () => {
-    expect(splitPromptIntoComposerSegments("/plan ")).toEqual([{ type: "text", text: "/plan " }]);
+    expect(splitPromptIntoComposerSegments("/review ")).toEqual([
+      { type: "text", text: "/review " },
+    ]);
     expect(splitPromptIntoComposerSegments("/model spark")).toEqual([
       { type: "text", text: "/model spark" },
     ]);

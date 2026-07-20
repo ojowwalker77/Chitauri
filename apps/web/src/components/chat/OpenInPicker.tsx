@@ -51,8 +51,8 @@ export const OpenInPicker = memo(function OpenInPicker({
   // regardless, for surfaces that don't establish that container.
   labelMode?: "responsive" | "always";
   // Pins the primary "Open" action to a specific editor for this surface without
-  // mutating the shared preferred-editor setting. The PDF viewer uses this to default
-  // to the OS viewer (e.g. Preview) while still listing installed editors.
+  // mutating the shared preferred-editor setting — e.g. defaulting to the OS handler
+  // (`system-default`) while still listing installed editors.
   defaultEditor?: EditorId;
 }) {
   // Only subscribe to the config query when the caller did not supply config.

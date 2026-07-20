@@ -3720,89 +3720,7 @@ describe("ClaudeAdapterLive", () => {
     },
   );
 
-  it.effect("sets plan permission mode on sendTurn when interactionMode is plan", () => {
-    const harness = makeHarness();
-    return Effect.gen(function* () {
-      const adapter = yield* ClaudeAdapter;
-
-      const session = yield* adapter.startSession({
-        threadId: THREAD_ID,
-        provider: "claudeAgent",
-        runtimeMode: "full-access",
-      });
-      yield* adapter.sendTurn({
-        threadId: session.threadId,
-        input: "plan this for me",
-        interactionMode: "plan",
-        attachments: [],
-      });
-
-      assert.deepEqual(harness.query.setPermissionModeCalls, ["plan"]);
-      const promptText = yield* Effect.promise(() =>
-        readFirstPromptText(harness.getLastCreateQueryInput()),
-      );
-      assert.include(promptText ?? "", "TeaCode plan mode is active.");
-      assert.include(promptText ?? "", "<proposed_plan>");
-      assert.include(promptText ?? "", "User request:\nplan this for me");
-    }).pipe(
-      Effect.provideService(Random.Random, makeDeterministicRandomService()),
-      Effect.provide(harness.layer),
-    );
-  });
-
-  it.effect("restores base permission mode on sendTurn when interactionMode is default", () => {
-    const harness = makeHarness();
-    return Effect.gen(function* () {
-      const adapter = yield* ClaudeAdapter;
-
-      const session = yield* adapter.startSession({
-        threadId: THREAD_ID,
-        provider: "claudeAgent",
-        runtimeMode: "full-access",
-      });
-
-      // First turn in plan mode
-      yield* adapter.sendTurn({
-        threadId: session.threadId,
-        input: "plan this",
-        interactionMode: "plan",
-        attachments: [],
-      });
-
-      // Complete the turn so we can send another
-      const turnCompletedFiber = yield* Stream.filter(
-        adapter.streamEvents,
-        (event) => event.type === "turn.completed",
-      ).pipe(Stream.runHead, Effect.forkChild);
-
-      harness.query.emit({
-        type: "result",
-        subtype: "success",
-        is_error: false,
-        errors: [],
-        session_id: "sdk-session-plan-restore",
-        uuid: "result-plan",
-      } as unknown as SDKMessage);
-
-      yield* Fiber.join(turnCompletedFiber);
-
-      // Second turn back to default
-      yield* adapter.sendTurn({
-        threadId: session.threadId,
-        input: "now do it",
-        interactionMode: "default",
-        attachments: [],
-      });
-
-      // First call sets "plan", second call restores "bypassPermissions" (the base for full-access)
-      assert.deepEqual(harness.query.setPermissionModeCalls, ["plan", "bypassPermissions"]);
-    }).pipe(
-      Effect.provideService(Random.Random, makeDeterministicRandomService()),
-      Effect.provide(harness.layer),
-    );
-  });
-
-  it.effect("restores base permission mode when interactionMode is absent", () => {
+  it.effect("re-pins the base permission mode on every sendTurn", () => {
     const harness = makeHarness();
     return Effect.gen(function* () {
       const adapter = yield* ClaudeAdapter;
@@ -3848,98 +3766,6 @@ describe("ClaudeAdapterLive", () => {
     );
   });
 
-  it.effect("resets Claude plan mode to default when settings provided the base mode", () => {
-    const harness = makeHarness();
-    return Effect.gen(function* () {
-      const adapter = yield* ClaudeAdapter;
-
-      const session = yield* adapter.startSession({
-        threadId: THREAD_ID,
-        provider: "claudeAgent",
-        runtimeMode: "approval-required",
-      });
-      yield* adapter.sendTurn({
-        threadId: session.threadId,
-        input: "plan this",
-        interactionMode: "plan",
-        attachments: [],
-      });
-
-      const turnCompletedFiber = yield* Stream.filter(
-        adapter.streamEvents,
-        (event) => event.type === "turn.completed",
-      ).pipe(Stream.runHead, Effect.forkChild);
-
-      harness.query.emit({
-        type: "result",
-        subtype: "success",
-        is_error: false,
-        errors: [],
-        session_id: "sdk-session-plan-settings-base",
-        uuid: "result-plan-settings-base",
-      } as unknown as SDKMessage);
-
-      yield* Fiber.join(turnCompletedFiber);
-
-      yield* adapter.sendTurn({
-        threadId: session.threadId,
-        input: "now build it",
-        attachments: [],
-      });
-
-      assert.deepEqual(harness.query.setPermissionModeCalls, ["plan", "default"]);
-    }).pipe(
-      Effect.provideService(Random.Random, makeDeterministicRandomService()),
-      Effect.provide(harness.layer),
-    );
-  });
-
-  it.effect("does not leave Claude in plan mode when a follow-up omits interactionMode", () => {
-    const harness = makeHarness();
-    return Effect.gen(function* () {
-      const adapter = yield* ClaudeAdapter;
-
-      const session = yield* adapter.startSession({
-        threadId: THREAD_ID,
-        provider: "claudeAgent",
-        runtimeMode: "full-access",
-      });
-      yield* adapter.sendTurn({
-        threadId: session.threadId,
-        input: "plan this",
-        interactionMode: "plan",
-        attachments: [],
-      });
-
-      const turnCompletedFiber = yield* Stream.filter(
-        adapter.streamEvents,
-        (event) => event.type === "turn.completed",
-      ).pipe(Stream.runHead, Effect.forkChild);
-
-      harness.query.emit({
-        type: "result",
-        subtype: "success",
-        is_error: false,
-        errors: [],
-        session_id: "sdk-session-plan-omitted-reset",
-        uuid: "result-plan-omitted-reset",
-      } as unknown as SDKMessage);
-
-      yield* Fiber.join(turnCompletedFiber);
-
-      yield* adapter.sendTurn({
-        threadId: session.threadId,
-        input: "now build it",
-        attachments: [],
-      });
-
-      assert.deepEqual(harness.query.setPermissionModeCalls, ["plan", "bypassPermissions"]);
-    }).pipe(
-      Effect.provideService(Random.Random, makeDeterministicRandomService()),
-      Effect.provide(harness.layer),
-    );
-  });
-
   it.effect("captures ExitPlanMode as a proposed plan and denies auto-exit", () => {
     const harness = makeHarness();
     return Effect.gen(function* () {
@@ -3956,7 +3782,6 @@ describe("ClaudeAdapterLive", () => {
       yield* adapter.sendTurn({
         threadId: session.threadId,
         input: "plan this",
-        interactionMode: "plan",
         attachments: [],
       });
       yield* Stream.take(adapter.streamEvents, 1).pipe(Stream.runDrain);
@@ -4022,7 +3847,6 @@ describe("ClaudeAdapterLive", () => {
       yield* adapter.sendTurn({
         threadId: session.threadId,
         input: "plan this",
-        interactionMode: "plan",
         attachments: [],
       });
       yield* Stream.take(adapter.streamEvents, 1).pipe(Stream.runDrain);
@@ -4071,70 +3895,6 @@ describe("ClaudeAdapterLive", () => {
       assert.deepEqual(proposedEvent.value.providerRefs, {
         providerItemId: ProviderItemId.makeUnsafe("tool-exit-2"),
       });
-    }).pipe(
-      Effect.provideService(Random.Random, makeDeterministicRandomService()),
-      Effect.provide(harness.layer),
-    );
-  });
-
-  it.effect("extracts proposed plans from assistant tagged markdown snapshots", () => {
-    const harness = makeHarness();
-    return Effect.gen(function* () {
-      const adapter = yield* ClaudeAdapter;
-
-      const session = yield* adapter.startSession({
-        threadId: THREAD_ID,
-        provider: "claudeAgent",
-        runtimeMode: "full-access",
-      });
-
-      yield* Stream.take(adapter.streamEvents, 3).pipe(Stream.runDrain);
-
-      yield* adapter.sendTurn({
-        threadId: session.threadId,
-        input: "plan this",
-        interactionMode: "plan",
-        attachments: [],
-      });
-      yield* Stream.take(adapter.streamEvents, 1).pipe(Stream.runDrain);
-
-      const proposedEventFiber = yield* Stream.filter(
-        adapter.streamEvents,
-        (event) => event.type === "turn.proposed.completed",
-      ).pipe(Stream.runHead, Effect.forkChild);
-
-      harness.query.emit({
-        type: "assistant",
-        session_id: "sdk-session-tagged-plan",
-        uuid: "assistant-tagged-plan",
-        parent_tool_use_id: null,
-        message: {
-          model: "claude-opus-4-6",
-          id: "msg-tagged-plan",
-          type: "message",
-          role: "assistant",
-          content: [
-            {
-              type: "text",
-              text: "Here is the plan.\n<proposed_plan>\n# Tagged plan\n\n- capture it\n</proposed_plan>",
-            },
-          ],
-          stop_reason: null,
-          stop_sequence: null,
-          usage: {},
-        },
-      } as unknown as SDKMessage);
-
-      const proposedEvent = yield* Fiber.join(proposedEventFiber);
-      assert.equal(proposedEvent._tag, "Some");
-      if (proposedEvent._tag !== "Some") {
-        return;
-      }
-      assert.equal(proposedEvent.value.type, "turn.proposed.completed");
-      if (proposedEvent.value.type !== "turn.proposed.completed") {
-        return;
-      }
-      assert.equal(proposedEvent.value.payload.planMarkdown, "# Tagged plan\n\n- capture it");
     }).pipe(
       Effect.provideService(Random.Random, makeDeterministicRandomService()),
       Effect.provide(harness.layer),

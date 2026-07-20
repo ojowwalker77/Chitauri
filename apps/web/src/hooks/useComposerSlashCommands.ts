@@ -1,7 +1,6 @@
 import {
   type ModelSelection,
   type OrchestrationShellSnapshot,
-  type ProviderInteractionMode,
   type ProviderKind,
   type ProviderNativeCommandDescriptor,
   type ProviderModelOptions,
@@ -61,12 +60,10 @@ export function useComposerSlashCommands(input: {
   currentProviderModelOptions: ProviderModelOptions[ProviderKind] | undefined;
   selectedModelSelection: ModelSelection;
   runtimeMode: RuntimeMode;
-  interactionMode: ProviderInteractionMode;
   threadId: ThreadId;
   syncServerShellSnapshot: (snapshot: OrchestrationShellSnapshot) => void;
   navigateToThread: (threadId: ThreadId) => Promise<void>;
   handleClearConversation: () => Promise<void> | void;
-  handleInteractionModeChange: (mode: "default" | "plan") => Promise<void> | void;
   openForkTargetPicker: () => void;
   openReviewTargetPicker: () => void;
   setComposerDraftProviderModelOptions: (
@@ -109,12 +106,10 @@ export function useComposerSlashCommands(input: {
     currentProviderModelOptions,
     selectedModelSelection,
     runtimeMode,
-    interactionMode,
     threadId,
     syncServerShellSnapshot,
     navigateToThread,
     handleClearConversation,
-    handleInteractionModeChange,
     openForkTargetPicker,
     openReviewTargetPicker,
     setComposerDraftProviderModelOptions,
@@ -264,7 +259,6 @@ export function useComposerSlashCommands(input: {
         title: activeThread.title,
         modelSelection: selectedModelSelection,
         runtimeMode,
-        interactionMode,
         envMode: resolvedTarget.envMode,
         branch: resolvedTarget.branch,
         worktreePath: resolvedTarget.worktreePath,
@@ -283,7 +277,6 @@ export function useComposerSlashCommands(input: {
       activeProject,
       activeRootBranch,
       activeThread,
-      interactionMode,
       isServerThread,
       navigateToThread,
       runtimeMode,
@@ -339,7 +332,6 @@ export function useComposerSlashCommands(input: {
           title: nextThreadTitle,
           modelSelection: selectedModelSelection,
           runtimeMode,
-          interactionMode: "default",
           envMode: activeThread.envMode ?? (activeThread.worktreePath ? "worktree" : "local"),
           branch: activeThread.branch,
           worktreePath: activeThread.worktreePath,
@@ -369,7 +361,6 @@ export function useComposerSlashCommands(input: {
                 },
           dispatchMode: "queue",
           runtimeMode,
-          interactionMode: "default",
           createdAt,
         });
         const snapshot = await api.orchestration.getShellSnapshot();
@@ -528,11 +519,6 @@ export function useComposerSlashCommands(input: {
         await compactProviderThread();
         return true;
       }
-      if (slashInvocation.command === "plan" || slashInvocation.command === "default") {
-        await handleInteractionModeChange(slashInvocation.command === "plan" ? "plan" : "default");
-        editorActions.clearComposerSlashDraft();
-        return true;
-      }
       if (slashInvocation.command === "status") {
         editorActions.clearComposerSlashDraft();
         setIsSlashStatusDialogOpen(true);
@@ -626,7 +612,6 @@ export function useComposerSlashCommands(input: {
       createForkThreadFromSlashCommand,
       editorActions,
       handleClearConversation,
-      handleInteractionModeChange,
       openForkTargetPicker,
       openReviewTargetPicker,
       selectedProvider,
@@ -685,15 +670,6 @@ export function useComposerSlashCommands(input: {
         editorActions.setComposerHighlightedItemId(null);
         void compactProviderThread();
         editorActions.scheduleComposerFocus();
-        return;
-      }
-
-      if (item.command === "plan" || item.command === "default") {
-        void handleInteractionModeChange(item.command === "plan" ? "plan" : "default");
-        const applied = clearSlashCommandFromComposer();
-        if (wasPromptReplacementApplied(applied)) {
-          editorActions.setComposerHighlightedItemId(null);
-        }
         return;
       }
 
@@ -797,7 +773,6 @@ export function useComposerSlashCommands(input: {
       compactProviderThread,
       editorActions,
       handleClearConversation,
-      handleInteractionModeChange,
       openForkTargetPicker,
       openReviewTargetPicker,
       selectedProvider,

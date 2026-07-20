@@ -772,7 +772,7 @@ function shouldPollThreadDetailCatchup(threadId: ThreadId): boolean {
 function EventRouter() {
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
   const syncServerThreadDetailHotPath = useStore((store) => store.syncServerThreadDetailHotPath);
-  const applyShellEvent = useStore((store) => store.applyShellEvent);
+  const applyShellEvents = useStore((store) => store.applyShellEvents);
   const applyOrchestrationEventsHotPath = useStore(
     (store) => store.applyOrchestrationEventsHotPath,
   );
@@ -883,10 +883,11 @@ function EventRouter() {
         .filter((event) => event.sequence > snapshotSequence)
         .toSorted((left, right) => left.sequence - right.sequence);
       pendingShellEvents = [];
+      if (nextPending.length === 0) return;
       for (const event of nextPending) {
         shellSnapshotSequence = Math.max(shellSnapshotSequence, event.sequence);
-        applyShellEvent(event);
       }
+      applyShellEvents(nextPending);
     };
 
     const reconcileThreadSubscriptions = async (threadIds: readonly ThreadId[]) => {
@@ -1124,11 +1125,71 @@ function EventRouter() {
       },
     );
 
+    // The server emits one shell event per thread-aggregate event, so a streaming
+    // turn produces one per token delta. Applied individually each one costs a
+    // store notification plus a threads-array and sidebar-summary copy — the exact
+    // fan-out the domain-event path already avoids by batching. Mirror it here.
+    let liveShellEvents: OrchestrationShellStreamEvent[] = [];
+    const flushLiveShellEvents = () => {
+      if (liveShellEvents.length === 0) return;
+      const batch = liveShellEvents;
+      liveShellEvents = [];
+      applyShellEvents(batch);
+
+      // Collapse the batch per thread before reconciling. `replayThreadEvents`
+      // sets its in-flight flag synchronously before its first await, so calling
+      // it once per event in one tick means the FIRST call (the batch's lowest
+      // sequence) wins and every later one returns immediately — replaying to
+      // 901 when the batch reached 950 and leaving 49 events to sit until the
+      // catch-up poll. Dedupe to the max sequence per thread instead.
+      const latestUpsertByThread = new Map<
+        ThreadId,
+        {
+          readonly thread: OrchestrationShellSnapshot["threads"][number];
+          readonly sequence: number;
+        }
+      >();
+      for (const event of batch) {
+        if (event.kind !== "thread-upserted") continue;
+        const previous = latestUpsertByThread.get(event.thread.id);
+        if (previous === undefined || event.sequence > previous.sequence) {
+          latestUpsertByThread.set(event.thread.id, {
+            thread: event.thread,
+            sequence: event.sequence,
+          });
+        }
+      }
+      if (latestUpsertByThread.size === 0) return;
+
+      reconcilePromotedDraftsFromShellThreads(
+        [...latestUpsertByThread.values()].map((entry) => entry.thread),
+      );
+      for (const [threadId, entry] of latestUpsertByThread) {
+        if (!subscribedThreadIds.has(threadId)) continue;
+        if (!threadSnapshotSequenceById.has(threadId)) {
+          void requestThreadSnapshot(threadId);
+        }
+        void replayThreadEvents(threadId, entry.sequence).catch(() => undefined);
+      }
+    };
+    const shellEventFlushThrottler = new Throttler(
+      () => {
+        flushLiveShellEvents();
+      },
+      {
+        wait: 100,
+        leading: false,
+        trailing: true,
+      },
+    );
+
     reconcileThreadSubscriptionsRef.current = (threadIds) =>
       enqueueThreadSubscriptionReconcile(threadIds);
 
     const unsubShellEvent = api.orchestration.onShellEvent((item) => {
       if (item.kind === "snapshot") {
+        // A snapshot supersedes anything buffered before it.
+        liveShellEvents = [];
         shellSnapshotSequence = item.snapshot.snapshotSequence;
         syncServerShellSnapshot(item.snapshot);
         reconcilePromotedDraftsFromShellThreads(item.snapshot.threads);
@@ -1145,20 +1206,8 @@ function EventRouter() {
         return;
       }
       shellSnapshotSequence = item.sequence;
-      applyShellEvent(item);
-      if (item.kind === "thread-upserted") {
-        reconcilePromotedDraftsFromShellThreads([item.thread]);
-      }
-      if (
-        item.kind === "thread-upserted" &&
-        subscribedThreadIds.has(item.thread.id) &&
-        !threadSnapshotSequenceById.has(item.thread.id)
-      ) {
-        void requestThreadSnapshot(item.thread.id);
-      }
-      if (item.kind === "thread-upserted" && subscribedThreadIds.has(item.thread.id)) {
-        void replayThreadEvents(item.thread.id, item.sequence).catch(() => undefined);
-      }
+      liveShellEvents.push(item);
+      shellEventFlushThrottler.maybeExecute();
     });
     const unsubThreadEvent = api.orchestration.onThreadEvent((item) => {
       if (item.kind === "snapshot") {
@@ -1381,6 +1430,7 @@ function EventRouter() {
 
     return () => {
       flushPendingDomainEvents();
+      flushLiveShellEvents();
       disposed = true;
       window.clearTimeout(shellBootstrapFallbackTimer);
       window.clearInterval(threadDetailCatchupInterval);
@@ -1388,6 +1438,7 @@ function EventRouter() {
       needsBroadGitInvalidation = false;
       pendingGitInvalidationThreadIds = new Set();
       domainEventFlushThrottler.cancel();
+      shellEventFlushThrottler.cancel();
       reconcileThreadSubscriptionsRef.current = null;
       void api.orchestration.unsubscribeShell().catch(() => undefined);
       void Promise.all(
@@ -1407,7 +1458,7 @@ function EventRouter() {
     };
   }, [
     applyOrchestrationEventsHotPath,
-    applyShellEvent,
+    applyShellEvents,
     navigate,
     queryClient,
     removeOrphanedTerminalStates,

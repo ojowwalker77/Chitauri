@@ -31,14 +31,6 @@ describe("composerSlashCommands", () => {
     expect(filterComposerSlashCommands("auto")).toEqual([]);
   });
 
-  it("ranks slash command name matches before description-only matches", () => {
-    expect(
-      filterComposerSlashCommands("mode", ["fast", "default", "model"]).map(
-        (entry) => entry.command,
-      ),
-    ).toEqual(["model", "fast", "default"]);
-  });
-
   it("parses slash invocations with optional arguments", () => {
     expect(parseComposerSlashInvocation("/review current diff")).toEqual({
       command: "review",
@@ -101,7 +93,6 @@ describe("composerSlashCommands", () => {
         terminalContextCount: 0,
         selectedSkillCount: 0,
         selectedMentionCount: 0,
-        interactionMode: "default",
       }),
     ).toBe(true);
 
@@ -112,18 +103,6 @@ describe("composerSlashCommands", () => {
         terminalContextCount: 0,
         selectedSkillCount: 0,
         selectedMentionCount: 0,
-        interactionMode: "default",
-      }),
-    ).toBe(false);
-
-    expect(
-      canOfferForkSlashCommand({
-        prompt: "",
-        imageCount: 0,
-        terminalContextCount: 0,
-        selectedSkillCount: 0,
-        selectedMentionCount: 0,
-        interactionMode: "plan",
       }),
     ).toBe(false);
   });
@@ -320,17 +299,7 @@ describe("composerSlashCommands", () => {
         canOfferSideCommand: true,
         canOfferExportCommand: true,
       }),
-    ).toEqual([
-      "clear",
-      "model",
-      "plan",
-      "default",
-      "review",
-      "fork",
-      "status",
-      "subagents",
-      "export",
-    ]);
+    ).toEqual(["clear", "model", "review", "fork", "status", "subagents", "export"]);
   });
 
   it("treats claude aliases like /fork as provider-native collisions", () => {

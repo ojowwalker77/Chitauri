@@ -39,15 +39,6 @@ export interface ContextWindowSelectionStatus {
   readonly pendingSelectedLabel: string | null;
 }
 
-export interface ContextWindowMeterDisplay {
-  readonly usedPercentageLabel: string | null;
-  readonly tokenUsageLabel: string;
-  readonly hasReliableTokenRatio: boolean;
-  readonly normalizedPercentage: number;
-  readonly compactLabel: string;
-  readonly ariaLabel: string;
-}
-
 const KNOWN_CONTEXT_WINDOW_MAX_TOKENS = {
   "200k": 200_000,
   "1m": 1_000_000,
@@ -216,38 +207,6 @@ export function deriveSelectedContextWindowSnapshot(
     durationMs: null,
     compactsAutomatically: false,
     updatedAt: "",
-  };
-}
-
-function formatPercentage(value: number | null): string | null {
-  if (value === null || !Number.isFinite(value)) {
-    return null;
-  }
-  if (value < 10) {
-    return `${value.toFixed(1).replace(/\.0$/, "")}%`;
-  }
-  return `${Math.round(value)}%`;
-}
-
-export function deriveContextWindowMeterDisplay(
-  usage: ContextWindowSnapshot,
-): ContextWindowMeterDisplay {
-  const usedPercentageLabel = formatPercentage(usage.usedPercentage);
-  const tokenUsageLabel = formatContextWindowTokens(usage.usedTokens);
-  const hasReliableTokenRatio =
-    usage.maxTokens !== null &&
-    (usage.usedTokens > 0 || usage.usedPercent === null || usage.remainingTokens !== null);
-  const normalizedPercentage = Math.max(0, Math.min(100, usage.usedPercentage ?? 0));
-  return {
-    usedPercentageLabel,
-    tokenUsageLabel,
-    hasReliableTokenRatio,
-    normalizedPercentage,
-    compactLabel:
-      usage.usedPercentage !== null ? `${Math.round(usage.usedPercentage)}%` : tokenUsageLabel,
-    ariaLabel: usedPercentageLabel
-      ? `Context window ${usedPercentageLabel} used`
-      : `Context window ${tokenUsageLabel} tokens used`,
   };
 }
 

@@ -22,7 +22,6 @@ import {
   buildCodexInitializeParams,
   buildCodexMcpConfig,
   CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS,
-  CODEX_PLAN_MODE_DEVELOPER_INSTRUCTIONS,
   CodexAppServerManager,
   classifyCodexStderrLine,
   isRecoverableThreadResumeError,
@@ -37,6 +36,17 @@ const fullAccessTurnOverrides = {
   approvalPolicy: "never",
   sandboxPolicy: { type: "dangerFullAccess" },
 } as const;
+
+// Every Codex turn now carries the default collaboration preset (plan mode is gone).
+const defaultCollaborationMode = (model = "gpt-5.3-codex", reasoningEffort = "medium") =>
+  ({
+    mode: "default",
+    settings: {
+      model,
+      reasoning_effort: reasoningEffort,
+      developer_instructions: CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS,
+    },
+  }) as const;
 const approvalRequiredTurnOverrides = {
   approvalPolicy: "untrusted",
   sandboxPolicy: { type: "readOnly" },
@@ -836,6 +846,7 @@ describe("sendTurn", () => {
       model: "gpt-5.3-codex",
       serviceTier: "fast",
       effort: "high",
+      collaborationMode: defaultCollaborationMode("gpt-5.3-codex", "high"),
     });
     expect(updateSession).toHaveBeenCalledWith(context, {
       status: "running",
@@ -863,6 +874,7 @@ describe("sendTurn", () => {
         },
       ],
       model: "gpt-5.3-codex",
+      collaborationMode: defaultCollaborationMode(),
     });
   });
 
@@ -889,6 +901,7 @@ describe("sendTurn", () => {
         },
       ],
       model: "gpt-5.3-codex",
+      collaborationMode: defaultCollaborationMode(),
     });
   });
 
@@ -922,6 +935,7 @@ describe("sendTurn", () => {
         },
       ],
       model: "gpt-5.3-codex",
+      collaborationMode: defaultCollaborationMode(),
     });
   });
 
@@ -955,37 +969,7 @@ describe("sendTurn", () => {
         },
       ],
       model: "gpt-5.3-codex",
-    });
-  });
-
-  it("passes Codex plan mode as a collaboration preset on turn/start", async () => {
-    const { manager, context, sendRequest } = createSendTurnHarness();
-
-    await manager.sendTurn({
-      threadId: asThreadId("thread_1"),
-      input: "Plan the work",
-      interactionMode: "plan",
-    });
-
-    expect(sendRequest).toHaveBeenCalledWith(context, "turn/start", {
-      threadId: "thread_1",
-      ...fullAccessTurnOverrides,
-      input: [
-        {
-          type: "text",
-          text: "Plan the work",
-          text_elements: [],
-        },
-      ],
-      model: "gpt-5.3-codex",
-      collaborationMode: {
-        mode: "plan",
-        settings: {
-          model: "gpt-5.3-codex",
-          reasoning_effort: "medium",
-          developer_instructions: CODEX_PLAN_MODE_DEVELOPER_INSTRUCTIONS,
-        },
-      },
+      collaborationMode: defaultCollaborationMode(),
     });
   });
 
@@ -995,7 +979,6 @@ describe("sendTurn", () => {
     await manager.sendTurn({
       threadId: asThreadId("thread_1"),
       input: "PLEASE IMPLEMENT THIS PLAN:\n- step 1",
-      interactionMode: "default",
     });
 
     expect(sendRequest).toHaveBeenCalledWith(context, "turn/start", {
@@ -1009,46 +992,7 @@ describe("sendTurn", () => {
         },
       ],
       model: "gpt-5.3-codex",
-      collaborationMode: {
-        mode: "default",
-        settings: {
-          model: "gpt-5.3-codex",
-          reasoning_effort: "medium",
-          developer_instructions: CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS,
-        },
-      },
-    });
-  });
-
-  it("keeps the session model when interaction mode is set without an explicit model", async () => {
-    const { manager, context, sendRequest } = createSendTurnHarness();
-    context.session.model = "gpt-5.2-codex";
-
-    await manager.sendTurn({
-      threadId: asThreadId("thread_1"),
-      input: "Plan this with my current session model",
-      interactionMode: "plan",
-    });
-
-    expect(sendRequest).toHaveBeenCalledWith(context, "turn/start", {
-      threadId: "thread_1",
-      ...fullAccessTurnOverrides,
-      input: [
-        {
-          type: "text",
-          text: "Plan this with my current session model",
-          text_elements: [],
-        },
-      ],
-      model: "gpt-5.2-codex",
-      collaborationMode: {
-        mode: "plan",
-        settings: {
-          model: "gpt-5.2-codex",
-          reasoning_effort: "medium",
-          developer_instructions: CODEX_PLAN_MODE_DEVELOPER_INSTRUCTIONS,
-        },
-      },
+      collaborationMode: defaultCollaborationMode(),
     });
   });
 
@@ -1072,7 +1016,6 @@ describe("sendTurn", () => {
       model: "gpt-5.4",
       serviceTier: "fast",
       effort: "high",
-      interactionMode: "plan",
     });
 
     expect(result).toEqual({
@@ -1097,14 +1040,7 @@ describe("sendTurn", () => {
       model: "gpt-5.4",
       serviceTier: "fast",
       effort: "high",
-      collaborationMode: {
-        mode: "plan",
-        settings: {
-          model: "gpt-5.4",
-          reasoning_effort: "high",
-          developer_instructions: CODEX_PLAN_MODE_DEVELOPER_INSTRUCTIONS,
-        },
-      },
+      collaborationMode: defaultCollaborationMode("gpt-5.4", "high"),
     });
     expect(updateSession).toHaveBeenCalledWith(context, {
       status: "running",
@@ -2151,6 +2087,7 @@ describe("respondToRequest", () => {
         },
       ],
       model: "gpt-5.3-codex",
+      collaborationMode: defaultCollaborationMode(),
     });
   });
 

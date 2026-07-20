@@ -86,7 +86,6 @@ async function mountClaudePicker(props?: {
   const draftsByThreadId: Record<ThreadId, ComposerThreadDraftState> = {
     [CLAUDE_THREAD_ID]: {
       prompt: props?.prompt ?? "",
-      sketchpad: null,
       promptHistorySavedDraft: null,
       images: [],
       files: [],
@@ -112,7 +111,6 @@ async function mountClaudePicker(props?: {
           },
       activeProvider: "claudeAgent",
       runtimeMode: null,
-      interactionMode: null,
     },
   };
   useComposerDraftStore.setState({
@@ -322,7 +320,6 @@ async function mountCodexPicker(props: { model?: string; options?: CodexModelOpt
   const draftsByThreadId: Record<ThreadId, ComposerThreadDraftState> = {
     [threadId]: {
       prompt: "",
-      sketchpad: null,
       promptHistorySavedDraft: null,
       images: [],
       files: [],
@@ -344,7 +341,6 @@ async function mountCodexPicker(props: { model?: string; options?: CodexModelOpt
       },
       activeProvider: "codex",
       runtimeMode: null,
-      interactionMode: null,
     },
   };
 
@@ -660,7 +656,6 @@ async function mountOpenCodePicker(props?: {
   const draftsByThreadId: Record<ThreadId, ComposerThreadDraftState> = {
     [OPENCODE_THREAD_ID]: {
       prompt: "",
-      sketchpad: null,
       promptHistorySavedDraft: null,
       images: [],
       files: [],
@@ -682,7 +677,6 @@ async function mountOpenCodePicker(props?: {
       },
       activeProvider: "opencode",
       runtimeMode: null,
-      interactionMode: null,
     },
   };
 

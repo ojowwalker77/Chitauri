@@ -974,7 +974,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             yield* analytics.record("provider.turn.sent", {
               provider: routed.adapter.provider,
               model: input.modelSelection?.model,
-              interactionMode: input.interactionMode,
               attachmentCount: input.attachments.length,
               hasInput: typeof input.input === "string" && input.input.trim().length > 0,
             });
@@ -1036,7 +1035,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             yield* analytics.record("provider.turn.steered", {
               provider: routed.adapter.provider,
               model: input.modelSelection?.model,
-              interactionMode: input.interactionMode,
               attachmentCount: input.attachments.length,
               hasInput: typeof input.input === "string" && input.input.trim().length > 0,
             });

@@ -23,7 +23,6 @@ import type {
 } from "../composerDraftStore";
 import { readComposerImageBlob } from "./composerImageBlobStore";
 import { normalizeComposerImageSource } from "./composerImageSource";
-import { hasSketchpadContent, type SketchpadDocument } from "./composerSketchpad";
 import { randomUUID } from "./utils";
 
 export const IMAGE_SIZE_LIMIT_LABEL = `${Math.round(
@@ -237,7 +236,6 @@ interface EffectiveComposerAttachmentCountDraft {
   files?: ReadonlyArray<unknown>;
   assistantSelections?: ReadonlyArray<unknown>;
   persistedAttachments?: ReadonlyArray<AttachmentIdCarrier>;
-  sketchpad?: SketchpadDocument | null;
 }
 
 export function effectiveComposerAttachmentCount(
@@ -252,8 +250,7 @@ export function effectiveComposerAttachmentCount(
     (draft.images?.length ?? 0) +
     (draft.files?.length ?? 0) +
     (draft.assistantSelections?.length ?? 0) +
-    pendingPersistedCount +
-    (hasSketchpadContent(draft.sketchpad) ? 1 : 0)
+    pendingPersistedCount
   );
 }
 

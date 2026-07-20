@@ -50,7 +50,6 @@ import {
 } from "./Sidebar.logic";
 import { ProjectId, ThreadId } from "@t3tools/contracts";
 import {
-  DEFAULT_INTERACTION_MODE,
   DEFAULT_RUNTIME_MODE,
   type Project,
   type SidebarThreadSummary,
@@ -75,7 +74,6 @@ describe("hasUnseenCompletion", () => {
   it("returns true when a thread completed after its last visit", () => {
     expect(
       hasUnseenCompletion({
-        interactionMode: "default",
         latestTurn: makeLatestTurn(),
         lastVisitedAt: "2026-03-09T10:04:00.000Z",
         proposedPlans: [],
@@ -553,7 +551,6 @@ describe("pin helpers", () => {
         model: "gpt-5-codex",
       },
       runtimeMode: DEFAULT_RUNTIME_MODE,
-      interactionMode: DEFAULT_INTERACTION_MODE,
       session: null,
       messages: [],
       proposedPlans: [],
@@ -704,7 +701,6 @@ describe("pin helpers", () => {
 
 describe("resolveThreadStatusPill", () => {
   const baseThread = {
-    interactionMode: "plan" as const,
     latestTurn: null,
     lastVisitedAt: undefined,
     dismissedStatusKey: undefined,
@@ -831,7 +827,6 @@ describe("resolveThreadStatusPill", () => {
       resolveThreadStatusPill({
         thread: {
           ...baseThread,
-          interactionMode: "default",
           latestTurn: makeLatestTurn(),
           lastVisitedAt: "2026-03-09T10:04:00.000Z",
           session: {
@@ -1491,7 +1486,6 @@ function makeThread(overrides: Partial<Thread> = {}): Thread {
       ...overrides?.modelSelection,
     },
     runtimeMode: DEFAULT_RUNTIME_MODE,
-    interactionMode: DEFAULT_INTERACTION_MODE,
     session: null,
     messages: [],
     proposedPlans: [],
@@ -1518,7 +1512,6 @@ function makeSidebarThreadSummary(
       provider: "codex",
       model: "gpt-5.4",
     },
-    interactionMode: DEFAULT_INTERACTION_MODE,
     branch: null,
     worktreePath: null,
     session: null,

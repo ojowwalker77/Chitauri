@@ -4,7 +4,6 @@ import { Effect, Schema } from "effect";
 
 import {
   ClientOrchestrationCommand,
-  DEFAULT_PROVIDER_INTERACTION_MODE,
   DEFAULT_RUNTIME_MODE,
   ModelSelection,
   OrchestrationCommand,
@@ -100,7 +99,6 @@ it.effect("preserves thread activity payloads through the RPC JSON codec", () =>
             provider: "codex",
             model: "gpt-5.5",
           },
-          interactionMode: "default",
           runtimeMode: "full-access",
           envMode: "local",
           branch: null,
@@ -359,7 +357,6 @@ it.effect("decodes thread.turn.start defaults for provider, runtime mode, and di
     });
     assert.strictEqual(parsed.modelSelection, undefined);
     assert.strictEqual(parsed.runtimeMode, DEFAULT_RUNTIME_MODE);
-    assert.strictEqual(parsed.interactionMode, DEFAULT_PROVIDER_INTERACTION_MODE);
     assert.strictEqual(parsed.dispatchMode, "queue");
   }),
 );
@@ -385,7 +382,6 @@ it.effect("preserves explicit provider and runtime mode in thread.turn.start", (
     });
     assert.strictEqual(parsed.modelSelection?.provider, "codex");
     assert.strictEqual(parsed.runtimeMode, "full-access");
-    assert.strictEqual(parsed.interactionMode, DEFAULT_PROVIDER_INTERACTION_MODE);
   }),
 );
 
@@ -399,7 +395,6 @@ it.effect("decodes thread.created runtime mode for historical events", () =>
         provider: "codex",
         model: "gpt-5.4",
       },
-      interactionMode: "default",
       branch: null,
       worktreePath: null,
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -504,7 +499,6 @@ it.effect("strips client-sent dispatchOrigin from thread.turn.start commands", (
       dispatchMode: "queue",
       dispatchOrigin: "automation",
       runtimeMode: "full-access",
-      interactionMode: "default",
       createdAt: "2026-01-01T00:00:00.000Z",
     });
     assert.strictEqual(command.type, "thread.turn.start");
@@ -738,7 +732,6 @@ it.effect("rejects client thread.turn.start commands with too many upload attach
         })),
       },
       runtimeMode: "full-access",
-      interactionMode: "default",
       createdAt: "2026-01-01T00:00:00.000Z",
     }).pipe(
       Effect.match({
@@ -761,7 +754,6 @@ it.effect(
       });
       assert.strictEqual(parsed.modelSelection, undefined);
       assert.strictEqual(parsed.runtimeMode, DEFAULT_RUNTIME_MODE);
-      assert.strictEqual(parsed.interactionMode, DEFAULT_PROVIDER_INTERACTION_MODE);
       assert.strictEqual(parsed.dispatchMode, "queue");
       assert.strictEqual(parsed.sourceProposedPlan, undefined);
     }),

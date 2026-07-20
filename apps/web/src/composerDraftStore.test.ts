@@ -12,7 +12,6 @@ import {
   COMPOSER_DRAFT_STORAGE_KEY,
   type ComposerFileAttachment,
   type ComposerImageAttachment,
-  type QueuedSketchpadSnapshot,
   type QueuedComposerTurn,
   captureComposerPromptHistorySavedDraft,
   deriveEffectiveComposerModelState,
@@ -27,24 +26,6 @@ import {
   type TerminalContextDraft,
 } from "./lib/terminalContext";
 import { createDebouncedStorage } from "./lib/storage";
-import type { SketchpadDocument } from "./lib/composerSketchpad";
-
-function makeSketchpadDocument(text = "Sketch note"): SketchpadDocument {
-  return {
-    version: 1,
-    revision: 1,
-    nodes: [
-      {
-        id: "sketch-note",
-        kind: "note",
-        text,
-        frame: { x: 20, y: 30, width: 160, height: 90 },
-        author: "user",
-      },
-    ],
-    edges: [],
-  };
-}
 
 function makeImage(input: {
   id: string;
@@ -125,7 +106,7 @@ function makeQueuedTurn(id: string): QueuedComposerTurn {
     createdAt: "2026-03-13T12:00:00.000Z",
     previewText: `queued ${id}`,
     text: `queued ${id}`,
-    interactionMode: "plan",
+    isImplementation: true,
     selectedProvider: "codex",
     selectedModel: "gpt-5",
     selectedPromptEffort: null,
@@ -137,18 +118,13 @@ function makeQueuedTurn(id: string): QueuedComposerTurn {
   };
 }
 
-function makeQueuedChatTurn(
-  id: string,
-  image?: ComposerImageAttachment,
-  sketchpad?: QueuedSketchpadSnapshot,
-): QueuedComposerTurn {
+function makeQueuedChatTurn(id: string, image?: ComposerImageAttachment): QueuedComposerTurn {
   return {
     id,
     kind: "chat",
     createdAt: "2026-03-13T12:00:00.000Z",
     previewText: `queued chat ${id}`,
     prompt: "queued chat prompt",
-    sketchpad: sketchpad ?? null,
     images: image ? [image] : [],
     files: [],
     assistantSelections: [],
@@ -169,7 +145,6 @@ function makeQueuedChatTurn(
       planId: "plan-1",
     },
     runtimeMode: "full-access",
-    interactionMode: "default",
     envMode: "local",
   };
 }
@@ -377,50 +352,6 @@ describe("composerDraftStore clearComposerContent", () => {
 
     expect(useComposerDraftStore.getState().draftsByThreadId[threadId]).toBeUndefined();
   });
-
-  it("clears the sketch atomically with the rest of the composer", () => {
-    const store = useComposerDraftStore.getState();
-    store.setPrompt(threadId, "Explain this flow");
-    store.setSketchpadDocument(threadId, makeSketchpadDocument());
-
-    store.clearComposerContent(threadId);
-
-    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]).toBeUndefined();
-  });
-});
-
-describe("composerDraftStore sketchpad persistence", () => {
-  const threadId = ThreadId.makeUnsafe("thread-sketchpad-persistence");
-
-  beforeEach(() => {
-    resetComposerDraftStore();
-  });
-
-  it("persists and hydrates the editable document without transient viewport state", () => {
-    const sketchpad = makeSketchpadDocument("Persist this sketch");
-    useComposerDraftStore.getState().setSketchpadDocument(threadId, sketchpad);
-
-    const persistApi = useComposerDraftStore.persist as unknown as {
-      getOptions: () => {
-        partialize: (state: ReturnType<typeof useComposerDraftStore.getState>) => unknown;
-        merge: (
-          persistedState: unknown,
-          currentState: ReturnType<typeof useComposerDraftStore.getState>,
-        ) => ReturnType<typeof useComposerDraftStore.getState>;
-      };
-    };
-    const persistedState = persistApi.getOptions().partialize(useComposerDraftStore.getState()) as {
-      draftsByThreadId?: Record<string, { sketchpad?: Record<string, unknown> }>;
-    };
-    expect(persistedState.draftsByThreadId?.[threadId]?.sketchpad).toEqual(sketchpad);
-    expect(persistedState.draftsByThreadId?.[threadId]?.sketchpad).not.toHaveProperty("viewport");
-
-    const mergedState = persistApi
-      .getOptions()
-      .merge(persistedState, useComposerDraftStore.getInitialState());
-    expect(mergedState.draftsByThreadId[threadId]?.sketchpad).toEqual(sketchpad);
-    expect(mergedState.draftsByThreadId[threadId]?.sketchpad).not.toBe(sketchpad);
-  });
 });
 
 describe("composerDraftStore prompt history saved draft", () => {
@@ -591,7 +522,6 @@ describe("composerDraftStore prompt history saved draft", () => {
     store.addPastedTexts(threadId, [pastedText]);
     store.setSkills(threadId, [selectedSkill]);
     store.setMentions(threadId, [selectedMention]);
-    store.setSketchpadDocument(threadId, makeSketchpadDocument("History sketch"));
     const draftBeforeBrowse = useComposerDraftStore.getState().draftsByThreadId[threadId]!;
 
     store.setPromptHistorySavedDraft(
@@ -610,7 +540,6 @@ describe("composerDraftStore prompt history saved draft", () => {
     expect(browsingDraft.pastedTexts).toHaveLength(0);
     expect(browsingDraft.skills).toHaveLength(0);
     expect(browsingDraft.mentions).toHaveLength(0);
-    expect(browsingDraft.sketchpad).toBeNull();
     expect(
       browsingDraft.promptHistorySavedDraft?.assistantSelections.map((entry) => entry.id),
     ).toEqual(["sel-history"]);
@@ -625,10 +554,6 @@ describe("composerDraftStore prompt history saved draft", () => {
     ]);
     expect(browsingDraft.promptHistorySavedDraft?.skills).toEqual([selectedSkill]);
     expect(browsingDraft.promptHistorySavedDraft?.mentions).toEqual([selectedMention]);
-    expect(browsingDraft.promptHistorySavedDraft?.sketchpad?.nodes[0]).toMatchObject({
-      kind: "note",
-      text: "History sketch",
-    });
 
     store.setPrompt(threadId, "recalled history prompt");
     store.restorePromptHistorySavedDraft(threadId);
@@ -641,10 +566,6 @@ describe("composerDraftStore prompt history saved draft", () => {
     expect(restoredDraft.pastedTexts.map((entry) => entry.id)).toEqual(["paste-history"]);
     expect(restoredDraft.skills).toEqual([selectedSkill]);
     expect(restoredDraft.mentions).toEqual([selectedMention]);
-    expect(restoredDraft.sketchpad?.nodes[0]).toMatchObject({
-      kind: "note",
-      text: "History sketch",
-    });
   });
 
   it("persists and hydrates prompt-history snapshot images and structured context", () => {
@@ -676,7 +597,6 @@ describe("composerDraftStore prompt history saved draft", () => {
     store.addTerminalContext(threadId, terminalContext);
     store.addPastedTexts(threadId, [pastedText]);
     store.setSkills(threadId, [selectedSkill]);
-    store.setSketchpadDocument(threadId, makeSketchpadDocument("Persisted history sketch"));
     const draftBeforeBrowse = useComposerDraftStore.getState().draftsByThreadId[threadId]!;
     store.setPromptHistorySavedDraft(
       threadId,
@@ -719,10 +639,6 @@ describe("composerDraftStore prompt history saved draft", () => {
       },
     ]);
     expect(persistedSnapshot?.skills).toEqual([selectedSkill]);
-    expect(persistedSnapshot?.sketchpad).toMatchObject({
-      version: 1,
-      nodes: [{ kind: "note", text: "Persisted history sketch" }],
-    });
 
     const mergedState = persistApi
       .getOptions()
@@ -741,10 +657,6 @@ describe("composerDraftStore prompt history saved draft", () => {
       "paste-persist-history",
     ]);
     expect(restoredSnapshot?.skills).toEqual([selectedSkill]);
-    expect(restoredSnapshot?.sketchpad?.nodes[0]).toMatchObject({
-      kind: "note",
-      text: "Persisted history sketch",
-    });
   });
 
   it("syncs persisted images into an existing prompt-history snapshot", async () => {
@@ -880,9 +792,6 @@ describe("composerDraftStore copyTransferableComposerState", () => {
     useComposerDraftStore
       .getState()
       .setMentions(sourceThreadId, [{ name: "linear", path: "plugin://linear" }]);
-    useComposerDraftStore
-      .getState()
-      .setSketchpadDocument(sourceThreadId, makeSketchpadDocument("Transferred sketch"));
 
     useComposerDraftStore.getState().copyTransferableComposerState(sourceThreadId, targetThreadId);
 
@@ -902,11 +811,7 @@ describe("composerDraftStore copyTransferableComposerState", () => {
       ],
       skills: [{ name: "check-code", path: "/skills/check-code" }],
       mentions: [{ name: "linear", path: "plugin://linear" }],
-      sketchpad: {
-        nodes: [{ kind: "note", text: "Transferred sketch" }],
-      },
     });
-    expect(targetDraft?.sketchpad).not.toBe(sourceDraft?.sketchpad);
   });
 
   it("copies image attachments with fresh preview URLs", () => {
@@ -1350,7 +1255,6 @@ describe("composerDraftStore project draft thread mapping", () => {
       worktreePath: "/tmp/worktree-test",
       envMode: "worktree",
       runtimeMode: "full-access",
-      interactionMode: "default",
       createdAt: "2026-01-01T00:00:00.000Z",
       lastKnownPr: null,
     });
@@ -1361,7 +1265,6 @@ describe("composerDraftStore project draft thread mapping", () => {
       worktreePath: "/tmp/worktree-test",
       envMode: "worktree",
       runtimeMode: "full-access",
-      interactionMode: "default",
       createdAt: "2026-01-01T00:00:00.000Z",
       lastKnownPr: null,
     });
@@ -2112,45 +2015,14 @@ describe("composerDraftStore queued follow-ups", () => {
     expect(useComposerDraftStore.getState().draftsByThreadId[threadId]).toBeUndefined();
   });
 
-  it("releases a queued sketch PNG when its turn is removed", () => {
-    const store = useComposerDraftStore.getState();
-    const sketchpadImage = makeImage({
-      id: "queued-sketchpad-blob",
-      previewUrl: "blob:queued-sketchpad",
-      name: "sketchpad.png",
-    });
-    store.enqueueQueuedTurn(
-      threadId,
-      makeQueuedChatTurn("queued-sketchpad", undefined, {
-        document: makeSketchpadDocument(),
-        image: sketchpadImage,
-      }),
-    );
-
-    store.removeQueuedTurn(threadId, "queued-sketchpad");
-
-    expect(revokeSpy).toHaveBeenCalledWith("blob:queued-sketchpad");
-  });
-
   it("persists queued chat turns for refresh and restart rehydration", () => {
     const queuedImage = makeImage({
       id: "queued-image-persisted",
       previewUrl: "data:image/png;base64,AA==",
       name: "queued.png",
     });
-    const sketchpadImage = makeImage({
-      id: "queued-sketchpad-persisted",
-      previewUrl: "data:image/png;base64,AQ==",
-      name: "sketchpad.png",
-    });
     const store = useComposerDraftStore.getState();
-    store.enqueueQueuedTurn(
-      threadId,
-      makeQueuedChatTurn("queued-chat-1", queuedImage, {
-        document: makeSketchpadDocument("Queued sketch"),
-        image: sketchpadImage,
-      }),
-    );
+    store.enqueueQueuedTurn(threadId, makeQueuedChatTurn("queued-chat-1", queuedImage));
 
     const persistApi = useComposerDraftStore.persist as unknown as {
       getOptions: () => {
@@ -2177,10 +2049,6 @@ describe("composerDraftStore queued follow-ups", () => {
         kind: "chat",
         prompt: "queued chat prompt",
         images: [{ name: "queued.png" }],
-        sketchpad: {
-          document: { nodes: [{ kind: "note", text: "Queued sketch" }] },
-          image: { name: "sketchpad.png" },
-        },
         sourceProposedPlan: {
           threadId: "thread-source-plan",
           planId: "plan-1",
@@ -2447,23 +2315,11 @@ describe("composerDraftStore runtime and interaction settings", () => {
     );
   });
 
-  it("stores interaction mode overrides in the composer draft", () => {
-    const store = useComposerDraftStore.getState();
-
-    store.setInteractionMode(threadId, "plan");
-
-    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.interactionMode).toBe(
-      "plan",
-    );
-  });
-
   it("removes empty settings-only drafts when overrides are cleared", () => {
     const store = useComposerDraftStore.getState();
 
     store.setRuntimeMode(threadId, "approval-required");
-    store.setInteractionMode(threadId, "plan");
     store.setRuntimeMode(threadId, null);
-    store.setInteractionMode(threadId, null);
 
     expect(useComposerDraftStore.getState().draftsByThreadId[threadId]).toBeUndefined();
   });

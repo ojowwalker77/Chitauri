@@ -95,7 +95,7 @@ const seedTwoThreadsWithActivity = Effect.gen(function* () {
   yield* sql`
     INSERT INTO projection_threads (
       thread_id, project_id, title, model_selection_json, runtime_mode,
-      interaction_mode, env_mode, created_at, updated_at, deleted_at
+      env_mode, created_at, updated_at, deleted_at
     )
     VALUES
       (
@@ -103,7 +103,7 @@ const seedTwoThreadsWithActivity = Effect.gen(function* () {
         'project-archive',
         'Kept Thread',
         '{"provider":"claudeAgent","model":"claude-sonnet-4-6","options":{"effort":"max"}}',
-        'full-access', 'default', 'local',
+        'full-access', 'local',
         '2026-06-13T08:00:00.000Z', '2026-06-13T08:00:00.000Z', NULL
       ),
       (
@@ -111,7 +111,7 @@ const seedTwoThreadsWithActivity = Effect.gen(function* () {
         'project-archive',
         'Purged Thread',
         '{"provider":"codex","model":"gpt-5-codex","options":{"reasoningEffort":"high"}}',
-        'full-access', 'default', 'local',
+        'full-access', 'local',
         '2026-06-13T09:00:00.000Z', '2026-06-13T09:00:00.000Z', NULL
       )
   `;
@@ -476,14 +476,14 @@ describe("ProfileStatsArchive", () => {
         yield* sql`
           INSERT INTO projection_threads (
             thread_id, project_id, title, model_selection_json, runtime_mode,
-            interaction_mode, env_mode, created_at, updated_at, deleted_at
+            env_mode, created_at, updated_at, deleted_at
           )
           VALUES (
             'thread-empty-cleanup',
             'project-empty-cleanup',
             'Empty Cleanup',
             '{"provider":"codex","model":"gpt-5-codex"}',
-            'full-access', 'default', 'local',
+            'full-access', 'local',
             '2026-06-13T09:00:00.000Z',
             '2026-06-13T09:00:00.000Z',
             '2026-06-13T09:05:00.000Z'
@@ -551,14 +551,14 @@ describe("ProfileStatsArchive", () => {
         yield* sql`
           INSERT INTO projection_threads (
             thread_id, project_id, title, model_selection_json, runtime_mode,
-            interaction_mode, env_mode, created_at, updated_at, deleted_at
+            env_mode, created_at, updated_at, deleted_at
           )
           VALUES (
             'thread-message-checkpoint',
             'project-message-checkpoint',
             'Message Checkpoint',
             '{"provider":"codex","model":"gpt-5-codex"}',
-            'full-access', 'default', 'local',
+            'full-access', 'local',
             '2026-06-13T09:00:00.000Z',
             '2026-06-13T09:00:00.000Z',
             '2026-06-13T09:05:00.000Z'
@@ -654,14 +654,14 @@ describe("ProfileStatsArchive", () => {
         yield* sql`
           INSERT INTO projection_threads (
             thread_id, project_id, title, model_selection_json, runtime_mode,
-            interaction_mode, env_mode, created_at, updated_at, deleted_at
+            env_mode, created_at, updated_at, deleted_at
           )
           VALUES (
             'thread-stale-checkpoint',
             'project-stale-checkpoint',
             'Stale Checkpoint',
             '{"provider":"codex","model":"gpt-5-codex"}',
-            'full-access', 'default', 'local',
+            'full-access', 'local',
             '2026-06-13T09:00:00.000Z',
             '2026-06-13T09:00:00.000Z',
             '2026-06-13T09:05:00.000Z'
@@ -780,14 +780,14 @@ describe("ProfileStatsArchive", () => {
         yield* sql`
           INSERT INTO projection_threads (
             thread_id, project_id, title, model_selection_json, runtime_mode,
-            interaction_mode, env_mode, created_at, updated_at, deleted_at
+            env_mode, created_at, updated_at, deleted_at
           )
           VALUES (
             'thread-failed-purge',
             'project-failed-purge',
             'Failed Purge',
             '{"provider":"codex","model":"gpt-5-codex"}',
-            'full-access', 'default', 'local',
+            'full-access', 'local',
             '2026-06-13T09:00:00.000Z',
             '2026-06-13T09:00:00.000Z',
             '2026-06-13T09:05:00.000Z'
@@ -863,14 +863,14 @@ describe("ProfileStatsArchive", () => {
         yield* sql`
           INSERT INTO projection_threads (
             thread_id, project_id, title, model_selection_json, runtime_mode,
-            interaction_mode, env_mode, created_at, updated_at, deleted_at
+            env_mode, created_at, updated_at, deleted_at
           )
           VALUES (
             'thread-automation-purge',
             'project-automation-purge',
             'Automation Purge',
             '{"provider":"codex","model":"gpt-5-codex"}',
-            'full-access', 'default', 'local',
+            'full-access', 'local',
             '2026-06-13T09:00:00.000Z',
             '2026-06-13T09:00:00.000Z',
             '2026-06-13T09:05:00.000Z'
@@ -880,7 +880,7 @@ describe("ProfileStatsArchive", () => {
           INSERT INTO automation_definitions (
             automation_id, project_id, source_thread_id, name, prompt, schedule_json,
             enabled, next_run_at, model_selection_json, provider_options_json, runtime_mode,
-            interaction_mode, worktree_mode, mode, target_thread_id, max_iterations,
+            worktree_mode, mode, target_thread_id, max_iterations,
             stop_on_error, completion_policy_json, completion_policy_version,
             completion_policy_updated_at, minimum_interval_seconds, max_runtime_seconds,
             retry_policy_json, misfire_policy, acknowledged_risks_json, iteration_count,
@@ -898,7 +898,6 @@ describe("ProfileStatsArchive", () => {
             '{"provider":"codex","model":"gpt-5-codex"}',
             NULL,
             'full-access',
-            'default',
             'reuse',
             'heartbeat',
             'thread-automation-purge',
@@ -1011,24 +1010,24 @@ describe("ProfileStatsArchive", () => {
         yield* sql`
           INSERT INTO projection_threads (
             thread_id, project_id, title, model_selection_json, runtime_mode,
-            interaction_mode, env_mode, created_at, updated_at, deleted_at
+            env_mode, created_at, updated_at, deleted_at
           )
           VALUES
             (
               'thread-live', 'project-sweep', 'Live', '{"provider":"codex","model":"gpt-5-codex"}',
-              'full-access', 'default', 'local',
+              'full-access', 'local',
               '2026-06-13T09:00:00.000Z', '2026-06-13T09:00:00.000Z', NULL
             ),
             (
               'thread-manual', 'project-sweep', 'Manual',
               '{"provider":"codex","model":"gpt-5-codex"}',
-              'full-access', 'default', 'local',
+              'full-access', 'local',
               '2026-06-13T09:00:00.000Z', '2026-06-13T09:00:00.000Z', '2026-06-15T10:00:00.000Z'
             ),
             (
               'thread-retention', 'project-sweep', 'Retention',
               '{"provider":"codex","model":"gpt-5-codex"}',
-              'full-access', 'default', 'local',
+              'full-access', 'local',
               '2026-06-08T09:00:00.000Z', '2026-06-08T09:00:00.000Z', '2026-06-15T09:00:00.000Z'
             )
         `;

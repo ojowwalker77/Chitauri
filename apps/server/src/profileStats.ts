@@ -16,7 +16,7 @@ import type {
   StatsGetProfileStatsInput,
   StatsGetProfileTokenStatsInput,
 } from "@t3tools/contracts";
-import { isBuiltInComposerSlashCommandName } from "@t3tools/shared/composerSlashCommands";
+import { isKnownComposerSlashCommandName } from "@t3tools/shared/composerSlashCommands";
 import { Effect, Layer, ServiceMap } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
@@ -132,7 +132,6 @@ const PROFILE_SKILL_TOKEN_REGEX = new RegExp(
   "giu",
 );
 const PROFILE_TRAILING_PROMPT_BLOCK_PATTERNS = [
-  /\n*<sketchpad_context version="\d+">\n[\s\S]*?\n<\/sketchpad_context>\s*$/u,
   /\n*<pasted_text>\n[\s\S]*?\n<\/pasted_text>\s*$/u,
   /\n*<file_comments>\n[\s\S]*?\n<\/file_comments>\s*$/u,
   /\n*<terminal_context>\n[\s\S]*?\n<\/terminal_context>\s*$/u,
@@ -221,7 +220,7 @@ function extractTextSkillNames(text: string | null): string[] {
     if (leadingBoundary === "<" && prefix === "/") {
       continue;
     }
-    if (prefix === "/" && isBuiltInComposerSlashCommandName(rawName)) {
+    if (prefix === "/" && isKnownComposerSlashCommandName(rawName)) {
       continue;
     }
 

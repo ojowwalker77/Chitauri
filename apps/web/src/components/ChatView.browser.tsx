@@ -303,7 +303,6 @@ function createSnapshotForTargetUser(options: {
           provider: "codex",
           model: "gpt-5",
         },
-        interactionMode: "default",
         runtimeMode: "full-access",
         envMode: "local",
         branch: "main",
@@ -468,7 +467,6 @@ function addThreadToSnapshot(
           provider: "codex",
           model: "gpt-5",
         },
-        interactionMode: "default",
         runtimeMode: "full-access",
         envMode: "local",
         branch: "main",
@@ -511,7 +509,6 @@ function createAutomationDefinitionFromCreateRequest(
     nextRunAt: null,
     modelSelection: input.modelSelection,
     runtimeMode: input.runtimeMode ?? "approval-required",
-    interactionMode: input.interactionMode ?? "default",
     worktreeMode: input.worktreeMode ?? "auto",
     mode: input.mode ?? "standalone",
     targetThreadId: input.targetThreadId ?? null,
@@ -803,7 +800,6 @@ function createSnapshotWithSettledPlanAwaitingFollowUp(): OrchestrationReadModel
       thread.id === THREAD_ID
         ? {
             ...thread,
-            interactionMode: "plan",
             hasActionableProposedPlan: true,
             proposedPlans: [
               {
@@ -2068,7 +2064,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           projectId: PROJECT_ID,
           createdAt: NOW_ISO,
           runtimeMode: "full-access",
-          interactionMode: "default",
           entryPoint: "chat",
           branch: "feature/draft-automation",
           worktreePath: "/repo/worktrees/draft-automation",
@@ -2139,7 +2134,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
               },
             },
             runtimeMode: "full-access",
-            interactionMode: "default",
           });
 
           expect(wsRequests[automationCreateIndex]).toMatchObject({
@@ -2173,7 +2167,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           projectId: PROJECT_ID,
           createdAt: NOW_ISO,
           runtimeMode: "full-access",
-          interactionMode: "default",
           entryPoint: "chat",
           branch: null,
           worktreePath: null,
@@ -2260,7 +2253,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           projectId: PROJECT_ID,
           createdAt: NOW_ISO,
           runtimeMode: "full-access",
-          interactionMode: "default",
           entryPoint: "chat",
           branch: null,
           worktreePath: null,
@@ -2342,7 +2334,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           projectId: PROJECT_ID,
           createdAt: NOW_ISO,
           runtimeMode: "full-access",
-          interactionMode: "default",
           entryPoint: "chat",
           branch: null,
           worktreePath: null,
@@ -2420,7 +2411,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           projectId: PROJECT_ID,
           createdAt: NOW_ISO,
           runtimeMode: "full-access",
-          interactionMode: "default",
           entryPoint: "chat",
           branch: "feature/draft",
           worktreePath: "/repo/worktrees/feature-draft",
@@ -2471,74 +2461,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
               CHITAURI_WORKTREE_PATH: "/repo/worktrees/feature-draft",
             },
           });
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("toggles plan mode with Shift+Tab only while the composer is focused", async () => {
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-target-hotkey" as MessageId,
-        targetText: "hotkey target",
-      }),
-    });
-
-    try {
-      const readInteractionMode = () =>
-        useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.interactionMode ?? "default";
-      expect(readInteractionMode()).toBe("default");
-
-      window.dispatchEvent(
-        new KeyboardEvent("keydown", {
-          key: "Tab",
-          shiftKey: true,
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
-      await waitForLayout();
-
-      expect(readInteractionMode()).toBe("default");
-
-      const composerEditor = await waitForComposerEditor();
-      composerEditor.focus();
-      composerEditor.dispatchEvent(
-        new KeyboardEvent("keydown", {
-          key: "Tab",
-          shiftKey: true,
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
-
-      await vi.waitFor(
-        () => {
-          expect(readInteractionMode()).toBe("plan");
-          const planButton = Array.from(
-            document.querySelectorAll<HTMLButtonElement>("button"),
-          ).find((button) => button.textContent?.trim() === "Plan");
-          expect(planButton?.title).toContain("return to normal build mode");
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-
-      composerEditor.dispatchEvent(
-        new KeyboardEvent("keydown", {
-          key: "Tab",
-          shiftKey: true,
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
-
-      await vi.waitFor(
-        () => {
-          expect(readInteractionMode()).toBe("default");
         },
         { timeout: 8_000, interval: 16 },
       );
@@ -2973,7 +2895,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
         createdAt: NOW_ISO,
         previewText: firstQueuedPrompt,
         prompt: firstQueuedPrompt,
-        sketchpad: null,
         images: [queuedImage],
         files: [],
         assistantSelections: [],
@@ -2990,7 +2911,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           model: "gpt-5",
         },
         runtimeMode: "full-access",
-        interactionMode: "default",
         envMode: "local",
       });
       useComposerDraftStore.getState().enqueueQueuedTurn(THREAD_ID, {
@@ -2999,7 +2919,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
         createdAt: NOW_ISO,
         previewText: secondQueuedPrompt,
         prompt: secondQueuedPrompt,
-        sketchpad: null,
         images: [],
         files: [],
         assistantSelections: [],
@@ -3016,7 +2935,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           model: "gpt-5",
         },
         runtimeMode: "full-access",
-        interactionMode: "default",
         envMode: "local",
       });
 
@@ -3091,7 +3009,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
         createdAt: NOW_ISO,
         previewText: queuedPrompt,
         prompt: queuedPrompt,
-        sketchpad: null,
         images: [],
         files: [],
         assistantSelections: [],
@@ -3108,7 +3025,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           model: "gpt-5",
         },
         runtimeMode: "full-access",
-        interactionMode: "default",
         envMode: "local",
       });
 
@@ -3155,24 +3071,20 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
-      // Plan mode, settled turn, actionable proposed plan -> the live composer is
+      // Settled turn with an actionable proposed plan -> the live composer is
       // showing the plan follow-up prompt at the moment the queue drains.
       snapshot: createSnapshotWithSettledPlanAwaitingFollowUp(),
     });
 
     try {
-      // Make the live composer's interaction mode explicitly "plan" so the
-      // plan-follow-up branch in onSend is live. The queued chat turn below
-      // carries its own "default" mode and an image attachment, both of which the
+      // The queued chat turn below carries an image attachment that the
       // misroute (onSubmitPlanFollowUp) would discard.
-      useComposerDraftStore.getState().setInteractionMode(THREAD_ID, "plan");
       useComposerDraftStore.getState().enqueueQueuedTurn(THREAD_ID, {
         id: "queued-turn-plan-chat",
         kind: "chat",
         createdAt: NOW_ISO,
         previewText: queuedPrompt,
         prompt: queuedPrompt,
-        sketchpad: null,
         images: [queuedImage],
         files: [],
         assistantSelections: [],
@@ -3189,7 +3101,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           model: "gpt-5",
         },
         runtimeMode: "full-access",
-        interactionMode: "default",
         envMode: "local",
       });
 
@@ -3213,14 +3124,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
           );
           expect(turnStartRequest).toBeTruthy();
           const command = turnStartRequest!.command as {
-            interactionMode?: unknown;
             message?: { attachments?: Array<{ type?: unknown; name?: unknown }> };
           };
-          // Dispatched as a normal chat turn: it keeps the queued turn's own
-          // "default" interaction mode rather than being coerced to "plan" by the
-          // plan-follow-up path.
-          expect(command.interactionMode).toBe("default");
-          // ...and the queued image survives instead of being dropped to [].
+          // Dispatched as a normal chat turn: the queued image survives instead
+          // of being dropped to [] by the plan-follow-up path.
           const attachments = command.message?.attachments ?? [];
           expect(attachments).toHaveLength(1);
           expect(attachments[0]?.type).toBe("image");
@@ -3428,7 +3335,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           projectId: HOME_PROJECT_ID,
           createdAt: NOW_ISO,
           runtimeMode: "full-access",
-          interactionMode: "default",
           entryPoint: "chat",
           branch: null,
           worktreePath: null,
@@ -4217,7 +4123,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
       draftsByThreadId: {
         [draftThreadId]: {
           prompt: "",
-          sketchpad: null,
           promptHistorySavedDraft: null,
           images: [],
           files: [],
@@ -4241,7 +4146,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           },
           activeProvider: "claudeAgent",
           runtimeMode: null,
-          interactionMode: null,
         },
       },
       draftThreadsByThreadId: {
@@ -4249,7 +4153,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           projectId: PROJECT_ID,
           createdAt: NOW_ISO,
           runtimeMode: "approval-required",
-          interactionMode: "default",
           entryPoint: "terminal",
           branch: "feature/terminal-title",
           worktreePath: "/repo/project/.worktrees/terminal-title",
@@ -4340,30 +4243,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("enables plan mode from the composer extras menu", async () => {
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-plan-mode-toggle-test" as MessageId,
-        targetText: "plan mode toggle test",
-      }),
-    });
-
-    try {
-      await page.getByLabelText("Composer extras").click();
-      await page.getByText("Plan mode").click();
-
-      await vi.waitFor(() => {
-        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.interactionMode).toBe(
-          "plan",
-        );
-      });
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("distinguishes plan mode from the plan details sidebar button", async () => {
+  it("exposes the plan details sidebar button when a plan is awaiting follow-up", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotWithSettledPlanAwaitingFollowUp(),
@@ -4381,13 +4261,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
           .map((button) => button.textContent?.trim() ?? "")
           .filter(Boolean);
 
-        expect(buttonLabels.filter((label) => label === "Plan")).toHaveLength(1);
         expect(buttonLabels).toContain("Plan details");
         expect(document.querySelector('button[title="Show plan sidebar"]')).toBeNull();
       });
-      await expect
-        .element(page.getByTitle("Plan mode — click to return to normal build mode"))
-        .toBeInTheDocument();
       await expect.element(page.getByLabelText("Show plan details sidebar")).toBeInTheDocument();
     } finally {
       await mounted.cleanup();

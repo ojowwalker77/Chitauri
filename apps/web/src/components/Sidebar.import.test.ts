@@ -5,10 +5,10 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("./terminal/terminalRuntimeRegistry", () => ({
-  terminalRuntimeRegistry: {
-    disposeTerminal: vi.fn(),
-  },
+// Sidebar deliberately reaches the terminal runtime through the xterm-free
+// handle so the ~867 kB terminal stack stays out of the chat layout chunk.
+vi.mock("./terminal/terminalRuntimeHandle", () => ({
+  disposeTerminalRuntimeThread: vi.fn(),
 }));
 
 describe("Sidebar module", () => {

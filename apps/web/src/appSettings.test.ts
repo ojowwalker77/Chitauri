@@ -673,7 +673,7 @@ describe("AppSettingsSchema", () => {
       codexBinaryPath: "/usr/local/bin/codex",
       codexHomePath: "",
       grokBinaryPath: "",
-      defaultThreadEnvMode: "local",
+      defaultThreadEnvMode: "worktree",
       defaultRuntimeMode: "full-access",
       taskListDisplayMode: DEFAULT_TASK_LIST_DISPLAY_MODE,
       confirmThreadDelete: false,

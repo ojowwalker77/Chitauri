@@ -445,7 +445,7 @@ export const WHATS_NEW_ENTRIES: readonly WhatsNewEntry[] = [
         id: "absolute-file-previews",
         title: "Local previews can open more real files",
         description:
-          "Absolute local file paths now get preview grants, making image, PDF, and workspace previews more reliable when agent output points at files on disk.",
+          "Absolute local file paths now get preview grants, making image and workspace previews more reliable when agent output points at files on disk.",
         details:
           "The server now grants and validates local preview access more carefully, including trusted-origin checks, local image route coverage, workspace file-system normalization, and web-side preview/download handling for absolute paths.",
       },
@@ -794,20 +794,12 @@ export const WHATS_NEW_ENTRIES: readonly WhatsNewEntry[] = [
     date: "Jun 13",
     features: [
       {
-        id: "secure-pdf-preview",
-        title: "PDFs open safely inside Chitauri",
-        description:
-          "Local PDFs can now be previewed directly in the workspace pane with page navigation, zoom controls, selection-safe rendering, and hardened link handling.",
-        details:
-          "This release replaces browser iframe PDF handling with a pdf.js-powered viewer, authenticated local preview routes, workspace/scratch allowlists, sanitized annotation links, page reset behavior when switching files, fresh page proxies per document, and focused server/web tests for local image/PDF access and PDF navigation helpers.",
-      },
-      {
         id: "workspace-file-preview",
         title: "File preview is shared across chat and editor workspaces",
         description:
-          "The right dock and editor workspace now use the same richer file preview surface, so browsing files, images, markdown, and PDFs feels more consistent.",
+          "The right dock and editor workspace now use the same richer file preview surface, so browsing files, images, and markdown feels more consistent.",
         details:
-          "Chitauri now routes file preview through `WorkspaceFilePreview`, `PdfFilePreview`, shared preview headers, markdown/source selection references, workspace file openers, dock pane activation metadata, local preview URL helpers, and tighter file reference context-menu behavior.",
+          "Chitauri now routes file preview through `WorkspaceFilePreview`, shared preview headers, markdown/source selection references, workspace file openers, dock pane activation metadata, local preview URL helpers, and tighter file reference context-menu behavior.",
       },
       {
         id: "pi-plugin-routing",
@@ -845,9 +837,9 @@ export const WHATS_NEW_ENTRIES: readonly WhatsNewEntry[] = [
         id: "preview-security-and-local-files",
         title: "Local previews have tighter safety rails",
         description:
-          "Local image/PDF preview routes are more explicit about what can be opened, how auth applies, and when unsafe paths or URLs should be rejected.",
+          "Local preview routes are more explicit about what can be opened, how auth applies, and when unsafe paths or URLs should be rejected.",
         details:
-          "Server-side local preview handling now shares local preview file helpers, narrows CORS behavior for preview responses, covers local image routes, hardens scratch workspace path generation, and keeps external PDF links on an allowlisted path instead of trusting unsafe annotation URLs.",
+          "Server-side local preview handling now shares local preview file helpers, narrows CORS behavior for preview responses, covers local image routes, and hardens scratch workspace path generation.",
       },
     ],
   },

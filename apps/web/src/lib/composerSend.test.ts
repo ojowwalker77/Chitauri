@@ -7,7 +7,6 @@ import {
   effectiveComposerAttachmentCount,
   findPendingBlobComposerAttachments,
 } from "./composerSend";
-import { createEmptySketchpadDocument } from "./composerSketchpad";
 
 describe("composerSend attachment builders", () => {
   const originalCreateObjectUrl = URL.createObjectURL;
@@ -76,24 +75,14 @@ describe("composerSend attachment builders", () => {
   });
 
   it("counts durable images that have not hydrated yet", () => {
-    const sketchpad = createEmptySketchpadDocument();
-    sketchpad.nodes.push({
-      id: "note-1",
-      kind: "note",
-      text: "Sketch",
-      frame: { x: 0, y: 0, width: 160, height: 90 },
-      author: "user",
-    });
-
     expect(
       effectiveComposerAttachmentCount({
         images: [{ id: "hydrated" }],
         files: [{}],
         assistantSelections: [{}],
         persistedAttachments: [{ id: "hydrated" }, { id: "pending" }],
-        sketchpad,
       }),
-    ).toBe(5);
+    ).toBe(4);
   });
 
   it("finds only pending IndexedDB-backed images", () => {

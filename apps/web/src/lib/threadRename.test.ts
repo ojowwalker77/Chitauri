@@ -45,7 +45,6 @@ describe("dispatchThreadRename", () => {
           model: "gpt-5",
         },
         runtimeMode: "full-access",
-        interactionMode: "default",
         envMode: "local",
         branch: null,
         worktreePath: null,

@@ -61,6 +61,19 @@ export interface GitPreparedCommitContext {
   stagedPatch: string;
 }
 
+/**
+ * The ref a fresh thread worktree branches from.
+ *
+ * `ref` is what `git worktree add` is given — a remote-tracking ref
+ * (`origin/main`) whenever the repository has a remote, so the worktree starts
+ * from the pushed tip instead of whatever this clone last checked out. `branch`
+ * is the bare branch name behind it, for display and thread metadata.
+ */
+export interface GitDefaultWorktreeBaseRef {
+  readonly ref: string;
+  readonly branch: string;
+}
+
 export interface ExecuteGitProgress {
   readonly onStdoutLine?: (line: string) => Effect.Effect<void, never>;
   readonly onStderrLine?: (line: string) => Effect.Effect<void, never>;
@@ -242,6 +255,17 @@ export interface GitCoreShape {
    * Pull current branch from upstream using fast-forward only.
    */
   readonly pullCurrentBranch: (cwd: string) => Effect.Effect<GitPullResult, GitCommandError>;
+
+  /**
+   * Resolve the base ref a new thread worktree should branch from: the primary
+   * remote's default branch, refreshed from the remote first.
+   *
+   * The fetch is best-effort — offline degrades to the last known remote tip
+   * rather than blocking thread creation.
+   */
+  readonly resolveDefaultWorktreeBaseRef: (input: {
+    readonly cwd: string;
+  }) => Effect.Effect<GitDefaultWorktreeBaseRef | null, GitCommandError>;
 
   /**
    * Create a worktree and branch from a base branch.

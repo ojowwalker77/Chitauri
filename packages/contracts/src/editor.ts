@@ -234,11 +234,11 @@ export const EDITORS = [
     launchStyle: "line-column",
   },
   { id: "file-manager", label: "File Manager", commands: null, launchStyle: "direct-path" },
-  // Opens the target with the OS default handler (e.g. Preview for PDFs on macOS,
-  // the registered default viewer on Windows/Linux). Launched via the cross-platform
+  // Opens the target with the OS default handler (Preview and friends on macOS, the
+  // registered default app on Windows/Linux). Launched via the cross-platform
   // `open` package server-side, so it has no commands/macApplications of its own and
   // is intentionally excluded from `resolveAvailableEditors` — surfaces that want it
-  // (the PDF viewer) opt in explicitly rather than cluttering the code-editor menu.
+  // opt in explicitly rather than cluttering the code-editor menu.
   { id: "system-default", label: "Default app", commands: null, launchStyle: "direct-path" },
 ] as const satisfies ReadonlyArray<EditorDefinition>;
 

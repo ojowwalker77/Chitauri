@@ -6,6 +6,8 @@
 import { SearchAddon } from "@xterm/addon-search";
 import { Terminal } from "@xterm/xterm";
 
+import { registerTerminalRuntimeRegistry } from "./terminalRuntimeHandle";
+
 import {
   attachRuntimeToContainer,
   createRuntimeEntry,
@@ -93,3 +95,7 @@ class TerminalRuntimeRegistry {
 }
 
 export const terminalRuntimeRegistry = new TerminalRuntimeRegistry();
+
+// Let xterm-free callers reach the registry without importing it (and the ~867 kB
+// terminal stack behind it). See terminalRuntimeHandle.ts.
+registerTerminalRuntimeRegistry(terminalRuntimeRegistry);

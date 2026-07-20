@@ -133,7 +133,6 @@ layer("OrchestrationEventStore", (it) => {
               options: [{ id: "reasoningEffort", value: "medium" }],
             },
             runtimeMode: "full-access",
-            interactionMode: "default",
             branch: null,
             worktreePath: null,
             createdAt: now,
@@ -162,7 +161,6 @@ layer("OrchestrationEventStore", (it) => {
             },
             dispatchMode: "queue",
             runtimeMode: "full-access",
-            interactionMode: "default",
             createdAt: now,
           })},
           ${"{}"}

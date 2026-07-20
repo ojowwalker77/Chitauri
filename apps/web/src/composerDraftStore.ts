@@ -17,7 +17,6 @@ import {
   OrchestrationThreadPullRequest,
   ProjectId,
   ProviderMentionReference,
-  ProviderInteractionMode,
   ProviderKind,
   ProviderModelOptions,
   ProviderSkillReference,
@@ -38,7 +37,6 @@ import { useMemo } from "react";
 import { getLocalStorageItem } from "./hooks/useLocalStorage";
 import { resolveAppModelSelection } from "./appSettings";
 import {
-  DEFAULT_INTERACTION_MODE,
   DEFAULT_RUNTIME_MODE,
   type ChatAssistantSelectionAttachment,
   type ChatFileAttachment,
@@ -63,12 +61,6 @@ import {
 } from "./lib/composerPastedText";
 import { normalizeAssistantSelectionAttachment } from "./lib/assistantSelections";
 import { cloneComposerImageAttachment } from "./lib/composerSend";
-import {
-  SketchpadDocumentSchema,
-  cloneSketchpadDocument,
-  normalizeSketchpadDocument,
-  type SketchpadDocument,
-} from "./lib/composerSketchpad";
 import { deleteComposerImageBlob } from "./lib/composerImageBlobStore";
 import {
   type ComposerImageSource,
@@ -146,7 +138,6 @@ export interface ComposerFileAttachment extends ChatFileAttachment {
 
 export interface ComposerPromptHistorySavedDraft {
   prompt: string;
-  sketchpad: SketchpadDocument | null;
   images: ComposerImageAttachment[];
   files: ComposerFileAttachment[];
   nonPersistedImageIds: string[];
@@ -159,11 +150,6 @@ export interface ComposerPromptHistorySavedDraft {
   mentions: ProviderMentionReference[];
 }
 
-export interface QueuedSketchpadSnapshot {
-  document: SketchpadDocument;
-  image: ComposerImageAttachment;
-}
-
 export type ComposerAssistantSelectionAttachment = ChatAssistantSelectionAttachment;
 
 export interface QueuedComposerChatTurn {
@@ -172,7 +158,6 @@ export interface QueuedComposerChatTurn {
   createdAt: string;
   previewText: string;
   prompt: string;
-  sketchpad: QueuedSketchpadSnapshot | null;
   images: ComposerImageAttachment[];
   files: ComposerFileAttachment[];
   assistantSelections: ComposerAssistantSelectionAttachment[];
@@ -188,7 +173,6 @@ export interface QueuedComposerChatTurn {
   providerOptionsForDispatch?: ProviderStartOptions | undefined;
   sourceProposedPlan?: NonNullable<OrchestrationLatestTurn["sourceProposedPlan"]> | undefined;
   runtimeMode: RuntimeMode;
-  interactionMode: ProviderInteractionMode;
   envMode: DraftThreadEnvMode;
 }
 
@@ -204,7 +188,8 @@ export interface QueuedComposerPlanFollowUp {
   createdAt: string;
   previewText: string;
   text: string;
-  interactionMode: "default" | "plan";
+  /** True when the queued follow-up implements the plan rather than refining it. */
+  isImplementation: boolean;
   selectedProvider: ProviderKind;
   selectedModel: string | null;
   selectedPromptEffort: string | null;
@@ -283,12 +268,6 @@ const PersistedQueuedComposerChatTurn = Schema.Struct({
   createdAt: Schema.String,
   previewText: Schema.String,
   prompt: Schema.String,
-  sketchpad: Schema.optionalKey(
-    Schema.Struct({
-      document: SketchpadDocumentSchema,
-      image: PersistedComposerImageAttachment,
-    }),
-  ),
   images: Schema.Array(PersistedComposerImageAttachment),
   assistantSelections: Schema.optionalKey(Schema.Array(PersistedAssistantSelectionDraft)),
   terminalContexts: Schema.Array(PersistedQueuedTerminalContextDraft),
@@ -303,7 +282,6 @@ const PersistedQueuedComposerChatTurn = Schema.Struct({
   providerOptionsForDispatch: Schema.optionalKey(ProviderStartOptions),
   sourceProposedPlan: Schema.optionalKey(PersistedSourceProposedPlanReference),
   runtimeMode: RuntimeMode,
-  interactionMode: ProviderInteractionMode,
   envMode: DraftThreadEnvModeSchema,
 });
 type PersistedQueuedComposerChatTurn = typeof PersistedQueuedComposerChatTurn.Type;
@@ -314,7 +292,7 @@ const PersistedQueuedComposerPlanFollowUp = Schema.Struct({
   createdAt: Schema.String,
   previewText: Schema.String,
   text: Schema.String,
-  interactionMode: ProviderInteractionMode,
+  isImplementation: Schema.Boolean,
   selectedProvider: ProviderKind,
   selectedModel: Schema.NullOr(Schema.String),
   selectedPromptEffort: Schema.NullOr(Schema.String),
@@ -334,7 +312,6 @@ const PersistedComposerPromptHistorySavedDraft = Schema.Union([
   Schema.String,
   Schema.Struct({
     prompt: Schema.String,
-    sketchpad: Schema.optionalKey(SketchpadDocumentSchema),
     attachments: Schema.optionalKey(Schema.Array(PersistedComposerImageAttachment)),
     assistantSelections: Schema.optionalKey(Schema.Array(PersistedAssistantSelectionDraft)),
     terminalContexts: Schema.optionalKey(Schema.Array(PersistedTerminalContextDraft)),
@@ -349,7 +326,6 @@ type PersistedComposerPromptHistorySavedDraft =
 
 const PersistedComposerThreadDraftState = Schema.Struct({
   prompt: Schema.String,
-  sketchpad: Schema.optionalKey(SketchpadDocumentSchema),
   // Set only while composer prompt-history browsing is active: the user's real
   // draft snapshot, kept safe while `prompt` temporarily holds a recalled history entry.
   promptHistorySavedDraft: Schema.optionalKey(PersistedComposerPromptHistorySavedDraft),
@@ -375,7 +351,6 @@ const PersistedComposerThreadDraftState = Schema.Struct({
   ),
   activeProvider: Schema.optionalKey(Schema.NullOr(ProviderKind)),
   runtimeMode: Schema.optionalKey(RuntimeMode),
-  interactionMode: Schema.optionalKey(ProviderInteractionMode),
 });
 type PersistedComposerThreadDraftState = typeof PersistedComposerThreadDraftState.Type;
 
@@ -423,7 +398,6 @@ const PersistedDraftThreadState = Schema.Struct({
   projectId: ProjectId,
   createdAt: Schema.String,
   runtimeMode: RuntimeMode,
-  interactionMode: ProviderInteractionMode,
   entryPoint: DraftThreadEntryPointSchema.pipe(Schema.withDecodingDefault(() => "chat")),
   branch: Schema.NullOr(Schema.String),
   worktreePath: Schema.NullOr(Schema.String),
@@ -451,7 +425,6 @@ const PersistedComposerDraftStoreStorage = Schema.Struct({
 
 export interface ComposerThreadDraftState {
   prompt: string;
-  sketchpad: SketchpadDocument | null;
   // Non-null only while composer prompt-history browsing is active: the user's
   // real draft, kept safe while `prompt` temporarily holds a recalled history
   // entry. Restored (and cleared) when a browse is interrupted by a thread
@@ -472,14 +445,12 @@ export interface ComposerThreadDraftState {
   modelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>>;
   activeProvider: ProviderKind | null;
   runtimeMode: RuntimeMode | null;
-  interactionMode: ProviderInteractionMode | null;
 }
 
 export interface DraftThreadState {
   projectId: ProjectId;
   createdAt: string;
   runtimeMode: RuntimeMode;
-  interactionMode: ProviderInteractionMode;
   entryPoint: ThreadPrimarySurface;
   branch: string | null;
   worktreePath: string | null;
@@ -495,7 +466,6 @@ interface DraftThreadMutationOptions {
   createdAt?: string;
   envMode?: DraftThreadEnvMode;
   runtimeMode?: RuntimeMode;
-  interactionMode?: ProviderInteractionMode;
   entryPoint?: ThreadPrimarySurface;
 }
 
@@ -537,7 +507,6 @@ export interface ComposerDraftStoreState {
       worktreePath?: string | null;
       envMode?: DraftThreadEnvMode;
       runtimeMode?: RuntimeMode;
-      interactionMode?: ProviderInteractionMode;
     },
   ) => void;
   setDraftThreadContext: (
@@ -561,8 +530,6 @@ export interface ComposerDraftStoreState {
   clearDraftThread: (threadId: ThreadId) => void;
   setStickyModelSelection: (modelSelection: ModelSelection | null | undefined) => void;
   setPrompt: (threadId: ThreadId, prompt: string) => void;
-  setSketchpadDocument: (threadId: ThreadId, document: SketchpadDocument | null) => void;
-  clearSketchpad: (threadId: ThreadId) => void;
   setPromptHistorySavedDraft: (
     threadId: ThreadId,
     savedDraft: ComposerPromptHistorySavedDraft | null,
@@ -595,10 +562,6 @@ export interface ComposerDraftStoreState {
     },
   ) => void;
   setRuntimeMode: (threadId: ThreadId, runtimeMode: RuntimeMode | null | undefined) => void;
-  setInteractionMode: (
-    threadId: ThreadId,
-    interactionMode: ProviderInteractionMode | null | undefined,
-  ) => void;
   enqueueQueuedTurn: (threadId: ThreadId, queuedTurn: QueuedComposerTurn) => void;
   insertQueuedTurn: (threadId: ThreadId, queuedTurn: QueuedComposerTurn, index: number) => void;
   removeQueuedTurn: (threadId: ThreadId, queuedTurnId: string) => void;
@@ -767,8 +730,6 @@ function buildDraftThreadState(input: {
       mode: input.createdAtMode,
     }),
     runtimeMode: options?.runtimeMode ?? existingThread?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
-    interactionMode:
-      options?.interactionMode ?? existingThread?.interactionMode ?? DEFAULT_INTERACTION_MODE,
     entryPoint: nextEntryPoint,
     branch:
       options?.branch === undefined ? (existingThread?.branch ?? null) : (options.branch ?? null),
@@ -795,7 +756,6 @@ function draftThreadStatesEqual(
     left.projectId === right.projectId &&
     left.createdAt === right.createdAt &&
     left.runtimeMode === right.runtimeMode &&
-    left.interactionMode === right.interactionMode &&
     left.entryPoint === right.entryPoint &&
     left.branch === right.branch &&
     left.worktreePath === right.worktreePath &&
@@ -882,7 +842,6 @@ const EMPTY_MODEL_SELECTION_BY_PROVIDER: Partial<Record<ProviderKind, ModelSelec
 
 const EMPTY_THREAD_DRAFT = Object.freeze<ComposerThreadDraftState>({
   prompt: "",
-  sketchpad: null,
   promptHistorySavedDraft: null,
   images: EMPTY_IMAGES,
   files: EMPTY_FILES,
@@ -899,13 +858,11 @@ const EMPTY_THREAD_DRAFT = Object.freeze<ComposerThreadDraftState>({
   modelSelectionByProvider: EMPTY_MODEL_SELECTION_BY_PROVIDER,
   activeProvider: null,
   runtimeMode: null,
-  interactionMode: null,
 });
 
 function createEmptyThreadDraft(): ComposerThreadDraftState {
   return {
     prompt: "",
-    sketchpad: null,
     promptHistorySavedDraft: null,
     images: [],
     files: [],
@@ -922,7 +879,6 @@ function createEmptyThreadDraft(): ComposerThreadDraftState {
     modelSelectionByProvider: {},
     activeProvider: null,
     runtimeMode: null,
-    interactionMode: null,
   };
 }
 
@@ -1119,7 +1075,6 @@ export function captureComposerPromptHistorySavedDraft(input: {
   const { threadId, draft, prompt } = input;
   return {
     prompt,
-    sketchpad: draft.sketchpad ? cloneSketchpadDocument(draft.sketchpad) : null,
     // Keep the same image objects here: ownership moves from visible composer to saved snapshot.
     images: [...draft.images],
     files: [...draft.files],
@@ -1144,7 +1099,6 @@ function buildTransferredComposerDraft(input: {
   return {
     ...base,
     prompt: sourceDraft.prompt,
-    sketchpad: sourceDraft.sketchpad ? cloneSketchpadDocument(sourceDraft.sketchpad) : null,
     promptHistorySavedDraft: clonePromptHistorySavedDraft(
       sourceDraft.promptHistorySavedDraft,
       targetThreadId,
@@ -1175,7 +1129,6 @@ function clonePromptHistorySavedDraft(
   }
   return {
     prompt: savedDraft.prompt,
-    sketchpad: savedDraft.sketchpad ? cloneSketchpadDocument(savedDraft.sketchpad) : null,
     images: savedDraft.images.map(cloneComposerImageAttachment),
     files: [...savedDraft.files],
     nonPersistedImageIds: [...savedDraft.nonPersistedImageIds],
@@ -1195,7 +1148,6 @@ function clonePromptHistorySavedDraft(
 function shouldRemoveDraft(draft: ComposerThreadDraftState): boolean {
   return (
     draft.prompt.length === 0 &&
-    draft.sketchpad === null &&
     draft.promptHistorySavedDraft === null &&
     draft.images.length === 0 &&
     draft.files.length === 0 &&
@@ -1210,8 +1162,7 @@ function shouldRemoveDraft(draft: ComposerThreadDraftState): boolean {
     draft.restoredSourceProposedPlan == null &&
     Object.keys(draft.modelSelectionByProvider).length === 0 &&
     draft.activeProvider === null &&
-    draft.runtimeMode === null &&
-    draft.interactionMode === null
+    draft.runtimeMode === null
   );
 }
 
@@ -1737,9 +1688,6 @@ function revokeQueuedTurnPreviewUrls(queuedTurn: QueuedComposerTurn): void {
   for (const image of queuedTurn.images) {
     revokeObjectPreviewUrl(image.previewUrl);
   }
-  if (queuedTurn.sketchpad) {
-    revokeObjectPreviewUrl(queuedTurn.sketchpad.image.previewUrl);
-  }
 }
 
 function revokePromptHistorySavedDraftPreviewUrls(
@@ -1848,7 +1796,6 @@ function normalizePersistedPromptHistorySavedDraft(
   if (prompt === null) {
     return null;
   }
-  const sketchpad = normalizeSketchpadDocument(candidate.sketchpad);
   const attachments = Array.isArray(candidate.attachments)
     ? candidate.attachments.flatMap((entry) => {
         const normalized = normalizePersistedAttachment(entry);
@@ -1887,7 +1834,6 @@ function normalizePersistedPromptHistorySavedDraft(
     : [];
   return {
     prompt,
-    ...(sketchpad ? { sketchpad } : {}),
     attachments,
     ...(assistantSelections.length > 0 ? { assistantSelections } : {}),
     ...(terminalContexts.length > 0 ? { terminalContexts } : {}),
@@ -2108,16 +2054,6 @@ function normalizePersistedQueuedTurns(
     }
     if (kind === "chat") {
       const prompt = typeof candidate.prompt === "string" ? candidate.prompt : "";
-      const rawSketchpad =
-        candidate.sketchpad && typeof candidate.sketchpad === "object"
-          ? (candidate.sketchpad as Record<string, unknown>)
-          : null;
-      const sketchpadDocument = normalizeSketchpadDocument(rawSketchpad?.document);
-      const sketchpadImage = normalizePersistedAttachment(rawSketchpad?.image);
-      const sketchpad =
-        sketchpadDocument && sketchpadImage
-          ? { document: sketchpadDocument, image: sketchpadImage }
-          : null;
       const images = Array.isArray(candidate.images)
         ? candidate.images.flatMap((image) => {
             const normalized = normalizePersistedAttachment(image);
@@ -2154,15 +2090,11 @@ function normalizePersistedQueuedTurns(
       const mentions = Array.isArray(candidate.mentions)
         ? candidate.mentions.filter(Schema.is(ProviderMentionReference))
         : [];
-      const interactionMode =
-        candidate.interactionMode === "default" || candidate.interactionMode === "plan"
-          ? candidate.interactionMode
-          : null;
       const envMode =
         candidate.envMode === "local" || candidate.envMode === "worktree"
           ? candidate.envMode
           : null;
-      if (interactionMode === null || envMode === null) {
+      if (envMode === null) {
         continue;
       }
       normalizedTurns.push({
@@ -2171,7 +2103,6 @@ function normalizePersistedQueuedTurns(
         createdAt,
         previewText,
         prompt,
-        ...(sketchpad ? { sketchpad } : {}),
         images,
         ...(assistantSelections.length > 0 ? { assistantSelections } : {}),
         terminalContexts,
@@ -2186,7 +2117,6 @@ function normalizePersistedQueuedTurns(
         ...(providerOptionsForDispatch ? { providerOptionsForDispatch } : {}),
         ...(sourceProposedPlan ? { sourceProposedPlan } : {}),
         runtimeMode,
-        interactionMode,
         envMode,
       });
       seenIds.add(id);
@@ -2194,20 +2124,19 @@ function normalizePersistedQueuedTurns(
     }
     if (kind === "plan-follow-up") {
       const text = typeof candidate.text === "string" ? candidate.text : "";
-      const interactionMode =
-        candidate.interactionMode === "default" || candidate.interactionMode === "plan"
-          ? candidate.interactionMode
-          : null;
-      if (interactionMode === null) {
-        continue;
-      }
+      // Legacy drafts persisted the mode instead of the flag: "default" meant
+      // the follow-up implemented the plan.
+      const isImplementation =
+        typeof candidate.isImplementation === "boolean"
+          ? candidate.isImplementation
+          : candidate.interactionMode === "default";
       normalizedTurns.push({
         id,
         kind: "plan-follow-up",
         createdAt,
         previewText,
         text,
-        interactionMode,
+        isImplementation,
         selectedProvider,
         selectedModel,
         selectedPromptEffort,
@@ -2291,11 +2220,6 @@ function normalizePersistedDraftThreads(
           candidateDraftThread.runtimeMode === "full-access"
             ? candidateDraftThread.runtimeMode
             : DEFAULT_RUNTIME_MODE,
-        interactionMode:
-          candidateDraftThread.interactionMode === "plan" ||
-          candidateDraftThread.interactionMode === "default"
-            ? candidateDraftThread.interactionMode
-            : DEFAULT_INTERACTION_MODE,
         entryPoint: normalizeDraftThreadEntryPoint(candidateDraftThread.entryPoint),
         branch: typeof branch === "string" ? branch : null,
         worktreePath: normalizedWorktreePath,
@@ -2328,7 +2252,6 @@ function normalizePersistedDraftThreads(
             projectId: projectId as ProjectId,
             createdAt: new Date().toISOString(),
             runtimeMode: DEFAULT_RUNTIME_MODE,
-            interactionMode: DEFAULT_INTERACTION_MODE,
             entryPoint,
             branch: null,
             worktreePath: null,
@@ -2370,7 +2293,6 @@ function normalizePersistedDraftsByThreadId(
     }
     const draftCandidate = draftValue as PersistedComposerThreadDraftState;
     const promptCandidate = typeof draftCandidate.prompt === "string" ? draftCandidate.prompt : "";
-    const sketchpad = normalizeSketchpadDocument(draftCandidate.sketchpad);
     const promptHistorySavedDraft = normalizePersistedPromptHistorySavedDraft(
       draftCandidate.promptHistorySavedDraft,
     );
@@ -2415,10 +2337,6 @@ function normalizePersistedDraftsByThreadId(
       draftCandidate.runtimeMode === "approval-required" ||
       draftCandidate.runtimeMode === "full-access"
         ? draftCandidate.runtimeMode
-        : null;
-    const interactionMode =
-      draftCandidate.interactionMode === "plan" || draftCandidate.interactionMode === "default"
-        ? draftCandidate.interactionMode
         : null;
     const prompt = ensureInlineTerminalContextPlaceholders(
       promptCandidate,
@@ -2482,7 +2400,6 @@ function normalizePersistedDraftsByThreadId(
     const hasReferenceData = skills.length > 0 || mentions.length > 0;
     if (
       promptCandidate.length === 0 &&
-      sketchpad === null &&
       promptHistorySavedDraft === null &&
       attachments.length === 0 &&
       terminalContexts.length === 0 &&
@@ -2493,14 +2410,12 @@ function normalizePersistedDraftsByThreadId(
       !hasQueuedTurns &&
       restoredSourceProposedPlan === null &&
       !hasModelData &&
-      !runtimeMode &&
-      !interactionMode
+      !runtimeMode
     ) {
       continue;
     }
     nextDraftsByThreadId[threadId as ThreadId] = {
       prompt,
-      ...(sketchpad ? { sketchpad } : {}),
       ...(promptHistorySavedDraft !== null ? { promptHistorySavedDraft } : {}),
       attachments,
       ...(assistantSelections.length > 0 ? { assistantSelections } : {}),
@@ -2513,7 +2428,6 @@ function normalizePersistedDraftsByThreadId(
       ...(restoredSourceProposedPlan ? { restoredSourceProposedPlan } : {}),
       ...(hasModelData ? { modelSelectionByProvider, activeProvider } : {}),
       ...(runtimeMode ? { runtimeMode } : {}),
-      ...(interactionMode ? { interactionMode } : {}),
     };
   }
 
@@ -2552,26 +2466,12 @@ function partializeComposerDraftStoreState(
         if (images.length !== queuedTurn.images.length) {
           continue;
         }
-        const persistedSketchpadImage = queuedTurn.sketchpad
-          ? persistQueuedComposerImages([queuedTurn.sketchpad.image])[0]
-          : undefined;
-        if (queuedTurn.sketchpad && !persistedSketchpadImage) {
-          continue;
-        }
         persistedQueuedTurns.push({
           id: queuedTurn.id,
           kind: "chat",
           createdAt: queuedTurn.createdAt,
           previewText: queuedTurn.previewText,
           prompt: queuedTurn.prompt,
-          ...(queuedTurn.sketchpad && persistedSketchpadImage
-            ? {
-                sketchpad: {
-                  document: cloneSketchpadDocument(queuedTurn.sketchpad.document),
-                  image: persistedSketchpadImage,
-                },
-              }
-            : {}),
           images,
           assistantSelections: queuedTurn.assistantSelections.map((selection) => ({
             id: selection.id,
@@ -2621,7 +2521,6 @@ function partializeComposerDraftStoreState(
             ? { sourceProposedPlan: queuedTurn.sourceProposedPlan }
             : {}),
           runtimeMode: queuedTurn.runtimeMode,
-          interactionMode: queuedTurn.interactionMode,
           envMode: queuedTurn.envMode,
         });
         continue;
@@ -2632,7 +2531,7 @@ function partializeComposerDraftStoreState(
         createdAt: queuedTurn.createdAt,
         previewText: queuedTurn.previewText,
         text: queuedTurn.text,
-        interactionMode: queuedTurn.interactionMode,
+        isImplementation: queuedTurn.isImplementation,
         selectedProvider: queuedTurn.selectedProvider,
         selectedModel: queuedTurn.selectedModel,
         selectedPromptEffort: queuedTurn.selectedPromptEffort,
@@ -2649,7 +2548,6 @@ function partializeComposerDraftStoreState(
     const hasReferenceData = draft.skills.length > 0 || draft.mentions.length > 0;
     if (
       draft.prompt.length === 0 &&
-      draft.sketchpad === null &&
       draft.promptHistorySavedDraft === null &&
       draft.persistedAttachments.length === 0 &&
       draft.assistantSelections.length === 0 &&
@@ -2660,23 +2558,16 @@ function partializeComposerDraftStoreState(
       !hasQueuedTurns &&
       draft.restoredSourceProposedPlan == null &&
       !hasModelData &&
-      draft.runtimeMode === null &&
-      draft.interactionMode === null
+      draft.runtimeMode === null
     ) {
       continue;
     }
     const persistedDraft: DeepMutable<PersistedComposerThreadDraftState> = {
       prompt: draft.prompt,
-      ...(draft.sketchpad ? { sketchpad: cloneSketchpadDocument(draft.sketchpad) } : {}),
       ...(draft.promptHistorySavedDraft !== null
         ? {
             promptHistorySavedDraft: {
               prompt: draft.promptHistorySavedDraft.prompt,
-              ...(draft.promptHistorySavedDraft.sketchpad
-                ? {
-                    sketchpad: cloneSketchpadDocument(draft.promptHistorySavedDraft.sketchpad),
-                  }
-                : {}),
               attachments: draft.promptHistorySavedDraft.persistedAttachments,
               ...(draft.promptHistorySavedDraft.assistantSelections.length > 0
                 ? {
@@ -2789,7 +2680,6 @@ function partializeComposerDraftStoreState(
           }
         : {}),
       ...(draft.runtimeMode ? { runtimeMode: draft.runtimeMode } : {}),
-      ...(draft.interactionMode ? { interactionMode: draft.interactionMode } : {}),
     };
     persistedDraftsByThreadId[threadId as ThreadId] = persistedDraft;
   }
@@ -3135,18 +3025,8 @@ function hydrateQueuedTurnsFromPersisted(
   }
   return queuedTurns.map((queuedTurn) => {
     if (queuedTurn.kind === "chat") {
-      const sketchpadImage = queuedTurn.sketchpad
-        ? hydrateImagesFromPersisted([queuedTurn.sketchpad.image])[0]
-        : undefined;
       return {
         ...queuedTurn,
-        sketchpad:
-          queuedTurn.sketchpad && sketchpadImage
-            ? {
-                document: cloneSketchpadDocument(queuedTurn.sketchpad.document),
-                image: sketchpadImage,
-              }
-            : null,
         images: hydrateImagesFromPersisted(queuedTurn.images),
         files: [],
         assistantSelections: normalizeAssistantSelections(queuedTurn.assistantSelections ?? []),
@@ -3170,7 +3050,6 @@ function hydratePromptHistorySavedDraft(
   if (typeof savedDraft === "string") {
     return {
       prompt: savedDraft,
-      sketchpad: null,
       images: [],
       files: [],
       nonPersistedImageIds: [],
@@ -3186,7 +3065,6 @@ function hydratePromptHistorySavedDraft(
   const attachments = savedDraft.attachments ?? [];
   return {
     prompt: savedDraft.prompt,
-    sketchpad: savedDraft.sketchpad ? cloneSketchpadDocument(savedDraft.sketchpad) : null,
     images: hydrateImagesFromPersisted(attachments),
     files: [],
     nonPersistedImageIds: [],
@@ -3215,7 +3093,6 @@ function toHydratedThreadDraft(
 
   return {
     prompt: persistedDraft.prompt,
-    sketchpad: persistedDraft.sketchpad ? cloneSketchpadDocument(persistedDraft.sketchpad) : null,
     promptHistorySavedDraft: hydratePromptHistorySavedDraft(persistedDraft.promptHistorySavedDraft),
     images: hydrateImagesFromPersisted(persistedDraft.attachments),
     files: [],
@@ -3236,7 +3113,6 @@ function toHydratedThreadDraft(
     modelSelectionByProvider,
     activeProvider,
     runtimeMode: persistedDraft.runtimeMode ?? null,
-    interactionMode: persistedDraft.interactionMode ?? null,
   };
 }
 
@@ -3337,7 +3213,6 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
             projectId: options.projectId,
             createdAt: options.createdAt ?? new Date().toISOString(),
             runtimeMode: options.runtimeMode ?? DEFAULT_RUNTIME_MODE,
-            interactionMode: options.interactionMode ?? DEFAULT_INTERACTION_MODE,
             entryPoint: "chat",
             branch: options.branch ?? null,
             worktreePath,
@@ -3685,29 +3560,6 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
           return { draftsByThreadId: nextDraftsByThreadId };
         });
       },
-      setSketchpadDocument: (threadId, document) => {
-        if (threadId.length === 0) {
-          return;
-        }
-        const normalized = document ? normalizeSketchpadDocument(document) : null;
-        set((state) => {
-          const existing = state.draftsByThreadId[threadId] ?? createEmptyThreadDraft();
-          const nextDraft: ComposerThreadDraftState = {
-            ...existing,
-            sketchpad: normalized ? cloneSketchpadDocument(normalized) : null,
-          };
-          const nextDraftsByThreadId = { ...state.draftsByThreadId };
-          if (shouldRemoveDraft(nextDraft)) {
-            delete nextDraftsByThreadId[threadId];
-          } else {
-            nextDraftsByThreadId[threadId] = nextDraft;
-          }
-          return { draftsByThreadId: nextDraftsByThreadId };
-        });
-      },
-      clearSketchpad: (threadId) => {
-        get().setSketchpadDocument(threadId, null);
-      },
       setPromptHistorySavedDraft: (threadId, savedDraft) => {
         if (threadId.length === 0) {
           return;
@@ -3726,7 +3578,6 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
             ...(savedDraft !== null
               ? {
                   images: [],
-                  sketchpad: null,
                   files: [],
                   nonPersistedImageIds: [],
                   persistedAttachments: [],
@@ -3767,7 +3618,6 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
           const nextDraft: ComposerThreadDraftState = {
             ...current,
             prompt: savedDraft.prompt,
-            sketchpad: savedDraft.sketchpad ? cloneSketchpadDocument(savedDraft.sketchpad) : null,
             promptHistorySavedDraft: null,
             images: savedDraft.images,
             files: [...savedDraft.files],
@@ -4156,35 +4006,6 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
           return { draftsByThreadId: nextDraftsByThreadId };
         });
       },
-      setInteractionMode: (threadId, interactionMode) => {
-        if (threadId.length === 0) {
-          return;
-        }
-        const nextInteractionMode =
-          interactionMode === "plan" || interactionMode === "default" ? interactionMode : null;
-        set((state) => {
-          const existing = state.draftsByThreadId[threadId];
-          if (!existing && nextInteractionMode === null) {
-            return state;
-          }
-          const base = existing ?? createEmptyThreadDraft();
-          if (base.interactionMode === nextInteractionMode) {
-            return state;
-          }
-          const nextDraft: ComposerThreadDraftState = {
-            ...base,
-            interactionMode: nextInteractionMode,
-          };
-          const nextDraftsByThreadId = { ...state.draftsByThreadId };
-          if (shouldRemoveDraft(nextDraft)) {
-            delete nextDraftsByThreadId[threadId];
-          } else {
-            nextDraftsByThreadId[threadId] = nextDraft;
-          }
-          return { draftsByThreadId: nextDraftsByThreadId };
-        });
-      },
-      // Keep queued follow-ups with the thread draft so route changes do not hide them.
       enqueueQueuedTurn: (threadId, queuedTurn) => {
         if (threadId.length === 0) {
           return;
@@ -4951,7 +4772,6 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
           const nextDraft: ComposerThreadDraftState = {
             ...current,
             prompt: "",
-            sketchpad: null,
             promptHistorySavedDraft: null,
             images: [],
             files: [],

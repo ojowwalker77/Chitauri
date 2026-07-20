@@ -1,15 +1,14 @@
 // FILE: WorkspaceFilePreview.tsx
 // Purpose: Shared single-file preview (code with syntax highlighting, parsed
-//          markdown, images, PDFs) for workspace files plus absolute local
-//          file references reused by editor and right-dock panes.
+//          markdown, images) for workspace files plus absolute local
+//          file references reused by editor and right-dock panes. Anything the
+//          file-read RPC rejects as binary (PDFs, archives, executables) falls
+//          back to the shared error state below the header, whose "Open in"
+//          control hands the file to an external app.
 // Layer: Web chat presentation component
 // Exports: WorkspaceFilePreview, isMarkdownPreviewablePath
 
-import {
-  isSupportedLocalImagePath,
-  isSupportedLocalPdfPath,
-  lowerCaseExtensionOf,
-} from "@t3tools/shared/localPreviewFiles";
+import { isSupportedLocalImagePath, lowerCaseExtensionOf } from "@t3tools/shared/localPreviewFiles";
 import {
   isLocalAbsolutePath,
   isWorkspaceRelativePathSafe,
@@ -63,7 +62,6 @@ import { WorkspaceFilePreviewHeader } from "./chat/WorkspaceFilePreviewHeader";
 import { TranscriptSelectionAction } from "./chat/TranscriptSelectionAction";
 import { useCodeSelectionAction } from "./chat/useCodeSelectionAction";
 import { LocalImagePreview } from "./LocalImagePreview";
-import { PdfFilePreview } from "./PdfFilePreview";
 import { Skeleton } from "./ui/skeleton";
 
 const MARKDOWN_PREVIEW_EXTENSIONS = new Set([".markdown", ".md", ".mdx"]);
@@ -300,10 +298,10 @@ function FilePreviewLoadingState() {
 export interface WorkspaceFilePreviewProps {
   workspaceRoot: string | null;
   /**
-   * Workspace-relative path of the previewed file. Binary previews (images,
-   * PDFs) may instead be absolute paths outside the workspace — e.g. a
-   * session's scratch directory — served by the local-image route, which never
-   * touch the workspace-relative file-read RPC.
+   * Workspace-relative path of the previewed file. Image previews may instead
+   * be absolute paths outside the workspace — e.g. a session's scratch
+   * directory — served by the local-image route, which never touches the
+   * workspace-relative file-read RPC.
    */
   filePath: string | null;
   /**
@@ -329,13 +327,12 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
   const queryClient = useQueryClient();
   const markdownPreviewDefault = props.markdownPreviewDefault ?? false;
   const fileIsImage = filePath !== null && isSupportedLocalImagePath(filePath);
-  const fileIsPdf = filePath !== null && isSupportedLocalPdfPath(filePath);
   const fileIsLocalAbsolute = filePath !== null && isLocalAbsolutePath(filePath);
   const fileIsWorkspaceRelative = filePath !== null && isWorkspaceRelativePathSafe(filePath);
-  const fileIsScratchBinaryPreview =
-    filePath !== null && (fileIsImage || fileIsPdf) && isScratchWorkspacePath(filePath);
+  const fileIsScratchImagePreview =
+    filePath !== null && fileIsImage && isScratchWorkspacePath(filePath);
   const fileNeedsLocalPreviewGrant =
-    filePath !== null && fileIsLocalAbsolute && !fileIsScratchBinaryPreview;
+    filePath !== null && fileIsLocalAbsolute && !fileIsScratchImagePreview;
   const fileIsMarkdown = filePath !== null && isMarkdownPreviewablePath(filePath);
   const [markdownPreviewEnabled, setMarkdownPreviewEnabled] = useState(markdownPreviewDefault);
   const localPreviewGrantQuery = useQuery(
@@ -353,12 +350,11 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
       cwd: props.workspaceRoot,
       relativePath: filePath,
       previewGrant: localPreviewGrant,
-      // Images and PDFs are binary: they stream through the local-image HTTP
-      // route instead of the text file-read RPC.
+      // Images stream through the local-image HTTP route instead of the text
+      // file-read RPC.
       enabled:
         filePath !== null &&
         !fileIsImage &&
-        !fileIsPdf &&
         (props.workspaceRoot !== null || localPreviewGrant !== null),
     }),
   );
@@ -504,7 +500,7 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
     fileQuery.data !== undefined &&
     !fileQuery.data.truncated;
 
-  if (!props.workspaceRoot && !fileIsLocalAbsolute && !fileIsScratchBinaryPreview) {
+  if (!props.workspaceRoot && !fileIsLocalAbsolute && !fileIsScratchImagePreview) {
     return (
       <PanelStateMessage density="compact" fill="flex">
         <p>No workspace is attached to this chat.</p>
@@ -534,23 +530,6 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
       );
     }
     return <FilePreviewLoadingState />;
-  }
-
-  // PDFs own their full surface — toolbar (file name, page nav, zoom, Open) plus
-  // the rendered page stack — so they skip the shared breadcrumb header here.
-  if (fileIsPdf) {
-    const openInTarget =
-      props.workspaceRoot && isWorkspaceRelativePathSafe(filePath)
-        ? joinWorkspaceRelativePath(props.workspaceRoot, filePath)
-        : filePath;
-    return (
-      <PdfFilePreview
-        filePath={filePath}
-        cwd={props.workspaceRoot}
-        previewGrant={localPreviewGrant}
-        openInTarget={openInTarget}
-      />
-    );
   }
 
   const hoveredCommentLine = lineCommenting.hoveredLine;

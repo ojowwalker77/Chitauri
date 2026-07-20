@@ -2103,6 +2103,53 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
         return { branches, isRepo: true, hasOriginRemote: remoteNames.includes("origin") };
       });
 
+    const resolveDefaultWorktreeBaseRef: GitCoreShape["resolveDefaultWorktreeBaseRef"] = (input) =>
+      Effect.gen(function* () {
+        const remoteName = yield* resolvePrimaryRemoteName(input.cwd).pipe(
+          Effect.catch(() => Effect.succeed(null)),
+        );
+
+        if (remoteName) {
+          // Refresh remote-tracking refs so the worktree starts from the pushed
+          // tip. Best-effort and non-zero-exit tolerant: a repo that is offline,
+          // behind a proxy, or waiting on credentials must still get a worktree
+          // from the last known tip instead of failing the send.
+          yield* executeGit(
+            "GitCore.resolveDefaultWorktreeBaseRef.fetch",
+            input.cwd,
+            ["fetch", "--quiet", "--no-tags", remoteName],
+            { allowNonZeroExit: true, timeoutMs: 30_000 },
+          ).pipe(Effect.catch(() => Effect.succeed(null)));
+
+          const defaultBranch = yield* resolveDefaultBranchName(input.cwd, remoteName);
+          for (const candidate of [defaultBranch, ...DEFAULT_BASE_BRANCH_CANDIDATES]) {
+            if (!candidate) continue;
+            if (yield* remoteBranchExists(input.cwd, remoteName, candidate)) {
+              return { ref: `${remoteName}/${candidate}`, branch: candidate };
+            }
+          }
+        }
+
+        // No remote, or a remote without a resolvable default branch: fall back
+        // to a local default branch so worktree mode still works in a
+        // local-only repository.
+        for (const candidate of DEFAULT_BASE_BRANCH_CANDIDATES) {
+          if (yield* branchExists(input.cwd, candidate)) {
+            return { ref: candidate, branch: candidate };
+          }
+        }
+
+        const currentBranch = yield* runGitStdout(
+          "GitCore.resolveDefaultWorktreeBaseRef.current",
+          input.cwd,
+          ["branch", "--show-current"],
+        ).pipe(
+          Effect.map((stdout) => stdout.trim()),
+          Effect.catch(() => Effect.succeed("")),
+        );
+        return currentBranch.length > 0 ? { ref: currentBranch, branch: currentBranch } : null;
+      });
+
     const createWorktree: GitCoreShape["createWorktree"] = (input) =>
       Effect.gen(function* () {
         const targetBranch = input.newBranch ?? input.branch;
@@ -2646,6 +2693,7 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
       readRangeContext,
       readConfigValue,
       listBranches,
+      resolveDefaultWorktreeBaseRef,
       createWorktree,
       createDetachedWorktree,
       fetchPullRequestBranch,

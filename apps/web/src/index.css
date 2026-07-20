@@ -18,7 +18,7 @@
 
 @font-face {
   font-family: "0xProto";
-  src: url("./assets/fonts/0xProtoNerdFontMono-Regular.ttf") format("truetype");
+  src: url("./assets/fonts/0xProtoNerdFontMono-Regular.woff2") format("woff2");
   font-style: normal;
   font-weight: 100 599;
   font-display: swap;
@@ -26,7 +26,7 @@
 
 @font-face {
   font-family: "0xProto";
-  src: url("./assets/fonts/0xProtoNerdFontMono-Bold.ttf") format("truetype");
+  src: url("./assets/fonts/0xProtoNerdFontMono-Bold.woff2") format("woff2");
   font-style: normal;
   font-weight: 600 900;
   font-display: swap;
@@ -34,7 +34,7 @@
 
 @font-face {
   font-family: "0xProto";
-  src: url("./assets/fonts/0xProtoNerdFontMono-Italic.ttf") format("truetype");
+  src: url("./assets/fonts/0xProtoNerdFontMono-Italic.woff2") format("woff2");
   font-style: italic;
   font-weight: 100 900;
   font-display: swap;
@@ -180,7 +180,9 @@
     background: var(--color-background-button-secondary-hover);
   }
 
-  /* Claude-style persistent sidebar panel: opaque, bordered, and shadowless. */
+  /* Docked persistent sidebar panel: opaque, shadowless, flush to the window edge.
+     It runs full height and meets the canvas on a single hairline, so the only
+     border is on the seam side — no card radius, no surrounding inset. */
   .app-sidebar-surface {
     --app-sidebar-surface: var(--panel);
     --app-density-row-height: 2.375rem;
@@ -188,11 +190,19 @@
     --app-density-row-gap: 0.5rem;
     overflow: hidden;
     background: var(--app-sidebar-surface);
-    border: 1px solid var(--sidebar-border);
-    border-radius: 10px;
+    border: 0;
+    border-radius: 0;
     box-shadow: none;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+  }
+
+  [data-slot="sidebar"][data-side="left"] .app-sidebar-surface {
+    border-right: 1px solid var(--sidebar-border);
+  }
+
+  [data-slot="sidebar"][data-side="right"] .app-sidebar-surface {
+    border-left: 1px solid var(--sidebar-border);
   }
 
   .app-sidebar-surface [data-slot="sidebar-footer"] {
@@ -213,13 +223,6 @@
     font-size: 0.78125rem;
     font-weight: 500;
     letter-spacing: 0;
-  }
-
-  @media (max-width: 767px) {
-    .app-sidebar-surface {
-      border: 0;
-      border-radius: 0;
-    }
   }
 
   .chitauri-anthropic-shell .chat-content-card {
@@ -532,13 +535,40 @@ textarea:focus-visible {
   z-index: 40;
   inset: 0 0 auto;
   height: 0.5rem;
-  background: var(--background);
+  /* Transparent, not `--background`. This strip spans the full window width at
+     z-40, so painting the canvas colour drew an 8px band of main-view background
+     across the top of the sidebar. It used to be invisible only because the
+     floating sidebar's inset already showed the canvas there; with the sidebar
+     docked flush to the top edge it leaked. The drag region works regardless of
+     paint, so it should not paint at all. */
+  background: transparent;
   -webkit-app-region: drag;
 }
 
 .claude-main-shell {
   padding: 0.75rem 0.75rem 0.75rem 0;
   background: var(--background);
+}
+
+/* Decorative canvas image (Settings → Appearance → Background). The inline style
+   supplies `background-image`; sizing/attachment live here so the flat default
+   stays a single solid paint with no extra layers. */
+.claude-main-shell[data-app-background="image"] {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* The chat surface stacks an opaque fill over the canvas and would otherwise hide
+   the image completely. It carries the Tailwind `bg-background` UTILITY, which
+   lives in a later cascade layer than any component rule — so `!important` is the
+   only reliable override. Scoped to image mode, so the flat default is untouched.
+   Message bubbles, panels and popovers keep their own surfaces. */
+.claude-main-shell[data-app-background="image"] .chat-content-card,
+.claude-main-shell[data-app-background="image"] .chat-content-card-backing,
+.claude-main-shell[data-app-background="image"] [data-slot="sidebar-inset"] {
+  background-color: transparent !important;
+  background-image: none !important;
 }
 
 .chat-content-card {
@@ -1438,123 +1468,6 @@ label:has(> select#reasoning-effort) select {
   padding: 0.32rem 0.55rem;
   font-size: 0.74rem;
   font-weight: 500;
-}
-
-/* In-app PDF viewer (pdf.js canvas + text/link layers). The scroll area centers
-   a stack of page sheets over a muted backdrop, matching the rest of the chrome. */
-.pdf-viewer-scroll {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  background: var(--app-user-message-background);
-}
-
-.pdf-viewer-page {
-  position: relative;
-  flex: 0 0 auto;
-  /* Auto inline margins center the sheet but collapse to 0 once it is wider than
-     the viewport, so zoomed-in pages stay fully scroll-reachable on the left. */
-  margin-inline: auto;
-  background: #fff;
-  border: 1px solid color-mix(in srgb, var(--border), var(--foreground) 10%);
-  overflow: hidden;
-}
-
-.pdf-viewer-page__canvas {
-  display: block;
-}
-
-/* pdf.js text layer: transparent, selectable runs positioned over the canvas. */
-.pdf-viewer-page__text-layer {
-  --scale-factor: 1;
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  text-align: initial;
-  text-size-adjust: none;
-  forced-color-adjust: none;
-  transform-origin: 0 0;
-  line-height: 1;
-  overflow: clip;
-}
-
-.pdf-viewer-page__text-layer :is(span, br) {
-  color: transparent;
-  position: absolute;
-  white-space: pre;
-  cursor: text;
-  transform-origin: 0 0;
-}
-
-.pdf-viewer-page__text-layer span.markedContent {
-  top: 0;
-  height: 0;
-}
-
-.pdf-viewer-page__text-layer ::selection {
-  background: color-mix(in srgb, var(--primary) 35%, transparent);
-}
-
-.pdf-viewer-page__text-layer .endOfContent {
-  position: absolute;
-  inset: 100% 0 0;
-  z-index: 0;
-  cursor: default;
-  user-select: none;
-  display: block;
-}
-
-.pdf-viewer-page__text-layer.selecting .endOfContent {
-  top: 0;
-}
-
-/* Clickable links (external URLs + internal page jumps) drawn over the canvas. */
-.pdf-viewer-page__link-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-}
-
-.pdf-viewer-page__link {
-  position: absolute;
-  display: block;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  border-radius: 2px;
-  cursor: pointer;
-  transition: background-color 120ms ease;
-}
-
-.pdf-viewer-page__link:hover,
-.pdf-viewer-page__link:focus-visible {
-  background: color-mix(in srgb, var(--primary) 18%, transparent);
-  outline: none;
-}
-
-/* Per-page render failure marker: a single broken page should report itself
-   rather than blend into the white sheet. */
-.pdf-viewer-page__error {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 16px;
-  text-align: center;
-  color: var(--destructive);
-  font-size: 12px;
-}
-
-.pdf-viewer-page__error-detail {
-  max-width: 90%;
-  color: var(--muted-foreground);
-  font-size: 11px;
-  word-break: break-word;
 }
 
 /* Generated image preview/download card rendered inline from markdown ![alt](file.png) */

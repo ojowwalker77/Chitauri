@@ -82,7 +82,6 @@ export function useThreadHandoff() {
           stickyModelSelectionByProvider,
         }),
         runtimeMode: thread.runtimeMode,
-        interactionMode: thread.interactionMode,
         envMode: thread.envMode ?? (thread.worktreePath ? "worktree" : "local"),
         branch: thread.branch,
         worktreePath: thread.worktreePath,

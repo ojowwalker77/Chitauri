@@ -42,10 +42,14 @@ export function resolveBranchToolbarValue(input: {
   activeWorktreePath: string | null;
   activeThreadBranch: string | null;
   currentGitBranch: string | null;
+  defaultBranch?: string | null;
 }): string | null {
   const { envMode, activeWorktreePath, activeThreadBranch, currentGitBranch } = input;
   if (envMode === "worktree" && !activeWorktreePath) {
-    return activeThreadBranch ?? currentGitBranch;
+    // A worktree that has not been created yet branches off the repository
+    // default (refreshed from the remote at send time), not whatever this
+    // checkout happens to sit on — so show that, or the picker lies.
+    return activeThreadBranch ?? input.defaultBranch ?? currentGitBranch;
   }
   return currentGitBranch ?? activeThreadBranch;
 }

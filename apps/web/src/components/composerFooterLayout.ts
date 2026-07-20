@@ -25,28 +25,20 @@ export function shouldUseCompactComposerFooter(
 // layout passes). The width at each demotion is remembered so widening the
 // pane promotes back with hysteresis instead of flickering at the boundary.
 export interface ComposerFooterControlsPlan {
-  showContextMeter: boolean;
   showModelLabel: boolean;
   showTraitsLabel: boolean;
-  relocateLeadingControls: boolean;
 }
 
-// Tier 0 = everything visible ... tier 3 = icons only, tier 4 = leading
-// controls move below the input.
-export const COMPOSER_FOOTER_MAX_TIER = 4;
+// Tier 0 = everything visible ... tier 2 = icons only.
+export const COMPOSER_FOOTER_MAX_TIER = 2;
 // Extra width (px) required beyond the recorded overflow point before stepping
 // back to a richer tier, so a 1px resize cannot oscillate between tiers.
 export const COMPOSER_FOOTER_TIER_PROMOTION_SLACK_PX = 32;
 
-export function composerFooterPlanForTier(
-  tier: number,
-  hasContextMeter: boolean,
-): ComposerFooterControlsPlan {
+export function composerFooterPlanForTier(tier: number): ComposerFooterControlsPlan {
   return {
-    showContextMeter: hasContextMeter && tier < 1,
-    showTraitsLabel: tier < 2,
-    showModelLabel: tier < 3,
-    relocateLeadingControls: tier >= 4,
+    showTraitsLabel: tier < 1,
+    showModelLabel: tier < 2,
   };
 }
 
@@ -60,9 +52,7 @@ export interface ComposerFooterTierStep {
 export function resolveNextComposerFooterTier(input: {
   currentTier: number;
   clientWidth: number;
-  // Whether the rendered footer content currently overflows. Callers must
-  // also account for clusters that CLIP (overflow-hidden) rather than grow
-  // the row's scrollWidth — e.g. the leading "+"/access-rules cluster.
+  // Whether the rendered footer content currently overflows.
   isOverflowing: boolean;
   demotionWidths: ReadonlyArray<number | undefined>;
 }): ComposerFooterTierStep {

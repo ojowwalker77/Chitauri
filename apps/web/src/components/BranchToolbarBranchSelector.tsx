@@ -394,11 +394,13 @@ export function BranchToolbarBranchSelector({
   const hasOriginRemote = branchesQuery.data?.hasOriginRemote ?? false;
   const currentGitBranch =
     branchStatusQuery.data?.branch ?? branches.find((branch) => branch.current)?.name ?? null;
+  const defaultBranch = branches.find((branch) => branch.isDefault)?.name ?? null;
   const canonicalActiveBranch = resolveBranchToolbarValue({
     envMode: effectiveEnvMode,
     activeWorktreePath,
     activeThreadBranch,
     currentGitBranch,
+    defaultBranch,
   });
   const branchNames = useMemo(() => branches.map((branch) => branch.name), [branches]);
   const branchByName = useMemo(

@@ -44,8 +44,9 @@ export function useEditorLaunchers({
   openInTarget: string | null;
   // When set, this editor becomes the fixed primary action for this surface and is
   // ensured to appear in the option list even if it is not an installed editor.
-  // Used by the PDF viewer to default "Open" to the OS viewer (e.g. Preview) without
-  // touching the global code-editor preference shared by every other surface.
+  // Lets a surface default "Open" to something outside the installed-editor catalog
+  // (e.g. `system-default`) without touching the global code-editor preference
+  // shared by every other surface.
   defaultEditor?: EditorId | undefined;
 }): EditorLaunchers {
   const [preferredEditor, setPreferredEditor] = usePreferredEditor(availableEditors);

@@ -84,6 +84,24 @@ describe("deriveMessageTrailItems", () => {
     expect(capped?.preview.length).toBeLessThanOrEqual(281);
   });
 
+  it("does not add an ellipsis when the collapsed text lands exactly on the cap", () => {
+    // Long enough to take the bounded-window fast path, but the trailing
+    // whitespace collapses away so the real preview is exactly at the cap and
+    // nothing was actually truncated.
+    const exactlyAtCap = "a".repeat(280) + "\n".repeat(2000);
+    const [item] = deriveMessageTrailItems([messageEntry("u1", "user", exactlyAtCap)]);
+    expect(item?.preview).toBe("a".repeat(280));
+    expect(item?.preview.endsWith("…")).toBe(false);
+  });
+
+  it("matches an unwindowed collapse for whitespace-heavy text past the window", () => {
+    // The fast path's window under-fills here, so it must fall back rather than
+    // return a short preview.
+    const text = `${" ".repeat(3000)}${"z".repeat(50)}`;
+    const [item] = deriveMessageTrailItems([messageEntry("u1", "user", text)]);
+    expect(item?.preview).toBe("z".repeat(50));
+  });
+
   it("reports attachment counts", () => {
     const [item] = deriveMessageTrailItems([messageEntry("u1", "user", "look", 3)]);
     expect(item?.attachmentCount).toBe(3);

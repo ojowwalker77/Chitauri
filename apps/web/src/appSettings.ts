@@ -67,6 +67,14 @@ export const DEFAULT_SIDEBAR_PROJECT_SORT_ORDER: SidebarProjectSortOrder = "manu
 export const SidebarThreadSortOrder = Schema.Literals(["updated_at", "created_at"]);
 export type SidebarThreadSortOrder = typeof SidebarThreadSortOrder.Type;
 export const DEFAULT_SIDEBAR_THREAD_SORT_ORDER: SidebarThreadSortOrder = "updated_at";
+/** Which window edge the thread sidebar docks against. */
+export const SidebarPosition = Schema.Literals(["left", "right"]);
+export type SidebarPosition = typeof SidebarPosition.Type;
+export const DEFAULT_SIDEBAR_POSITION: SidebarPosition = "left";
+/** Optional decorative image behind the main chat canvas. */
+export const AppBackground = Schema.Literals(["none", "london", "rio", "sf", "tokyo"]);
+export type AppBackground = typeof AppBackground.Type;
+export const DEFAULT_APP_BACKGROUND: AppBackground = "none";
 export const TaskListDisplayMode = Schema.Literals(["sidebar", "composer"]);
 export type TaskListDisplayMode = typeof TaskListDisplayMode.Type;
 export const DEFAULT_TASK_LIST_DISPLAY_MODE: TaskListDisplayMode = "sidebar";
@@ -145,7 +153,9 @@ export const AppSettingsSchema = Schema.Struct({
     withDefaults(() => ""),
   ),
   openCodeExperimentalWebSockets: Schema.Boolean.pipe(withDefaults(() => false)),
-  defaultThreadEnvMode: EnvMode.pipe(withDefaults(() => "local" as const satisfies EnvMode)),
+  // Threads start in a fresh worktree branched off the remote default branch;
+  // the composer's Local/Worktree control still overrides it per thread.
+  defaultThreadEnvMode: EnvMode.pipe(withDefaults(() => "worktree" as const satisfies EnvMode)),
   defaultRuntimeMode: RuntimeMode.pipe(withDefaults(() => DEFAULT_RUNTIME_MODE)),
   autoArchiveMergedPrThreads: Schema.Boolean.pipe(withDefaults(() => false)),
   autoDeleteMergedLocalBranches: Schema.Boolean.pipe(withDefaults(() => false)),
@@ -169,6 +179,8 @@ export const AppSettingsSchema = Schema.Struct({
   sidebarThreadSortOrder: SidebarThreadSortOrder.pipe(
     withDefaults(() => DEFAULT_SIDEBAR_THREAD_SORT_ORDER),
   ),
+  sidebarPosition: SidebarPosition.pipe(withDefaults(() => DEFAULT_SIDEBAR_POSITION)),
+  appBackground: AppBackground.pipe(withDefaults(() => DEFAULT_APP_BACKGROUND)),
   timestampFormat: TimestampFormat.pipe(withDefaults(() => DEFAULT_TIMESTAMP_FORMAT)),
   customCodexModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customClaudeModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),

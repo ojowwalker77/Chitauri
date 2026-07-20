@@ -11,6 +11,7 @@ import {
 
 import { toPersistenceSqlError } from "../Errors.ts";
 import {
+  AppendProjectionThreadMessageTextInput,
   GetProjectionThreadMessageInput,
   ProjectionThreadMessageRepository,
   type ProjectionThreadMessageRepositoryShape,
@@ -50,6 +51,10 @@ function toProjectionThreadMessage(
     ...(row.dispatchOrigin ? { dispatchOrigin: row.dispatchOrigin } : {}),
   };
 }
+
+const AppendedProjectionThreadMessageRowSchema = Schema.Struct({
+  messageId: Schema.String,
+});
 
 const makeProjectionThreadMessageRepository = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
@@ -163,6 +168,38 @@ const makeProjectionThreadMessageRepository = Effect.gen(function* () {
     },
   });
 
+  // Streaming deltas only ever grow `text`, so append in place. Reading the row back
+  // and rewriting it per delta turns an n-character message built from k deltas into
+  // O(n * k) bytes read and written.
+  const appendProjectionThreadMessageText = SqlSchema.findAll({
+    Request: AppendProjectionThreadMessageTextInput,
+    Result: AppendedProjectionThreadMessageRowSchema,
+    execute: (input) => {
+      const nextAttachmentsJson =
+        input.attachments !== undefined ? JSON.stringify(input.attachments) : null;
+      const nextSkillsJson = input.skills !== undefined ? JSON.stringify(input.skills) : null;
+      const nextMentionsJson = input.mentions !== undefined ? JSON.stringify(input.mentions) : null;
+      return sql`
+        UPDATE projection_thread_messages
+        SET
+          thread_id = ${input.threadId},
+          turn_id = COALESCE(turn_id, ${input.turnId}),
+          role = ${input.role},
+          text = text || ${input.textDelta},
+          attachments_json = COALESCE(${nextAttachmentsJson}, attachments_json),
+          skills_json = COALESCE(${nextSkillsJson}, skills_json),
+          mentions_json = COALESCE(${nextMentionsJson}, mentions_json),
+          dispatch_mode = COALESCE(${input.dispatchMode ?? null}, dispatch_mode),
+          dispatch_origin = COALESCE(${input.dispatchOrigin ?? null}, dispatch_origin),
+          is_streaming = 1,
+          source = ${input.source},
+          updated_at = ${input.updatedAt}
+        WHERE message_id = ${input.messageId}
+        RETURNING message_id AS "messageId"
+      `;
+    },
+  });
+
   const listProjectionThreadMessageRows = SqlSchema.findAll({
     Request: ListProjectionThreadMessagesInput,
     Result: ProjectionThreadMessageDbRowSchema,
@@ -229,6 +266,16 @@ const makeProjectionThreadMessageRepository = Effect.gen(function* () {
       Effect.mapError(toPersistenceSqlError("ProjectionThreadMessageRepository.upsert:query")),
     );
 
+  const appendStreamingText: ProjectionThreadMessageRepositoryShape["appendStreamingText"] = (
+    input,
+  ) =>
+    appendProjectionThreadMessageText(input).pipe(
+      Effect.mapError(
+        toPersistenceSqlError("ProjectionThreadMessageRepository.appendStreamingText:query"),
+      ),
+      Effect.map((rows) => rows.length > 0),
+    );
+
   const getByMessageId: ProjectionThreadMessageRepositoryShape["getByMessageId"] = (input) =>
     getProjectionThreadMessageRow(input).pipe(
       Effect.mapError(
@@ -254,6 +301,7 @@ const makeProjectionThreadMessageRepository = Effect.gen(function* () {
 
   return {
     upsert,
+    appendStreamingText,
     getByMessageId,
     listByThreadId,
     deleteByThreadId,

@@ -206,10 +206,7 @@ const THREAD_STATUS_PRIORITY: Record<ThreadStatusPill["label"], number> = {
   Completed: 1,
 };
 
-type ThreadStatusInput = Pick<
-  Thread,
-  "interactionMode" | "latestTurn" | "lastVisitedAt" | "session" | "updatedAt"
-> & {
+type ThreadStatusInput = Pick<Thread, "latestTurn" | "lastVisitedAt" | "session" | "updatedAt"> & {
   proposedPlans?: Thread["proposedPlans"] | undefined;
   hasActionableProposedPlan?: boolean | undefined;
   hasLiveTailWork?: boolean | undefined;
@@ -480,7 +477,6 @@ export function resolveThreadStatusPill(input: {
   const hasPlanReadyPrompt =
     !hasPendingUserInput &&
     !thread.hasLiveTailWork &&
-    thread.interactionMode === "plan" &&
     isLatestTurnSettled(thread.latestTurn, thread.session) &&
     (thread.hasActionableProposedPlan ??
       hasActionableProposedPlan(

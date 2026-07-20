@@ -381,7 +381,6 @@ describe("ProviderCommandReactor", () => {
         projectId: asProjectId("project-1"),
         title: "Thread",
         modelSelection: modelSelection,
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         branch: null,
         worktreePath: null,
@@ -470,7 +469,6 @@ describe("ProviderCommandReactor", () => {
           model: "gpt-5-codex",
         },
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         envMode: "local",
         branch: null,
         worktreePath: null,
@@ -506,7 +504,6 @@ describe("ProviderCommandReactor", () => {
           attachments: [],
         },
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
     );
@@ -629,7 +626,6 @@ describe("ProviderCommandReactor", () => {
           mentions: [mention],
         },
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
     );
@@ -662,7 +658,6 @@ describe("ProviderCommandReactor", () => {
         messageId: asMessageId("user-message-edit"),
         text: "edited prompt",
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
     );
@@ -731,7 +726,6 @@ describe("ProviderCommandReactor", () => {
           attachments: [],
         },
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
     );
@@ -748,7 +742,6 @@ describe("ProviderCommandReactor", () => {
         messageId: asMessageId("msg-queued-before-edit"),
         text: "edited queued prompt",
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
     );
@@ -809,7 +802,6 @@ describe("ProviderCommandReactor", () => {
           attachments: [imageAttachment],
         },
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
     );
@@ -834,7 +826,6 @@ describe("ProviderCommandReactor", () => {
         messageId: asMessageId("msg-image-edit"),
         text: "edited image prompt",
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
     );
@@ -881,7 +872,6 @@ describe("ProviderCommandReactor", () => {
         messageId: asMessageId("user-message-checkpoint-edit"),
         text: "edited checkpoint prompt",
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
     );
@@ -943,7 +933,6 @@ describe("ProviderCommandReactor", () => {
         messageId: asMessageId("user-message-edit-fails"),
         text: "edited prompt",
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
     );
@@ -1009,7 +998,6 @@ describe("ProviderCommandReactor", () => {
         messageId: asMessageId("user-message-start-fails"),
         text: "edited prompt",
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
     );
@@ -1079,7 +1067,6 @@ describe("ProviderCommandReactor", () => {
           text: "hello reactor",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -1130,7 +1117,6 @@ describe("ProviderCommandReactor", () => {
           text: "hello despite slow git",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -1179,7 +1165,6 @@ describe("ProviderCommandReactor", () => {
           text: "hello reactor",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -1254,7 +1239,6 @@ describe("ProviderCommandReactor", () => {
           attachments: [],
         },
         modelSelection: { provider: "claudeAgent", model: "claude-opus-4-8" },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -1299,7 +1283,6 @@ describe("ProviderCommandReactor", () => {
           text: "hello reactor",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -1335,7 +1318,6 @@ describe("ProviderCommandReactor", () => {
           text: "what permissions do you have",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "full-access",
         createdAt: now,
       }),
@@ -1379,7 +1361,6 @@ describe("ProviderCommandReactor", () => {
           provider: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         branch: null,
         worktreePath: null,
@@ -1398,7 +1379,6 @@ describe("ProviderCommandReactor", () => {
           text: "hello from home chat",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -1444,7 +1424,6 @@ describe("ProviderCommandReactor", () => {
           text: "Polish the loading states across the sidebar and composer",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -1498,7 +1477,6 @@ describe("ProviderCommandReactor", () => {
           provider: "grok",
           model: "grok-build",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -1553,7 +1531,6 @@ describe("ProviderCommandReactor", () => {
           provider: "grok",
           model: "grok-build",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -1603,7 +1580,6 @@ describe("ProviderCommandReactor", () => {
           text: "The app crashes during startup, fix it",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -1669,7 +1645,6 @@ describe("ProviderCommandReactor", () => {
           provider: "grok",
           model: "grok-build",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -1744,7 +1719,6 @@ describe("ProviderCommandReactor", () => {
             serverPassword: "secret",
           },
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -1819,7 +1793,6 @@ describe("ProviderCommandReactor", () => {
           attachments: [],
         },
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
     );
@@ -1888,7 +1861,6 @@ describe("ProviderCommandReactor", () => {
           attachments: [],
         },
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
     );
@@ -1927,7 +1899,6 @@ describe("ProviderCommandReactor", () => {
           attachments: [],
         },
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
     );
@@ -1995,7 +1966,6 @@ describe("ProviderCommandReactor", () => {
         },
         dispatchMode: "steer",
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
     );
@@ -2006,7 +1976,6 @@ describe("ProviderCommandReactor", () => {
     expect(harness.steerTurn.mock.calls[0]?.[0]).toMatchObject({
       threadId: ThreadId.makeUnsafe("thread-1"),
       input: "pivot now",
-      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
     });
   });
 
@@ -2059,7 +2028,6 @@ describe("ProviderCommandReactor", () => {
         },
         dispatchMode: "steer",
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
     );
@@ -2113,7 +2081,6 @@ describe("ProviderCommandReactor", () => {
             fastMode: true,
           },
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -2168,7 +2135,6 @@ describe("ProviderCommandReactor", () => {
             effort: "max",
           },
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -2221,7 +2187,6 @@ describe("ProviderCommandReactor", () => {
             reasoningEffort: "high",
           },
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -2267,7 +2232,6 @@ describe("ProviderCommandReactor", () => {
           text: "bootstrap claude session",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -2328,7 +2292,6 @@ describe("ProviderCommandReactor", () => {
             fastMode: true,
           },
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -2357,44 +2320,6 @@ describe("ProviderCommandReactor", () => {
     });
   });
 
-  it("forwards plan interaction mode to the provider turn request", async () => {
-    const harness = await createHarness();
-    const now = new Date().toISOString();
-
-    await Effect.runPromise(
-      harness.engine.dispatch({
-        type: "thread.interaction-mode.set",
-        commandId: CommandId.makeUnsafe("cmd-interaction-mode-set-plan"),
-        threadId: ThreadId.makeUnsafe("thread-1"),
-        interactionMode: "plan",
-        createdAt: now,
-      }),
-    );
-
-    await Effect.runPromise(
-      harness.engine.dispatch({
-        type: "thread.turn.start",
-        commandId: CommandId.makeUnsafe("cmd-turn-start-plan"),
-        threadId: ThreadId.makeUnsafe("thread-1"),
-        message: {
-          messageId: asMessageId("user-message-plan"),
-          role: "user",
-          text: "plan this change",
-          attachments: [],
-        },
-        interactionMode: "plan",
-        runtimeMode: "approval-required",
-        createdAt: now,
-      }),
-    );
-
-    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
-    expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
-      threadId: ThreadId.makeUnsafe("thread-1"),
-      interactionMode: "plan",
-    });
-  });
-
   it("adopts the requested provider on a first turn before binding a session", async () => {
     const harness = await createHarness({
       threadModelSelection: { provider: "codex", model: "gpt-5-codex" },
@@ -2416,7 +2341,6 @@ describe("ProviderCommandReactor", () => {
           provider: "claudeAgent",
           model: "claude-opus-4-6",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -2464,7 +2388,6 @@ describe("ProviderCommandReactor", () => {
           text: "first",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -2483,7 +2406,6 @@ describe("ProviderCommandReactor", () => {
           text: "second",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -2515,7 +2437,6 @@ describe("ProviderCommandReactor", () => {
           text: "first",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -2535,7 +2456,6 @@ describe("ProviderCommandReactor", () => {
           text: "second",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -2570,7 +2490,6 @@ describe("ProviderCommandReactor", () => {
             effort: "medium",
           },
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -2597,7 +2516,6 @@ describe("ProviderCommandReactor", () => {
             effort: "max",
           },
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -2642,7 +2560,6 @@ describe("ProviderCommandReactor", () => {
           text: "first",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "full-access",
         createdAt: now,
       }),
@@ -2680,7 +2597,6 @@ describe("ProviderCommandReactor", () => {
           text: "second",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "full-access",
         createdAt: now,
       }),
@@ -2770,7 +2686,6 @@ describe("ProviderCommandReactor", () => {
           text: "first",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -2794,7 +2709,6 @@ describe("ProviderCommandReactor", () => {
           provider: "claudeAgent",
           model: "claude-opus-4-6",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -2854,7 +2768,6 @@ describe("ProviderCommandReactor", () => {
           text: "first",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "full-access",
         createdAt: now,
       }),
@@ -2911,7 +2824,6 @@ describe("ProviderCommandReactor", () => {
           text: "first",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "full-access",
         createdAt: now,
       }),
@@ -2971,7 +2883,6 @@ describe("ProviderCommandReactor", () => {
           text: "resume codex",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt: now,
       }),
@@ -3065,7 +2976,6 @@ describe("ProviderCommandReactor", () => {
           provider: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         parentThreadId: ThreadId.makeUnsafe("thread-1"),
         branch: null,
@@ -3142,7 +3052,6 @@ describe("ProviderCommandReactor", () => {
           provider: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         branch: null,
         worktreePath: null,
@@ -3754,7 +3663,6 @@ describe("ProviderCommandReactor", () => {
           provider: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
         parentThreadId: ThreadId.makeUnsafe("thread-1"),
         branch: null,

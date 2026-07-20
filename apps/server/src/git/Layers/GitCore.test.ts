@@ -1109,6 +1109,68 @@ it.layer(TestLayer)("git integration", (it) => {
     );
   });
 
+  // ── resolveDefaultWorktreeBaseRef ──
+
+  describe("resolveDefaultWorktreeBaseRef", () => {
+    it.effect("returns the remote default branch and refreshes it first", () =>
+      Effect.gen(function* () {
+        const origin = yield* makeTmpDir("git-origin-");
+        const clone = yield* makeTmpDir("git-clone-");
+        const upstream = yield* makeTmpDir("git-upstream-");
+
+        // A bare origin seeded from a working clone, so `origin/HEAD` resolves.
+        yield* initRepoWithCommit(upstream);
+        yield* git(upstream, ["branch", "-M", "main"]);
+        yield* git(origin, ["init", "--bare", "--initial-branch=main", "."]);
+        yield* git(upstream, ["remote", "add", "origin", origin]);
+        yield* git(upstream, ["push", "-u", "origin", "main"]);
+        yield* git(clone, ["clone", origin, "."]);
+        yield* git(clone, ["config", "user.email", "test@test.com"]);
+        yield* git(clone, ["config", "user.name", "Test"]);
+
+        // A commit that only exists on the remote: the resolver must fetch it,
+        // otherwise the worktree would start from this clone's stale tip.
+        yield* writeTextFile(path.join(upstream, "remote-only.txt"), "remote\n");
+        yield* git(upstream, ["add", "."]);
+        yield* git(upstream, ["commit", "-m", "remote only"]);
+        yield* git(upstream, ["push", "origin", "main"]);
+
+        // Leave the clone on an unrelated branch: the base must not follow HEAD.
+        yield* git(clone, ["checkout", "-b", "feature/elsewhere"]);
+
+        const result = yield* (yield* GitCore).resolveDefaultWorktreeBaseRef({ cwd: clone });
+        expect(result).toEqual({ ref: "origin/main", branch: "main" });
+
+        const remoteTip = yield* git(upstream, ["rev-parse", "main"]);
+        const resolvedTip = yield* git(clone, ["rev-parse", "origin/main"]);
+        expect(resolvedTip).toBe(remoteTip);
+      }),
+    );
+
+    it.effect("falls back to a local default branch when there is no remote", () =>
+      Effect.gen(function* () {
+        const tmp = yield* makeTmpDir();
+        yield* initRepoWithCommit(tmp);
+        yield* git(tmp, ["branch", "-M", "main"]);
+        yield* git(tmp, ["checkout", "-b", "feature/local-only"]);
+
+        const result = yield* (yield* GitCore).resolveDefaultWorktreeBaseRef({ cwd: tmp });
+        expect(result).toEqual({ ref: "main", branch: "main" });
+      }),
+    );
+
+    it.effect("falls back to the current branch when no default branch exists", () =>
+      Effect.gen(function* () {
+        const tmp = yield* makeTmpDir();
+        yield* initRepoWithCommit(tmp);
+        yield* git(tmp, ["branch", "-M", "trunk"]);
+
+        const result = yield* (yield* GitCore).resolveDefaultWorktreeBaseRef({ cwd: tmp });
+        expect(result).toEqual({ ref: "trunk", branch: "trunk" });
+      }),
+    );
+  });
+
   // ── createGitWorktree + removeGitWorktree ──
 
   describe("createGitWorktree", () => {

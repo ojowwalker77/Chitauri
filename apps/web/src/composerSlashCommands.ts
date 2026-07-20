@@ -118,18 +118,6 @@ const COMPOSER_SLASH_COMMAND_DEFINITIONS: Record<
     description: "Switch response model for this thread",
     source: "shared",
   },
-  plan: {
-    command: "plan",
-    label: "/plan",
-    description: "Switch this thread into plan mode",
-    source: "app",
-  },
-  default: {
-    command: "default",
-    label: "/default",
-    description: "Switch this thread back to normal chat mode",
-    source: "app",
-  },
   review: {
     command: "review",
     label: "/review",
@@ -226,15 +214,13 @@ export function canOfferForkSlashCommand(input: {
   terminalContextCount: number;
   selectedSkillCount: number;
   selectedMentionCount: number;
-  interactionMode: "default" | "plan";
 }): boolean {
   return (
     !hasMeaningfulComposerText(input.prompt) &&
     input.imageCount === 0 &&
     input.terminalContextCount === 0 &&
     input.selectedSkillCount === 0 &&
-    input.selectedMentionCount === 0 &&
-    input.interactionMode === "default"
+    input.selectedMentionCount === 0
   );
 }
 
@@ -244,7 +230,6 @@ export function canOfferSideSlashCommand(input: {
   terminalContextCount: number;
   selectedSkillCount: number;
   selectedMentionCount: number;
-  interactionMode: "default" | "plan";
   isSidechat: boolean;
 }): boolean {
   return (
@@ -253,7 +238,6 @@ export function canOfferSideSlashCommand(input: {
     input.terminalContextCount === 0 &&
     input.selectedSkillCount === 0 &&
     input.selectedMentionCount === 0 &&
-    input.interactionMode === "default" &&
     !input.isSidechat
   );
 }
@@ -358,8 +342,6 @@ export function getAvailableComposerSlashCommands(input: {
           ...(input.canOfferCompactCommand ? (["compact"] as const) : []),
           "model",
           ...(input.supportsFastSlashCommand ? (["fast"] as const) : []),
-          "plan",
-          "default",
           ...(input.canOfferReviewCommand ? (["review"] as const) : []),
           ...(input.canOfferForkCommand ? (["fork"] as const) : []),
           "status",
