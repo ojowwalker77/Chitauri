@@ -407,7 +407,6 @@ import {
   COMPOSER_COLUMN_FRAME_CLASS_NAME,
   COMPOSER_EDITOR_PADDING_CLASS_NAME,
   COMPOSER_FOOTER_ROW_CLASS_NAME,
-  CHAT_BACKGROUND_CLASS_NAME,
   CHAT_COLUMN_GUTTER_CLASS_NAME,
 } from "./chat/composerPickerStyles";
 import { getComposerTraitSelection } from "./chat/composerTraits";
@@ -8425,12 +8424,7 @@ export default function ChatView({
   // Empty state: no active thread
   if (!activeThread) {
     return (
-      <div
-        className={cn(
-          "flex min-h-0 min-w-0 flex-1 flex-col text-[var(--color-text-foreground-secondary)]",
-          CHAT_BACKGROUND_CLASS_NAME,
-        )}
-      >
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col text-[var(--color-text-foreground-secondary)]">
         {!isElectron && (
           <header className={cn(CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME, "px-3 py-2 md:hidden")}>
             <div className="flex items-center gap-2">
@@ -9074,10 +9068,7 @@ export default function ChatView({
 
   return (
     <div
-      className={cn(
-        "relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
-        CHAT_BACKGROUND_CLASS_NAME,
-      )}
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
       onDragEnter={onComposerDragEnter}
       onDragOver={onComposerDragOver}
       onDragLeave={onComposerDragLeave}

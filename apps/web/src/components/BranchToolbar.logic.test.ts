@@ -151,6 +151,19 @@ describe("shouldSyncLocalThreadBranch", () => {
     ).toBe(false);
   });
 
+  it("does not rewrite stale branch metadata on a draft thread", () => {
+    expect(
+      shouldSyncLocalThreadBranch({
+        envMode: "local",
+        activeWorktreePath: null,
+        activeThreadBranch: "feature/old",
+        currentGitBranch: "main",
+        hasServerThread: false,
+        isBranchActionPending: false,
+      }),
+    ).toBe(false);
+  });
+
   it("syncs missing branch metadata for local server threads", () => {
     expect(
       shouldSyncLocalThreadBranch({

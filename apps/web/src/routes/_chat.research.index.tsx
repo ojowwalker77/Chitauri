@@ -15,7 +15,6 @@ import {
   CHAT_SURFACE_HEADER_HEIGHT_CLASS,
   CHAT_SURFACE_HEADER_PADDING_X_CLASS,
 } from "~/components/chat/chatHeaderControls";
-import { CHAT_BACKGROUND_CLASS_NAME } from "~/components/chat/composerPickerStyles";
 import { Button } from "~/components/ui/button";
 import { toastManager } from "~/components/ui/toast";
 import {
@@ -157,12 +156,7 @@ function ResearchIndexRoute() {
   return (
     <ProjectSurfaceFrame>
       <RouteInsetSurface>
-        <div
-          className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
-            CHAT_BACKGROUND_CLASS_NAME,
-          )}
-        >
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <header
             className={cn(
               CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,

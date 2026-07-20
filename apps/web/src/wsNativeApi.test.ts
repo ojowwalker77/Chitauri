@@ -286,7 +286,6 @@ describe("wsNativeApi", () => {
       settings: {
         enableAssistantStreaming: true,
         enableProviderUpdateChecks: true,
-        defaultThreadEnvMode: "local",
         defaultRuntimeMode: "full-access",
         addProjectBaseDirectory: "",
         textGenerationModelSelection: { provider: "codex", model: "gpt-5.4-mini" },

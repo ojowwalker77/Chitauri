@@ -104,7 +104,7 @@ import {
 } from "./-chatThreadRoute.logic";
 import { getLocalStorageItem, setLocalStorageItem } from "~/hooks/useLocalStorage";
 import {
-  CHAT_BACKGROUND_CLASS_NAME,
+  CHAT_SURFACE_TRANSPARENT_CLASS_NAME,
   CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME,
   CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME,
 } from "../components/chat/composerPickerStyles";
@@ -549,26 +549,14 @@ function SingleChatSurface(props: {
         return;
       }
 
-      await handleNewThread(
-        projectId,
-        {
-          envMode: appSettings.defaultThreadEnvMode,
-        },
-        {
-          search: (previous) => ({
-            ...stripEditorViewSearchParams(stripDiffSearchParams(previous)),
-            view: "editor",
-          }),
-        },
-      );
+      await handleNewThread(projectId, undefined, {
+        search: (previous) => ({
+          ...stripEditorViewSearchParams(stripDiffSearchParams(previous)),
+          view: "editor",
+        }),
+      });
     },
-    [
-      appSettings.defaultThreadEnvMode,
-      appSettings.sidebarThreadSortOrder,
-      handleNewThread,
-      navigate,
-      threadSummaries,
-    ],
+    [appSettings.sidebarThreadSortOrder, handleNewThread, navigate, threadSummaries],
   );
   const handleSelectEditorProject = useCallback(
     (projectId: ProjectId) => {
@@ -784,7 +772,7 @@ function SingleChatSurface(props: {
             chatPanel={
               <SidebarInset
                 className="min-h-0 min-w-0 overflow-hidden overscroll-y-none text-foreground"
-                surfaceClassName={CHAT_BACKGROUND_CLASS_NAME}
+                surfaceClassName={CHAT_SURFACE_TRANSPARENT_CLASS_NAME}
               >
                 <ChatView
                   threadId={props.threadId}
@@ -810,7 +798,7 @@ function SingleChatSurface(props: {
       <div
         className={cn(CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME, CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME)}
       >
-        <RouteInsetSurface surfaceClassName={CHAT_BACKGROUND_CLASS_NAME}>
+        <RouteInsetSurface surfaceClassName={CHAT_SURFACE_TRANSPARENT_CLASS_NAME}>
           <ChatView
             threadId={props.threadId}
             paneScopeId={SINGLE_CHAT_PANE_SCOPE_ID}

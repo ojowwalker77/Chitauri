@@ -1112,7 +1112,6 @@ function SettingsRouteView() {
   const changedSettingLabels = [
     ...(theme !== "system" ? ["Theme"] : []),
     ...(settings.defaultProvider !== defaults.defaultProvider ? ["Default provider"] : []),
-    ...(settings.defaultThreadEnvMode !== defaults.defaultThreadEnvMode ? ["New thread mode"] : []),
     ...(settings.sidebarProjectSortOrder !== defaults.sidebarProjectSortOrder
       ? ["Project sort order"]
       : []),
@@ -1900,43 +1899,6 @@ function SettingsRouteView() {
                   />
                 </SelectItem>
               ))}
-            </SettingsSelectControl>
-          }
-        />
-
-        <SettingsRow
-          title="New threads"
-          description="Workspace mode for newly created threads. New worktree fetches the remote and branches off the default branch; Local works in the checkout you already have."
-          resetAction={
-            settings.defaultThreadEnvMode !== defaults.defaultThreadEnvMode ? (
-              <SettingResetButton
-                label="new threads"
-                onClick={() =>
-                  updateSettings({
-                    defaultThreadEnvMode: defaults.defaultThreadEnvMode,
-                  })
-                }
-              />
-            ) : null
-          }
-          control={
-            <SettingsSelectControl
-              value={settings.defaultThreadEnvMode}
-              onValueChange={(value) => {
-                if (value !== "local" && value !== "worktree") return;
-                updateSettings({
-                  defaultThreadEnvMode: value,
-                });
-              }}
-              ariaLabel="Default thread mode"
-              valueContent={settings.defaultThreadEnvMode === "worktree" ? "New worktree" : "Local"}
-            >
-              <SelectItem hideIndicator value="local">
-                Local
-              </SelectItem>
-              <SelectItem hideIndicator value="worktree">
-                New worktree
-              </SelectItem>
             </SettingsSelectControl>
           }
         />

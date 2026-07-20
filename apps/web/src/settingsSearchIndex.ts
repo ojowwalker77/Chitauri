@@ -58,13 +58,6 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     keywords: "Choose the provider used for new chats. agent codex claude",
   },
   {
-    id: "general:new-threads",
-    section: "general",
-    title: "New threads",
-    keywords:
-      "Pick the default workspace mode for newly created draft threads. local worktree environment",
-  },
-  {
     id: "general:permissions-mode",
     section: "general",
     title: "Permissions Mode",

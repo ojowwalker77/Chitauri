@@ -145,7 +145,6 @@ export function useHandleNewThread() {
         resolveTerminalThreadCreationState({
           activeDraftThread: activeDraftThreadSnapshot,
           activeThread: activeThreadSnapshot,
-          defaultEnvMode: settings.defaultThreadEnvMode,
           defaultProvider: options?.provider ?? settings.defaultProvider,
           draftComposerState:
             useComposerDraftStore.getState().draftsByThreadId[targetThreadId] ?? null,
@@ -265,7 +264,6 @@ export function useHandleNewThread() {
         setProjectDraftThreadId(projectId, threadId, {
           ...createFreshDraftThreadSeed({
             createdAt,
-            defaultEnvMode: settings.defaultThreadEnvMode,
             entryPoint,
             options: {
               ...options,
@@ -296,7 +294,6 @@ export function useHandleNewThread() {
       focusedThreadId,
       settings.defaultProvider,
       settings.defaultRuntimeMode,
-      settings.defaultThreadEnvMode,
     ],
   );
 

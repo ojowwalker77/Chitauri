@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.2 - 2026-07-20
+
+### Fixed
+
+- New repository threads now always begin as a fresh worktree from the fetched remote default branch (normally `origin/main`). The Local/New worktree and branch pickers remain available as explicit per-thread overrides, but a stale saved setting or the currently checked-out local branch can no longer silently change the default.
+- Removed the obsolete inset chat sheet and its duplicate opaque background layers. The main shell now paints the canvas once, flush to the window edges, so the real background no longer appears as a gray frame around a white surface.
+
 ## 0.9.1 - 2026-07-20
 
 ### Fixed

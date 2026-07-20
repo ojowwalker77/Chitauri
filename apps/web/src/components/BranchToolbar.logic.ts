@@ -54,8 +54,10 @@ export function resolveBranchToolbarValue(input: {
   return currentGitBranch ?? activeThreadBranch;
 }
 
-// Local threads should mirror the concrete checkout; stale thread metadata makes
-// the current Git branch appear selectable while clicks only perform a no-op.
+// Durable local threads should mirror the concrete checkout; stale thread
+// metadata makes the current Git branch appear selectable while clicks only
+// perform a no-op. Drafts intentionally stay branchless until the user picks a
+// branch so a pending worktree can still resolve the fetched remote default.
 export function shouldSyncLocalThreadBranch(input: {
   envMode: EnvMode;
   activeWorktreePath: string | null;
@@ -69,7 +71,7 @@ export function shouldSyncLocalThreadBranch(input: {
     input.activeWorktreePath === null &&
     !input.isBranchActionPending &&
     input.currentGitBranch !== null &&
-    (input.hasServerThread || input.activeThreadBranch !== null) &&
+    input.hasServerThread &&
     input.activeThreadBranch !== input.currentGitBranch
   );
 }

@@ -26,7 +26,6 @@ import {
   resolveSelectableModel,
 } from "@t3tools/shared/model";
 import { useLocalStorage } from "./hooks/useLocalStorage";
-import { EnvMode } from "./components/BranchToolbar.logic";
 import { formatProviderModelOptionName, type ProviderModelOption } from "./providerModelOptions";
 import {
   DEFAULT_PROVIDER_ORDER,
@@ -153,9 +152,6 @@ export const AppSettingsSchema = Schema.Struct({
     withDefaults(() => ""),
   ),
   openCodeExperimentalWebSockets: Schema.Boolean.pipe(withDefaults(() => false)),
-  // Threads start in a fresh worktree branched off the remote default branch;
-  // the composer's Local/Worktree control still overrides it per thread.
-  defaultThreadEnvMode: EnvMode.pipe(withDefaults(() => "worktree" as const satisfies EnvMode)),
   defaultRuntimeMode: RuntimeMode.pipe(withDefaults(() => DEFAULT_RUNTIME_MODE)),
   autoArchiveMergedPrThreads: Schema.Boolean.pipe(withDefaults(() => false)),
   autoDeleteMergedLocalBranches: Schema.Boolean.pipe(withDefaults(() => false)),
@@ -394,7 +390,6 @@ function serverSettingsToAppSettings(settings: ServerSettings): Partial<AppSetti
     codexHomePath: settings.providers.codex.homePath,
     cursorApiEndpoint: settings.providers.cursor.apiEndpoint,
     cursorBinaryPath: settings.providers.cursor.binaryPath,
-    defaultThreadEnvMode: settings.defaultThreadEnvMode,
     defaultRuntimeMode: settings.defaultRuntimeMode,
     enableAssistantStreaming: settings.enableAssistantStreaming,
     enableProviderUpdateChecks: settings.enableProviderUpdateChecks,
@@ -457,9 +452,6 @@ function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): Ser
   }
   if (hasOwn(patch, "enableProviderUpdateChecks")) {
     serverPatch.enableProviderUpdateChecks = Boolean(patch.enableProviderUpdateChecks);
-  }
-  if (patch.defaultThreadEnvMode === "local" || patch.defaultThreadEnvMode === "worktree") {
-    serverPatch.defaultThreadEnvMode = patch.defaultThreadEnvMode;
   }
   if (
     patch.defaultRuntimeMode === "approval-required" ||
@@ -590,7 +582,6 @@ function buildInitialServerSettingsMigrationPatch(settings: AppSettings): Server
     "codexHomePath",
     "cursorApiEndpoint",
     "cursorBinaryPath",
-    "defaultThreadEnvMode",
     "defaultRuntimeMode",
     "enableAssistantStreaming",
     "enableProviderUpdateChecks",

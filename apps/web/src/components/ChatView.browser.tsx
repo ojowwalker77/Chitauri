@@ -1001,6 +1001,37 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
       },
     };
   }
+  if (tag === WS_METHODS.workspaceProvisionThreadWorktree) {
+    const requestedBranch =
+      typeof body.newBranch === "string" ? body.newBranch : "teacode/test-worktree";
+    const worktreePath = `/repo/.codex/worktrees/project/${requestedBranch.replaceAll("/", "-")}`;
+    return {
+      workspace: {
+        id: typeof body.threadId === "string" ? `thread:${body.threadId}:worktree` : "worktree",
+        projectId: PROJECT_ID,
+        ownerThreadId: typeof body.threadId === "string" ? body.threadId : null,
+        kind: "worktree",
+        state: "ready",
+        retentionPolicy: "retain",
+        workspaceRoot: "/repo/project",
+        path: worktreePath,
+        branch: requestedBranch,
+        ref: requestedBranch,
+        createdAt: NOW_ISO,
+        updatedAt: NOW_ISO,
+        retiredAt: null,
+      },
+      envMode: "worktree",
+      branch: requestedBranch,
+      worktreePath,
+      associatedWorktreePath: worktreePath,
+      associatedWorktreeBranch: requestedBranch,
+      associatedWorktreeRef: requestedBranch,
+      changesTransferred: false,
+      conflictsDetected: false,
+      message: null,
+    };
+  }
   if (tag === WS_METHODS.projectsSearchEntries) {
     return {
       entries: [],
@@ -3166,6 +3197,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
       const newThreadId = newThreadPath.slice(1) as ThreadId;
 
+      expect(useComposerDraftStore.getState().getDraftThread(newThreadId)).toMatchObject({
+        envMode: "worktree",
+        branch: null,
+        worktreePath: null,
+      });
+
       // The composer editor should be present for the new draft thread.
       await waitForComposerEditor();
 
@@ -3583,7 +3620,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("offers New worktree from an empty draft thread", async () => {
+  it("keeps Local available as an explicit override on a default worktree draft", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({
@@ -3604,17 +3641,17 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
       const newThreadId = newThreadPath.slice(1) as ThreadId;
 
-      const envPickerTrigger = await waitForEnvironmentModeButton("Local");
+      const envPickerTrigger = await waitForEnvironmentModeButton("Worktree");
       envPickerTrigger.click();
 
-      const newWorktreeOption = page.getByText("New worktree");
-      await expect.element(newWorktreeOption).toBeInTheDocument();
-      await newWorktreeOption.click();
+      const localOption = page.getByText("Local project");
+      await expect.element(localOption).toBeInTheDocument();
+      await localOption.click();
 
       await vi.waitFor(
         () => {
           expect(useComposerDraftStore.getState().getDraftThread(newThreadId)?.envMode).toBe(
-            "worktree",
+            "local",
           );
         },
         { timeout: 8_000, interval: 16 },
@@ -3624,7 +3661,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("creates a temporary branch-backed worktree on first send in New worktree mode", async () => {
+  it("provisions a temporary worktree from the fetched remote default on first send", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({
@@ -3645,12 +3682,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
       const newThreadId = newThreadPath.slice(1) as ThreadId;
 
-      const envPickerTrigger = await waitForEnvironmentModeButton("Local");
-      envPickerTrigger.click();
-
-      const newWorktreeOption = page.getByText("New worktree");
-      await expect.element(newWorktreeOption).toBeInTheDocument();
-      await newWorktreeOption.click();
+      await waitForEnvironmentModeButton("Worktree");
+      await waitForServerConfigToApply();
 
       useComposerDraftStore.getState().setPrompt(newThreadId, "Ship it");
       const composerEditor = await waitForComposerEditor();
@@ -3669,13 +3702,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
         () => {
           const createWorktreeRequest = wsRequests.find(
             (request) =>
-              request._tag === WS_METHODS.gitCreateWorktree &&
-              request.cwd === "/repo/project" &&
-              request.branch === "main" &&
+              request._tag === WS_METHODS.workspaceProvisionThreadWorktree &&
+              request.baseBranch === null &&
               typeof request.newBranch === "string",
           );
           expect(createWorktreeRequest).toBeTruthy();
-          expect(createWorktreeRequest?.newBranch).toMatch(/^chitauri\/[0-9a-f]{8}$/);
+          expect(createWorktreeRequest?.newBranch).toMatch(/^teacode\/[0-9a-f]{8}$/);
 
           const detachedRequest = wsRequests.find(
             (request) => request._tag === WS_METHODS.gitCreateDetachedWorktree,
@@ -3695,8 +3727,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
           expect(createThreadRequest).toBeTruthy();
           expect(createThreadRequest?.command).toMatchObject({
             envMode: "worktree",
-            branch: createWorktreeRequest?.newBranch,
-            worktreePath: `/repo/.codex/worktrees/project/${String(createWorktreeRequest?.newBranch).replaceAll("/", "-")}`,
+            branch: null,
+            worktreePath: null,
           });
         },
         { timeout: 8_000, interval: 16 },
@@ -3738,12 +3770,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
       const newThreadId = newThreadPath.slice(1) as ThreadId;
 
-      const envPickerTrigger = await waitForEnvironmentModeButton("Local");
-      envPickerTrigger.click();
-
-      const newWorktreeOption = page.getByText("New worktree");
-      await expect.element(newWorktreeOption).toBeInTheDocument();
-      await newWorktreeOption.click();
+      await waitForEnvironmentModeButton("Worktree");
+      await waitForServerConfigToApply();
 
       useComposerDraftStore.getState().setPrompt(newThreadId, "Ship it with setup");
       const composerEditor = await waitForComposerEditor();
@@ -3761,21 +3789,20 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(
         () => {
           const createWorktreeIndex = wsRequests.findIndex((request) => {
-            return (
-              request._tag === WS_METHODS.gitCreateWorktree &&
-              request.cwd === "/repo/project" &&
-              request.branch === "main" &&
-              typeof request.newBranch === "string"
-            );
+            return request._tag === WS_METHODS.workspaceProvisionThreadWorktree;
           });
           expect(createWorktreeIndex).toBeGreaterThanOrEqual(0);
           const createWorktreeRequest = wsRequests[createWorktreeIndex];
           if (
             !createWorktreeRequest ||
-            createWorktreeRequest._tag !== WS_METHODS.gitCreateWorktree
+            createWorktreeRequest._tag !== WS_METHODS.workspaceProvisionThreadWorktree
           ) {
             throw new Error("Expected create worktree request.");
           }
+          expect(createWorktreeRequest).toMatchObject({
+            baseBranch: null,
+            newBranch: expect.stringMatching(/^teacode\/[0-9a-f]{8}$/),
+          });
           const worktreePath = `/repo/.codex/worktrees/project/${String(
             createWorktreeRequest.newBranch,
           ).replaceAll("/", "-")}`;

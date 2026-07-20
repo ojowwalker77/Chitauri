@@ -830,7 +830,6 @@ export function buildThemeCssVariables(
   const appVariables: Record<string, string> = {
     "--accent": pack.theme.accent,
     "--accent-foreground": readCodexVariable("--color-text-foreground"),
-    "--app-shell-background": readCodexVariable("--color-background-surface-under"),
     "--app-composer-focus-border": composerFocusBorder,
     // Composer and picker surfaces stay opaque in every runtime.
     "--app-composer-backdrop-filter": "none",

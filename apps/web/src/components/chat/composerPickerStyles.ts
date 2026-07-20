@@ -63,14 +63,15 @@ export const COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME = "text-muted-foreground/45";
 // tuned via the `--picker-section-py` token on `[data-slot="menu-label"]`.
 
 export const COMPOSER_MAX_WIDTH_CLASS_NAME = "max-w-[45rem]";
-/** Main chat column is the flat window canvas, never the elevated panel layer. */
-export const CHAT_BACKGROUND_CLASS_NAME = "bg-background";
+/** The chat column shows the window canvas (`.claude-main-shell`) through itself.
+ *  Only needed where a surface would otherwise default to an opaque fill. */
+export const CHAT_SURFACE_TRANSPARENT_CLASS_NAME = "bg-transparent";
 
 /** Flat, clipped main canvas. The sidebar owns the only persistent panel layer. */
 export const CHAT_CONTENT_CARD_CLASS_NAME = "chat-content-card relative overflow-hidden";
 
-/** Opaque chat canvas shared by thread and route surfaces. */
-export const CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME = `${CHAT_BACKGROUND_CLASS_NAME} ${CHAT_CONTENT_CARD_CLASS_NAME}`;
+/** Chat canvas shared by thread and route surfaces. */
+export const CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME = `${CHAT_SURFACE_TRANSPARENT_CLASS_NAME} ${CHAT_CONTENT_CARD_CLASS_NAME}`;
 
 /** Clipped full-height inset shell for app routes. */
 export const CHAT_ROUTE_INSET_SHELL_CLASS_NAME =

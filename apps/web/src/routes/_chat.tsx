@@ -505,7 +505,7 @@ function ChatRouteLayout() {
       defaultOpen
       open={resolvedSidebarOpen}
       onOpenChange={setSidebarOpen}
-      className="chitauri-anthropic-shell isolate overflow-hidden bg-[var(--app-shell-background)]"
+      className="chitauri-anthropic-shell isolate overflow-hidden"
       data-sidebar-side={sidebarSide}
       style={{ "--sidebar-width": `${THREAD_SIDEBAR_DEFAULT_WIDTH}px` } as CSSProperties}
     >

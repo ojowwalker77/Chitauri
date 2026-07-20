@@ -33,6 +33,13 @@ export interface NewThreadOptions {
   fresh?: boolean;
 }
 
+/**
+ * Product invariant for a repository thread: start pending creation of a fresh
+ * worktree. The first send resolves the base from the fetched remote default
+ * branch; an explicit per-thread picker choice can still override this.
+ */
+export const DEFAULT_NEW_THREAD_ENV_MODE = "worktree" as const satisfies DraftThreadEnvMode;
+
 export interface InheritedThreadContext {
   branch: string | null;
   worktreePath: string | null;
@@ -96,8 +103,6 @@ export type ThreadBootstrapPlan = DraftReusePlanStored | DraftReusePlanRoute | D
 interface ResolveTerminalThreadCreationStateInput {
   activeDraftThread: DraftThreadState | null;
   activeThread: ActiveThreadSnapshot | null;
-  /** `settings.defaultThreadEnvMode`; applies unless the caller overrides it. */
-  defaultEnvMode: DraftThreadEnvMode;
   defaultProvider?: ProviderKind | null | undefined;
   draftComposerState: ComposerThreadDraftState | null;
   draftThread: DraftThreadState | null;
@@ -196,8 +201,6 @@ export function resolveThreadBootstrapPlan(input: {
 // Build the initial draft-thread metadata for a brand new thread bootstrap.
 export function createFreshDraftThreadSeed(input: {
   createdAt: string;
-  /** `settings.defaultThreadEnvMode`; applies unless the caller overrides it. */
-  defaultEnvMode: DraftThreadEnvMode;
   entryPoint: ThreadPrimarySurface;
   options: NewThreadOptions | undefined;
 }): Omit<DraftThreadState, "projectId"> {
@@ -208,7 +211,8 @@ export function createFreshDraftThreadSeed(input: {
     // A pinned worktree path (Git Workbench pull requests) is worktree mode by
     // construction, whatever the setting says.
     envMode:
-      input.options?.envMode ?? (input.options?.worktreePath ? "worktree" : input.defaultEnvMode),
+      input.options?.envMode ??
+      (input.options?.worktreePath ? "worktree" : DEFAULT_NEW_THREAD_ENV_MODE),
     runtimeMode: input.options?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
     lastKnownPr: input.options?.lastKnownPr ?? null,
     entryPoint: input.entryPoint,
@@ -282,12 +286,11 @@ export function resolveTerminalThreadCreationState(
   const hasExplicitEnvModeOverride =
     input.options !== undefined && Object.hasOwn(input.options, "envMode");
   const explicitEnvMode: DraftThreadEnvMode | undefined = hasExplicitEnvModeOverride
-    ? (input.options?.envMode ?? input.defaultEnvMode)
+    ? (input.options?.envMode ?? DEFAULT_NEW_THREAD_ENV_MODE)
     : undefined;
   // A caller that pins a worktree path (Git Workbench opening a pull request)
-  // is already in worktree mode. Everything else follows the setting rather
-  // than inheriting from whatever the previous thread happened to use, so
-  // "new thread" means the same thing every time.
+  // is already in worktree mode. Everything else uses the product default
+  // rather than inheriting from whatever thread happened to be open.
   const inheritedEnvMode =
     input.draftThread?.envMode !== undefined ? input.draftThread.envMode : undefined;
 
@@ -318,8 +321,8 @@ export function resolveTerminalThreadCreationState(
         : null) ??
       null,
     envMode: hasExplicitEnvModeOverride
-      ? (explicitEnvMode ?? input.defaultEnvMode)
-      : (inheritedEnvMode ?? input.defaultEnvMode),
+      ? (explicitEnvMode ?? DEFAULT_NEW_THREAD_ENV_MODE)
+      : (inheritedEnvMode ?? DEFAULT_NEW_THREAD_ENV_MODE),
     branch:
       input.options?.branch !== undefined
         ? (input.options.branch ?? null)

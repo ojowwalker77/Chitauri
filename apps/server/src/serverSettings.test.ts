@@ -27,7 +27,6 @@ describe("ServerSettingsService", () => {
 
     expect(settings.providers.codex.binaryPath).toBe("codex");
     expect(settings.providers.grok.binaryPath).toBe("grok");
-    expect(settings.defaultThreadEnvMode).toBe("worktree");
     expect(settings.defaultRuntimeMode).toBe("full-access");
     expect(settings.enableProviderUpdateChecks).toBe(true);
   });

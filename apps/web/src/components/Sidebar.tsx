@@ -265,7 +265,6 @@ import {
   resolveProjectEmptyState,
   resolveSettingsBackTarget,
   type SettingsBackTarget,
-  resolveSidebarNewThreadEnvMode,
   resolveThreadRowClassName,
   resolveThreadRowTrailingReserveClass,
   resolveThreadStatusPill,
@@ -327,6 +326,7 @@ import {
   createOrRecoverProjectFromPath,
   PROJECT_CREATE_EXISTING_SYNC_ERROR,
 } from "../lib/projectCreation";
+import { DEFAULT_NEW_THREAD_ENV_MODE } from "../lib/threadBootstrap";
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
 const THREAD_PREVIEW_LIMIT = 5;
@@ -1716,17 +1716,10 @@ export default function Sidebar() {
         return true;
       }
 
-      void handleNewThread(projectId, {
-        envMode: appSettings.defaultThreadEnvMode,
-      }).catch(() => undefined);
+      void handleNewThread(projectId).catch(() => undefined);
       return true;
     },
-    [
-      appSettings.defaultThreadEnvMode,
-      appSettings.sidebarThreadSortOrder,
-      handleNewThread,
-      navigate,
-    ],
+    [appSettings.sidebarThreadSortOrder, handleNewThread, navigate],
   );
 
   const openExistingProjectFromSnapshot = useCallback(
@@ -1759,18 +1752,10 @@ export default function Sidebar() {
       }
 
       setProjectExpanded(projectId, true);
-      void handleNewThread(projectId, {
-        envMode: appSettings.defaultThreadEnvMode,
-      }).catch(() => undefined);
+      void handleNewThread(projectId).catch(() => undefined);
       return true;
     },
-    [
-      appSettings.defaultThreadEnvMode,
-      appSettings.sidebarThreadSortOrder,
-      handleNewThread,
-      navigate,
-      setProjectExpanded,
-    ],
+    [appSettings.sidebarThreadSortOrder, handleNewThread, navigate, setProjectExpanded],
   );
 
   // Poll the server read model briefly after project.create so we only recover from fresh state.
@@ -1858,18 +1843,9 @@ export default function Sidebar() {
         return;
       }
 
-      void handleNewThread(typedProjectId, {
-        envMode: resolveSidebarNewThreadEnvMode({
-          defaultEnvMode: appSettings.defaultThreadEnvMode,
-        }),
-      });
+      void handleNewThread(typedProjectId);
     },
-    [
-      appSettings.defaultThreadEnvMode,
-      focusMostRecentThreadForProject,
-      handleNewThread,
-      sidebarThreads,
-    ],
+    [focusMostRecentThreadForProject, handleNewThread, sidebarThreads],
   );
 
   // Shared resolver behind the settings-back path and thread segment switch.
@@ -2018,9 +1994,7 @@ export default function Sidebar() {
         // snapshot is just slow to catch up, continue with the local new-thread flow
         // instead of surfacing a false-negative sidebar sync error.
         setProjectExpanded(creationResult.projectId, true);
-        void handleNewThread(creationResult.projectId, {
-          envMode: appSettings.defaultThreadEnvMode,
-        }).catch(() => undefined);
+        void handleNewThread(creationResult.projectId).catch(() => undefined);
         finishAddingProject();
         return;
       } catch (error) {
@@ -2031,7 +2005,6 @@ export default function Sidebar() {
       }
     },
     [
-      appSettings.defaultThreadEnvMode,
       handleNewThread,
       isAddingProject,
       projects,
@@ -2120,21 +2093,12 @@ export default function Sidebar() {
 
   const handlePrimaryNewThread = useCallback(() => {
     if (currentProjectShortcutTargetId) {
-      void handleNewThread(currentProjectShortcutTargetId, {
-        envMode: resolveSidebarNewThreadEnvMode({
-          defaultEnvMode: appSettings.defaultThreadEnvMode,
-        }),
-      });
+      void handleNewThread(currentProjectShortcutTargetId);
       return;
     }
 
     handleStartAddProject();
-  }, [
-    appSettings.defaultThreadEnvMode,
-    currentProjectShortcutTargetId,
-    handleNewThread,
-    handleStartAddProject,
-  ]);
+  }, [currentProjectShortcutTargetId, handleNewThread, handleStartAddProject]);
 
   const handleImportThread = useCallback(
     async (request: ImportThreadRequest) => {
@@ -2226,9 +2190,7 @@ export default function Sidebar() {
           title,
           modelSelection,
           runtimeMode: appSettings.defaultRuntimeMode,
-          envMode: resolveSidebarNewThreadEnvMode({
-            defaultEnvMode: appSettings.defaultThreadEnvMode,
-          }),
+          envMode: DEFAULT_NEW_THREAD_ENV_MODE,
           branch: null,
           worktreePath: null,
           createdAt,
@@ -2260,7 +2222,6 @@ export default function Sidebar() {
       }
     },
     [
-      appSettings.defaultThreadEnvMode,
       currentProjectShortcutTargetId,
       navigate,
       projects,
@@ -5090,12 +5051,7 @@ export default function Sidebar() {
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                void handleNewThread(project.id, {
-                  envMode: resolveSidebarNewThreadEnvMode({
-                    defaultEnvMode: appSettings.defaultThreadEnvMode,
-                  }),
-                  entryPoint: "terminal",
-                });
+                void handleNewThread(project.id, { entryPoint: "terminal" });
               }}
             />
             <SidebarIconButton
@@ -5109,11 +5065,7 @@ export default function Sidebar() {
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                void handleNewThread(project.id, {
-                  envMode: resolveSidebarNewThreadEnvMode({
-                    defaultEnvMode: appSettings.defaultThreadEnvMode,
-                  }),
-                });
+                void handleNewThread(project.id);
               }}
             />
           </SidebarSectionToolbar>

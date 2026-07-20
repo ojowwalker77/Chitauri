@@ -36,7 +36,6 @@ import {
   resolveSettingsBackTarget,
   resolveProjectStatusIndicator,
   resolveSidebarBranchLabel,
-  resolveSidebarNewThreadEnvMode,
   resolveSidebarStatusLabel,
   resolveThreadHoverCardMetadata,
   resolveThreadRowClassName,
@@ -197,25 +196,6 @@ describe("resolveThreadHoverCardMetadata", () => {
       branch: "main",
       worktreeName: null,
     });
-  });
-});
-
-describe("resolveSidebarNewThreadEnvMode", () => {
-  it("uses the app default when the caller does not request a specific mode", () => {
-    expect(
-      resolveSidebarNewThreadEnvMode({
-        defaultEnvMode: "worktree",
-      }),
-    ).toBe("worktree");
-  });
-
-  it("preserves an explicit requested mode over the app default", () => {
-    expect(
-      resolveSidebarNewThreadEnvMode({
-        requestedEnvMode: "local",
-        defaultEnvMode: "worktree",
-      }),
-    ).toBe("local");
   });
 });
 

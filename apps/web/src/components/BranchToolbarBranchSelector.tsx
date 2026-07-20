@@ -659,24 +659,6 @@ export function BranchToolbarBranchSelector({
     });
   };
 
-  useEffect(() => {
-    if (
-      effectiveEnvMode !== "worktree" ||
-      activeWorktreePath ||
-      activeThreadBranch ||
-      !currentGitBranch
-    ) {
-      return;
-    }
-    onSetThreadWorkspace({ branch: currentGitBranch, worktreePath: null });
-  }, [
-    activeThreadBranch,
-    activeWorktreePath,
-    currentGitBranch,
-    effectiveEnvMode,
-    onSetThreadWorkspace,
-  ]);
-
   const handleOpenChange = useCallback(
     (open: boolean) => {
       setIsBranchMenuOpen(open);

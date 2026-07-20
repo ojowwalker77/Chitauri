@@ -153,7 +153,7 @@
   }
   body {
     @apply text-foreground relative;
-    background: var(--app-shell-background, transparent);
+    background: var(--background, transparent);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -167,7 +167,6 @@
      The panel is the only raised surface, so the hierarchy stays legible without
      gradients, glass, or a second content-card shadow competing for attention. */
   .chitauri-anthropic-shell {
-    --app-shell-background: var(--background);
     --app-content-card-radius: 0px;
   }
 
@@ -223,17 +222,6 @@
     font-size: 0.78125rem;
     font-weight: 500;
     letter-spacing: 0;
-  }
-
-  .chitauri-anthropic-shell .chat-content-card {
-    border-radius: 0;
-    background-color: var(--app-shell-background);
-    box-shadow: none;
-  }
-
-  .chitauri-anthropic-shell .chat-content-card::before,
-  .chitauri-anthropic-shell .chat-content-card-backing::after {
-    display: none;
   }
 
   /* Small icon badges inherit the persistent panel language. */
@@ -373,7 +361,6 @@
   --font-mono-family: "0xProto", monospace;
   --font-chat-code-family: "0xProto", monospace;
   --terminal-font-family: "0xProto", monospace;
-  --app-shell-background: var(--background);
   --app-sidebar-backdrop-filter: none;
   --app-sidebar-shadow: none;
   --app-sidebar-surface: var(--panel);
@@ -433,7 +420,6 @@
 
   @variant dark {
     color-scheme: dark;
-    --app-shell-background: var(--background);
     --background: #111318;
     --foreground: #f7f8fa;
     --panel: color-mix(in srgb, #ffffff 4%, #111318);
@@ -545,8 +531,10 @@ textarea:focus-visible {
   -webkit-app-region: drag;
 }
 
+/* Flush, not inset: the chat surface meets the window edge directly. The old
+   0.75rem right/top/bottom padding dated from the floating content card and now
+   only leaves a frame of canvas showing around an opaque sheet. */
 .claude-main-shell {
-  padding: 0.75rem 0.75rem 0.75rem 0;
   background: var(--background);
 }
 
@@ -559,26 +547,10 @@ textarea:focus-visible {
   background-repeat: no-repeat;
 }
 
-/* The chat surface stacks an opaque fill over the canvas and would otherwise hide
-   the image completely. It carries the Tailwind `bg-background` UTILITY, which
-   lives in a later cascade layer than any component rule — so `!important` is the
-   only reliable override. Scoped to image mode, so the flat default is untouched.
+/* `.chat-content-card` is a marker class only (route-shell tests key off it); the
+   canvas — flat colour or background image — is painted once, by this shell. Every
+   surface above it is transparent, so nothing has to be punched back out here.
    Message bubbles, panels and popovers keep their own surfaces. */
-.claude-main-shell[data-app-background="image"] .chat-content-card,
-.claude-main-shell[data-app-background="image"] .chat-content-card-backing,
-.claude-main-shell[data-app-background="image"] [data-slot="sidebar-inset"] {
-  background-color: transparent !important;
-  background-image: none !important;
-}
-
-.chat-content-card {
-  position: relative;
-  overflow: hidden;
-  border: 0;
-  border-radius: 0;
-  background: var(--background);
-  box-shadow: none;
-}
 
 .chat-surface-header {
   border: 0;

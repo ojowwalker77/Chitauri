@@ -1,13 +1,7 @@
 import { Schema } from "effect";
 import { TrimmedString } from "./baseSchemas";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
-import {
-  DEFAULT_RUNTIME_MODE,
-  ModelSelection,
-  ProviderKind,
-  RuntimeMode,
-  ThreadEnvironmentMode,
-} from "./orchestration";
+import { DEFAULT_RUNTIME_MODE, ModelSelection, ProviderKind, RuntimeMode } from "./orchestration";
 
 const StringSetting = TrimmedString.check(Schema.isMaxLength(4096));
 const CustomModels = Schema.Array(Schema.String.check(Schema.isMaxLength(256))).pipe(
@@ -87,7 +81,6 @@ export type SkillsServerSettings = typeof SkillsServerSettings.Type;
 export const ServerSettings = Schema.Struct({
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   enableProviderUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
-  defaultThreadEnvMode: ThreadEnvironmentMode.pipe(Schema.withDecodingDefault(() => "worktree")),
   defaultRuntimeMode: RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
   addProjectBaseDirectory: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
   textGenerationModelSelection: ModelSelection.pipe(
@@ -126,7 +119,6 @@ const ProviderSettingsBasePatch = {
 export const ServerSettingsPatch = Schema.Struct({
   enableAssistantStreaming: Schema.optionalKey(Schema.Boolean),
   enableProviderUpdateChecks: Schema.optionalKey(Schema.Boolean),
-  defaultThreadEnvMode: Schema.optionalKey(ThreadEnvironmentMode),
   defaultRuntimeMode: Schema.optionalKey(RuntimeMode),
   addProjectBaseDirectory: Schema.optionalKey(StringSetting),
   textGenerationModelSelection: Schema.optionalKey(ModelSelectionPatch),
