@@ -44,6 +44,7 @@ import {
   TbFolderOpen as IconFolderOpen,
   TbHistory as IconHistory,
   TbInfoCircle as IconInfoCircle,
+  TbInbox as IconInbox,
   TbLayoutDistributeHorizontal as IconLayoutDistributeHorizontal,
   TbListCheck as IconListCheck,
   TbListDetails as IconListDetails,
@@ -172,6 +173,7 @@ export const ChartBarIcon = adaptIcon(IconChartBar);
 export const ShareIcon = adaptIcon(IconShare3);
 export const SparklesIcon = adaptIcon(IconSparkles);
 export const HashIcon = adaptIcon(IconHash);
+export const InboxIcon = adaptIcon(IconInbox);
 export const EllipsisIcon = adaptIcon(IconDots);
 export const ExternalLinkIcon = adaptIcon(IconExternalLink);
 export const EyeIcon = adaptIcon(IconEye);

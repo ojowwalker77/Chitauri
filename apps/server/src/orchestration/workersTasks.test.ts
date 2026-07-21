@@ -217,4 +217,182 @@ describe("Worker Task orchestration", () => {
       ),
     ).rejects.toThrow("belongs to Worker");
   });
+
+  it("creates delegated Tasks under a different Worker with durable requester links", async () => {
+    const now = "2026-07-21T12:00:00.000Z";
+    const recipientTaskId = TaskId.makeUnsafe("task-recipient");
+    const withRequester = await addProject(createEmptyReadModel(now), {
+      id: WORKER_ID,
+      sequence: 1,
+    });
+    const withBothWorkers = await addProject(withRequester, {
+      id: OTHER_WORKER_ID,
+      sequence: 2,
+    });
+    const requesterTask = firstEvent(
+      await Effect.runPromise(
+        decideOrchestrationCommand({
+          readModel: withBothWorkers,
+          command: {
+            type: "task.create",
+            commandId: CommandId.makeUnsafe("command-requester-task"),
+            taskId: TASK_ID,
+            workerId: WORKER_ID,
+            title: "Ship passkeys",
+            brief: "Coordinate the client integration.",
+            origin: "user",
+            createdAt: now,
+          },
+        }),
+      ),
+    );
+    expect(requesterTask?.type).toBe("task.created");
+    if (!requesterTask || requesterTask.type !== "task.created") return;
+    const withRequesterTask = await Effect.runPromise(
+      projectEvent(withBothWorkers, {
+        ...requesterTask,
+        sequence: 3,
+      } as OrchestrationEvent),
+    );
+
+    const delegatedTask = firstEvent(
+      await Effect.runPromise(
+        decideOrchestrationCommand({
+          readModel: withRequesterTask,
+          command: {
+            type: "task.create",
+            commandId: CommandId.makeUnsafe("command-delegated-task"),
+            taskId: recipientTaskId,
+            workerId: OTHER_WORKER_ID,
+            requesterWorkerId: WORKER_ID,
+            requesterTaskId: TASK_ID,
+            title: "Add passkey endpoints",
+            brief: "Implement the repository-owned API work.",
+            origin: "delegation",
+            createdAt: now,
+          },
+        }),
+      ),
+    );
+
+    expect(delegatedTask?.type).toBe("task.created");
+    if (!delegatedTask || delegatedTask.type !== "task.created") return;
+    expect(delegatedTask.payload).toMatchObject({
+      taskId: recipientTaskId,
+      workerId: OTHER_WORKER_ID,
+      requesterWorkerId: WORKER_ID,
+      requesterTaskId: TASK_ID,
+      origin: "delegation",
+    });
+
+    const withDelegatedTask = await Effect.runPromise(
+      projectEvent(withRequesterTask, {
+        ...delegatedTask,
+        sequence: 4,
+      } as OrchestrationEvent),
+    );
+    expect(withDelegatedTask.tasks.find((task) => task.id === recipientTaskId)).toMatchObject({
+      workerId: OTHER_WORKER_ID,
+      requesterWorkerId: WORKER_ID,
+      requesterTaskId: TASK_ID,
+      origin: "delegation",
+    });
+  });
+
+  it("rejects same-Worker and invalid requester delegation links", async () => {
+    const now = "2026-07-21T12:00:00.000Z";
+    const withRequester = await addProject(createEmptyReadModel(now), {
+      id: WORKER_ID,
+      sequence: 1,
+    });
+    const withBothWorkers = await addProject(withRequester, {
+      id: OTHER_WORKER_ID,
+      sequence: 2,
+    });
+    const requesterTask = firstEvent(
+      await Effect.runPromise(
+        decideOrchestrationCommand({
+          readModel: withBothWorkers,
+          command: {
+            type: "task.create",
+            commandId: CommandId.makeUnsafe("command-requester-task"),
+            taskId: TASK_ID,
+            workerId: WORKER_ID,
+            title: "Requester Task",
+            brief: "",
+            origin: "user",
+            createdAt: now,
+          },
+        }),
+      ),
+    );
+    expect(requesterTask?.type).toBe("task.created");
+    if (!requesterTask || requesterTask.type !== "task.created") return;
+    const withRequesterTask = await Effect.runPromise(
+      projectEvent(withBothWorkers, {
+        ...requesterTask,
+        sequence: 3,
+      } as OrchestrationEvent),
+    );
+
+    await expect(
+      Effect.runPromise(
+        decideOrchestrationCommand({
+          readModel: withRequesterTask,
+          command: {
+            type: "task.create",
+            commandId: CommandId.makeUnsafe("command-same-worker-delegation"),
+            taskId: TaskId.makeUnsafe("task-same-worker"),
+            workerId: WORKER_ID,
+            requesterWorkerId: WORKER_ID,
+            requesterTaskId: TASK_ID,
+            title: "Same Worker",
+            brief: "",
+            origin: "delegation",
+            createdAt: now,
+          },
+        }),
+      ),
+    ).rejects.toThrow("different repository Worker");
+
+    await expect(
+      Effect.runPromise(
+        decideOrchestrationCommand({
+          readModel: withRequesterTask,
+          command: {
+            type: "task.create",
+            commandId: CommandId.makeUnsafe("command-missing-requester-task"),
+            taskId: TaskId.makeUnsafe("task-missing-requester"),
+            workerId: OTHER_WORKER_ID,
+            requesterWorkerId: WORKER_ID,
+            requesterTaskId: TaskId.makeUnsafe("task-does-not-exist"),
+            title: "Missing Requester",
+            brief: "",
+            origin: "delegation",
+            createdAt: now,
+          },
+        }),
+      ),
+    ).rejects.toThrow("Task 'task-does-not-exist' does not exist");
+
+    await expect(
+      Effect.runPromise(
+        decideOrchestrationCommand({
+          readModel: withRequesterTask,
+          command: {
+            type: "task.create",
+            commandId: CommandId.makeUnsafe("command-mismatched-requester-worker"),
+            taskId: TaskId.makeUnsafe("task-mismatched-requester"),
+            workerId: WORKER_ID,
+            requesterWorkerId: OTHER_WORKER_ID,
+            requesterTaskId: TASK_ID,
+            title: "Mismatched Requester",
+            brief: "",
+            origin: "delegation",
+            createdAt: now,
+          },
+        }),
+      ),
+    ).rejects.toThrow("belongs to Worker");
+  });
 });

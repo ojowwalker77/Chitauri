@@ -1,5 +1,5 @@
 // FILE: Sidebar.tsx
-// Purpose: Renders the project/thread sidebar, including row status, sorting, and thread actions.
+// Purpose: Renders Worker navigation with durable Tasks, Inbox requests, and unfiled Threads.
 // Exports: Sidebar
 
 import {
@@ -15,6 +15,7 @@ import {
   GitMergedSimpleIcon,
   GitHubIcon,
   GitPullRequestIcon,
+  InboxIcon,
   ListTodoIcon,
   type LucideIcon,
   NewThreadIcon,
@@ -1008,6 +1009,7 @@ export default function Sidebar() {
   const isOnResearch = routePathname.startsWith("/research");
   const isOnGitHub = routePathname === "/github";
   const isOnTasks = routePathname === "/tasks";
+  const isOnInbox = routePathname === "/inbox";
   const { settings: appSettings, updateSettings } = useAppSettings();
   // Rootless chats can be hidden independently from the project thread list.
   const chatsSectionVisible = appSettings.showChatsSection;
@@ -2005,6 +2007,20 @@ export default function Sidebar() {
       void navigate({
         to: "/tasks",
         search: { worker, task: undefined, create: undefined },
+      });
+    },
+    [currentProjectShortcutTargetId, navigate, projects],
+  );
+
+  const navigateToWorkerInbox = useCallback(
+    (workerId?: ProjectId) => {
+      const worker =
+        workerId ??
+        currentProjectShortcutTargetId ??
+        projects.find((project) => project.kind === "project")?.id;
+      void navigate({
+        to: "/inbox",
+        search: { worker, request: undefined },
       });
     },
     [currentProjectShortcutTargetId, navigate, projects],
@@ -3373,6 +3389,16 @@ export default function Sidebar() {
     }
     return byProjectId;
   }, [appSettings.sidebarThreadSortOrder, sidebarThreadsByProjectId]);
+  const sortedUnfiledThreadsByProjectId = useMemo(() => {
+    const byProjectId = new Map<ProjectId, SidebarThreadSummary[]>();
+    for (const [projectId, projectThreads] of sortedSidebarThreadsByProjectId) {
+      byProjectId.set(
+        projectId,
+        projectThreads.filter((thread) => thread.taskId == null),
+      );
+    }
+    return byProjectId;
+  }, [sortedSidebarThreadsByProjectId]);
   const handleProjectTitlePointerDownCapture = useCallback(() => {
     suppressProjectClickAfterDragRef.current = false;
   }, []);
@@ -3631,7 +3657,7 @@ export default function Sidebar() {
     () =>
       deriveSidebarProjectData({
         projects: standardProjects,
-        sortedSidebarThreadsByProjectId,
+        sortedSidebarThreadsByProjectId: sortedUnfiledThreadsByProjectId,
         pinnedThreadIds,
         expandedParentThreadIds: expandedSubagentParentIds,
         threadListExtraPagesByProjectCwd,
@@ -3646,7 +3672,7 @@ export default function Sidebar() {
       expandedSubagentParentIds,
       threadListExtraPagesByProjectCwd,
       pinnedThreadIds,
-      sortedSidebarThreadsByProjectId,
+      sortedUnfiledThreadsByProjectId,
       standardProjects,
       resolveThreadStatusForSidebar,
     ],
@@ -4731,6 +4757,9 @@ export default function Sidebar() {
       "group-hover/project-header:pr-[4.75rem] group-has-[:focus-visible]/project-header:pr-[4.75rem]";
     const showProjectThreadCount = focusedProjectId === project.id && allProjectThreadCount > 0;
     const workerTaskCount = tasks.filter((task) => task.workerId === project.id).length;
+    const workerRequestCount = tasks.filter(
+      (task) => task.workerId === project.id && task.origin === "delegation",
+    ).length;
 
     return (
       <div className="group/collapsible" data-sidebar-tree-project={project.id}>
@@ -4829,7 +4858,7 @@ export default function Sidebar() {
               label={`Create new Task for ${project.name} Worker`}
               tooltip="New Task"
               tooltipSide="top"
-              data-testid="new-thread-button"
+              data-testid="new-task-button"
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -4875,6 +4904,28 @@ export default function Sidebar() {
                   ) : null}
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
+              <SidebarMenuSubItem className="w-full">
+                <SidebarMenuSubButton
+                  render={<button type="button" />}
+                  data-thread-selection-safe
+                  size="sm"
+                  className="h-7 translate-x-0 rounded-lg pr-2 text-left text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]"
+                  onClick={() => navigateToWorkerInbox(project.id)}
+                >
+                  <SidebarGlyph icon={InboxIcon} variant="compact" />
+                  <span className="min-w-0 flex-1 truncate">Inbox</span>
+                  {workerRequestCount > 0 ? (
+                    <span className="text-[11px] tabular-nums text-muted-foreground/55">
+                      {workerRequestCount}
+                    </span>
+                  ) : null}
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+              {visibleEntries.length > 0 ? (
+                <div className="px-2 pt-1 pb-0.5 text-[10px] font-medium tracking-wide text-muted-foreground/48 uppercase">
+                  Unfiled
+                </div>
+              ) : null}
               {visibleEntries.map((entry) =>
                 renderThreadRow(
                   entry.thread,
@@ -5703,6 +5754,31 @@ export default function Sidebar() {
                       <SidebarGlyph icon={ListTodoIcon} variant="leading" />
                     </SidebarLeadingIcon>
                     <span className="truncate">Tasks</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    size="sm"
+                    aria-current={isOnInbox ? "page" : undefined}
+                    className={cn(
+                      SIDEBAR_HEADER_ROW_CLASS_NAME,
+                      isOnInbox
+                        ? SIDEBAR_ROW_ACTIVE_CLASS_NAME
+                        : cn(SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME, SIDEBAR_ROW_HOVER_CLASS_NAME),
+                    )}
+                    onClick={() => navigateToWorkerInbox()}
+                  >
+                    <SidebarLeadingIcon
+                      size="sm"
+                      tone={
+                        isOnInbox
+                          ? "text-[var(--sidebar-accent-foreground)]"
+                          : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME
+                      }
+                    >
+                      <SidebarGlyph icon={InboxIcon} variant="leading" />
+                    </SidebarLeadingIcon>
+                    <span className="truncate">Inbox</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>

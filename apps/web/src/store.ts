@@ -816,6 +816,8 @@ function taskShellsEqual(
     left !== undefined &&
     left.id === right.id &&
     left.workerId === right.workerId &&
+    left.requesterWorkerId === right.requesterWorkerId &&
+    left.requesterTaskId === right.requesterTaskId &&
     left.title === right.title &&
     left.brief === right.brief &&
     left.status === right.status &&
@@ -831,6 +833,8 @@ function toTaskShell(task: OrchestrationReadModel["tasks"][number]): Orchestrati
   return {
     id: task.id,
     workerId: task.workerId,
+    requesterWorkerId: task.requesterWorkerId,
+    requesterTaskId: task.requesterTaskId,
     title: task.title,
     brief: task.brief,
     status: task.status,
@@ -3246,6 +3250,8 @@ function applyOrchestrationEvent(
       return upsertTask(state, {
         id: event.payload.taskId,
         workerId: event.payload.workerId,
+        requesterWorkerId: event.payload.requesterWorkerId,
+        requesterTaskId: event.payload.requesterTaskId,
         title: event.payload.title,
         brief: event.payload.brief,
         status: event.payload.status,

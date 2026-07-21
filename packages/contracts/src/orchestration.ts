@@ -401,6 +401,7 @@ export const TaskStatus = Schema.Literals([
   "open",
   "in_progress",
   "blocked",
+  "waiting_on_worker",
   "in_review",
   "completed",
   "cancelled",
@@ -419,6 +420,8 @@ export type TaskOrigin = typeof TaskOrigin.Type;
 export const OrchestrationTask = Schema.Struct({
   id: TaskId,
   workerId: ProjectId,
+  requesterWorkerId: Schema.NullOr(ProjectId),
+  requesterTaskId: Schema.NullOr(TaskId),
   title: TrimmedNonEmptyString,
   brief: Schema.String,
   status: TaskStatus,
@@ -433,6 +436,8 @@ export type OrchestrationTask = typeof OrchestrationTask.Type;
 export const OrchestrationTaskShell = Schema.Struct({
   id: TaskId,
   workerId: ProjectId,
+  requesterWorkerId: Schema.NullOr(ProjectId),
+  requesterTaskId: Schema.NullOr(TaskId),
   title: TrimmedNonEmptyString,
   brief: Schema.String,
   status: TaskStatus,
@@ -879,6 +884,8 @@ export const TaskCreateCommand = Schema.Struct({
   commandId: CommandId,
   taskId: TaskId,
   workerId: ProjectId,
+  requesterWorkerId: Schema.optional(ProjectId),
+  requesterTaskId: Schema.optional(TaskId),
   title: TrimmedNonEmptyString,
   brief: Schema.optional(Schema.String).pipe(Schema.withDecodingDefault(() => "")),
   origin: Schema.optional(TaskOrigin).pipe(Schema.withDecodingDefault(() => "user")),
@@ -1492,6 +1499,8 @@ export const ProjectDeletedPayload = Schema.Struct({
 export const TaskCreatedPayload = Schema.Struct({
   taskId: TaskId,
   workerId: ProjectId,
+  requesterWorkerId: Schema.NullOr(ProjectId),
+  requesterTaskId: Schema.NullOr(TaskId),
   title: TrimmedNonEmptyString,
   brief: Schema.String,
   status: TaskStatus,

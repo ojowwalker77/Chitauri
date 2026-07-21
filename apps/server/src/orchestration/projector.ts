@@ -299,6 +299,8 @@ export function projectEvent(
           const nextTask = {
             id: payload.taskId,
             workerId: payload.workerId,
+            requesterWorkerId: payload.requesterWorkerId,
+            requesterTaskId: payload.requesterTaskId,
             title: payload.title,
             brief: payload.brief,
             status: payload.status,

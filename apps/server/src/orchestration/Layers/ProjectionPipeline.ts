@@ -710,6 +710,8 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
           yield* projectionTaskRepository.upsert({
             taskId: event.payload.taskId,
             workerId: event.payload.workerId,
+            requesterWorkerId: event.payload.requesterWorkerId,
+            requesterTaskId: event.payload.requesterTaskId,
             title: event.payload.title,
             brief: event.payload.brief,
             status: event.payload.status,

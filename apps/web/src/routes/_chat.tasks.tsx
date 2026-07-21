@@ -10,6 +10,11 @@ import { ProjectSurfaceFrame } from "~/components/ProjectSurfaceFrame";
 import { RouteInsetSurface } from "~/components/RouteInsetSurface";
 import { SidebarHeaderNavigationControls } from "~/components/SidebarHeaderNavigationControls";
 import {
+  TASK_STATUSES,
+  TASK_STATUS_LABELS,
+  TaskStatusPill,
+} from "~/components/tasks/TaskStatusPill";
+import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
   CHAT_SURFACE_HEADER_HEIGHT_CLASS,
   CHAT_SURFACE_HEADER_PADDING_X_CLASS,
@@ -28,6 +33,7 @@ import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { toastManager } from "~/components/ui/toast";
 import {
+  ArrowRightIcon,
   CheckCircle2Icon,
   ChevronRightIcon,
   GitBranchIcon,
@@ -39,33 +45,6 @@ import { cn, newCommandId, newTaskId, newThreadId } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
 
-const TASK_STATUSES: readonly TaskStatus[] = [
-  "open",
-  "in_progress",
-  "blocked",
-  "in_review",
-  "completed",
-  "cancelled",
-];
-
-const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
-  open: "Open",
-  in_progress: "In progress",
-  blocked: "Blocked",
-  in_review: "In review",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
-
-const TASK_STATUS_TONES: Record<TaskStatus, string> = {
-  open: "bg-foreground/8 text-muted-foreground",
-  in_progress: "bg-blue-500/12 text-blue-400",
-  blocked: "bg-amber-500/12 text-amber-400",
-  in_review: "bg-violet-500/12 text-violet-400",
-  completed: "bg-emerald-500/12 text-emerald-400",
-  cancelled: "bg-foreground/6 text-muted-foreground/70",
-};
-
 export const Route = createFileRoute("/_chat/tasks")({
   validateSearch: (search) => ({
     worker: typeof search.worker === "string" ? search.worker : undefined,
@@ -74,19 +53,6 @@ export const Route = createFileRoute("/_chat/tasks")({
   }),
   component: TasksRoute,
 });
-
-function StatusPill({ status }: { status: TaskStatus }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex h-5 items-center rounded-full px-2 text-[11px] font-medium",
-        TASK_STATUS_TONES[status],
-      )}
-    >
-      {TASK_STATUS_LABELS[status]}
-    </span>
-  );
-}
 
 function TaskCreateDialog({
   open,
@@ -182,6 +148,157 @@ function TaskCreateDialog({
   );
 }
 
+type WorkerOption = {
+  readonly id: ProjectId;
+  readonly name: string;
+};
+
+function DelegateTaskDialog({
+  open,
+  requesterWorkerId,
+  requesterTaskId,
+  workers,
+  onOpenChange,
+}: {
+  open: boolean;
+  requesterWorkerId: ProjectId;
+  requesterTaskId: TaskId;
+  workers: readonly WorkerOption[];
+  onOpenChange: (open: boolean) => void;
+}) {
+  const availableWorkers = workers.filter((worker) => worker.id !== requesterWorkerId);
+  const [recipientWorkerId, setRecipientWorkerId] = useState<ProjectId | "">("");
+  const [title, setTitle] = useState("");
+  const [request, setRequest] = useState("");
+  const [constraints, setConstraints] = useState("");
+  const [deliverables, setDeliverables] = useState("");
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setRecipientWorkerId(availableWorkers.at(0)?.id ?? "");
+      return;
+    }
+    setTitle("");
+    setRequest("");
+    setConstraints("");
+    setDeliverables("");
+    setPending(false);
+  }, [availableWorkers.at(0)?.id, open]);
+
+  const submit = async () => {
+    const api = readNativeApi();
+    const trimmedTitle = title.trim();
+    if (!api || !recipientWorkerId || !trimmedTitle || pending) return;
+    const taskId = newTaskId();
+    const sections = [
+      request.trim() ? `Request\n${request.trim()}` : null,
+      constraints.trim() ? `Constraints\n${constraints.trim()}` : null,
+      deliverables.trim() ? `Requested deliverables\n${deliverables.trim()}` : null,
+    ].filter((section): section is string => section !== null);
+    setPending(true);
+    try {
+      await api.orchestration.dispatchCommand({
+        type: "task.create",
+        commandId: newCommandId(),
+        taskId,
+        workerId: recipientWorkerId,
+        requesterWorkerId,
+        requesterTaskId,
+        title: trimmedTitle,
+        brief: sections.join("\n\n"),
+        origin: "delegation",
+        createdAt: new Date().toISOString(),
+      });
+      try {
+        await api.orchestration.dispatchCommand({
+          type: "task.update",
+          commandId: newCommandId(),
+          taskId: requesterTaskId,
+          status: "waiting_on_worker",
+        });
+      } catch {
+        toastManager.add({
+          type: "warning",
+          title: "Request created",
+          description: "The parent Task status could not be updated automatically.",
+        });
+      }
+      toastManager.add({ type: "success", title: "Work request sent" });
+      onOpenChange(false);
+    } catch (error) {
+      toastManager.add({
+        type: "error",
+        title: "Could not send work request",
+        description: error instanceof Error ? error.message : "The delegated Task was not created.",
+      });
+      setPending(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => !pending && onOpenChange(nextOpen)}>
+      <DialogPopup>
+        <DialogHeader>
+          <DialogTitle>Request work from another Worker</DialogTitle>
+          <DialogDescription>
+            The receiving Worker gets an independently inspectable Task in its own repository.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogPanel className="space-y-3">
+          <select
+            aria-label="Receiving Worker"
+            className="h-9 w-full rounded-lg border border-border/60 bg-background px-2 text-sm text-foreground outline-hidden focus:border-ring"
+            value={recipientWorkerId}
+            onChange={(event) => setRecipientWorkerId(ProjectId.makeUnsafe(event.target.value))}
+          >
+            {availableWorkers.map((worker) => (
+              <option key={worker.id} value={worker.id}>
+                {worker.name} Worker
+              </option>
+            ))}
+          </select>
+          <Input
+            autoFocus
+            placeholder="Subject"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+          <Textarea
+            aria-label="Work request"
+            placeholder="Required behavior and context"
+            value={request}
+            onChange={(event) => setRequest(event.target.value)}
+          />
+          <Textarea
+            aria-label="Work request constraints"
+            placeholder="Constraints"
+            value={constraints}
+            onChange={(event) => setConstraints(event.target.value)}
+          />
+          <Textarea
+            aria-label="Requested deliverables"
+            placeholder="Commit, pull request, contract, test report…"
+            value={deliverables}
+            onChange={(event) => setDeliverables(event.target.value)}
+          />
+        </DialogPanel>
+        <DialogFooter>
+          <Button variant="ghost" disabled={pending} onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!recipientWorkerId || !title.trim() || pending}
+            onClick={() => void submit()}
+          >
+            {pending ? "Sending…" : "Send request"}
+          </Button>
+        </DialogFooter>
+      </DialogPopup>
+    </Dialog>
+  );
+}
+
 function TasksRoute() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -203,6 +320,15 @@ function TasksRoute() {
   );
   const selectedTask =
     workerTasks.find((task) => task.id === search.task) ?? workerTasks.at(0) ?? null;
+  const requesterTask = selectedTask?.requesterTaskId
+    ? tasks.find((task) => task.id === selectedTask.requesterTaskId)
+    : null;
+  const requesterWorker = selectedTask?.requesterWorkerId
+    ? workers.find((worker) => worker.id === selectedTask.requesterWorkerId)
+    : null;
+  const dependencies = selectedTask
+    ? tasks.filter((task) => task.requesterTaskId === selectedTask.id)
+    : [];
   const taskThreads = threads.filter((thread) => thread.taskId === selectedTask?.id);
   const unfiledThreads = threads.filter(
     (thread) => thread.projectId === selectedWorker?.id && thread.taskId == null,
@@ -216,6 +342,7 @@ function TasksRoute() {
     selectedWorker?.workerInstructions ?? "",
   );
   const [threadPending, setThreadPending] = useState(false);
+  const [delegateDialogOpen, setDelegateDialogOpen] = useState(false);
 
   useEffect(() => {
     setCreateDialogOpen(search.create === true);
@@ -413,7 +540,7 @@ function TasksRoute() {
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-medium">{task.title}</div>
                       <div className="mt-1 flex items-center gap-2">
-                        <StatusPill status={task.status} />
+                        <TaskStatusPill status={task.status} />
                         <span className="truncate text-[11px] text-muted-foreground/65">
                           {task.origin}
                         </span>
@@ -438,7 +565,7 @@ function TasksRoute() {
                 <div className="mx-auto max-w-3xl space-y-7">
                   <div>
                     <div className="mb-3 flex flex-wrap items-center gap-2">
-                      <StatusPill status={selectedTask.status} />
+                      <TaskStatusPill status={selectedTask.status} />
                       <span className="text-xs text-muted-foreground">
                         {selectedWorker.name} Worker
                       </span>
@@ -471,8 +598,88 @@ function TasksRoute() {
                         <MessageCircleIcon />
                         {threadPending ? "Starting…" : "New Thread"}
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={workers.length < 2}
+                        onClick={() => setDelegateDialogOpen(true)}
+                      >
+                        <ArrowRightIcon />
+                        Request Worker
+                      </Button>
                     </div>
                   </div>
+
+                  {requesterTask && requesterWorker ? (
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-3 rounded-2xl border border-cyan-500/20 bg-cyan-500/6 p-4 text-left hover:bg-cyan-500/10"
+                      onClick={() =>
+                        updateSearch({
+                          worker: requesterWorker.id,
+                          task: requesterTask.id,
+                          create: undefined,
+                        })
+                      }
+                    >
+                      <ArrowRightIcon className="size-4 rotate-180 text-cyan-400" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-medium tracking-wide text-cyan-400 uppercase">
+                          Requested by {requesterWorker.name} Worker
+                        </div>
+                        <div className="mt-1 truncate text-sm text-foreground">
+                          {requesterTask.title}
+                        </div>
+                      </div>
+                      <ChevronRightIcon className="size-4 text-muted-foreground" />
+                    </button>
+                  ) : null}
+
+                  {dependencies.length > 0 ? (
+                    <div className="rounded-2xl border border-border/55 bg-card/45 p-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <ArrowRightIcon className="size-4" />
+                          Worker dependencies
+                        </div>
+                        <span className="text-[11px] tabular-nums text-muted-foreground">
+                          {dependencies.length}
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {dependencies.map((dependency) => {
+                          const dependencyWorker = workers.find(
+                            (worker) => worker.id === dependency.workerId,
+                          );
+                          return (
+                            <button
+                              key={dependency.id}
+                              type="button"
+                              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left hover:bg-accent"
+                              onClick={() =>
+                                updateSearch({
+                                  worker: dependency.workerId,
+                                  task: dependency.id,
+                                  create: undefined,
+                                })
+                              }
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-xs font-medium">
+                                  {dependency.title}
+                                </div>
+                                <div className="mt-1 text-[11px] text-muted-foreground">
+                                  {dependencyWorker?.name ?? "Unknown"} Worker
+                                </div>
+                              </div>
+                              <TaskStatusPill status={dependency.status} />
+                              <ChevronRightIcon className="size-3 text-muted-foreground" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="rounded-2xl border border-border/55 bg-card/45 p-4">
@@ -490,7 +697,16 @@ function TasksRoute() {
                               void navigate({ to: "/$threadId", params: { threadId: thread.id } })
                             }
                           >
-                            <span className="min-w-0 flex-1 truncate">{thread.title}</span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate">{thread.title}</span>
+                              <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+                                {thread.envMode === "worktree"
+                                  ? thread.worktreePath || "Worktree"
+                                  : thread.branch
+                                    ? `Branch · ${thread.branch}`
+                                    : "Local workspace"}
+                              </span>
+                            </span>
                             <ChevronRightIcon className="size-3 text-muted-foreground" />
                           </button>
                         ))}
@@ -641,6 +857,15 @@ function TasksRoute() {
         }}
         onCreated={(taskId) => updateSearch({ task: taskId, create: undefined })}
       />
+      {selectedTask && selectedWorker ? (
+        <DelegateTaskDialog
+          open={delegateDialogOpen}
+          requesterWorkerId={selectedWorker.id}
+          requesterTaskId={selectedTask.id}
+          workers={workers}
+          onOpenChange={setDelegateDialogOpen}
+        />
+      ) : null}
     </ProjectSurfaceFrame>
   );
 }

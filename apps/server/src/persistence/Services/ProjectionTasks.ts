@@ -11,6 +11,8 @@ import type { ProjectionRepositoryError } from "../Errors.ts";
 export const ProjectionTask = Schema.Struct({
   taskId: TaskId,
   workerId: ProjectId,
+  requesterWorkerId: Schema.NullOr(ProjectId),
+  requesterTaskId: Schema.NullOr(TaskId),
   title: Schema.String,
   brief: Schema.String,
   status: TaskStatus,

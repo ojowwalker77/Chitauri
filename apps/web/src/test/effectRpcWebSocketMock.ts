@@ -125,6 +125,8 @@ export function createShellSnapshotFromReadModel(
     tasks: snapshot.tasks.map((task) => ({
       id: task.id,
       workerId: task.workerId,
+      requesterWorkerId: task.requesterWorkerId,
+      requesterTaskId: task.requesterTaskId,
       title: task.title,
       brief: task.brief,
       status: task.status,
