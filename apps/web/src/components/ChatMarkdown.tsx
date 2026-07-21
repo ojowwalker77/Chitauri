@@ -28,12 +28,11 @@ import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { copyTextToClipboard } from "../hooks/useCopyToClipboard";
-import { resolveDiffThemeName, type DiffThemeName } from "../lib/diffRendering";
+import { DIFF_THEME_NAME, type DiffThemeName } from "../lib/diffRendering";
 import { dedentCode, parseCodeFenceInfo, type CodeFenceInfo } from "../lib/codeFence";
 import { getFileIconName, pathLooksLikeKnownFile } from "../file-icons";
 import { CentralIcon } from "~/lib/central-icons";
 import { isLocalImageMarkdownSrc } from "../lib/localImageUrls";
-import { useTheme } from "../hooks/useTheme";
 import { useSmoothStreamedText } from "../hooks/useSmoothStreamedText";
 import { openWorkspaceFileReference, useWorkspaceFileOpener } from "../lib/workspaceFileOpener";
 import { resolveMarkdownFileLinkTarget, rewriteMarkdownFileUriHref } from "../markdown-links";
@@ -726,18 +725,12 @@ function inlineCodeFilePath(raw: string): string | null {
 // meta/ctrl-click — or a surface without a viewer — opens the preferred
 // external editor. `targetPath` may carry a `:line` suffix (used to open); the
 // chip icon and title use the position-free path.
-function OpenableFileChip(props: {
-  targetPath: string;
-  theme: "light" | "dark";
-  label?: ReactNode;
-  href?: string;
-}) {
+function OpenableFileChip(props: { targetPath: string; label?: ReactNode; href?: string }) {
   const opener = useWorkspaceFileOpener();
   const chipPath = props.targetPath.replace(MARKDOWN_LINK_POSITION_SUFFIX_PATTERN, "");
   return (
     <InlineMentionChip
       path={chipPath}
-      theme={props.theme}
       href={props.href ?? props.targetPath}
       onActivate={(event) => {
         event.preventDefault();
@@ -957,8 +950,7 @@ function ChatMarkdown({
   markers,
   onTaskToggle,
 }: ChatMarkdownProps) {
-  const { resolvedTheme } = useTheme();
-  const diffThemeName = resolveDiffThemeName(resolvedTheme);
+  const diffThemeName = DIFF_THEME_NAME;
   // Reveal streamed text at a steady, adaptive cadence so tokens appear fluidly instead of
   // in the ~100ms network clumps that land in the store. No-ops (returns `text`) when not
   // streaming or under reduced motion. Governs cadence only; the deferred value below still
@@ -1019,7 +1011,6 @@ function ChatMarkdown({
         return (
           <OpenableFileChip
             targetPath={targetPath}
-            theme={resolvedTheme}
             label={nodeToPlainText(children)}
             {...(restoredHref ? { href: restoredHref } : {})}
           />
@@ -1058,7 +1049,7 @@ function ChatMarkdown({
           const filePath = inlineCodeFilePath(nodeToPlainText(children));
           if (filePath) {
             const targetPath = resolveMarkdownFileLinkTarget(filePath, cwd) ?? filePath;
-            return <OpenableFileChip targetPath={targetPath} theme={resolvedTheme} />;
+            return <OpenableFileChip targetPath={targetPath} />;
           }
         }
         return (
@@ -1106,7 +1097,7 @@ function ChatMarkdown({
         return <input {...props} />;
       },
     }),
-    [cwd, diffThemeName, isStreaming, onImageExpand, onTaskToggle, resolvedTheme],
+    [cwd, diffThemeName, isStreaming, onImageExpand, onTaskToggle],
   );
 
   return (

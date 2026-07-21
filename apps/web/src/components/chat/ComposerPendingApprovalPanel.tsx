@@ -169,7 +169,7 @@ function ApprovalDetail({ parsed }: { parsed: ParsedApproval }) {
   if (code) {
     return (
       <pre
-        className="mt-2.5 overflow-hidden rounded-[8px] bg-[var(--color-background-elevated-secondary)] px-3 py-2 font-mono text-[12px] leading-snug text-foreground/85"
+        className="mt-2.5 overflow-hidden rounded-lg bg-[var(--color-background-elevated-secondary)] px-3 py-2 font-mono text-[12px] leading-snug text-foreground/85"
         title={code}
       >
         <code className="block truncate">{code}</code>

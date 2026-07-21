@@ -41,13 +41,7 @@ import {
   type ChatAssistantSelectionAttachment,
   type ChatFileAttachment,
   type ChatImageAttachment,
-  type ThreadPrimarySurface,
 } from "./types";
-import {
-  type TerminalContextDraft,
-  ensureInlineTerminalContextPlaceholders,
-  normalizeTerminalContextText,
-} from "./lib/terminalContext";
 import {
   type FileCommentDraft,
   type FileCommentSelection,
@@ -77,7 +71,6 @@ export const COMPOSER_DRAFT_STORAGE_KEY = "teacode:composer-drafts:v1";
 const COMPOSER_DRAFT_STORAGE_VERSION = 6;
 const DraftThreadEnvModeSchema = Schema.Literals(["local", "worktree"]);
 export type DraftThreadEnvMode = typeof DraftThreadEnvModeSchema.Type;
-const DraftThreadEntryPointSchema = Schema.Literals(["chat", "terminal"]);
 const COMPOSER_PROVIDER_KINDS = [
   "codex",
   "claudeAgent",
@@ -91,7 +84,6 @@ const isProviderKind = Schema.is(ProviderKind);
 const GROK_REASONING_EFFORT_SET = new Set<string>(GROK_REASONING_EFFORT_OPTIONS);
 
 const COMPOSER_PERSIST_DEBOUNCE_MS = 300;
-const TERMINAL_DRAFT_THREAD_MAPPING_SUFFIX = "::terminal";
 
 const composerDebouncedStorage = createDebouncedStorage(
   typeof localStorage !== "undefined" ? localStorage : createMemoryStorage(),
@@ -143,7 +135,6 @@ export interface ComposerPromptHistorySavedDraft {
   nonPersistedImageIds: string[];
   persistedAttachments: PersistedComposerImageAttachment[];
   assistantSelections: ComposerAssistantSelectionAttachment[];
-  terminalContexts: TerminalContextDraft[];
   fileComments: FileCommentDraft[];
   pastedTexts: PastedTextDraft[];
   skills: ProviderSkillReference[];
@@ -161,7 +152,6 @@ export interface QueuedComposerChatTurn {
   images: ComposerImageAttachment[];
   files: ComposerFileAttachment[];
   assistantSelections: ComposerAssistantSelectionAttachment[];
-  terminalContexts: TerminalContextDraft[];
   fileComments: FileCommentDraft[];
   pastedTexts: PastedTextDraft[];
   skills: ProviderSkillReference[];
@@ -199,29 +189,6 @@ export interface QueuedComposerPlanFollowUp {
 }
 
 export type QueuedComposerTurn = QueuedComposerChatTurn | QueuedComposerPlanFollowUp;
-
-const PersistedTerminalContextDraft = Schema.Struct({
-  id: Schema.String,
-  threadId: ThreadId,
-  createdAt: Schema.String,
-  terminalId: Schema.String,
-  terminalLabel: Schema.String,
-  lineStart: Schema.Number,
-  lineEnd: Schema.Number,
-});
-type PersistedTerminalContextDraft = typeof PersistedTerminalContextDraft.Type;
-
-const PersistedQueuedTerminalContextDraft = Schema.Struct({
-  id: Schema.String,
-  threadId: ThreadId,
-  createdAt: Schema.String,
-  terminalId: Schema.String,
-  terminalLabel: Schema.String,
-  lineStart: Schema.Number,
-  lineEnd: Schema.Number,
-  text: Schema.String,
-});
-type PersistedQueuedTerminalContextDraft = typeof PersistedQueuedTerminalContextDraft.Type;
 
 // File comments always carry their authored text (no live source to re-derive
 // from), so a single schema covers both live drafts and queued turns.
@@ -270,7 +237,6 @@ const PersistedQueuedComposerChatTurn = Schema.Struct({
   prompt: Schema.String,
   images: Schema.Array(PersistedComposerImageAttachment),
   assistantSelections: Schema.optionalKey(Schema.Array(PersistedAssistantSelectionDraft)),
-  terminalContexts: Schema.Array(PersistedQueuedTerminalContextDraft),
   fileComments: Schema.optionalKey(Schema.Array(PersistedFileCommentDraft)),
   pastedTexts: Schema.optionalKey(Schema.Array(PersistedPastedTextDraft)),
   skills: Schema.Array(ProviderSkillReference),
@@ -314,7 +280,6 @@ const PersistedComposerPromptHistorySavedDraft = Schema.Union([
     prompt: Schema.String,
     attachments: Schema.optionalKey(Schema.Array(PersistedComposerImageAttachment)),
     assistantSelections: Schema.optionalKey(Schema.Array(PersistedAssistantSelectionDraft)),
-    terminalContexts: Schema.optionalKey(Schema.Array(PersistedTerminalContextDraft)),
     fileComments: Schema.optionalKey(Schema.Array(PersistedFileCommentDraft)),
     pastedTexts: Schema.optionalKey(Schema.Array(PersistedPastedTextDraft)),
     skills: Schema.optionalKey(Schema.Array(ProviderSkillReference)),
@@ -339,7 +304,6 @@ const PersistedComposerThreadDraftState = Schema.Struct({
       }),
     ),
   ),
-  terminalContexts: Schema.optionalKey(Schema.Array(PersistedTerminalContextDraft)),
   fileComments: Schema.optionalKey(Schema.Array(PersistedFileCommentDraft)),
   pastedTexts: Schema.optionalKey(Schema.Array(PersistedPastedTextDraft)),
   skills: Schema.optionalKey(Schema.Array(ProviderSkillReference)),
@@ -398,7 +362,6 @@ const PersistedDraftThreadState = Schema.Struct({
   projectId: ProjectId,
   createdAt: Schema.String,
   runtimeMode: RuntimeMode,
-  entryPoint: DraftThreadEntryPointSchema.pipe(Schema.withDecodingDefault(() => "chat")),
   branch: Schema.NullOr(Schema.String),
   worktreePath: Schema.NullOr(Schema.String),
   lastKnownPr: Schema.optionalKey(Schema.NullOr(OrchestrationThreadPullRequest)),
@@ -435,7 +398,6 @@ export interface ComposerThreadDraftState {
   nonPersistedImageIds: string[];
   persistedAttachments: PersistedComposerImageAttachment[];
   assistantSelections: ComposerAssistantSelectionAttachment[];
-  terminalContexts: TerminalContextDraft[];
   fileComments: FileCommentDraft[];
   pastedTexts: PastedTextDraft[];
   skills: ProviderSkillReference[];
@@ -451,7 +413,6 @@ export interface DraftThreadState {
   projectId: ProjectId;
   createdAt: string;
   runtimeMode: RuntimeMode;
-  entryPoint: ThreadPrimarySurface;
   branch: string | null;
   worktreePath: string | null;
   lastKnownPr?: OrchestrationThreadPullRequest | null;
@@ -466,7 +427,6 @@ interface DraftThreadMutationOptions {
   createdAt?: string;
   envMode?: DraftThreadEnvMode;
   runtimeMode?: RuntimeMode;
-  entryPoint?: ThreadPrimarySurface;
 }
 
 type DraftThreadCreatedAtMode = "accept-empty" | "preserve-existing-on-empty";
@@ -481,10 +441,7 @@ export interface ComposerDraftStoreState {
   projectDraftThreadIdByProjectId: Record<string, ThreadId>;
   stickyModelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>>;
   stickyActiveProvider: ProviderKind | null;
-  getDraftThreadByProjectId: (
-    projectId: ProjectId,
-    entryPoint?: ThreadPrimarySurface,
-  ) => ProjectDraftThread | null;
+  getDraftThreadByProjectId: (projectId: ProjectId) => ProjectDraftThread | null;
   getDraftThread: (threadId: ThreadId) => DraftThreadState | null;
   setProjectDraftThreadId: (
     projectId: ProjectId,
@@ -522,7 +479,7 @@ export interface ComposerDraftStoreState {
     projectId: ProjectId,
     options?: DraftThreadMutationOptions,
   ) => void;
-  clearProjectDraftThreadId: (projectId: ProjectId, entryPoint?: ThreadPrimarySurface) => void;
+  clearProjectDraftThreadId: (projectId: ProjectId) => void;
   clearProjectDraftThreads: (projectId: ProjectId) => void;
   clearProjectDraftThreadById: (projectId: ProjectId, threadId: ThreadId) => void;
   markDraftThreadPromoting: (threadId: ThreadId, promotedTo?: ThreadId) => void;
@@ -540,7 +497,6 @@ export interface ComposerDraftStoreState {
     threadId: ThreadId,
     attachments: PersistedComposerImageAttachment[],
   ) => Promise<ComposerAttachmentPersistenceResult>;
-  setTerminalContexts: (threadId: ThreadId, contexts: TerminalContextDraft[]) => void;
   setSkills: (threadId: ThreadId, skills: ProviderSkillReference[]) => void;
   setMentions: (threadId: ThreadId, mentions: ProviderMentionReference[]) => void;
   setModelSelection: (
@@ -583,16 +539,6 @@ export interface ComposerDraftStoreState {
   addPastedTexts: (threadId: ThreadId, pastedTexts: PastedTextDraft[]) => void;
   removePastedText: (threadId: ThreadId, pastedTextId: string) => void;
   clearPastedTexts: (threadId: ThreadId) => void;
-  insertTerminalContext: (
-    threadId: ThreadId,
-    prompt: string,
-    context: TerminalContextDraft,
-    index: number,
-  ) => boolean;
-  addTerminalContext: (threadId: ThreadId, context: TerminalContextDraft) => void;
-  addTerminalContexts: (threadId: ThreadId, contexts: TerminalContextDraft[]) => void;
-  removeTerminalContext: (threadId: ThreadId, contextId: string) => void;
-  clearTerminalContexts: (threadId: ThreadId) => void;
   clearPersistedAttachments: (threadId: ThreadId) => void;
   syncPersistedAttachments: (
     threadId: ThreadId,
@@ -670,27 +616,6 @@ const EMPTY_PERSISTED_DRAFT_STORE_STATE = Object.freeze<PersistedComposerDraftSt
   stickyActiveProvider: null,
 });
 
-function projectDraftThreadMappingKey(
-  projectId: ProjectId,
-  entryPoint: ThreadPrimarySurface = "chat",
-): string {
-  return entryPoint === "terminal"
-    ? `${projectId}${TERMINAL_DRAFT_THREAD_MAPPING_SUFFIX}`
-    : projectId;
-}
-
-function projectDraftThreadEntryPointFromKey(key: string): ThreadPrimarySurface {
-  return key.endsWith(TERMINAL_DRAFT_THREAD_MAPPING_SUFFIX) ? "terminal" : "chat";
-}
-
-function projectIdFromDraftThreadMappingKey(key: string): ProjectId {
-  return (
-    key.endsWith(TERMINAL_DRAFT_THREAD_MAPPING_SUFFIX)
-      ? key.slice(0, -TERMINAL_DRAFT_THREAD_MAPPING_SUFFIX.length)
-      : key
-  ) as ProjectId;
-}
-
 function resolveDraftThreadCreatedAt(input: {
   createdAt: string | undefined;
   existingThread: DraftThreadState | undefined;
@@ -716,10 +641,6 @@ function buildDraftThreadState(input: {
     options?.worktreePath === undefined
       ? (existingThread?.worktreePath ?? null)
       : (options.worktreePath ?? null);
-  const nextEntryPoint = normalizeDraftThreadEntryPoint(
-    options?.entryPoint,
-    existingThread?.entryPoint ?? "chat",
-  );
   const nextPromotedTo = existingThread?.promotedTo;
 
   return {
@@ -730,7 +651,6 @@ function buildDraftThreadState(input: {
       mode: input.createdAtMode,
     }),
     runtimeMode: options?.runtimeMode ?? existingThread?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
-    entryPoint: nextEntryPoint,
     branch:
       options?.branch === undefined ? (existingThread?.branch ?? null) : (options.branch ?? null),
     worktreePath: nextWorktreePath,
@@ -756,7 +676,6 @@ function draftThreadStatesEqual(
     left.projectId === right.projectId &&
     left.createdAt === right.createdAt &&
     left.runtimeMode === right.runtimeMode &&
-    left.entryPoint === right.entryPoint &&
     left.branch === right.branch &&
     left.worktreePath === right.worktreePath &&
     Equal.equals(left.lastKnownPr ?? null, right.lastKnownPr ?? null) &&
@@ -824,7 +743,6 @@ const EMPTY_IMAGES: ComposerImageAttachment[] = [];
 const EMPTY_FILES: ComposerFileAttachment[] = [];
 const EMPTY_IDS: string[] = [];
 const EMPTY_PERSISTED_ATTACHMENTS: PersistedComposerImageAttachment[] = [];
-const EMPTY_TERMINAL_CONTEXTS: TerminalContextDraft[] = [];
 const EMPTY_PASTED_TEXTS: PastedTextDraft[] = [];
 const EMPTY_SKILLS: ProviderSkillReference[] = [];
 const EMPTY_MENTIONS: ProviderMentionReference[] = [];
@@ -848,7 +766,6 @@ const EMPTY_THREAD_DRAFT = Object.freeze<ComposerThreadDraftState>({
   nonPersistedImageIds: EMPTY_IDS,
   persistedAttachments: EMPTY_PERSISTED_ATTACHMENTS,
   assistantSelections: [],
-  terminalContexts: EMPTY_TERMINAL_CONTEXTS,
   fileComments: [],
   pastedTexts: EMPTY_PASTED_TEXTS,
   skills: EMPTY_SKILLS,
@@ -869,7 +786,6 @@ function createEmptyThreadDraft(): ComposerThreadDraftState {
     nonPersistedImageIds: [],
     persistedAttachments: [],
     assistantSelections: [],
-    terminalContexts: [],
     fileComments: [],
     pastedTexts: [],
     skills: [],
@@ -890,10 +806,6 @@ function composerImageDedupKey(image: ComposerImageAttachment): string {
 
 function composerFileDedupKey(file: ComposerFileAttachment): string {
   return `${file.mimeType}\u0000${file.sizeBytes}\u0000${file.name}`;
-}
-
-function terminalContextDedupKey(context: TerminalContextDraft): string {
-  return `${context.terminalId}\u0000${context.lineStart}\u0000${context.lineEnd}`;
 }
 
 function assistantSelectionDedupKey(
@@ -1019,53 +931,6 @@ function hydratePastedTextsFromPersisted(
   return normalizePastedTexts(persisted.map((entry) => createPastedTextDraft(entry)));
 }
 
-function normalizeTerminalContextForThread(
-  threadId: ThreadId,
-  context: TerminalContextDraft,
-): TerminalContextDraft | null {
-  const terminalId = context.terminalId.trim();
-  const terminalLabel = context.terminalLabel.trim();
-  if (terminalId.length === 0 || terminalLabel.length === 0) {
-    return null;
-  }
-  const lineStart = Math.max(1, Math.floor(context.lineStart));
-  const lineEnd = Math.max(lineStart, Math.floor(context.lineEnd));
-  return {
-    ...context,
-    threadId,
-    terminalId,
-    terminalLabel,
-    lineStart,
-    lineEnd,
-    text: normalizeTerminalContextText(context.text),
-  };
-}
-
-function normalizeTerminalContextsForThread(
-  threadId: ThreadId,
-  contexts: ReadonlyArray<TerminalContextDraft>,
-): TerminalContextDraft[] {
-  const existingIds = new Set<string>();
-  const existingDedupKeys = new Set<string>();
-  const normalizedContexts: TerminalContextDraft[] = [];
-
-  for (const context of contexts) {
-    const normalizedContext = normalizeTerminalContextForThread(threadId, context);
-    if (!normalizedContext) {
-      continue;
-    }
-    const dedupKey = terminalContextDedupKey(normalizedContext);
-    if (existingIds.has(normalizedContext.id) || existingDedupKeys.has(dedupKey)) {
-      continue;
-    }
-    normalizedContexts.push(normalizedContext);
-    existingIds.add(normalizedContext.id);
-    existingDedupKeys.add(dedupKey);
-  }
-
-  return normalizedContexts;
-}
-
 // Moves all sendable composer content into a hidden draft while history text is being browsed.
 export function captureComposerPromptHistorySavedDraft(input: {
   threadId: ThreadId;
@@ -1081,7 +946,6 @@ export function captureComposerPromptHistorySavedDraft(input: {
     nonPersistedImageIds: [...draft.nonPersistedImageIds],
     persistedAttachments: [...draft.persistedAttachments],
     assistantSelections: normalizeAssistantSelections(draft.assistantSelections),
-    terminalContexts: normalizeTerminalContextsForThread(threadId, draft.terminalContexts),
     fileComments: normalizeFileComments(draft.fileComments),
     pastedTexts: normalizePastedTexts(draft.pastedTexts),
     skills: [...draft.skills],
@@ -1108,10 +972,6 @@ function buildTransferredComposerDraft(input: {
     nonPersistedImageIds: [...sourceDraft.nonPersistedImageIds],
     persistedAttachments: [...sourceDraft.persistedAttachments],
     assistantSelections: normalizeAssistantSelections(sourceDraft.assistantSelections),
-    terminalContexts: normalizeTerminalContextsForThread(
-      targetThreadId,
-      sourceDraft.terminalContexts,
-    ),
     fileComments: normalizeFileComments(sourceDraft.fileComments),
     pastedTexts: normalizePastedTexts(sourceDraft.pastedTexts),
     skills: [...sourceDraft.skills],
@@ -1134,10 +994,6 @@ function clonePromptHistorySavedDraft(
     nonPersistedImageIds: [...savedDraft.nonPersistedImageIds],
     persistedAttachments: [...savedDraft.persistedAttachments],
     assistantSelections: normalizeAssistantSelections(savedDraft.assistantSelections),
-    terminalContexts: normalizeTerminalContextsForThread(
-      targetThreadId,
-      savedDraft.terminalContexts,
-    ),
     fileComments: normalizeFileComments(savedDraft.fileComments),
     pastedTexts: normalizePastedTexts(savedDraft.pastedTexts),
     skills: [...savedDraft.skills],
@@ -1153,7 +1009,6 @@ function shouldRemoveDraft(draft: ComposerThreadDraftState): boolean {
     draft.files.length === 0 &&
     draft.persistedAttachments.length === 0 &&
     draft.assistantSelections.length === 0 &&
-    draft.terminalContexts.length === 0 &&
     draft.fileComments.length === 0 &&
     draft.pastedTexts.length === 0 &&
     draft.skills.length === 0 &&
@@ -1635,7 +1490,7 @@ export function deriveEffectiveComposerModelState(input: {
 }
 
 // Resolve the model we should persist for a draft-backed thread promotion.
-// This keeps terminal-first thread creation aligned with the composer precedence.
+// This keeps draft-backed thread creation aligned with the composer precedence.
 export function resolvePreferredComposerModelSelection(input: {
   draft:
     | Pick<ComposerThreadDraftState, "modelSelectionByProvider" | "activeProvider">
@@ -1808,12 +1663,6 @@ function normalizePersistedPromptHistorySavedDraft(
         return normalized ? [normalized] : [];
       })
     : [];
-  const terminalContexts = Array.isArray(candidate.terminalContexts)
-    ? candidate.terminalContexts.flatMap((entry) => {
-        const normalized = normalizePersistedTerminalContextDraft(entry);
-        return normalized ? [normalized] : [];
-      })
-    : [];
   const fileComments = Array.isArray(candidate.fileComments)
     ? candidate.fileComments.flatMap((entry) => {
         const normalized = normalizePersistedFileCommentDraft(entry);
@@ -1836,75 +1685,10 @@ function normalizePersistedPromptHistorySavedDraft(
     prompt,
     attachments,
     ...(assistantSelections.length > 0 ? { assistantSelections } : {}),
-    ...(terminalContexts.length > 0 ? { terminalContexts } : {}),
     ...(fileComments.length > 0 ? { fileComments } : {}),
     ...(pastedTexts.length > 0 ? { pastedTexts } : {}),
     ...(skills.length > 0 ? { skills } : {}),
     ...(mentions.length > 0 ? { mentions } : {}),
-  };
-}
-
-function normalizePersistedTerminalContextDraft(
-  value: unknown,
-): PersistedTerminalContextDraft | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const candidate = value as Record<string, unknown>;
-  const id = candidate.id;
-  const threadId = candidate.threadId;
-  const createdAt = candidate.createdAt;
-  const lineStart = candidate.lineStart;
-  const lineEnd = candidate.lineEnd;
-  if (
-    typeof id !== "string" ||
-    id.length === 0 ||
-    typeof threadId !== "string" ||
-    threadId.length === 0 ||
-    typeof createdAt !== "string" ||
-    createdAt.length === 0 ||
-    typeof lineStart !== "number" ||
-    !Number.isFinite(lineStart) ||
-    typeof lineEnd !== "number" ||
-    !Number.isFinite(lineEnd)
-  ) {
-    return null;
-  }
-  const terminalId = typeof candidate.terminalId === "string" ? candidate.terminalId.trim() : "";
-  const terminalLabel =
-    typeof candidate.terminalLabel === "string" ? candidate.terminalLabel.trim() : "";
-  if (terminalId.length === 0 || terminalLabel.length === 0) {
-    return null;
-  }
-  const normalizedLineStart = Math.max(1, Math.floor(lineStart));
-  const normalizedLineEnd = Math.max(normalizedLineStart, Math.floor(lineEnd));
-  return {
-    id,
-    threadId: threadId as ThreadId,
-    createdAt,
-    terminalId,
-    terminalLabel,
-    lineStart: normalizedLineStart,
-    lineEnd: normalizedLineEnd,
-  };
-}
-
-function normalizePersistedQueuedTerminalContextDraft(
-  value: unknown,
-): PersistedQueuedTerminalContextDraft | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const candidate = value as Record<string, unknown>;
-  const base = normalizePersistedTerminalContextDraft(candidate);
-  if (!base) {
-    return null;
-  }
-  const text =
-    typeof candidate.text === "string" ? normalizeTerminalContextText(candidate.text) : "";
-  return {
-    ...base,
-    text,
   };
 }
 
@@ -2060,12 +1844,6 @@ function normalizePersistedQueuedTurns(
             return normalized ? [normalized] : [];
           })
         : [];
-      const terminalContexts = Array.isArray(candidate.terminalContexts)
-        ? candidate.terminalContexts.flatMap((context) => {
-            const normalized = normalizePersistedQueuedTerminalContextDraft(context);
-            return normalized ? [normalized] : [];
-          })
-        : [];
       const assistantSelections = Array.isArray(candidate.assistantSelections)
         ? candidate.assistantSelections.flatMap((selection) => {
             const normalized = normalizePersistedAssistantSelection(selection);
@@ -2105,7 +1883,6 @@ function normalizePersistedQueuedTurns(
         prompt,
         images,
         ...(assistantSelections.length > 0 ? { assistantSelections } : {}),
-        terminalContexts,
         ...(fileComments.length > 0 ? { fileComments } : {}),
         ...(pastedTexts.length > 0 ? { pastedTexts } : {}),
         skills: [...skills],
@@ -2158,10 +1935,6 @@ function normalizeDraftThreadEnvMode(
     return value;
   }
   return fallbackWorktreePath ? "worktree" : "local";
-}
-
-function normalizeDraftThreadEntryPoint(value: unknown, fallback: ThreadPrimarySurface = "chat") {
-  return value === "terminal" || value === "chat" ? value : fallback;
 }
 
 function normalizePersistedDraftThreads(
@@ -2220,7 +1993,6 @@ function normalizePersistedDraftThreads(
           candidateDraftThread.runtimeMode === "full-access"
             ? candidateDraftThread.runtimeMode
             : DEFAULT_RUNTIME_MODE,
-        entryPoint: normalizeDraftThreadEntryPoint(candidateDraftThread.entryPoint),
         branch: typeof branch === "string" ? branch : null,
         worktreePath: normalizedWorktreePath,
         ...(lastKnownPr ? { lastKnownPr } : {}),
@@ -2238,8 +2010,7 @@ function normalizePersistedDraftThreads(
     for (const [mappingKey, threadId] of Object.entries(
       rawProjectDraftThreadIdByProjectId as Record<string, unknown>,
     )) {
-      const projectId = projectIdFromDraftThreadMappingKey(mappingKey);
-      const entryPoint = projectDraftThreadEntryPointFromKey(mappingKey);
+      const projectId = mappingKey as ProjectId;
       if (
         typeof projectId === "string" &&
         projectId.length > 0 &&
@@ -2252,7 +2023,6 @@ function normalizePersistedDraftThreads(
             projectId: projectId as ProjectId,
             createdAt: new Date().toISOString(),
             runtimeMode: DEFAULT_RUNTIME_MODE,
-            entryPoint,
             branch: null,
             worktreePath: null,
             envMode: "local",
@@ -2261,11 +2031,6 @@ function normalizePersistedDraftThreads(
           draftThreadsByThreadId[threadId as ThreadId] = {
             ...draftThreadsByThreadId[threadId as ThreadId]!,
             projectId: projectId as ProjectId,
-          };
-        } else if (draftThreadsByThreadId[threadId as ThreadId]?.entryPoint !== entryPoint) {
-          draftThreadsByThreadId[threadId as ThreadId] = {
-            ...draftThreadsByThreadId[threadId as ThreadId]!,
-            entryPoint,
           };
         }
       }
@@ -2302,12 +2067,6 @@ function normalizePersistedDraftsByThreadId(
           return normalized ? [normalized] : [];
         })
       : [];
-    const terminalContexts = Array.isArray(draftCandidate.terminalContexts)
-      ? draftCandidate.terminalContexts.flatMap((entry) => {
-          const normalized = normalizePersistedTerminalContextDraft(entry);
-          return normalized ? [normalized] : [];
-        })
-      : [];
     const assistantSelections = Array.isArray(draftCandidate.assistantSelections)
       ? draftCandidate.assistantSelections.flatMap((entry) => {
           const normalized = normalizePersistedAssistantSelection(entry);
@@ -2338,10 +2097,6 @@ function normalizePersistedDraftsByThreadId(
       draftCandidate.runtimeMode === "full-access"
         ? draftCandidate.runtimeMode
         : null;
-    const prompt = ensureInlineTerminalContextPlaceholders(
-      promptCandidate,
-      terminalContexts.length,
-    );
     // If the draft already has the v3 shape, use it directly
     const legacyDraftCandidate = draftValue as LegacyPersistedComposerThreadDraftState;
     let modelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>> = {};
@@ -2402,7 +2157,6 @@ function normalizePersistedDraftsByThreadId(
       promptCandidate.length === 0 &&
       promptHistorySavedDraft === null &&
       attachments.length === 0 &&
-      terminalContexts.length === 0 &&
       assistantSelections.length === 0 &&
       fileComments.length === 0 &&
       pastedTexts.length === 0 &&
@@ -2415,11 +2169,10 @@ function normalizePersistedDraftsByThreadId(
       continue;
     }
     nextDraftsByThreadId[threadId as ThreadId] = {
-      prompt,
+      prompt: promptCandidate,
       ...(promptHistorySavedDraft !== null ? { promptHistorySavedDraft } : {}),
       attachments,
       ...(assistantSelections.length > 0 ? { assistantSelections } : {}),
-      ...(terminalContexts.length > 0 ? { terminalContexts } : {}),
       ...(fileComments.length > 0 ? { fileComments } : {}),
       ...(pastedTexts.length > 0 ? { pastedTexts } : {}),
       ...(skills.length > 0 ? { skills } : {}),
@@ -2477,16 +2230,6 @@ function partializeComposerDraftStoreState(
             id: selection.id,
             assistantMessageId: selection.assistantMessageId,
             text: selection.text,
-          })),
-          terminalContexts: queuedTurn.terminalContexts.map((context) => ({
-            id: context.id,
-            threadId: context.threadId,
-            createdAt: context.createdAt,
-            terminalId: context.terminalId,
-            terminalLabel: context.terminalLabel,
-            lineStart: context.lineStart,
-            lineEnd: context.lineEnd,
-            text: context.text,
           })),
           ...(queuedTurn.fileComments.length > 0
             ? {
@@ -2551,7 +2294,6 @@ function partializeComposerDraftStoreState(
       draft.promptHistorySavedDraft === null &&
       draft.persistedAttachments.length === 0 &&
       draft.assistantSelections.length === 0 &&
-      draft.terminalContexts.length === 0 &&
       draft.fileComments.length === 0 &&
       draft.pastedTexts.length === 0 &&
       !hasReferenceData &&
@@ -2576,21 +2318,6 @@ function partializeComposerDraftStoreState(
                         id: selection.id,
                         assistantMessageId: selection.assistantMessageId,
                         text: selection.text,
-                      }),
-                    ),
-                  }
-                : {}),
-              ...(draft.promptHistorySavedDraft.terminalContexts.length > 0
-                ? {
-                    terminalContexts: draft.promptHistorySavedDraft.terminalContexts.map(
-                      (context) => ({
-                        id: context.id,
-                        threadId: context.threadId,
-                        createdAt: context.createdAt,
-                        terminalId: context.terminalId,
-                        terminalLabel: context.terminalLabel,
-                        lineStart: context.lineStart,
-                        lineEnd: context.lineEnd,
                       }),
                     ),
                   }
@@ -2631,19 +2358,6 @@ function partializeComposerDraftStoreState(
               id: selection.id,
               assistantMessageId: selection.assistantMessageId,
               text: selection.text,
-            })),
-          }
-        : {}),
-      ...(draft.terminalContexts.length > 0
-        ? {
-            terminalContexts: draft.terminalContexts.map((context) => ({
-              id: context.id,
-              threadId: context.threadId,
-              createdAt: context.createdAt,
-              terminalId: context.terminalId,
-              terminalLabel: context.terminalLabel,
-              lineStart: context.lineStart,
-              lineEnd: context.lineEnd,
             })),
           }
         : {}),
@@ -3030,7 +2744,6 @@ function hydrateQueuedTurnsFromPersisted(
         images: hydrateImagesFromPersisted(queuedTurn.images),
         files: [],
         assistantSelections: normalizeAssistantSelections(queuedTurn.assistantSelections ?? []),
-        terminalContexts: normalizeTerminalContextsForThread(threadId, queuedTurn.terminalContexts),
         fileComments: normalizeFileComments(queuedTurn.fileComments ?? []),
         pastedTexts: hydratePastedTextsFromPersisted(queuedTurn.pastedTexts),
         skills: [...queuedTurn.skills],
@@ -3055,7 +2768,6 @@ function hydratePromptHistorySavedDraft(
       nonPersistedImageIds: [],
       persistedAttachments: [],
       assistantSelections: [],
-      terminalContexts: [],
       fileComments: [],
       pastedTexts: [],
       skills: [],
@@ -3070,11 +2782,6 @@ function hydratePromptHistorySavedDraft(
     nonPersistedImageIds: [],
     persistedAttachments: [...attachments],
     assistantSelections: normalizeAssistantSelections(savedDraft.assistantSelections ?? []),
-    terminalContexts:
-      savedDraft.terminalContexts?.map((context) => ({
-        ...context,
-        text: "",
-      })) ?? [],
     fileComments: normalizeFileComments(savedDraft.fileComments ?? []),
     pastedTexts: hydratePastedTextsFromPersisted(savedDraft.pastedTexts),
     skills: [...(savedDraft.skills ?? [])],
@@ -3099,11 +2806,6 @@ function toHydratedThreadDraft(
     nonPersistedImageIds: [],
     persistedAttachments: [...persistedDraft.attachments],
     assistantSelections: normalizeAssistantSelections(persistedDraft.assistantSelections ?? []),
-    terminalContexts:
-      persistedDraft.terminalContexts?.map((context) => ({
-        ...context,
-        text: "",
-      })) ?? [],
     fileComments: normalizeFileComments(persistedDraft.fileComments ?? []),
     pastedTexts: hydratePastedTextsFromPersisted(persistedDraft.pastedTexts),
     skills: [...(persistedDraft.skills ?? [])],
@@ -3124,14 +2826,11 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
       projectDraftThreadIdByProjectId: {},
       stickyModelSelectionByProvider: {},
       stickyActiveProvider: null,
-      getDraftThreadByProjectId: (projectId, entryPoint = "chat") => {
+      getDraftThreadByProjectId: (projectId) => {
         if (projectId.length === 0) {
           return null;
         }
-        const threadId =
-          get().projectDraftThreadIdByProjectId[
-            projectDraftThreadMappingKey(projectId, entryPoint)
-          ];
+        const threadId = get().projectDraftThreadIdByProjectId[projectId];
         if (!threadId) {
           return null;
         }
@@ -3139,7 +2838,6 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
         if (
           !draftThread ||
           draftThread.projectId !== projectId ||
-          normalizeDraftThreadEntryPoint(draftThread.entryPoint) !== entryPoint ||
           draftThread.promotedTo !== undefined
         ) {
           return null;
@@ -3167,7 +2865,7 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
             options,
             createdAtMode: "accept-empty",
           });
-          const mappingKey = projectDraftThreadMappingKey(projectId, nextDraftThread.entryPoint);
+          const mappingKey = projectId as string;
           const previousThreadIdForProject = state.projectDraftThreadIdByProjectId[mappingKey];
           const hasSameProjectMapping = previousThreadIdForProject === threadId;
           if (hasSameProjectMapping && draftThreadStatesEqual(existingThread, nextDraftThread)) {
@@ -3213,7 +2911,6 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
             projectId: options.projectId,
             createdAt: options.createdAt ?? new Date().toISOString(),
             runtimeMode: options.runtimeMode ?? DEFAULT_RUNTIME_MODE,
-            entryPoint: "chat",
             branch: options.branch ?? null,
             worktreePath,
             lastKnownPr: null,
@@ -3251,7 +2948,7 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
           }
           const nextProjectDraftThreadIdByProjectId: Record<string, ThreadId> = {
             ...removeProjectDraftMappingsForThread(state.projectDraftThreadIdByProjectId, threadId),
-            [projectDraftThreadMappingKey(nextProjectId, nextDraftThread.entryPoint)]: threadId,
+            [nextProjectId]: threadId,
           };
           return {
             draftThreadsByThreadId: {
@@ -3277,10 +2974,7 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
             options,
             createdAtMode: "preserve-existing-on-empty",
           });
-          const targetMappingKey = projectDraftThreadMappingKey(
-            projectId,
-            nextDraftThread.entryPoint,
-          );
+          const targetMappingKey = projectId as string;
           const previousThreadIdForProject =
             state.projectDraftThreadIdByProjectId[targetMappingKey];
           const hasOnlyTargetMapping = Object.entries(state.projectDraftThreadIdByProjectId).every(
@@ -3324,12 +3018,12 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
           };
         });
       },
-      clearProjectDraftThreadId: (projectId, entryPoint = "chat") => {
+      clearProjectDraftThreadId: (projectId) => {
         if (projectId.length === 0) {
           return;
         }
         set((state) => {
-          const mappingKey = projectDraftThreadMappingKey(projectId, entryPoint);
+          const mappingKey = projectId as string;
           const threadId = state.projectDraftThreadIdByProjectId[mappingKey];
           if (threadId === undefined) {
             return state;
@@ -3360,7 +3054,7 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
           for (const [mappingKey, threadId] of Object.entries(
             state.projectDraftThreadIdByProjectId,
           )) {
-            if (projectIdFromDraftThreadMappingKey(mappingKey) === projectId) {
+            if ((mappingKey as ProjectId) === projectId) {
               removedThreadIds.add(threadId);
               continue;
             }
@@ -3395,8 +3089,7 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
         set((state) => {
           const matchingMappingKey = Object.entries(state.projectDraftThreadIdByProjectId).find(
             ([mappingKey, mappedThreadId]) =>
-              projectIdFromDraftThreadMappingKey(mappingKey) === projectId &&
-              mappedThreadId === threadId,
+              (mappingKey as ProjectId) === projectId && mappedThreadId === threadId,
           )?.[0];
           if (!matchingMappingKey) {
             return state;
@@ -3582,7 +3275,6 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
                   nonPersistedImageIds: [],
                   persistedAttachments: [],
                   assistantSelections: [],
-                  terminalContexts: [],
                   fileComments: [],
                   pastedTexts: [],
                   skills: [],
@@ -3624,10 +3316,6 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
             nonPersistedImageIds: [...savedDraft.nonPersistedImageIds],
             persistedAttachments: [...savedDraft.persistedAttachments],
             assistantSelections: normalizeAssistantSelections(savedDraft.assistantSelections),
-            terminalContexts: normalizeTerminalContextsForThread(
-              threadId,
-              savedDraft.terminalContexts,
-            ),
             fileComments: normalizeFileComments(savedDraft.fileComments),
             pastedTexts: normalizePastedTexts(savedDraft.pastedTexts),
             skills: [...savedDraft.skills],
@@ -3719,30 +3407,6 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
             composerAttachmentSyncGenerationByKey.get(generationKey) === generation,
           ),
         );
-      },
-      setTerminalContexts: (threadId, contexts) => {
-        if (threadId.length === 0) {
-          return;
-        }
-        const normalizedContexts = normalizeTerminalContextsForThread(threadId, contexts);
-        set((state) => {
-          const existing = state.draftsByThreadId[threadId] ?? createEmptyThreadDraft();
-          const nextDraft: ComposerThreadDraftState = {
-            ...existing,
-            prompt: ensureInlineTerminalContextPlaceholders(
-              existing.prompt,
-              normalizedContexts.length,
-            ),
-            terminalContexts: normalizedContexts,
-          };
-          const nextDraftsByThreadId = { ...state.draftsByThreadId };
-          if (shouldRemoveDraft(nextDraft)) {
-            delete nextDraftsByThreadId[threadId];
-          } else {
-            nextDraftsByThreadId[threadId] = nextDraft;
-          }
-          return { draftsByThreadId: nextDraftsByThreadId };
-        });
       },
       setSkills: (threadId, skills) => {
         if (threadId.length === 0) {
@@ -4520,124 +4184,6 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
           return { draftsByThreadId: nextDraftsByThreadId };
         });
       },
-      insertTerminalContext: (threadId, prompt, context, index) => {
-        if (threadId.length === 0) {
-          return false;
-        }
-        let inserted = false;
-        set((state) => {
-          const existing = state.draftsByThreadId[threadId] ?? createEmptyThreadDraft();
-          const normalizedContext = normalizeTerminalContextForThread(threadId, context);
-          if (!normalizedContext) {
-            return state;
-          }
-          const dedupKey = terminalContextDedupKey(normalizedContext);
-          if (
-            existing.terminalContexts.some((entry) => entry.id === normalizedContext.id) ||
-            existing.terminalContexts.some((entry) => terminalContextDedupKey(entry) === dedupKey)
-          ) {
-            return state;
-          }
-          inserted = true;
-          const boundedIndex = Math.max(0, Math.min(existing.terminalContexts.length, index));
-          const nextDraft: ComposerThreadDraftState = {
-            ...existing,
-            prompt,
-            terminalContexts: [
-              ...existing.terminalContexts.slice(0, boundedIndex),
-              normalizedContext,
-              ...existing.terminalContexts.slice(boundedIndex),
-            ],
-          };
-          return {
-            draftsByThreadId: {
-              ...state.draftsByThreadId,
-              [threadId]: nextDraft,
-            },
-          };
-        });
-        return inserted;
-      },
-      addTerminalContext: (threadId, context) => {
-        if (threadId.length === 0) {
-          return;
-        }
-        get().addTerminalContexts(threadId, [context]);
-      },
-      addTerminalContexts: (threadId, contexts) => {
-        if (threadId.length === 0 || contexts.length === 0) {
-          return;
-        }
-        set((state) => {
-          const existing = state.draftsByThreadId[threadId] ?? createEmptyThreadDraft();
-          const acceptedContexts = normalizeTerminalContextsForThread(threadId, [
-            ...existing.terminalContexts,
-            ...contexts,
-          ]).slice(existing.terminalContexts.length);
-          if (acceptedContexts.length === 0) {
-            return state;
-          }
-          return {
-            draftsByThreadId: {
-              ...state.draftsByThreadId,
-              [threadId]: {
-                ...existing,
-                prompt: ensureInlineTerminalContextPlaceholders(
-                  existing.prompt,
-                  existing.terminalContexts.length + acceptedContexts.length,
-                ),
-                terminalContexts: [...existing.terminalContexts, ...acceptedContexts],
-              },
-            },
-          };
-        });
-      },
-      removeTerminalContext: (threadId, contextId) => {
-        if (threadId.length === 0 || contextId.length === 0) {
-          return;
-        }
-        set((state) => {
-          const current = state.draftsByThreadId[threadId];
-          if (!current) {
-            return state;
-          }
-          const nextDraft: ComposerThreadDraftState = {
-            ...current,
-            terminalContexts: current.terminalContexts.filter(
-              (context) => context.id !== contextId,
-            ),
-          };
-          const nextDraftsByThreadId = { ...state.draftsByThreadId };
-          if (shouldRemoveDraft(nextDraft)) {
-            delete nextDraftsByThreadId[threadId];
-          } else {
-            nextDraftsByThreadId[threadId] = nextDraft;
-          }
-          return { draftsByThreadId: nextDraftsByThreadId };
-        });
-      },
-      clearTerminalContexts: (threadId) => {
-        if (threadId.length === 0) {
-          return;
-        }
-        set((state) => {
-          const current = state.draftsByThreadId[threadId];
-          if (!current || current.terminalContexts.length === 0) {
-            return state;
-          }
-          const nextDraft: ComposerThreadDraftState = {
-            ...current,
-            terminalContexts: [],
-          };
-          const nextDraftsByThreadId = { ...state.draftsByThreadId };
-          if (shouldRemoveDraft(nextDraft)) {
-            delete nextDraftsByThreadId[threadId];
-          } else {
-            nextDraftsByThreadId[threadId] = nextDraft;
-          }
-          return { draftsByThreadId: nextDraftsByThreadId };
-        });
-      },
       clearPersistedAttachments: (threadId) => {
         if (threadId.length === 0) {
           return;
@@ -4778,7 +4324,6 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
             nonPersistedImageIds: [],
             persistedAttachments: [],
             assistantSelections: [],
-            terminalContexts: [],
             fileComments: [],
             pastedTexts: [],
             skills: [],

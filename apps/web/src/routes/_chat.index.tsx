@@ -24,13 +24,12 @@ function ChatIndexRouteView() {
 
   // Fresh unsent chats have a route id but no persisted sidebar summary yet, so the thread-id
   // list never contains them. Include plain, still-unsent chat drafts so a cold start on "/"
-  // can restore one instead of always minting a new one. A
-  // non-"chat" entry point isn't a home-chat draft, and `promotedTo` means the draft already
+  // can restore one instead of always minting a new one. `promotedTo` means the draft already
   // became a real thread, so its stale id is no longer a valid restore target.
   const draftThreadIds = useMemo(() => {
     const draftThreadIds = new Set<string>();
     for (const [threadId, draft] of Object.entries(draftThreadsByThreadId)) {
-      if (draft.entryPoint === "chat" && draft.promotedTo === undefined) {
+      if (draft.promotedTo === undefined) {
         draftThreadIds.add(threadId);
       }
     }

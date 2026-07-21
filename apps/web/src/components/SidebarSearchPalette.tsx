@@ -4,15 +4,7 @@
  * Keeps the sidebar search UX aligned with the shared command primitives so
  * keyboard navigation and shortcut labels behave like the rest of the app.
  */
-import {
-  CheckIcon,
-  DeviceLaptopIcon,
-  MoonIcon,
-  NewThreadIcon,
-  SearchIcon,
-  SettingsIcon,
-  SunIcon,
-} from "~/lib/icons";
+import { CheckIcon, NewThreadIcon, SearchIcon, SettingsIcon } from "~/lib/icons";
 import {
   type FilesystemBrowseResult,
   type ImportableDesktopThread,
@@ -59,7 +51,6 @@ import {
   matchSidebarSearchProjects,
   matchSidebarSearchThreads,
 } from "./SidebarSearchPalette.logic";
-import { useTheme } from "../hooks/useTheme";
 import {
   Command,
   CommandDialog,
@@ -171,110 +162,6 @@ function PaletteIcon(props: { icon: IconComponent }) {
   );
 }
 
-type ThemeCommandItem = {
-  description: string;
-  id: string;
-  isActive: boolean;
-  label: string;
-  mode: "system" | "light" | "dark";
-};
-
-function queryTokens(query: string): string[] {
-  return query
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((token) => token.length > 0);
-}
-
-function hasTokenEqual(query: string, token: string): boolean {
-  return queryTokens(query).includes(token);
-}
-
-function createThemeCommandItem(
-  mode: ThemeCommandItem["mode"],
-  activeMode: ThemeCommandItem["mode"],
-): ThemeCommandItem {
-  if (mode === "system") {
-    return {
-      id: "theme-command:system",
-      label: "Follow system appearance",
-      description: "Match your OS appearance setting.",
-      mode,
-      isActive: activeMode === mode,
-    };
-  }
-
-  return {
-    id: `theme-command:${mode}`,
-    label: `Switch to ${mode} theme`,
-    description: mode === "light" ? "Always use the light theme." : "Always use the dark theme.",
-    mode,
-    isActive: activeMode === mode,
-  };
-}
-
-// Treat any token of length >= 2 that is a prefix of `keyword` as a match,
-// so typing `th` / `the` already starts surfacing theme actions.
-function hasTokenPrefixOf(query: string, keyword: string): boolean {
-  return queryTokens(query).some((token) => token.length >= 2 && keyword.startsWith(token));
-}
-
-// Keep the palette quiet by default, then expose focused appearance actions
-// once the user is clearly asking about theme modes.
-function buildThemeCommandItems(input: {
-  query: string;
-  resolvedTheme: "light" | "dark";
-  theme: "system" | "light" | "dark";
-}): ThemeCommandItem[] {
-  const normalizedQuery = input.query.trim().toLowerCase();
-  if (!normalizedQuery) {
-    return [];
-  }
-
-  if (
-    hasTokenEqual(normalizedQuery, "system") ||
-    hasTokenEqual(normalizedQuery, "auto") ||
-    hasTokenEqual(normalizedQuery, "automatic") ||
-    hasTokenEqual(normalizedQuery, "os")
-  ) {
-    return [createThemeCommandItem("system", input.theme)];
-  }
-
-  if (hasTokenEqual(normalizedQuery, "light")) {
-    return [
-      createThemeCommandItem("light", input.theme),
-      createThemeCommandItem("system", input.theme),
-    ];
-  }
-
-  if (hasTokenEqual(normalizedQuery, "dark")) {
-    return [
-      createThemeCommandItem("dark", input.theme),
-      createThemeCommandItem("system", input.theme),
-    ];
-  }
-
-  if (
-    hasTokenPrefixOf(normalizedQuery, "theme") ||
-    hasTokenPrefixOf(normalizedQuery, "appearance")
-  ) {
-    const nextMode = input.resolvedTheme === "dark" ? "light" : "dark";
-    return [
-      createThemeCommandItem(nextMode, input.theme),
-      createThemeCommandItem("system", input.theme),
-    ];
-  }
-
-  return [];
-}
-
-const THEME_MODE_ICONS: Record<"system" | "light" | "dark", IconComponent> = {
-  system: DeviceLaptopIcon,
-  light: SunIcon,
-  dark: MoonIcon,
-};
-
 function ProviderIcon(props: { provider: ProviderKind }) {
   return (
     <div className="flex size-5 shrink-0 items-center justify-center">
@@ -350,7 +237,6 @@ function HighlightedText(props: { text: string; query: string; className?: strin
 }
 
 export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
-  const { resolvedTheme, setTheme, theme } = useTheme();
   const [query, setQuery] = useState(props.initialBrowseQuery ?? "");
   const [highlightedItemValue, setHighlightedItemValue] = useState<string | null>(null);
   const [importProvider, setImportProvider] = useState<ImportProviderKind>(
@@ -474,16 +360,6 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
     () => (isBrowsing ? [] : matchSidebarSearchActions(props.actions, query)),
     [isBrowsing, props.actions, query],
   );
-  const themeCommandItems = useMemo(
-    () =>
-      buildThemeCommandItems({
-        query,
-        resolvedTheme,
-        theme,
-      }),
-    [query, resolvedTheme, theme],
-  );
-  const showThemeSection = !isBrowsing && query.trim().length > 0 && themeCommandItems.length > 0;
   const matchedProjects = useMemo(
     () => (isBrowsing ? [] : matchSidebarSearchProjects(props.projects, query)),
     [isBrowsing, props.projects, query],
@@ -493,10 +369,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
     [isBrowsing, props.threads, query],
   );
   const hasSearchResults =
-    matchedActions.length > 0 ||
-    themeCommandItems.length > 0 ||
-    matchedProjects.length > 0 ||
-    matchedThreads.length > 0;
+    matchedActions.length > 0 || matchedProjects.length > 0 || matchedThreads.length > 0;
   const importFieldLabel = importProvider === "codex" ? "Thread ID" : "Session ID";
   const importPlaceholder =
     importProvider === "claudeAgent"
@@ -1059,7 +932,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
 
                   {!isBrowsing &&
                   matchedActions.length > 0 &&
-                  (matchedThreads.length > 0 || matchedProjects.length > 0 || showThemeSection) ? (
+                  (matchedThreads.length > 0 || matchedProjects.length > 0) ? (
                     <CommandSeparator />
                   ) : null}
 
@@ -1129,9 +1002,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                     </CommandGroup>
                   ) : null}
 
-                  {!isBrowsing &&
-                  matchedThreads.length > 0 &&
-                  (matchedProjects.length > 0 || showThemeSection) ? (
+                  {!isBrowsing && matchedThreads.length > 0 && matchedProjects.length > 0 ? (
                     <CommandSeparator />
                   ) : null}
 
@@ -1167,46 +1038,6 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                     </CommandGroup>
                   ) : null}
 
-                  {showThemeSection && matchedProjects.length > 0 ? <CommandSeparator /> : null}
-
-                  {showThemeSection ? (
-                    <>
-                      {themeCommandItems.length > 0 ? (
-                        <CommandGroup>
-                          <CommandGroupLabel className="py-1.5 pl-3">Configure</CommandGroupLabel>
-                          {themeCommandItems.map((themeCommandItem) => (
-                            <CommandItem
-                              key={themeCommandItem.id}
-                              value={themeCommandItem.id}
-                              className="cursor-pointer items-center gap-3 rounded-lg px-3 py-1.5"
-                              onMouseDown={(event) => {
-                                event.preventDefault();
-                              }}
-                              onClick={() => {
-                                if (themeCommandItem.isActive) return;
-                                props.onOpenChange(false);
-                                setTheme(themeCommandItem.mode);
-                              }}
-                            >
-                              <PaletteIcon icon={THEME_MODE_ICONS[themeCommandItem.mode]} />
-                              <span className="min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,14px)] text-foreground">
-                                {themeCommandItem.label}
-                              </span>
-                              <span
-                                className="flex size-3.5 shrink-0 items-center justify-center"
-                                aria-hidden={!themeCommandItem.isActive}
-                              >
-                                {themeCommandItem.isActive ? (
-                                  <CheckIcon className="size-3.5 text-muted-foreground/79" />
-                                ) : null}
-                              </span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      ) : null}
-                    </>
-                  ) : null}
-
                   {!isBrowsing && !hasSearchResults ? (
                     <CommandEmpty className="py-10">
                       <div className="flex flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground/79">
@@ -1236,7 +1067,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                   </>
                 ) : (
                   <>
-                    <span>Jump to threads, projects, actions, or appearance.</span>
+                    <span>Jump to threads, projects, or actions.</span>
                     <span>Enter to open</span>
                   </>
                 )}

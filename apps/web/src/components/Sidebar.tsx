@@ -22,7 +22,6 @@ import {
   PlayIcon,
   SettingsIcon,
   StopFilledIcon,
-  TerminalIcon,
   Trash2,
   TriangleAlertIcon,
   WorktreeIcon,
@@ -145,8 +144,7 @@ import { useComposerDraftStore } from "../composerDraftStore";
 import { resolveThreadEnvironmentPresentation } from "../lib/threadEnvironment";
 import { dispatchThreadRename } from "../lib/threadRename";
 import { quotePosixShellArgument } from "../lib/shellQuote";
-import { DEFAULT_THREAD_TERMINAL_ID, type SidebarThreadSummary, type Thread } from "../types";
-import { shouldRenderTerminalWorkspace } from "./ChatView.logic";
+import { type SidebarThreadSummary, type Thread } from "../types";
 import { CHAT_SURFACE_HEADER_HEIGHT_CLASS } from "./chat/chatHeaderControls";
 import { ProviderIcon } from "./ProviderIcon";
 import { SidebarLeadingControls } from "./SidebarHeaderNavigationControls";
@@ -163,7 +161,6 @@ import { ThreadPinToggleButton } from "./ThreadPinToggleButton";
 import { ThreadRunningSpinner } from "./ThreadRunningSpinner";
 import { RenameDialog } from "./RenameDialog";
 import { RenameThreadDialog } from "./RenameThreadDialog";
-import { disposeTerminalRuntimeThread } from "./terminal/terminalRuntimeHandle";
 import {
   SidebarSearchPalette,
   type ImportProviderKind,
@@ -173,7 +170,6 @@ import {
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import { useThreadHandoff } from "../hooks/useThreadHandoff";
-import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
 import { useProjectRunStore, type ProjectRunState } from "../projectRunStore";
 import {
   selectPrimaryProjectRunCommand,
@@ -294,7 +290,6 @@ import {
   resolveAvailableHandoffTargetProviders,
   resolveThreadHandoffBadgeLabel,
 } from "../lib/threadHandoff";
-import { isTerminalFocused } from "../lib/terminalFocus";
 import { normalizeSettingsSection } from "../settingsNavigation";
 import {
   sidebarHoverRevealHideClassName,
@@ -466,7 +461,6 @@ function threadJumpLabelMapsEqual(
 function buildThreadJumpLabelMap(input: {
   keybindings: ResolvedKeybindingsConfig;
   platform: string;
-  terminalOpen: boolean;
   threadJumpCommandByThreadId: ReadonlyMap<
     ThreadId,
     NonNullable<ReturnType<typeof threadJumpCommandForIndex>>
@@ -478,10 +472,6 @@ function buildThreadJumpLabelMap(input: {
 
   const shortcutLabelOptions = {
     platform: input.platform,
-    context: {
-      terminalFocus: false,
-      terminalOpen: input.terminalOpen,
-    },
   } as const;
   const mapping = new Map<ThreadId, string>();
   for (const [threadId, command] of input.threadJumpCommandByThreadId) {
@@ -611,26 +601,15 @@ function resolveThreadRowMetaChips(input: {
   return chips;
 }
 
-function ProviderAvatarWithTerminal({
+function ProviderAvatar({
   provider,
   handoffSourceProvider,
   handoffTooltip,
-  terminalStatus,
-  terminalCount,
 }: {
   provider: ProviderKind;
   handoffSourceProvider?: ProviderKind | null;
   handoffTooltip?: string | null;
-  terminalStatus: TerminalStatusIndicator | null;
-  terminalCount: number;
 }) {
-  const showBadge = terminalCount > 1 || terminalStatus !== null;
-  const badgeTooltip =
-    terminalCount > 1
-      ? `${terminalCount} ${pluralize(terminalCount, "terminal")} open`
-      : (terminalStatus?.label ?? "Terminal open");
-  const badgeColorClass = terminalStatus?.colorClass ?? "text-muted-foreground/55";
-
   const hasHandoff = Boolean(handoffSourceProvider);
   const containerClass = hasHandoff
     ? "relative inline-flex h-3 w-4.5 shrink-0 items-center"
@@ -661,37 +640,7 @@ function ProviderAvatarWithTerminal({
       avatarNode
     );
 
-  return (
-    <span className="relative inline-flex shrink-0 items-center">
-      {wrappedAvatar}
-      {showBadge ? (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <span
-                aria-label={badgeTooltip}
-                className="sidebar-icon-chip absolute -top-1.5 -right-1.5 inline-flex size-3 min-w-3 items-center justify-center rounded-full px-px"
-              >
-                {terminalCount > 1 ? (
-                  <span
-                    className={cn(
-                      "text-[11px] font-semibold leading-none tabular-nums",
-                      badgeColorClass,
-                    )}
-                  >
-                    {terminalCount}
-                  </span>
-                ) : (
-                  <TerminalIcon className={cn("size-2.5", badgeColorClass)} />
-                )}
-              </span>
-            }
-          />
-          <TooltipPopup side="top">{badgeTooltip}</TooltipPopup>
-        </Tooltip>
-      ) : null}
-    </span>
-  );
+  return <span className="relative inline-flex shrink-0 items-center">{wrappedAvatar}</span>;
 }
 
 function renderSubagentLabel(input: {
@@ -768,12 +717,6 @@ function SidebarSubagentLabel(props: {
   });
 }
 
-interface TerminalStatusIndicator {
-  label: "Terminal input needed" | "Terminal task completed" | "Terminal process running";
-  colorClass: string;
-  pulse: boolean;
-}
-
 interface PrStatusIndicator {
   label: PrStatePresentation["label"];
   colorClass: string;
@@ -816,35 +759,6 @@ function toThreadPr(
     deletions: pr.deletions ?? null,
     changedFiles: pr.changedFiles ?? null,
   };
-}
-
-function terminalStatusFromThreadState(input: {
-  runningTerminalIds: string[];
-  terminalAttentionStatesById: Record<string, "attention" | "review">;
-}): TerminalStatusIndicator | null {
-  const terminalAttentionStates = Object.values(input.terminalAttentionStatesById ?? {});
-  if (terminalAttentionStates.includes("attention")) {
-    return {
-      label: "Terminal input needed",
-      colorClass: "text-info",
-      pulse: false,
-    };
-  }
-  if ((input.runningTerminalIds?.length ?? 0) > 0) {
-    return {
-      label: "Terminal process running",
-      colorClass: "text-success",
-      pulse: true,
-    };
-  }
-  if (terminalAttentionStates.includes("review")) {
-    return {
-      label: "Terminal task completed",
-      colorClass: "text-success",
-      pulse: false,
-    };
-  }
-  return null;
 }
 
 function prStatusIndicator(pr: ThreadPr): PrStatusIndicator | null {
@@ -1067,13 +981,9 @@ export default function Sidebar() {
   const reorderProjects = useStore((store) => store.reorderProjects);
   const renameProjectLocally = useStore((store) => store.renameProjectLocally);
   const clearComposerDraftForThread = useComposerDraftStore((store) => store.clearDraftThread);
-  const terminalStateByThreadId = useTerminalStateStore((state) => state.terminalStateByThreadId);
   const projectRunsByProjectId = useProjectRunStore((state) => state.runsByProjectId);
   const storeUpsertProjectRun = useProjectRunStore((state) => state.upsertRun);
   const storeRemoveProjectRun = useProjectRunStore((state) => state.removeRun);
-  const clearTerminalState = useTerminalStateStore((state) => state.clearTerminalState);
-  const openChatThreadPage = useTerminalStateStore((state) => state.openChatThreadPage);
-  const openTerminalThreadPage = useTerminalStateStore((state) => state.openTerminalThreadPage);
   const clearProjectDraftThreads = useComposerDraftStore((store) => store.clearProjectDraftThreads);
   const clearProjectDraftThreadById = useComposerDraftStore(
     (store) => store.clearProjectDraftThreadById,
@@ -1350,14 +1260,6 @@ export default function Sidebar() {
       sidebarThreadSummaryById,
     ],
   );
-  const routeTerminalState = routeThreadId
-    ? selectThreadTerminalState(terminalStateByThreadId, routeThreadId)
-    : null;
-  const terminalOpen = routeTerminalState?.terminalOpen ?? false;
-  const terminalWorkspaceOpen = shouldRenderTerminalWorkspace({
-    presentationMode: routeTerminalState?.presentationMode ?? "drawer",
-    terminalOpen,
-  });
   const pinnedThreadIds = useMemo(
     () =>
       derivePinnedThreadIdsForSidebar({
@@ -2301,7 +2203,7 @@ export default function Sidebar() {
   );
 
   /**
-   * Delete a single thread: stop session, close terminal, dispatch delete,
+   * Delete a single thread: stop session, dispatch delete,
    * clean up drafts/state, and optionally remove orphaned worktree.
    * Callers handle thread-level confirmation; this still prompts for worktree removal.
    */
@@ -2358,13 +2260,6 @@ export default function Sidebar() {
           .catch(() => undefined);
       }
 
-      try {
-        disposeTerminalRuntimeThread(threadId);
-        await api.terminal.close({ threadId, deleteHistory: true });
-      } catch {
-        // Terminal may already be closed
-      }
-
       const allDeletedIds = deletedIds ?? new Set<ThreadId>();
       const shouldNavigateToFallback = routeThreadId === threadId;
       const fallbackThreadId = getFallbackThreadIdAfterDelete({
@@ -2388,7 +2283,6 @@ export default function Sidebar() {
       unpinThread(threadId);
       clearComposerDraftForThread(threadId);
       clearProjectDraftThreadById(thread.projectId, thread.id);
-      clearTerminalState(threadId);
 
       if (shouldNavigateToFallback) {
         if (fallbackThreadId) {
@@ -2431,7 +2325,6 @@ export default function Sidebar() {
       appSettings.sidebarThreadSortOrder,
       clearComposerDraftForThread,
       clearProjectDraftThreadById,
-      clearTerminalState,
       handleNewChat,
       navigate,
       projectById,
@@ -2954,9 +2847,6 @@ export default function Sidebar() {
           { id: "mark-unread", label: "Mark unread" },
           ...handoffItems,
           { id: "copy-path", label: "Copy Path", separatorBefore: true },
-          ...(threadWorkspacePath
-            ? [{ id: "open-path-in-terminal", label: "Open Path in Terminal" }]
-            : []),
           { id: "copy-thread-id", label: "Copy Thread ID" },
           ...(options?.extraItems ?? []),
           { id: "archive", label: "Archive", separatorBefore: true },
@@ -3000,91 +2890,6 @@ export default function Sidebar() {
           return;
         }
         copyPathToClipboard(threadWorkspacePath);
-        return;
-      }
-      if (clicked === "open-path-in-terminal") {
-        if (!threadWorkspacePath) {
-          toastManager.add({
-            type: "error",
-            title: "Path unavailable",
-            description: "This thread does not have a workspace path to open.",
-          });
-          return;
-        }
-        await navigate({ to: "/$threadId", params: { threadId } });
-        const terminalStore = useTerminalStateStore.getState();
-        const currentTerminalState = selectThreadTerminalState(
-          terminalStore.terminalStateByThreadId,
-          threadId,
-        );
-
-        // Reuse the active terminal when one is already open and idle so that
-        // repeatedly invoking "Open Path in Terminal" doesn't pile up tabs.
-        // Only spawn a fresh tab when there is no terminal yet, the active id
-        // is stale (no longer in the layout), or the active terminal is busy
-        // running a subprocess.
-        const candidateBaseTerminalId =
-          currentTerminalState.activeTerminalId ||
-          currentTerminalState.terminalIds[0] ||
-          DEFAULT_THREAD_TERMINAL_ID;
-        const baseTerminalAvailable =
-          currentTerminalState.terminalOpen &&
-          currentTerminalState.terminalIds.includes(candidateBaseTerminalId) &&
-          !currentTerminalState.runningTerminalIds.includes(candidateBaseTerminalId);
-        const shouldCreateNewTerminal = !baseTerminalAvailable;
-        const targetTerminalId = shouldCreateNewTerminal
-          ? `terminal-${randomUUID()}`
-          : candidateBaseTerminalId;
-
-        const previousTerminalOpen = currentTerminalState.terminalOpen;
-        const previousPresentationMode = currentTerminalState.presentationMode;
-        const previousActiveTerminalId = currentTerminalState.activeTerminalId;
-
-        terminalStore.setTerminalPresentationMode(threadId, "drawer");
-        terminalStore.setTerminalOpen(threadId, true);
-        if (shouldCreateNewTerminal) {
-          terminalStore.newTerminal(threadId, targetTerminalId);
-        } else {
-          terminalStore.setActiveTerminal(threadId, targetTerminalId);
-        }
-
-        const cdCommand = `cd ${quotePosixShellArgument(threadWorkspacePath)}\r`;
-        try {
-          if (shouldCreateNewTerminal) {
-            // A brand new PTY needs an explicit cwd so that the shell's first
-            // prompt already shows the workspace path. The follow-up `cd` write
-            // makes the navigation visible in the scrollback (it's effectively
-            // a no-op since the shell is already there, but it matches the
-            // user-typed-it experience).
-            await api.terminal.open({
-              threadId,
-              terminalId: targetTerminalId,
-              cwd: threadWorkspacePath,
-            });
-          }
-          // Existing PTYs keep their launch cwd/env on reattach; writing `cd`
-          // navigates in place without replacing shell state.
-          await api.terminal.write({
-            threadId,
-            terminalId: targetTerminalId,
-            data: cdCommand,
-          });
-        } catch (error) {
-          if (shouldCreateNewTerminal) {
-            terminalStore.closeTerminal(threadId, targetTerminalId);
-          }
-          terminalStore.setTerminalPresentationMode(threadId, previousPresentationMode);
-          terminalStore.setTerminalOpen(threadId, previousTerminalOpen);
-          if (previousActiveTerminalId) {
-            terminalStore.setActiveTerminal(threadId, previousActiveTerminalId);
-          }
-          toastManager.add({
-            type: "error",
-            title: "Unable to open terminal",
-            description:
-              error instanceof Error ? error.message : "The terminal could not be opened.",
-          });
-        }
         return;
       }
       if (clicked === "copy-thread-id") {
@@ -3228,8 +3033,6 @@ export default function Sidebar() {
   const { activateThreadFromSidebarIntent } = useThreadActivationController({
     clearSelection,
     navigate,
-    openChatThreadPage,
-    openTerminalThreadPage,
     prewarmThreadDetailForIntent,
     rememberLastThreadRouteNow,
     routeThreadId,
@@ -3237,7 +3040,6 @@ export default function Sidebar() {
     setOptimisticActiveThreadId,
     setSelectionAnchor,
     sidebarThreadSummaryById,
-    terminalStateByThreadId,
   });
 
   const handleStartProjectRun = useCallback(
@@ -3254,7 +3056,7 @@ export default function Sidebar() {
       // The dialog lets the user edit the default command before launching, so an
       // explicit override wins over the resolved default while reusing its cwd.
       const command = commandOverride?.trim() || runCommand.command;
-      // Dev servers run from the project root; mirror the env the terminal runner
+      // Dev servers run from the project root; mirror the env the runner
       // would otherwise inject so scripts resolve project paths identically.
       const env = projectScriptRuntimeEnv({
         project: { cwd: project.cwd },
@@ -4275,14 +4077,7 @@ export default function Sidebar() {
     () => [...threadJumpCommandByThreadId.keys()],
     [threadJumpCommandByThreadId],
   );
-  const getCurrentSidebarShortcutContext = useCallback(
-    () => ({
-      terminalFocus: isTerminalFocused(),
-      terminalOpen,
-      terminalWorkspaceOpen,
-    }),
-    [terminalOpen, terminalWorkspaceOpen],
-  );
+  const getCurrentSidebarShortcutContext = useCallback(() => ({}), []);
   const [threadJumpLabelByThreadId, setThreadJumpLabelByThreadId] =
     useState<ReadonlyMap<ThreadId, string>>(EMPTY_THREAD_JUMP_LABELS);
   const threadJumpLabelsRef = useRef<ReadonlyMap<ThreadId, string>>(EMPTY_THREAD_JUMP_LABELS);
@@ -4384,6 +4179,39 @@ export default function Sidebar() {
     );
   }
 
+  /**
+   * The row's single identity glyph, rendered *before* the title.
+   *
+   * One slot, one glyph: a pull-request badge outranks the provider avatar,
+   * because when a thread has a PR that is the more specific fact about it and
+   * two icons on one row read as noise.
+   */
+  function renderThreadIdentityGlyph(input: {
+    prStatus: PrStatusIndicator | null;
+    provider: ProviderKind;
+    handoffSourceProvider: ProviderKind | null;
+    handoffTooltip: string | null;
+    showProviderAvatar: boolean;
+  }) {
+    if (input.prStatus) {
+      return (
+        <ThreadPrStatusBadge
+          prStatus={input.prStatus}
+          onOpen={openPrLink}
+          className="pointer-events-auto size-4"
+        />
+      );
+    }
+    if (!input.showProviderAvatar) return null;
+    return (
+      <ProviderAvatar
+        provider={input.provider}
+        handoffSourceProvider={input.handoffSourceProvider}
+        handoffTooltip={input.handoffTooltip}
+      />
+    );
+  }
+
   function renderThreadRowTrailingCluster(input: {
     isSubagentThread: boolean;
     threadJumpLabel: string | null;
@@ -4467,21 +4295,12 @@ export default function Sidebar() {
   }
 
   function renderPinnedThreadRow(thread: SidebarThreadSummary) {
-    const threadTerminalState = selectThreadTerminalState(terminalStateByThreadId, thread.id);
-    const threadEntryPoint = threadTerminalState.entryPoint;
-    const terminalStatus = terminalStatusFromThreadState({
-      runningTerminalIds: threadTerminalState.runningTerminalIds,
-      terminalAttentionStatesById: threadTerminalState.terminalAttentionStatesById,
-    });
-    const terminalCount = threadTerminalState.terminalIds.length;
     const isActive = visualActiveSidebarThreadId === thread.id;
     const rightMetaChips = resolveThreadRowMetaChips({
       thread,
       includeHandoffBadge: true,
       handoffShownInAvatar:
-        threadEntryPoint !== "terminal" &&
-        !isGenericChatThreadTitle(thread.title) &&
-        Boolean(thread.handoff?.sourceProvider),
+        !isGenericChatThreadTitle(thread.title) && Boolean(thread.handoff?.sourceProvider),
     });
     const threadStatus = resolveThreadStatusForSidebar(thread);
     const isSubagentThread = Boolean(thread.parentThreadId);
@@ -4511,13 +4330,6 @@ export default function Sidebar() {
         data-thread-hover-anchor={hoverAnchorId}
         className="group/thread-row relative w-full"
       >
-        {leadingPrStatus ? (
-          <ThreadPrStatusBadge
-            prStatus={leadingPrStatus}
-            onOpen={openPrLink}
-            className="pointer-events-auto absolute left-1.5 top-1/2 z-30 size-5 -translate-y-1/2"
-          />
-        ) : null}
         <div
           role="button"
           tabIndex={0}
@@ -4528,8 +4340,7 @@ export default function Sidebar() {
             // space, with a trailing reserve that grows only for the badges actually
             // present — instead of a rigid grid that permanently fenced off a
             // timestamp-era column and squeezed the title/project even when wide.
-            "relative h-auto min-h-10 gap-1.5 py-1 transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
-            leadingPrStatus && "pl-8",
+            "relative h-auto min-h-8 gap-1 py-0.5 transition-[background-color,color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:active:scale-100",
             resolveThreadRowTrailingReserveClass({
               metaChipCount: isActive ? rightMetaChips.length : 0,
               hasTrailingGlyph: hasTrailingStatusGlyph,
@@ -4561,40 +4372,34 @@ export default function Sidebar() {
             });
           }}
         >
-          {threadEntryPoint === "terminal" ? (
-            <SidebarGlyph icon={TerminalIcon} variant="chrome" />
-          ) : showThreadProviderAvatar ? (
-            <ProviderAvatarWithTerminal
-              provider={thread.modelSelection.provider ?? thread.session?.provider}
-              handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
-              handoffTooltip={handoffBadgeLabel}
-              terminalStatus={terminalStatus}
-              terminalCount={terminalCount}
-            />
-          ) : null}
-          <div className="grid min-w-0 flex-1 gap-0.5 text-left">
-            <div className="flex min-w-0 items-center gap-1.5">
-              <span
-                className={cn(
-                  "min-w-0 flex-1 truncate text-[length:calc(var(--app-font-size-ui,12px)+0.5px)] leading-5",
-                  isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
-                )}
-                data-testid={`thread-title-${thread.id}`}
-              >
-                {isSubagentThread ? (
-                  <SidebarSubagentLabel
-                    threadId={thread.id}
-                    parentThreadId={thread.parentThreadId}
-                    agentId={thread.subagentAgentId}
-                    nickname={thread.subagentNickname}
-                    role={thread.subagentRole}
-                    title={thread.title}
-                  />
-                ) : (
-                  thread.title
-                )}
-              </span>
-            </div>
+          <div className="flex min-w-0 flex-1 items-center gap-1 text-left">
+            {renderThreadIdentityGlyph({
+              prStatus: leadingPrStatus,
+              provider: thread.modelSelection.provider ?? thread.session?.provider,
+              handoffSourceProvider: thread.handoff?.sourceProvider ?? null,
+              handoffTooltip: handoffBadgeLabel,
+              showProviderAvatar: showThreadProviderAvatar,
+            })}
+            <span
+              className={cn(
+                "min-w-0 truncate text-[length:calc(var(--app-font-size-ui,12px)+0.5px)] leading-5",
+                isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
+              )}
+              data-testid={`thread-title-${thread.id}`}
+            >
+              {isSubagentThread ? (
+                <SidebarSubagentLabel
+                  threadId={thread.id}
+                  parentThreadId={thread.parentThreadId}
+                  agentId={thread.subagentAgentId}
+                  nickname={thread.subagentNickname}
+                  role={thread.subagentRole}
+                  title={thread.title}
+                />
+              ) : (
+                thread.title
+              )}
+            </span>
           </div>
           <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center">
             {renderThreadRowTrailingCluster({
@@ -4630,19 +4435,12 @@ export default function Sidebar() {
     topLevel = false,
     treeConnected = false,
   ) {
-    const threadTerminalState = selectThreadTerminalState(terminalStateByThreadId, thread.id);
-    const threadEntryPoint = threadTerminalState.entryPoint;
     const isActive = visualActiveSidebarThreadId === thread.id;
     const isPinned = pinnedThreadIdSet.has(thread.id);
     const isSelected = selectedThreadIds.has(thread.id);
     const isHighlighted = isActive || isSelected;
     const threadStatus = resolveThreadStatusForSidebar(thread);
     const prStatus = prStatusIndicator(prByThreadId.get(thread.id) ?? null);
-    const terminalStatus = terminalStatusFromThreadState({
-      runningTerminalIds: threadTerminalState.runningTerminalIds,
-      terminalAttentionStatesById: threadTerminalState.terminalAttentionStatesById,
-    });
-    const terminalCount = threadTerminalState.terminalIds.length;
     const secondaryMetaClass = isHighlighted
       ? "text-foreground/54 dark:text-foreground/64"
       : "text-muted-foreground/34";
@@ -4650,9 +4448,7 @@ export default function Sidebar() {
       thread,
       includeHandoffBadge: true,
       handoffShownInAvatar:
-        threadEntryPoint !== "terminal" &&
-        !isGenericChatThreadTitle(thread.title) &&
-        Boolean(thread.handoff?.sourceProvider),
+        !isGenericChatThreadTitle(thread.title) && Boolean(thread.handoff?.sourceProvider),
     });
     const isSubagentThread = Boolean(thread.parentThreadId);
     const isProjectTreeThread = !topLevel && !isSubagentThread;
@@ -4697,20 +4493,12 @@ export default function Sidebar() {
         className={cn(
           "group/thread-row w-full",
           treeConnected &&
-            "before:absolute before:top-4 before:-left-2 before:h-px before:w-2 before:bg-foreground/[0.08]",
+            "before:absolute before:top-4 before:-left-2 before:h-px before:w-2 before:bg-foreground/[0.05]",
         )}
         data-thread-item
       >
-        {leadingPrStatus ? (
-          <ThreadPrStatusBadge
-            prStatus={leadingPrStatus}
-            onOpen={openPrLink}
-            className="pointer-events-auto absolute left-1.5 top-1/2 z-30 size-5 -translate-y-1/2"
-          />
-        ) : null}
         <SidebarMenuSubButton
           render={<div role="button" tabIndex={0} />}
-          data-thread-entry-point={threadEntryPoint}
           size="sm"
           isActive={isActive}
           className={cn(
@@ -4718,8 +4506,8 @@ export default function Sidebar() {
               isActive,
               isSelected,
             }),
-            isProjectTreeThread && "!h-8 !min-h-8 py-0",
-            leadingPrStatus ? "pl-8" : topLevel && !isSubagentThread ? "pl-2" : null,
+            isProjectTreeThread && "!h-7 !min-h-7 py-0",
+            topLevel && !isSubagentThread ? "pl-1.5" : null,
             isSubagentThread
               ? "pr-7.5"
               : resolveThreadRowTrailingReserveClass({
@@ -4791,67 +4579,46 @@ export default function Sidebar() {
                 style={{ backgroundColor: subagentPresentation?.accentColor }}
               />
             </span>
-          ) : threadEntryPoint === "terminal" ? (
-            isProjectTreeThread ? (
-              <span className="inline-flex size-[26px] shrink-0 items-center justify-center text-muted-foreground/85">
-                <SidebarGlyph icon={TerminalIcon} variant="chrome" />
-              </span>
-            ) : (
-              <SidebarGlyph icon={TerminalIcon} variant="chrome" />
-            )
-          ) : showThreadProviderAvatar ? (
-            isProjectTreeThread ? (
-              <span className="inline-flex size-[26px] shrink-0 items-center justify-center text-muted-foreground/85">
-                <ProviderAvatarWithTerminal
-                  provider={thread.modelSelection.provider ?? thread.session?.provider}
-                  handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
-                  handoffTooltip={handoffBadgeLabel}
-                  terminalStatus={terminalStatus}
-                  terminalCount={terminalCount}
-                />
-              </span>
-            ) : (
-              <ProviderAvatarWithTerminal
-                provider={thread.modelSelection.provider ?? thread.session?.provider}
-                handoffSourceProvider={thread.handoff?.sourceProvider ?? null}
-                handoffTooltip={handoffBadgeLabel}
-                terminalStatus={terminalStatus}
-                terminalCount={terminalCount}
-              />
-            )
           ) : null}
           <div
             className={cn(
               "flex min-w-0 flex-1 items-center text-left",
-              isSubagentThread ? "gap-[5px]" : "gap-1.5",
+              isSubagentThread ? "gap-[5px]" : "gap-1",
             )}
           >
-            <div className="flex min-w-0 items-center gap-1.5">
-              <span
-                className={cn(
-                  "min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,12px)]",
-                  // Inactive thread names share the resting label color with
-                  // project/folder headers; the active row still pops via its
-                  // background + full-foreground color from resolveThreadRowClassName.
-                  isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
-                  isSubagentThread ? "leading-[18px] text-foreground/80" : "leading-5",
-                )}
-              >
-                {isSubagentThread ? (
-                  <SidebarSubagentLabel
-                    threadId={thread.id}
-                    parentThreadId={thread.parentThreadId}
-                    agentId={thread.subagentAgentId}
-                    nickname={thread.subagentNickname}
-                    role={thread.subagentRole}
-                    title={thread.title}
-                    roleClassName="text-muted-foreground/42"
-                  />
-                ) : (
-                  thread.title
-                )}
-              </span>
-            </div>
+            {isSubagentThread
+              ? null
+              : renderThreadIdentityGlyph({
+                  prStatus: leadingPrStatus,
+                  provider: thread.modelSelection.provider ?? thread.session?.provider,
+                  handoffSourceProvider: thread.handoff?.sourceProvider ?? null,
+                  handoffTooltip: handoffBadgeLabel,
+                  showProviderAvatar: showThreadProviderAvatar,
+                })}
+            <span
+              className={cn(
+                "min-w-0 truncate text-[length:var(--app-font-size-ui,12px)]",
+                // Inactive thread names share the resting label color with
+                // project/folder headers; the active row still pops via its
+                // background + full-foreground color from resolveThreadRowClassName.
+                isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
+                isSubagentThread ? "leading-[18px] text-foreground/80" : "leading-5",
+              )}
+            >
+              {isSubagentThread ? (
+                <SidebarSubagentLabel
+                  threadId={thread.id}
+                  parentThreadId={thread.parentThreadId}
+                  agentId={thread.subagentAgentId}
+                  nickname={thread.subagentNickname}
+                  role={thread.subagentRole}
+                  title={thread.title}
+                  roleClassName="text-muted-foreground/42"
+                />
+              ) : (
+                thread.title
+              )}
+            </span>
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-1.5 pr-1">
             {canToggleSubagents ? (
@@ -5040,21 +4807,6 @@ export default function Sidebar() {
           </button>
           <SidebarSectionToolbar placement="overlay" revealOnHover>
             <SidebarIconButton
-              icon={TerminalIcon}
-              label={`Create new terminal thread in ${project.name}`}
-              tooltip={
-                newTerminalThreadShortcutLabel
-                  ? `New terminal thread (${newTerminalThreadShortcutLabel})`
-                  : "New terminal thread"
-              }
-              tooltipSide="top"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                void handleNewThread(project.id, { entryPoint: "terminal" });
-              }}
-            />
-            <SidebarIconButton
               icon={NewThreadIcon}
               label={`Create new thread in ${project.name}`}
               tooltip={
@@ -5081,7 +4833,7 @@ export default function Sidebar() {
           <div className={DISCLOSURE_INNER_CLASS}>
             <SidebarMenuSub
               className={cn(
-                "my-0 mr-0 ml-2 w-auto translate-x-0 border-l border-foreground/[0.08] py-0 pr-0 pl-2",
+                "my-0 mr-0 ml-2 w-auto translate-x-0 border-l border-foreground/[0.05] py-0 pr-0 pl-2",
                 SIDEBAR_NESTED_LIST_GAP_CLASS_NAME,
                 "!gap-0",
                 disclosureContentClassName(project.expanded),
@@ -5244,7 +4996,6 @@ export default function Sidebar() {
             const nextLabelMap = buildThreadJumpLabelMap({
               keybindings,
               platform: navigator.platform,
-              terminalOpen: shortcutContext.terminalOpen,
               threadJumpCommandByThreadId,
             });
             return threadJumpLabelMapsEqual(current, nextLabelMap) ? current : nextLabelMap;
@@ -5331,7 +5082,6 @@ export default function Sidebar() {
         const nextLabelMap = buildThreadJumpLabelMap({
           keybindings,
           platform: navigator.platform,
-          terminalOpen: shortcutContext.terminalOpen,
           threadJumpCommandByThreadId,
         });
         return threadJumpLabelMapsEqual(current, nextLabelMap) ? current : nextLabelMap;
@@ -5493,7 +5243,6 @@ export default function Sidebar() {
   const newChatShortcutLabel =
     shortcutLabelForCommand(keybindings, "chat.newChat") ??
     shortcutLabelForCommand(keybindings, "chat.newLocal");
-  const newTerminalThreadShortcutLabel = shortcutLabelForCommand(keybindings, "chat.newTerminal");
   const importThreadShortcutLabel =
     shortcutLabelForCommand(keybindings, "sidebar.importThread") ??
     (isMacPlatform(navigator.platform) ? "⌘I" : "Ctrl+I");
@@ -6224,7 +5973,6 @@ export default function Sidebar() {
                     <SidebarLeadingIcon size="sm" tone={SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME}>
                       <SidebarGlyph icon={SettingsIcon} variant="leading" />
                     </SidebarLeadingIcon>
-                    <span>Settings</span>
                   </SidebarMenuButton>
                 )}
                 {showDesktopUpdateButton ? (

@@ -108,7 +108,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -156,7 +155,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -198,7 +196,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -232,7 +229,6 @@ describe("MessagesTimeline", () => {
       isRevertingCheckpoint: false,
       onImageExpand: () => {},
       markdownCwd: undefined,
-      resolvedTheme: "light" as const,
       timestampFormat: "locale" as const,
       workspaceRoot: undefined,
     };
@@ -355,7 +351,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -413,7 +408,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -461,7 +455,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -507,7 +500,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -550,7 +542,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -608,7 +599,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -650,7 +640,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -696,7 +685,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -746,7 +734,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -796,7 +783,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -839,7 +825,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -882,7 +867,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -927,7 +911,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -968,7 +951,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -1023,7 +1005,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -1082,7 +1063,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -1192,7 +1172,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -1254,7 +1233,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -1306,7 +1284,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -1416,7 +1393,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -1492,7 +1468,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -1595,7 +1570,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="light"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -1680,7 +1654,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -1734,7 +1707,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -1782,7 +1754,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -1846,7 +1817,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -1898,7 +1868,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -2038,7 +2007,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -2085,7 +2053,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -2130,7 +2097,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -2175,7 +2141,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -2221,7 +2186,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -2265,7 +2229,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -2348,7 +2311,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -2435,7 +2397,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,
@@ -2499,7 +2460,6 @@ describe("MessagesTimeline", () => {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />,

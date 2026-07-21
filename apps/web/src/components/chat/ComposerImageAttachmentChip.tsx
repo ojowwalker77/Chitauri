@@ -51,10 +51,10 @@ export const ComposerImageAttachmentChip = memo(function ComposerImageAttachment
               <img
                 src={image.source.appIconDataUrl}
                 alt=""
-                className="size-5 shrink-0 rounded-[5px]"
+                className="size-5 shrink-0 rounded-md"
               />
             ) : (
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-[5px] bg-muted text-[9px] font-semibold text-muted-foreground">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted text-[9px] font-semibold text-muted-foreground">
                 {(image.source.appName || "A").slice(0, 1).toUpperCase()}
               </span>
             )}

@@ -112,9 +112,7 @@ import { LinkChipIcon } from "../LinkChipIcon";
 import { openWorkspaceFileReference, useWorkspaceFileOpener } from "../../lib/workspaceFileOpener";
 import { isAgentActivityWorkEntry } from "./agentActivity.logic";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
-import { TerminalContextInlineChip } from "./TerminalContextInlineChip";
 import { deriveDisplayedUserMessageState } from "~/lib/composerMessageContext";
-import { type ParsedTerminalContextEntry } from "~/lib/terminalContext";
 import { cn } from "~/lib/utils";
 import {
   DEFAULT_CHAT_FONT_SIZE_PX,
@@ -127,11 +125,6 @@ import {
   ENVIRONMENT_CONTENT_INSET_MOTION_CLASS,
 } from "./composerPickerStyles";
 import { formatShortTimestamp } from "../../timestampFormat";
-import {
-  buildInlineTerminalContextText,
-  formatInlineTerminalContextLabel,
-  textContainsInlineTerminalContextLabels,
-} from "./userMessageTerminalContexts";
 import { splitPromptIntoDisplaySegments } from "~/composer-editor-mentions";
 import {
   getChatMessageFooterTextStyle,
@@ -154,11 +147,6 @@ import {
   summarizeWorkTrail,
   type SequencedWorkTrailEntry,
 } from "./workTrail";
-import {
-  resolveActiveTrailSnapshot,
-  type ActiveTrailSnapshot,
-  type MessageTrailAnchor,
-} from "./messageTrail.logic";
 
 const MAX_VISIBLE_INLINE_TOOL_ENTRIES = 4;
 // Changed-files list in the per-turn card is capped so large turns stay compact;
@@ -193,7 +181,6 @@ const MESSAGE_SEND_ENTER_CLEANUP_BUFFER_MS = 60;
 // Treat any partially visible row (>= 1px) as in view, so the navigation trail's
 // "active" tick tracks the topmost rendered row rather than waiting for a turn to
 // be substantially on-screen.
-const TRAIL_VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 0 } as const;
 // The deep-link "active" ring is applied imperatively to the rendered marker spans so jumping
 // never re-parses a message's markdown tree (the className is purely a CSS box-shadow).
 const ACTIVE_MARKER_CLASS_NAME = "thread-marker-active";
@@ -449,7 +436,6 @@ interface MessagesTimelineProps {
   onImageExpand: (preview: ExpandedImagePreview) => void;
   onIsAtEndChange?: (isAtEnd: boolean) => void;
   /** Emits current + visible sent-message anchors as the viewport scrolls (drives the trail). */
-  onTrailHighlightsChange?: (snapshot: ActiveTrailSnapshot) => void;
   onMessagesClickCapture?: ComponentProps<typeof LegendList>["onClickCapture"];
   onMessagesMouseUp?: ComponentProps<typeof LegendList>["onMouseUp"];
   onMessagesPointerCancel?: ComponentProps<typeof LegendList>["onPointerCancel"];
@@ -461,7 +447,6 @@ interface MessagesTimelineProps {
   onMessagesTouchStart?: ComponentProps<typeof LegendList>["onTouchStart"];
   onMessagesWheel?: ComponentProps<typeof LegendList>["onWheel"];
   markdownCwd: string | undefined;
-  resolvedTheme: "light" | "dark";
   chatFontSizePx?: number;
   timestampFormat: TimestampFormat;
   workspaceRoot: string | undefined;
@@ -504,7 +489,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   isRevertingCheckpoint,
   onImageExpand,
   onIsAtEndChange,
-  onTrailHighlightsChange,
   onMessagesClickCapture,
   onMessagesMouseUp,
   onMessagesPointerCancel,
@@ -516,7 +500,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   onMessagesTouchStart,
   onMessagesWheel,
   markdownCwd,
-  resolvedTheme,
   chatFontSizePx = DEFAULT_CHAT_FONT_SIZE_PX,
   timestampFormat,
   workspaceRoot,
@@ -874,72 +857,16 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       window.cancelAnimationFrame(frameId);
     };
   }, [onIsAtEndChange, resolvedListRef, rows.length]);
-  // Sent-message anchors (id + position in the virtualized row list) for the
-  // navigation trail. Held in a ref so the viewability callback stays stable and
-  // doesn't re-subscribe LegendList on every transcript change.
-  const userMessageAnchors = useMemo<MessageTrailAnchor[]>(() => {
-    const anchors: MessageTrailAnchor[] = [];
-    rows.forEach((row, index) => {
-      if (row.kind === "message" && row.message.role === "user") {
-        anchors.push({ id: row.message.id, rowIndex: index });
-      }
-    });
-    return anchors;
-  }, [rows]);
-  const userMessageAnchorsRef = useRef(userMessageAnchors);
-  userMessageAnchorsRef.current = userMessageAnchors;
-  const emitTrailHighlightsForViewport = useCallback(
-    (topRowIndex: number, bottomRowIndex: number) => {
-      if (!onTrailHighlightsChange || !Number.isFinite(topRowIndex)) {
-        return;
-      }
-      onTrailHighlightsChange(
-        resolveActiveTrailSnapshot(userMessageAnchorsRef.current, topRowIndex, bottomRowIndex),
-      );
-    },
-    [onTrailHighlightsChange],
-  );
   const handleListScroll = useCallback<NonNullable<MessagesTimelineProps["onMessagesScroll"]>>(
     (event) => {
       onMessagesScroll?.(event);
       const state = resolvedListRef.current?.getState?.();
       if (state) {
         onIsAtEndChange?.(state.isAtEnd);
-        emitTrailHighlightsForViewport(state.start, state.end);
       }
     },
-    [emitTrailHighlightsForViewport, onIsAtEndChange, onMessagesScroll, resolvedListRef],
+    [onIsAtEndChange, onMessagesScroll, resolvedListRef],
   );
-  const handleViewableItemsChanged = useCallback<
-    NonNullable<ComponentProps<typeof LegendList>["onViewableItemsChanged"]>
-  >(
-    ({ viewableItems }) => {
-      let topIndex = Number.POSITIVE_INFINITY;
-      let bottomIndex = Number.NEGATIVE_INFINITY;
-      for (const token of viewableItems) {
-        if (token.isViewable) {
-          topIndex = Math.min(topIndex, token.index);
-          bottomIndex = Math.max(bottomIndex, token.index);
-        }
-      }
-      emitTrailHighlightsForViewport(topIndex, bottomIndex);
-    },
-    [emitTrailHighlightsForViewport],
-  );
-  useEffect(() => {
-    if (!onTrailHighlightsChange) {
-      return;
-    }
-    const frameId = window.requestAnimationFrame(() => {
-      const state = resolvedListRef.current?.getState?.();
-      if (state) {
-        emitTrailHighlightsForViewport(state.start, state.end);
-      }
-    });
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
-  }, [emitTrailHighlightsForViewport, onTrailHighlightsChange, resolvedListRef, rows.length]);
   const toggleFileChangesExpanded = useCallback((turnId: TurnId) => {
     setExpandedFileChangesByTurnId((current) => ({
       ...current,
@@ -1104,7 +1031,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                   assistantMessageId: selection.assistantMessageId,
                   text: selection.text,
                 }));
-          const terminalContexts = displayedUserMessage.contexts;
           const renderedFileComments = displayedUserMessage.fileComments;
           const renderedPastedTexts = displayedUserMessage.pastedTexts;
           const userMessagePreview = deriveUserMessagePreviewState(
@@ -1114,11 +1040,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             },
           );
           const userMessageExpanded = expandedUserMessagesById[row.message.id] ?? false;
-          const showUserText =
-            userMessagePreview.text.trim().length > 0 || terminalContexts.length > 0;
+          const showUserText = userMessagePreview.text.trim().length > 0;
           const bubbleIsChipOnly =
             showUserText &&
-            terminalContexts.length === 0 &&
             hasOnlyInlineSkillChips(userMessagePreview.text, row.message.mentions ?? []);
           const canRevertAgentWork = typeof row.revertTurnCount === "number";
           const isEditingThisMessage = editingUserMessageId === row.message.id;
@@ -1193,7 +1117,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                         onTimelineImageLoad={
                           isTailContentRow ? scrollTailExpansionToEnd : ignoreTimelineImageLoad
                         }
-                        resolvedTheme={resolvedTheme}
                       />
                     ))}
                   </div>
@@ -1220,9 +1143,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     <UserMessageBody
                       text={userMessagePreview.text}
                       mentionReferences={row.message.mentions ?? []}
-                      terminalContexts={terminalContexts}
                       chatTypographyStyle={userMessageTypographyStyle}
-                      resolvedTheme={resolvedTheme}
                     />
                     {userMessagePreview.collapsible && (
                       <button
@@ -1663,7 +1584,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       <FileEntryIcon
                         pathValue={file.path}
                         kind="file"
-                        theme={resolvedTheme}
                         colorMode="inherit"
                         className="size-4 shrink-0 text-[var(--color-text-foreground)] opacity-70 dark:opacity-80"
                       />
@@ -1687,7 +1607,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     </button>
                   );
                   return (
-                    <div className="mt-1 mb-4 overflow-hidden rounded-[0.5rem] border border-[color:var(--color-border-light)] dark:border-[color:color-mix(in_srgb,var(--color-border-light)_55%,transparent)]">
+                    <div className="mt-1 mb-4 overflow-hidden rounded-lg border border-[color:var(--color-border-light)] dark:border-[color:color-mix(in_srgb,var(--color-border-light)_55%,transparent)]">
                       <div
                         className={cn(
                           "flex items-center justify-between gap-3 bg-[var(--app-user-message-background)] px-3 py-1.5",
@@ -1887,12 +1807,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         onPointerDown={onMessagesPointerDown}
         onPointerUp={onMessagesPointerUp}
         onScroll={handleListScroll}
-        {...(onTrailHighlightsChange
-          ? {
-              onViewableItemsChanged: handleViewableItemsChanged,
-              viewabilityConfig: TRAIL_VIEWABILITY_CONFIG,
-            }
-          : {})}
         onTouchEnd={onMessagesTouchEnd}
         onTouchMove={onMessagesTouchMove}
         onTouchStart={onMessagesTouchStart}
@@ -2276,17 +2190,6 @@ function formatWorkingTimerNow(startIso: string): string {
   return formatWorkingTimer(startIso, new Date().toISOString()) ?? "0s";
 }
 
-const UserMessageTerminalContextInlineLabel = memo(
-  function UserMessageTerminalContextInlineLabel(props: { context: ParsedTerminalContextEntry }) {
-    const tooltipText =
-      props.context.body.length > 0
-        ? `${props.context.header}\n${props.context.body}`
-        : props.context.header;
-
-    return <TerminalContextInlineChip label={props.context.header} tooltipText={tooltipText} />;
-  },
-);
-
 const UserImageAttachmentThumbnail = memo(function UserImageAttachmentThumbnail(props: {
   image: Extract<NonNullable<TimelineMessage["attachments"]>[number], { type: "image" }>;
   userImages: Array<
@@ -2294,7 +2197,6 @@ const UserImageAttachmentThumbnail = memo(function UserImageAttachmentThumbnail(
   >;
   onImageExpand: (preview: ExpandedImagePreview) => void;
   onTimelineImageLoad: () => void;
-  resolvedTheme: "light" | "dark";
 }) {
   return (
     <button
@@ -2318,12 +2220,7 @@ const UserImageAttachmentThumbnail = memo(function UserImageAttachmentThumbnail(
         />
       ) : (
         <div className="flex size-full items-center justify-center">
-          <FileEntryIcon
-            pathValue={props.image.name}
-            kind="file"
-            theme={props.resolvedTheme}
-            className="size-4 opacity-70"
-          />
+          <FileEntryIcon pathValue={props.image.name} kind="file" className="size-4 opacity-70" />
         </div>
       )}
     </button>
@@ -2334,7 +2231,6 @@ const UserImageAttachmentThumbnail = memo(function UserImageAttachmentThumbnail(
 function renderUserMessageInlineText(
   text: string,
   keyPrefix: string,
-  resolvedTheme: "light" | "dark",
   mentionReferences: ReadonlyArray<ProviderMentionReference> = [],
 ): ReactNode[] {
   return splitPromptIntoDisplaySegments(text, mentionReferences).flatMap((segment, index) => {
@@ -2350,7 +2246,6 @@ function renderUserMessageInlineText(
         <InlineMentionChip
           key={`${key}:mention`}
           path={segment.path}
-          theme={resolvedTheme}
           mentionReferences={mentionReferences}
           {...(segment.kind ? { kind: segment.kind } : {})}
         />,
@@ -2485,115 +2380,13 @@ const UserMessageEditForm = memo(function UserMessageEditForm(props: {
 const UserMessageBody = memo(function UserMessageBody(props: {
   text: string;
   mentionReferences: ReadonlyArray<ProviderMentionReference>;
-  terminalContexts: ParsedTerminalContextEntry[];
   chatTypographyStyle: CSSProperties;
-  resolvedTheme: "light" | "dark";
 }) {
-  if (props.terminalContexts.length > 0) {
-    const hasEmbeddedInlineLabels = textContainsInlineTerminalContextLabels(
-      props.text,
-      props.terminalContexts,
-    );
-    const inlinePrefix = buildInlineTerminalContextText(props.terminalContexts);
-    const inlineNodes: ReactNode[] = [];
-
-    if (hasEmbeddedInlineLabels) {
-      let cursor = 0;
-
-      for (const context of props.terminalContexts) {
-        const label = formatInlineTerminalContextLabel(context.header);
-        const matchIndex = props.text.indexOf(label, cursor);
-        if (matchIndex === -1) {
-          inlineNodes.length = 0;
-          break;
-        }
-        if (matchIndex > cursor) {
-          inlineNodes.push(
-            ...renderUserMessageInlineText(
-              props.text.slice(cursor, matchIndex),
-              `user-terminal-context-inline-before:${context.header}:${cursor}`,
-              props.resolvedTheme,
-              props.mentionReferences,
-            ),
-          );
-        }
-        inlineNodes.push(
-          <UserMessageTerminalContextInlineLabel
-            key={`user-terminal-context-inline:${context.header}`}
-            context={context}
-          />,
-        );
-        cursor = matchIndex + label.length;
-      }
-
-      if (inlineNodes.length > 0) {
-        if (cursor < props.text.length) {
-          inlineNodes.push(
-            ...renderUserMessageInlineText(
-              props.text.slice(cursor),
-              `user-message-terminal-context-inline-rest:${cursor}`,
-              props.resolvedTheme,
-              props.mentionReferences,
-            ),
-          );
-        }
-
-        return (
-          <div
-            className="block max-w-full min-w-0 wrap-break-word whitespace-pre-wrap font-system-ui text-foreground"
-            style={props.chatTypographyStyle}
-          >
-            {inlineNodes}
-          </div>
-        );
-      }
-    }
-
-    for (const context of props.terminalContexts) {
-      inlineNodes.push(
-        <UserMessageTerminalContextInlineLabel
-          key={`user-terminal-context-inline:${context.header}`}
-          context={context}
-        />,
-      );
-      inlineNodes.push(
-        <span key={`user-terminal-context-inline-space:${context.header}`} aria-hidden="true">
-          {" "}
-        </span>,
-      );
-    }
-
-    if (props.text.length > 0) {
-      inlineNodes.push(
-        ...renderUserMessageInlineText(
-          props.text,
-          "user-message-terminal-context-inline-text",
-          props.resolvedTheme,
-          props.mentionReferences,
-        ),
-      );
-    } else if (inlinePrefix.length === 0) {
-      return null;
-    }
-
-    return (
-      <div
-        className="block max-w-full min-w-0 wrap-break-word whitespace-pre-wrap font-system-ui text-foreground"
-        style={props.chatTypographyStyle}
-      >
-        {inlineNodes}
-      </div>
-    );
-  }
-
   if (props.text.length === 0) {
     return null;
   }
 
-  if (
-    props.terminalContexts.length === 0 &&
-    hasOnlyInlineSkillChips(props.text, props.mentionReferences)
-  ) {
+  if (hasOnlyInlineSkillChips(props.text, props.mentionReferences)) {
     return (
       <div
         className="flex max-w-full min-w-0 items-center leading-none text-foreground [&>span]:translate-y-0"
@@ -2602,7 +2395,6 @@ const UserMessageBody = memo(function UserMessageBody(props: {
         {renderUserMessageInlineText(
           props.text,
           "user-message-inline-chip-only",
-          props.resolvedTheme,
           props.mentionReferences,
         )}
       </div>
@@ -2614,12 +2406,7 @@ const UserMessageBody = memo(function UserMessageBody(props: {
       className="block max-w-full min-w-0 whitespace-pre-wrap break-words font-system-ui text-foreground"
       style={props.chatTypographyStyle}
     >
-      {renderUserMessageInlineText(
-        props.text,
-        "user-message-inline",
-        props.resolvedTheme,
-        props.mentionReferences,
-      )}
+      {renderUserMessageInlineText(props.text, "user-message-inline", props.mentionReferences)}
     </div>
   );
 });

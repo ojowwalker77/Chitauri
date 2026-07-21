@@ -8,30 +8,23 @@ import type { FileDiffMetadata } from "@pierre/diffs/react";
 
 export type FileDiffStat = { additions: number; deletions: number };
 
-export const DIFF_THEME_NAMES = {
-  // Keep diff syntax highlighting on the bundled GitHub themes for better parity with git tooling.
-  light: "github-light",
-  dark: "github-dark",
-} as const;
+// Keep diff syntax highlighting on the bundled GitHub theme for better parity
+// with git tooling.
+export const DIFF_THEME_NAME = "github-dark" as const;
 
-export type DiffThemeName = (typeof DIFF_THEME_NAMES)[keyof typeof DIFF_THEME_NAMES];
+export type DiffThemeName = typeof DIFF_THEME_NAME;
 
-export function resolveDiffThemeName(theme: "light" | "dark"): DiffThemeName {
-  return theme === "dark" ? DIFF_THEME_NAMES.dark : DIFF_THEME_NAMES.light;
-}
-
-// The `unsafeCSS` payload is identical per theme and only ever has two values,
-// so cache it instead of rebuilding the (large) template string per file/render.
-const diffPanelUnsafeCssCache = new Map<"light" | "dark", string>();
+// The `unsafeCSS` payload never varies, so build the (large) template string
+// once instead of per file/render.
+let diffPanelUnsafeCss: string | null = null;
 
 // Themed CSS injected into the @pierre/diffs shadow markup so the diff viewer
 // adopts the app's chat code font and themed addition/deletion backgrounds.
 // Shared by every diff surface (turn diffs, repo diffs, the git pane) so they
 // render consistently — previously the git pane omitted this entirely.
-export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
-  const cached = diffPanelUnsafeCssCache.get(theme);
-  if (cached) {
-    return cached;
+export function buildDiffPanelUnsafeCSS(): string {
+  if (diffPanelUnsafeCss !== null) {
+    return diffPanelUnsafeCss;
   }
   const css = `
 :host {
@@ -152,7 +145,7 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
   font-variant-numeric: tabular-nums !important;
 }
 `;
-  diffPanelUnsafeCssCache.set(theme, css);
+  diffPanelUnsafeCss = css;
   return css;
 }
 

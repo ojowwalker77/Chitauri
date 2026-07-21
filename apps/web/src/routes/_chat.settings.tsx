@@ -43,25 +43,24 @@ import {
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  type AppBackground,
   type AppSettings,
   type TaskListDisplayMode,
-  DEFAULT_UI_DENSITY,
-  type UiDensity,
   MAX_CHAT_FONT_SIZE_PX,
   MAX_TERMINAL_FONT_SIZE_PX,
   getCustomModelsForProvider,
   getGitTextGenerationModelOptions,
   MAX_CUSTOM_MODEL_LENGTH,
+  MAX_WINDOW_TRANSPARENCY,
   MIN_CHAT_FONT_SIZE_PX,
+  MIN_WINDOW_TRANSPARENCY,
   MIN_TERMINAL_FONT_SIZE_PX,
   MODEL_PROVIDER_SETTINGS,
   normalizeChatFontSizePx,
+  normalizeWindowTransparency,
   normalizeTerminalFontSizePx,
   patchCustomModels,
   useAppSettings,
 } from "../appSettings";
-import { APP_BACKGROUND_LABELS } from "../lib/appBackgrounds";
 import { APP_VERSION } from "../branding";
 import { useDesktopTopBarTrafficLightGutterClassName } from "../hooks/useDesktopTopBarGutter";
 import { useProviderModelCatalog } from "../hooks/useProviderModelCatalog";
@@ -88,7 +87,6 @@ import {
 import { ProviderUsageSettingsPanel } from "../components/settings/ProviderUsageSettingsPanel";
 import { ProfileSettingsPanel } from "../components/settings/ProfileSettingsPanel";
 import { KeyboardShortcutsSettingsPanel } from "../components/settings/KeyboardShortcutsSettingsPanel";
-import { SkillsSettingsPanel } from "../components/settings/SkillsSettingsPanel";
 import {
   CHAT_CONTENT_CARD_CLASS_NAME,
   CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME,
@@ -101,8 +99,6 @@ import { SidebarHeaderNavigationControls } from "../components/SidebarHeaderNavi
 import { RouteInsetSurface } from "../components/RouteInsetSurface";
 import { resolveAndPersistPreferredEditor } from "../editorPreferences";
 import { isElectron } from "../env";
-import { useTheme } from "../hooks/useTheme";
-import { isUiDensity } from "../lib/appDensity";
 import { CentralIcon } from "../lib/central-icons";
 import { gitRemoveWorktreeMutationOptions } from "../lib/gitReactQuery";
 import {
@@ -112,14 +108,11 @@ import {
 import {
   ArchiveIcon,
   ChevronDownIcon,
-  DeviceLaptopIcon,
   DownloadIcon,
   ExternalLinkIcon,
   Loader2Icon,
-  MoonIcon,
   PlusIcon,
   RotateCcwIcon,
-  SunIcon,
   XIcon,
 } from "../lib/icons";
 import {
@@ -171,30 +164,9 @@ import {
   getVisibleProviderUpdateStatuses,
   shouldShowProviderUpdateStatus,
 } from "../providerUpdates";
+import { getAppearanceMode, setAppearanceMode, type AppearanceMode } from "../hooks/useTheme";
 
 // ── Settings taxonomy ──────────────────────────────────────────────────────
-
-const UI_DENSITY_OPTIONS = [
-  {
-    value: "compact",
-    label: "Compact",
-    description: "Tighter spacing in the sidebar, composer, and settings rows.",
-  },
-  {
-    value: "comfortable",
-    label: "Comfortable",
-    description: "Balanced spacing for everyday use.",
-  },
-  {
-    value: "spacious",
-    label: "Spacious",
-    description: "More breathing room across the main workspace surfaces.",
-  },
-] as const satisfies ReadonlyArray<{
-  value: UiDensity;
-  label: string;
-  description: string;
-}>;
 
 const PERMISSIONS_MODE_OPTIONS = [
   {
@@ -208,27 +180,6 @@ const PERMISSIONS_MODE_OPTIONS = [
   label: string;
   activeClassName?: string;
 }>;
-
-const THEME_OPTIONS = [
-  {
-    value: "system",
-    label: "Follow System",
-    description: "Match your OS appearance setting.",
-    icon: <DeviceLaptopIcon />,
-  },
-  {
-    value: "light",
-    label: "Light",
-    description: "Always use the light theme.",
-    icon: <SunIcon />,
-  },
-  {
-    value: "dark",
-    label: "Dark",
-    description: "Always use the dark theme.",
-    icon: <MoonIcon />,
-  },
-] as const;
 
 function HighlightColorSwatch({ color }: { color: string }) {
   return (
@@ -263,6 +214,15 @@ const HIGHLIGHT_COLOR_OPTIONS: ReadonlyArray<{
     label: "Red",
     icon: <HighlightColorSwatch color="color-mix(in srgb, var(--danger) 60%, transparent)" />,
   },
+];
+
+const APPEARANCE_MODE_OPTIONS: ReadonlyArray<{
+  value: AppearanceMode;
+  label: string;
+}> = [
+  { value: "system", label: "Follow System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
 ];
 
 const TASK_LIST_DISPLAY_OPTIONS = [
@@ -310,14 +270,6 @@ const SIDEBAR_POSITION_LABELS = {
   left: "Left",
   right: "Right",
 } as const;
-
-const APP_BACKGROUND_OPTIONS = [
-  "none",
-  "london",
-  "rio",
-  "sf",
-  "tokyo",
-] as const satisfies ReadonlyArray<AppBackground>;
 
 type InstallBinarySettingsKey =
   | "claudeBinaryPath"
@@ -751,7 +703,6 @@ function SettingsRouteView() {
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
   const activeSectionItem = SETTINGS_NAV_ITEMS.find((item) => item.id === activeSection)!;
 
-  const { theme, setTheme } = useTheme();
   const { settings, defaults, updateSettings, resetSettings } = useAppSettings();
   const [appSnapState, setAppSnapState] = useState<DesktopAppSnapState | null>(null);
   const appSnapRequestGuardRef = useRef(createLatestAppSnapRequestGuard());
@@ -1110,7 +1061,6 @@ function SettingsRouteView() {
     settings.piBinaryPath !== defaults.piBinaryPath ||
     settings.piAgentDir !== defaults.piAgentDir;
   const changedSettingLabels = [
-    ...(theme !== "system" ? ["Theme"] : []),
     ...(settings.defaultProvider !== defaults.defaultProvider ? ["Default provider"] : []),
     ...(settings.sidebarProjectSortOrder !== defaults.sidebarProjectSortOrder
       ? ["Project sort order"]
@@ -1119,9 +1069,7 @@ function SettingsRouteView() {
       ? ["Thread sort order"]
       : []),
     ...(settings.sidebarPosition !== defaults.sidebarPosition ? ["Sidebar position"] : []),
-    ...(settings.appBackground !== defaults.appBackground ? ["Background"] : []),
     ...(settings.showChatsSection !== defaults.showChatsSection ? ["Chats section"] : []),
-    ...(settings.uiDensity !== defaults.uiDensity ? ["UI density"] : []),
     ...(settings.highlightColor !== defaults.highlightColor ? ["Highlight color"] : []),
     ...(settings.chatFontSizePx !== defaults.chatFontSizePx ? ["Base font size"] : []),
     ...(settings.terminalFontSizePx !== defaults.terminalFontSizePx ? ["Terminal font size"] : []),
@@ -1366,7 +1314,6 @@ function SettingsRouteView() {
     );
     if (!confirmed) return;
 
-    setTheme("system");
     resetSettings();
     setOpenInstallProviders({
       codex: false,
@@ -1967,37 +1914,6 @@ function SettingsRouteView() {
         />
 
         <SettingsRow
-          title="Background"
-          description="Optional image behind the chat canvas. The theme colour is layered over it so text keeps its contrast."
-          resetAction={
-            settings.appBackground !== defaults.appBackground ? (
-              <SettingResetButton
-                label="background"
-                onClick={() => updateSettings({ appBackground: defaults.appBackground })}
-              />
-            ) : null
-          }
-          control={
-            <SettingsSelectControl
-              value={settings.appBackground}
-              onValueChange={(value) => {
-                const next = APP_BACKGROUND_OPTIONS.find((option) => option === value);
-                if (!next) return;
-                updateSettings({ appBackground: next });
-              }}
-              ariaLabel="Canvas background"
-              valueContent={APP_BACKGROUND_LABELS[settings.appBackground]}
-            >
-              {APP_BACKGROUND_OPTIONS.map((option) => (
-                <SelectItem hideIndicator key={option} value={option}>
-                  {APP_BACKGROUND_LABELS[option]}
-                </SelectItem>
-              ))}
-            </SettingsSelectControl>
-          }
-        />
-
-        <SettingsRow
           title="Sidebar position"
           description="Which side of the window the main sidebar docks against."
           resetAction={
@@ -2078,54 +1994,14 @@ function SettingsRouteView() {
         <h2 className={SETTINGS_SECTION_LABEL_CLASS_NAME}>Theme and typography</h2>
         <SettingsCard>
           <SettingsRow
-            title="Theme"
-            description="Choose how TeaCode looks across the app."
-            resetAction={
-              theme !== "system" ? (
-                <SettingResetButton label="theme" onClick={() => setTheme("system")} />
-              ) : null
-            }
+            title="Appearance"
+            description="Choose how TeaCode looks. Follow System will match your operating system preference."
             control={
               <SettingsSegmentedControl
-                value={theme}
-                onValueChange={(value) => {
-                  if (value !== "system" && value !== "light" && value !== "dark") return;
-                  setTheme(value);
-                }}
-                ariaLabel="Theme preference"
-                options={THEME_OPTIONS}
-              />
-            }
-          />
-        </SettingsCard>
-
-        <SettingsCard>
-          <SettingsRow
-            title="UI density"
-            description="Control spacing in the sidebar, composer, chat gutters, and settings rows without changing font size."
-            resetAction={
-              settings.uiDensity !== defaults.uiDensity ? (
-                <SettingResetButton
-                  label="UI density"
-                  onClick={() =>
-                    updateSettings({
-                      uiDensity: DEFAULT_UI_DENSITY,
-                    })
-                  }
-                />
-              ) : null
-            }
-            control={
-              <SettingsSegmentedControl
-                value={settings.uiDensity}
-                onValueChange={(value) => {
-                  if (!isUiDensity(value)) {
-                    return;
-                  }
-                  updateSettings({ uiDensity: value });
-                }}
-                ariaLabel="UI density"
-                options={UI_DENSITY_OPTIONS}
+                value={getAppearanceMode()}
+                onValueChange={(value) => setAppearanceMode(value)}
+                ariaLabel="Appearance mode"
+                options={APPEARANCE_MODE_OPTIONS}
               />
             }
           />
@@ -2148,6 +2024,42 @@ function SettingsRouteView() {
                 ariaLabel="Highlight color"
                 options={HIGHLIGHT_COLOR_OPTIONS}
               />
+            }
+          />
+
+          <SettingsRow
+            title="Window transparency"
+            description="How much of the desktop shows through the window. Only applies to the translucent macOS window material; the composer keeps its own surface."
+            resetAction={
+              settings.windowTransparency !== defaults.windowTransparency ? (
+                <SettingResetButton
+                  label="window transparency"
+                  onClick={() =>
+                    updateSettings({ windowTransparency: defaults.windowTransparency })
+                  }
+                />
+              ) : null
+            }
+            control={
+              <div className="flex w-full items-center justify-end gap-3 sm:w-auto">
+                <input
+                  type="range"
+                  className="theme-slider h-1 w-full cursor-pointer appearance-none rounded-full bg-[var(--selected)] sm:w-40"
+                  min={MIN_WINDOW_TRANSPARENCY}
+                  max={MAX_WINDOW_TRANSPARENCY}
+                  step={1}
+                  value={settings.windowTransparency}
+                  onChange={(event) => {
+                    updateSettings({
+                      windowTransparency: normalizeWindowTransparency(Number(event.target.value)),
+                    });
+                  }}
+                  aria-label="Window transparency"
+                />
+                <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
+                  {settings.windowTransparency}%
+                </span>
+              </div>
             }
           />
 
@@ -3638,7 +3550,6 @@ function SettingsRouteView() {
           <>
             {renderModelsPanel()}
             {renderProvidersPanel()}
-            <SkillsSettingsPanel />
             <ProviderUsageSettingsPanel />
           </>
         );

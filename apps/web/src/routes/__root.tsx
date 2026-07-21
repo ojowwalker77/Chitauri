@@ -8,7 +8,6 @@ import {
   type ServerConfig,
   type ServerProviderStatus,
 } from "@t3tools/contracts";
-import { defaultTerminalTitleForCliKind } from "@t3tools/shared/terminalThreads";
 import {
   Outlet,
   createRootRouteWithContext,
@@ -30,7 +29,6 @@ import ShortcutsDialog from "../components/ShortcutsDialog";
 import WhatsNewDialog from "../components/WhatsNewDialog";
 import { useWhatsNew } from "../whatsNew/useWhatsNew";
 import { WhatsNewPopoutCard } from "../whatsNew/WhatsNewPopoutCard";
-import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
 import { Button, dialogActionButtonClassName } from "../components/ui/button";
 import { OVERLAY_SURFACE_CLASS_NAME } from "../components/ui/surface";
 import { AnchoredToastProvider, ToastProvider, toastManager } from "../components/ui/toast";
@@ -38,7 +36,6 @@ import { useGitProgressToastPreview } from "../components/useGitProgressToastPre
 import { resolveAndPersistPreferredEditor } from "../editorPreferences";
 import { useFeatureFlags } from "../featureFlags";
 import { useFocusedChatContext } from "../focusedChatContext";
-import { isTerminalFocused } from "../lib/terminalFocus";
 import {
   serverConfigQueryOptions,
   serverQueryKeys,
@@ -51,8 +48,6 @@ import {
   useComposerDraftStore,
 } from "../composerDraftStore";
 import { useStore } from "../store";
-import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
-import { terminalActivityFromEvent } from "../terminalActivity";
 import {
   onServerConfigUpdated,
   onServerProviderStatusesUpdated,
@@ -61,9 +56,7 @@ import {
 } from "../wsNativeApi";
 import { providerQueryKeys } from "../lib/providerReactQuery";
 import { invalidateProjectFileQueriesForCwds, projectQueryKeys } from "../lib/projectReactQuery";
-import { collectActiveTerminalThreadIds } from "../lib/terminalStateCleanup";
 import { useProjectRunStore } from "../projectRunStore";
-import { dockTerminalThreadId } from "../lib/dockTerminalScope";
 import { TaskCompletionNotifications } from "../notifications/taskCompletion";
 import { useWorkspaceStore } from "../workspaceStore";
 import {
@@ -71,8 +64,8 @@ import {
   useRetainedThreadDetailIds,
 } from "../threadDetailSubscriptionRetention";
 import { getThreadFromState } from "../threadDerivation";
-import { useAppDensity } from "../hooks/useAppDensity";
 import { useAppTypography } from "../hooks/useAppTypography";
+import { useWindowTransparency } from "../hooks/useWindowTransparency";
 import { usePreloadSettingsRoute } from "../hooks/usePreloadSettingsRoute";
 import { useSyncDesktopTopBarTrafficLightGutterZoom } from "../hooks/useDesktopTopBarGutter";
 import { useTheme } from "../hooks/useTheme";
@@ -147,7 +140,7 @@ export const Route = createRootRouteWithContext<{
 
 function RootRouteView() {
   useAppTypography();
-  useAppDensity();
+  useWindowTransparency();
   usePreloadSettingsRoute();
   useNativeFontSmoothing();
   useSyncDesktopTopBarTrafficLightGutterZoom();
@@ -499,16 +492,6 @@ function GlobalShortcutsDialog() {
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const keybindings = serverConfigQuery.data?.keybindings ?? [];
   const platform = typeof navigator === "undefined" ? "" : navigator.platform;
-  const activeThreadTerminalState = useTerminalStateStore((state) =>
-    focusedThreadId
-      ? selectThreadTerminalState(state.terminalStateByThreadId, focusedThreadId)
-      : null,
-  );
-  const terminalOpen = activeThreadTerminalState?.terminalOpen ?? false;
-  const terminalWorkspaceOpen = shouldRenderTerminalWorkspace({
-    presentationMode: activeThreadTerminalState?.presentationMode ?? "drawer",
-    terminalOpen,
-  });
 
   useEffect(() => {
     const onMenuAction = window.desktopBridge?.onMenuAction;
@@ -534,11 +517,6 @@ function GlobalShortcutsDialog() {
       keybindings={keybindings}
       projectScripts={activeProject?.kind === "project" ? activeProject.scripts : []}
       platform={platform}
-      context={{
-        terminalFocus: isTerminalFocused(),
-        terminalOpen,
-        terminalWorkspaceOpen,
-      }}
     />
   );
 }
@@ -777,9 +755,6 @@ function EventRouter() {
     (store) => store.applyOrchestrationEventsHotPath,
   );
   const setProjectExpanded = useStore((store) => store.setProjectExpanded);
-  const removeOrphanedTerminalStates = useTerminalStateStore(
-    (store) => store.removeOrphanedTerminalStates,
-  );
   const setServerWorkspacePaths = useWorkspaceStore((store) => store.setServerWorkspacePaths);
   const serverThreads = useStore((store) => store.threads);
   const queryClient = useQueryClient();
@@ -962,7 +937,6 @@ function EventRouter() {
       shellSnapshotSequence = snapshot.snapshotSequence;
       syncServerShellSnapshot(snapshot);
       reconcilePromotedDraftsFromShellThreads(snapshot.threads);
-      removeOrphanedTerminalsForCurrentState();
       flushShellBuffer(snapshot.snapshotSequence);
     };
 
@@ -975,28 +949,6 @@ function EventRouter() {
       threadReplayRequestInFlight.clear();
       await api.orchestration.subscribeShell().catch(() => loadShellSnapshotOnce());
       await enqueueThreadSubscriptionReconcile(visibleThreadIdsRef.current);
-    };
-
-    const removeOrphanedTerminalsForCurrentState = () => {
-      const draftThreadIds = Object.keys(
-        useComposerDraftStore.getState().draftThreadsByThreadId,
-      ) as ThreadId[];
-      const activeThreadIds = collectActiveTerminalThreadIds({
-        snapshotThreads: useStore.getState().threads.map((thread) => ({
-          id: thread.id,
-          deletedAt: null,
-          archivedAt: thread.archivedAt ?? null,
-        })),
-        draftThreadIds,
-        retainedThreadIds: [],
-      });
-      // Right-dock terminals live under a synthetic scope derived from each active
-      // thread; retain those scopes so docked terminals are not pruned mid-session.
-      // Snapshot first: we mutate the set while iterating its prior membership.
-      for (const activeThreadId of Array.from(activeThreadIds)) {
-        activeThreadIds.add(dockTerminalThreadId(activeThreadId));
-      }
-      removeOrphanedTerminalStates(activeThreadIds);
     };
 
     const flushPendingDomainEvents = () => {
@@ -1193,7 +1145,6 @@ function EventRouter() {
         shellSnapshotSequence = item.snapshot.snapshotSequence;
         syncServerShellSnapshot(item.snapshot);
         reconcilePromotedDraftsFromShellThreads(item.snapshot.threads);
-        removeOrphanedTerminalsForCurrentState();
         flushShellBuffer(item.snapshot.snapshotSequence);
         return;
       }
@@ -1237,32 +1188,9 @@ function EventRouter() {
       threadSnapshotSequenceById.set(threadId, item.event.sequence);
       queueDomainEvent(item.event);
     });
-    const unsubTerminalEvent = api.terminal.onEvent((event) => {
-      const terminalThreadId = ThreadId.makeUnsafe(event.threadId);
-      if (event.type === "activity") {
-        const terminalStore = useTerminalStateStore.getState();
-        const currentCliKind =
-          selectThreadTerminalState(terminalStore.terminalStateByThreadId, terminalThreadId)
-            .terminalCliKindsById[event.terminalId] ?? null;
-        if (event.cliKind || currentCliKind !== null) {
-          terminalStore.setTerminalMetadata(terminalThreadId, event.terminalId, {
-            cliKind: event.cliKind,
-            label: event.cliKind ? defaultTerminalTitleForCliKind(event.cliKind) : "Terminal",
-          });
-        }
-      }
-      const activity = terminalActivityFromEvent(event);
-      if (activity === null) {
-        return;
-      }
-      useTerminalStateStore.getState().setTerminalActivity(terminalThreadId, event.terminalId, {
-        hasRunningSubprocess: activity.hasRunningSubprocess,
-        agentState: activity.agentState,
-      });
-    });
     // Dev servers are first-class server processes; mirror their lifecycle into the
     // client store so the sidebar indicator survives reconnects and stays consistent
-    // across tabs without owning any thread/terminal state.
+    // across tabs without owning any thread state.
     const invalidateLocalServers = () => {
       void queryClient.invalidateQueries({ queryKey: serverQueryKeys.localServers() });
     };
@@ -1449,7 +1377,6 @@ function EventRouter() {
       unsubscribeRetainedThreadIdChanges();
       unsubShellEvent();
       unsubThreadEvent();
-      unsubTerminalEvent();
       unsubDevServerEvent();
       unsubWelcome();
       unsubServerConfigUpdated();
@@ -1461,7 +1388,6 @@ function EventRouter() {
     applyShellEvents,
     navigate,
     queryClient,
-    removeOrphanedTerminalStates,
     setProjectExpanded,
     setServerWorkspacePaths,
     syncServerShellSnapshot,

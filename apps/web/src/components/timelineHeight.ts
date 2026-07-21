@@ -6,7 +6,6 @@
 import type { TurnDiffFileChange } from "../types";
 import { DEFAULT_CHAT_FONT_SIZE_PX, normalizeChatFontSizePx } from "../appSettings";
 import { deriveDisplayedUserMessageState } from "../lib/composerMessageContext";
-import { buildInlineTerminalContextText } from "./chat/userMessageTerminalContexts";
 import { deriveUserMessagePreviewState } from "./chat/userMessagePreview";
 import { hasLeadingUserMedia, resolveUserTurnMarker } from "./chat/userTurnMarker";
 import {
@@ -281,12 +280,7 @@ export function estimateTimelineMessageHeight(
       hideImageOnlyBootstrapPrompt: (message.attachments?.length ?? 0) > 0,
     });
     const userMessagePreview = deriveUserMessagePreviewState(displayedUserMessage.visibleText);
-    const renderedText =
-      displayedUserMessage.contexts.length > 0
-        ? [buildInlineTerminalContextText(displayedUserMessage.contexts), userMessagePreview.text]
-            .filter((part) => part.length > 0)
-            .join(" ")
-        : userMessagePreview.text;
+    const renderedText = userMessagePreview.text;
     const estimatedLines =
       renderedText.length > 0 ? estimateWrappedLineCount(renderedText, charsPerLine) : 0;
     const imageAttachmentCount =

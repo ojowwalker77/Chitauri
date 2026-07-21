@@ -1,7 +1,7 @@
 // FILE: threadBootstrap.ts
-// Purpose: Pure helpers for draft reuse and terminal-thread promotion payloads.
+// Purpose: Pure helpers for draft reuse and thread promotion payloads.
 // Layer: Web bootstrap/domain helpers
-// Exports: draft patching, reuse checks, and terminal creation state resolution.
+// Exports: draft patching, reuse checks, and thread creation state resolution.
 
 import {
   DEFAULT_RUNTIME_MODE,
@@ -20,7 +20,7 @@ import {
   type DraftThreadState,
   resolvePreferredComposerModelSelection,
 } from "../composerDraftStore";
-import { type Thread, type ThreadPrimarySurface } from "../types";
+import { type Thread } from "../types";
 
 export interface NewThreadOptions {
   branch?: string | null;
@@ -28,7 +28,6 @@ export interface NewThreadOptions {
   envMode?: DraftThreadEnvMode;
   runtimeMode?: RuntimeMode;
   lastKnownPr?: OrchestrationThreadPullRequest | null;
-  entryPoint?: ThreadPrimarySurface;
   provider?: ProviderKind;
   fresh?: boolean;
 }
@@ -100,7 +99,7 @@ export interface DraftReusePlanFresh {
 
 export type ThreadBootstrapPlan = DraftReusePlanStored | DraftReusePlanRoute | DraftReusePlanFresh;
 
-interface ResolveTerminalThreadCreationStateInput {
+interface ResolveThreadCreationStateInput {
   activeDraftThread: DraftThreadState | null;
   activeThread: ActiveThreadSnapshot | null;
   defaultProvider?: ProviderKind | null | undefined;
@@ -111,7 +110,7 @@ interface ResolveTerminalThreadCreationStateInput {
   projectId: ProjectId;
 }
 
-export interface TerminalThreadCreationState {
+export interface ThreadCreationState {
   branch: string | null;
   envMode: DraftThreadEnvMode;
   lastKnownPr: OrchestrationThreadPullRequest | null;
@@ -158,7 +157,6 @@ export function createActiveDraftThreadSnapshot(
     projectId: activeDraftThread.projectId,
     createdAt: activeDraftThread.createdAt,
     runtimeMode: activeDraftThread.runtimeMode,
-    entryPoint: activeDraftThread.entryPoint,
     branch: activeDraftThread.branch,
     worktreePath: activeDraftThread.worktreePath,
     lastKnownPr: activeDraftThread.lastKnownPr ?? null,
@@ -170,24 +168,16 @@ export function createActiveDraftThreadSnapshot(
  * Promotion (first send) does not erase the project's draft-thread mapping, so a thread that has
  * already started running still looks like a reusable draft. Reusing it makes "New thread" navigate
  * to the thread you are already on — a dead button. Treat such a draft as consumed.
- *
- * Terminal-first drafts intentionally own a server thread before their first turn, so server
- * existence alone must not disqualify them.
  */
 export function isConsumedDraftThread(input: {
-  entryPoint: ThreadPrimarySurface;
   hasLatestTurn: boolean;
   hasServerThread: boolean;
 }): boolean {
-  if (input.hasLatestTurn) {
-    return true;
-  }
-  return input.entryPoint === "terminal" ? false : input.hasServerThread;
+  return input.hasLatestTurn || input.hasServerThread;
 }
 
 // Decide whether we should reuse a stored draft, the current route draft, or create a fresh one.
 export function resolveThreadBootstrapPlan(input: {
-  entryPoint: ThreadPrimarySurface;
   latestActiveDraftThread: DraftThreadState | null;
   projectId: ProjectId;
   routeThreadId: ThreadId | null;
@@ -196,7 +186,6 @@ export function resolveThreadBootstrapPlan(input: {
   if (
     shouldReuseActiveDraftThread({
       draftThread: input.latestActiveDraftThread,
-      entryPoint: input.entryPoint,
       projectId: input.projectId,
       routeThreadId: input.routeThreadId,
     })
@@ -220,7 +209,6 @@ export function resolveThreadBootstrapPlan(input: {
 // Build the initial draft-thread metadata for a brand new thread bootstrap.
 export function createFreshDraftThreadSeed(input: {
   createdAt: string;
-  entryPoint: ThreadPrimarySurface;
   options: NewThreadOptions | undefined;
 }): Omit<DraftThreadState, "projectId"> {
   return {
@@ -234,7 +222,6 @@ export function createFreshDraftThreadSeed(input: {
       (input.options?.worktreePath ? "worktree" : DEFAULT_NEW_THREAD_ENV_MODE),
     runtimeMode: input.options?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
     lastKnownPr: input.options?.lastKnownPr ?? null,
-    entryPoint: input.entryPoint,
   };
 }
 
@@ -250,12 +237,8 @@ export function hasDraftContextOverrides(options?: NewThreadOptions): boolean {
 }
 
 // Build the exact patch we should apply to an existing draft before reusing it.
-export function buildDraftThreadContextPatch(
-  entryPoint: ThreadPrimarySurface,
-  options?: NewThreadOptions,
-): {
+export function buildDraftThreadContextPatch(options?: NewThreadOptions): {
   branch?: string | null;
-  entryPoint: ThreadPrimarySurface;
   envMode?: DraftThreadEnvMode;
   lastKnownPr?: OrchestrationThreadPullRequest | null;
   runtimeMode?: RuntimeMode;
@@ -274,34 +257,28 @@ export function buildDraftThreadContextPatch(
     ...(options?.envMode !== undefined ? { envMode: options.envMode } : {}),
     ...(options?.runtimeMode !== undefined ? { runtimeMode: options.runtimeMode } : {}),
     ...(options?.lastKnownPr !== undefined ? { lastKnownPr: options.lastKnownPr } : {}),
-    entryPoint,
   };
 }
 
-// Reuse only when the active route draft already belongs to the target project and surface.
+// Reuse only when the active route draft already belongs to the target project.
 export function shouldReuseActiveDraftThread(input: {
   draftThread: DraftThreadState | null;
-  entryPoint: ThreadPrimarySurface;
   projectId: ProjectId;
   routeThreadId: ThreadId | null;
 }): input is {
   draftThread: DraftThreadState;
-  entryPoint: ThreadPrimarySurface;
   projectId: ProjectId;
   routeThreadId: ThreadId;
 } {
   return Boolean(
-    input.draftThread &&
-    input.routeThreadId &&
-    input.draftThread.projectId === input.projectId &&
-    input.draftThread.entryPoint === input.entryPoint,
+    input.draftThread && input.routeThreadId && input.draftThread.projectId === input.projectId,
   );
 }
 
-// Resolve the durable thread payload for terminal-first promotion from the most specific state.
-export function resolveTerminalThreadCreationState(
-  input: ResolveTerminalThreadCreationStateInput,
-): TerminalThreadCreationState {
+// Resolve the durable thread payload for promotion from the most specific state.
+export function resolveThreadCreationState(
+  input: ResolveThreadCreationStateInput,
+): ThreadCreationState {
   const hasExplicitEnvModeOverride =
     input.options !== undefined && Object.hasOwn(input.options, "envMode");
   const explicitEnvMode: DraftThreadEnvMode | undefined = hasExplicitEnvModeOverride

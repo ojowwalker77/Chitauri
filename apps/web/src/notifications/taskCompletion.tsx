@@ -12,17 +12,12 @@ import { useAppSettings } from "../appSettings";
 import { isElectron } from "../env";
 import { useStore } from "../store";
 import { createAllThreadsSelector } from "../storeSelectors";
-import { useTerminalStateStore } from "../terminalStateStore";
 import type { Thread } from "../types";
 import {
-  buildTerminalAttentionCopy,
-  buildTerminalCompletionCopy,
   buildInputNeededCopy,
   buildTaskCompletionCopy,
   collectCompletedThreadCandidates,
-  collectCompletedTerminalCandidates,
   collectInputNeededThreadCandidates,
-  collectTerminalAttentionCandidates,
   isNotificationRuntimeFreshTimestamp,
   shouldShowThreadNotificationToast,
 } from "./taskCompletion.logic";
@@ -144,12 +139,10 @@ export function TaskCompletionNotifications() {
   });
   const threads = useStore(useRef(createAllThreadsSelector()).current);
   const threadsHydrated = useStore((store) => store.threadsHydrated);
-  const terminalStateByThreadId = useTerminalStateStore((store) => store.terminalStateByThreadId);
   const visibleThreadIds = useMemo(() => {
     return resolveVisibleToastThreadIds({ activeThreadId });
   }, [activeThreadId]);
   const previousThreadsRef = useRef<readonly Thread[]>([]);
-  const previousTerminalStateRef = useRef(terminalStateByThreadId);
   const runtimeStartedAtMsRef = useRef(Date.now());
   const readyRef = useRef(false);
 
@@ -183,7 +176,6 @@ export function TaskCompletionNotifications() {
 
     if (!readyRef.current) {
       previousThreadsRef.current = threads;
-      previousTerminalStateRef.current = terminalStateByThreadId;
       readyRef.current = true;
       return;
     }
@@ -194,29 +186,15 @@ export function TaskCompletionNotifications() {
     ).filter((candidate) =>
       isNotificationRuntimeFreshTimestamp(candidate.completedAt, runtimeStartedAtMsRef.current),
     );
-    const terminalCompletions = collectCompletedTerminalCandidates(
-      previousTerminalStateRef.current,
-      terminalStateByThreadId,
-    );
     const inputNeededCandidates = collectInputNeededThreadCandidates(
       previousThreadsRef.current,
       threads,
     ).filter((candidate) =>
       isNotificationRuntimeFreshTimestamp(candidate.createdAt, runtimeStartedAtMsRef.current),
     );
-    const terminalAttentionCandidates = collectTerminalAttentionCandidates(
-      previousTerminalStateRef.current,
-      terminalStateByThreadId,
-    );
     previousThreadsRef.current = threads;
-    previousTerminalStateRef.current = terminalStateByThreadId;
 
-    if (
-      completions.length === 0 &&
-      inputNeededCandidates.length === 0 &&
-      terminalCompletions.length === 0 &&
-      terminalAttentionCandidates.length === 0
-    ) {
+    if (completions.length === 0 && inputNeededCandidates.length === 0) {
       return;
     }
 
@@ -257,45 +235,10 @@ export function TaskCompletionNotifications() {
         void showSystemThreadNotification(copy, candidate.threadId, navigate);
       }
     }
-
-    for (const completion of terminalCompletions) {
-      const copy = buildTerminalCompletionCopy(completion);
-      if (
-        settings.enableTaskCompletionToasts &&
-        shouldShowThreadNotificationToast({
-          threadId: completion.threadId,
-          visibleThreadIds,
-        })
-      ) {
-        showThreadToast(copy, completion.threadId, "success", navigate);
-      }
-
-      if (shouldAttemptSystemNotification) {
-        void showSystemThreadNotification(copy, completion.threadId, navigate);
-      }
-    }
-
-    for (const candidate of terminalAttentionCandidates) {
-      const copy = buildTerminalAttentionCopy(candidate);
-      if (
-        settings.enableTaskCompletionToasts &&
-        shouldShowThreadNotificationToast({
-          threadId: candidate.threadId,
-          visibleThreadIds,
-        })
-      ) {
-        showThreadToast(copy, candidate.threadId, "warning", navigate);
-      }
-
-      if (shouldAttemptSystemNotification) {
-        void showSystemThreadNotification(copy, candidate.threadId, navigate);
-      }
-    }
   }, [
     navigate,
     settings.enableSystemTaskCompletionNotifications,
     settings.enableTaskCompletionToasts,
-    terminalStateByThreadId,
     threads,
     threadsHydrated,
     visibleThreadIds,
@@ -320,6 +263,6 @@ export function buildNotificationSettingsSupportText(
     case "unsupported":
       return "This browser does not support desktop notifications.";
     case "default":
-      return "Allow browser notifications to get alerts when chats or terminal agents finish or need input in the background.";
+      return "Allow browser notifications to get alerts when chats finish or need input in the background.";
   }
 }

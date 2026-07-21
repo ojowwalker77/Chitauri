@@ -37,7 +37,6 @@ import {
   effectiveComposerAttachmentCount,
 } from "../lib/composerSend";
 import { useStore } from "../store";
-import { useTerminalStateStore } from "../terminalStateStore";
 import { toastManager } from "./ui/toast";
 
 const MAX_DEDUPED_CAPTURE_IDS = 128;
@@ -93,7 +92,6 @@ export function AppSnapCoordinator() {
   const navigate = useNavigate();
   const { handleNewChat } = useHandleNewChat();
   const { focusedThreadId } = useFocusedChatContext();
-  const openChatThreadPage = useTerminalStateStore((state) => state.openChatThreadPage);
   const { settings } = useAppSettings();
   const focusedThreadRef = useRef<ThreadId | null>(focusedThreadId);
   const lastInteractionRef = useRef<AppSnapThreadAffinity | null>(null);
@@ -266,13 +264,12 @@ export function AppSnapCoordinator() {
 
   const routeToThread = useCallback(
     async (threadId: ThreadId) => {
-      openChatThreadPage(threadId);
       if (focusedThreadRef.current !== threadId) {
         await navigate({ to: "/$threadId", params: { threadId } });
       }
       requestComposerFocus(threadId);
     },
-    [navigate, openChatThreadPage],
+    [navigate],
   );
 
   const resolveDestination = useCallback(

@@ -69,7 +69,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     id: "agents",
     group: "app",
     label: "Agents",
-    description: "Models, providers, orchestration, skills, and usage.",
+    description: "Models, providers, orchestration, and usage.",
     icon: "agent-network",
     eyebrow: "Agent configuration",
   },
@@ -98,7 +98,7 @@ export function normalizeSettingsSection(value: unknown): SettingsSectionId {
   if (SETTINGS_SECTION_IDS.some((candidate) => candidate === value)) {
     return value as SettingsSectionId;
   }
-  if (["models", "providers", "skills", "usage"].includes(value)) {
+  if (["models", "providers", "usage"].includes(value)) {
     return "agents";
   }
   if (["shortcuts", "worktrees", "archived"].includes(value)) {

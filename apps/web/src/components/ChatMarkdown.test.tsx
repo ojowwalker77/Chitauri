@@ -13,10 +13,6 @@ vi.mock("@pierre/diffs", () => ({
     }),
 }));
 
-vi.mock("../hooks/useTheme", () => ({
-  useTheme: () => ({ resolvedTheme: "light" }),
-}));
-
 async function renderMarkdown(
   text: string,
   cwd = "C:\\Users\\LENOVO\\dpcode",

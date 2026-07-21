@@ -22,7 +22,6 @@ import { MentionChipIcon, type MentionChipKind } from "./MentionChipIcon";
 
 interface InlineMentionChipProps {
   path: string;
-  theme: "light" | "dark";
   kind?: MentionChipKind;
   mentionReferences?: ReadonlyArray<ProviderMentionReference>;
   /** Defaults to the path basename (composer-style label). */
@@ -42,7 +41,6 @@ export const InlineMentionChip = memo(function InlineMentionChip(props: InlineMe
       icon={
         <MentionChipIcon
           path={props.path}
-          theme={props.theme}
           {...(props.kind ? { kind: props.kind } : {})}
           {...(props.mentionReferences ? { mentionReferences: props.mentionReferences } : {})}
         />

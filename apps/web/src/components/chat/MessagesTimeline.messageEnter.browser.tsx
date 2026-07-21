@@ -67,7 +67,6 @@ function MessageEnterTimeline() {
           isRevertingCheckpoint={false}
           onImageExpand={() => {}}
           markdownCwd={undefined}
-          resolvedTheme="dark"
           timestampFormat="locale"
           workspaceRoot={undefined}
         />
@@ -106,7 +105,6 @@ function HydratingTimeline() {
           isRevertingCheckpoint={false}
           onImageExpand={() => {}}
           markdownCwd={undefined}
-          resolvedTheme="dark"
           timestampFormat="locale"
           workspaceRoot={undefined}
         />

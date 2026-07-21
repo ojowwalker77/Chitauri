@@ -99,7 +99,6 @@ function DiffFileCollapseChevron(props: { collapsed: boolean }) {
 
 const DiffPanelFileRow = memo(function DiffPanelFileRow(props: {
   fileDiff: FileDiffMetadata;
-  resolvedTheme: "light" | "dark";
   diffRenderMode: DiffRenderMode;
   diffWordWrap: boolean;
   workspaceRoot: string | null;
@@ -154,7 +153,6 @@ const DiffPanelFileRow = memo(function DiffPanelFileRow(props: {
     >
       <FileDiffCard
         fileDiff={props.fileDiff}
-        theme={props.resolvedTheme}
         diffStyle={props.diffRenderMode === "split" ? "split" : "unified"}
         overflow={props.diffWordWrap ? "wrap" : "scroll"}
         collapsed={props.isCollapsed}
@@ -191,7 +189,6 @@ function areCollapsedSetsEqual(left: ReadonlySet<string>, right: ReadonlySet<str
 export const DiffPanelFileList = memo(
   function DiffPanelFileList(props: {
     renderableFiles: ReadonlyArray<FileDiffMetadata>;
-    resolvedTheme: "light" | "dark";
     diffRenderMode: DiffRenderMode;
     diffWordWrap: boolean;
     workspaceRoot: string | null;
@@ -213,12 +210,10 @@ export const DiffPanelFileList = memo(
       <FileDiffSurface className="h-full min-h-0 overflow-auto px-2 pb-2">
         {props.renderableFiles.map((fileDiff) => {
           const fileKey = buildFileDiffRenderKey(fileDiff);
-          const themedFileKey = `${fileKey}:${props.resolvedTheme}`;
           return (
             <DiffPanelFileRow
-              key={themedFileKey}
+              key={fileKey}
               fileDiff={fileDiff}
-              resolvedTheme={props.resolvedTheme}
               diffRenderMode={props.diffRenderMode}
               diffWordWrap={props.diffWordWrap}
               workspaceRoot={props.workspaceRoot}
@@ -234,7 +229,6 @@ export const DiffPanelFileList = memo(
   (previous, next) => {
     return (
       previous.renderableFiles === next.renderableFiles &&
-      previous.resolvedTheme === next.resolvedTheme &&
       previous.diffRenderMode === next.diffRenderMode &&
       previous.diffWordWrap === next.diffWordWrap &&
       previous.workspaceRoot === next.workspaceRoot &&

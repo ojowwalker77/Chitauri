@@ -19,7 +19,6 @@ import {
   type ServerLifecycleStreamEvent,
   type ServerProviderStatusesUpdatedPayload,
   type ServerSettingsUpdatedPayload,
-  type TerminalEvent,
   type WsPush,
   type WsPushChannel,
   type WsPushMessage,
@@ -411,13 +410,6 @@ export class WsTransport {
               this.emit(WS_CHANNELS.serverSettingsUpdated, payload),
             restartChannel,
           );
-        } else if (channel === WS_CHANNELS.terminalEvent) {
-          this.startStream(
-            "terminal.events",
-            client[WS_METHODS.subscribeTerminalEvents]({}),
-            (event: TerminalEvent) => this.emit(WS_CHANNELS.terminalEvent, event),
-            restartChannel,
-          );
         } else if (channel === WS_CHANNELS.projectDevServerEvent) {
           this.startStream(
             "project.devServers",
@@ -449,7 +441,6 @@ export class WsTransport {
     else if (channel === WS_CHANNELS.serverProviderStatusesUpdated)
       this.stopStream("server.providers");
     else if (channel === WS_CHANNELS.serverSettingsUpdated) this.stopStream("server.settings");
-    else if (channel === WS_CHANNELS.terminalEvent) this.stopStream("terminal.events");
     else if (channel === WS_CHANNELS.projectDevServerEvent) this.stopStream("project.devServers");
     else if (channel === ORCHESTRATION_WS_CHANNELS.domainEvent)
       this.stopStream("orchestration.domain");

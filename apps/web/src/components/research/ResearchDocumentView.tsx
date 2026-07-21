@@ -87,7 +87,7 @@ function ReferenceRail({ references }: { references: readonly ResearchReference[
                 key={reference.id}
                 type="button"
                 onClick={() => void openReference(reference)}
-                className="group flex min-h-11 w-full items-start gap-2.5 rounded-[8px] px-2.5 py-2 text-left transition-[background-color,scale] duration-press ease-out hover:bg-hover active:scale-[0.96] motion-reduce:transition-none"
+                className="group flex min-h-11 w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-[background-color,scale] duration-press ease-out hover:bg-hover active:scale-[0.96] motion-reduce:transition-none"
               >
                 <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--color-background-elevated-secondary)] text-muted-foreground">
                   <Icon className="size-3.5" />

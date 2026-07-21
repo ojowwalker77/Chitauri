@@ -1,7 +1,7 @@
 // FILE: teacodeEnvironmentBootstrap.ts
 // Purpose: Apply the TeaCode -> Chitauri environment compatibility bridge before runtime modules load.
 
-import { applyTeaCodeEnvironmentCompatibility } from "./productIdentity";
+import { applyTeaCodeEnvironmentCompatibility } from "./productIdentity.ts";
 
 const { legacyKeysUsed } = applyTeaCodeEnvironmentCompatibility();
 if (legacyKeysUsed.length > 0) {

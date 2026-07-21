@@ -40,7 +40,6 @@ function renderTranscriptPaneMarkup(
       onOpenThread={(_threadId: ThreadId) => {}}
       onRevertUserMessage={(_messageId: MessageId) => {}}
       onScrollToBottom={() => {}}
-      resolvedTheme="light"
       revertTurnCountByUserMessageId={new Map()}
       scrollButtonVisible
       terminalWorkspaceTerminalTabActive={false}

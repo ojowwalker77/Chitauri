@@ -7,9 +7,10 @@
 export const SIDEBAR_ROW_HEIGHT_CLASS_NAME =
   "min-h-[var(--app-density-row-height,1.75rem)] h-[var(--app-density-row-height,1.75rem)]";
 
-export const SIDEBAR_ROW_RADIUS_CLASS_NAME = "rounded-[8px]";
+export const SIDEBAR_ROW_RADIUS_CLASS_NAME = "rounded-lg";
 
-export const SIDEBAR_ROW_PADDING_CLASS_NAME = "px-2 py-[var(--app-density-row-padding-y,0.125rem)]";
+export const SIDEBAR_ROW_PADDING_CLASS_NAME =
+  "px-1.5 py-[var(--app-density-row-padding-y,0.125rem)]";
 
 export const SIDEBAR_ROW_GAP_CLASS_NAME = "gap-[var(--app-density-row-gap,0.5rem)]";
 
@@ -24,7 +25,7 @@ export const SIDEBAR_ROW_HOVER_CLASS_NAME =
 export const SIDEBAR_ROW_ACTIVE_CLASS_NAME =
   "bg-[var(--sidebar-accent-active)] text-[var(--sidebar-accent-foreground)] hover:bg-[var(--sidebar-accent-active)] hover:text-[var(--sidebar-accent-foreground)]";
 
-export const SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME = "text-[#c2c0bc]";
+export const SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME = "text-[var(--color-text-foreground-secondary)]";
 
 /**
  * Resting foreground for primary sidebar item labels and their accompanying
@@ -32,14 +33,14 @@ export const SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME = "text-[#c2c0bc]";
  * glyphs). Sits just below the full-foreground active row so resting items read
  * clearly without competing with the selected thread.
  */
-export const SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME = "text-[#c2c0bc]";
+export const SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME = "text-[var(--color-text-foreground-secondary)]";
 
 /** Dimmer idle label color shared by project header rows, thread rows, and settings nav rows. */
-export const SIDEBAR_ROW_MUTED_TEXT_CLASS_NAME = "text-muted-foreground/79";
+export const SIDEBAR_ROW_MUTED_TEXT_CLASS_NAME = "text-muted-foreground/60";
 
 /** Section label ("Threads"/"Pinned"/"Workspace" and settings "App"/"Chitauri"). */
 export const SIDEBAR_SECTION_LABEL_CLASS_NAME =
-  "sidebar-section-label text-[12.5px] font-normal text-muted-foreground";
+  "sidebar-section-label text-[12.5px] font-normal text-muted-foreground/70";
 
 /** Project/chat/settings header rows and settings sidebar nav items. */
 export const SIDEBAR_HEADER_ROW_CLASS_NAME = [
@@ -55,17 +56,16 @@ export const SIDEBAR_HEADER_ROW_CLASS_NAME = [
 /**
  * Thread rows nested under a project.
  *
- * The left gutter is one step (8px) in from the project header's own `px-2`, so a
- * thread's leading avatar sits just right of the folder glyph and its name just
- * right of the project name — a readable stair-step that still leaves the row's
- * width to the title. Callers widen it only when something occupies the gutter
- * (the absolutely-positioned PR badge) and narrow it for flush top-level rows.
+ * The left gutter is one step (6px) in from the project header's own `px-1.5`, so a
+ * thread's title sits just right of the project name — a readable stair-step that
+ * leaves the rest of the row's width to the title itself. Callers narrow it for
+ * flush top-level rows.
  */
 export const SIDEBAR_THREAD_ROW_BASE_CLASS_NAME = [
   "w-full translate-x-0 cursor-pointer justify-start text-left select-none",
   SIDEBAR_ROW_HEIGHT_CLASS_NAME,
   SIDEBAR_ROW_RADIUS_CLASS_NAME,
-  "pl-4 text-[13.5px]",
+  "pl-3 text-[13.5px]",
   SIDEBAR_ROW_FOCUS_CLASS_NAME,
 ].join(" ");
 

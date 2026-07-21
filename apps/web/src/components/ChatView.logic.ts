@@ -12,7 +12,6 @@ import {
 import { normalizeModelSlug } from "@t3tools/shared/model";
 import { buildTeaCodeBranchName } from "@t3tools/shared/git";
 import { isGenericChatThreadTitle } from "@t3tools/shared/chatThreads";
-import { isGenericTerminalThreadTitle } from "@t3tools/shared/terminalThreads";
 import {
   type ChatAssistantSelectionAttachment,
   type ChatMessage,
@@ -25,11 +24,6 @@ import {
 } from "../types";
 import { type DraftThreadState } from "../composerDraftStore";
 import { Schema } from "effect";
-import {
-  filterTerminalContextsWithText,
-  stripInlineTerminalContextPlaceholders,
-  type TerminalContextDraft,
-} from "../lib/terminalContext";
 import { deriveDisplayedUserMessageState } from "../lib/composerMessageContext";
 import { filterPastedTextsWithText, type PastedTextDraft } from "../lib/composerPastedText";
 import {
@@ -68,13 +62,6 @@ export function resolveRuntimeModeAfterApprovalDecision(
     return ALWAYS_ALLOW_RUNTIME_MODE;
   }
   return null;
-}
-
-export function shouldRenderProviderHealthBanner(input: {
-  threadEntryPoint: ThreadPrimarySurface;
-  terminalWorkspaceTerminalTabActive: boolean;
-}): boolean {
-  return input.threadEntryPoint === "chat" && !input.terminalWorkspaceTerminalTabActive;
 }
 
 // Big-paste cards are sent only by the normal chat path; non-chat composer flows
@@ -386,7 +373,7 @@ export function buildLocalDraftThread(
     id: threadId,
     codexThreadId: null,
     projectId: draftThread.projectId,
-    title: draftThread.entryPoint === "terminal" ? "New terminal" : "New thread",
+    title: "New thread",
     modelSelection: fallbackModelSelection,
     runtimeMode: draftThread.runtimeMode,
     session: null,
@@ -786,24 +773,16 @@ export function deriveComposerSendState(options: {
   fileCount: number;
   assistantSelectionCount: number;
   fileCommentCount: number;
-  terminalContexts: ReadonlyArray<TerminalContextDraft>;
   pastedTexts: ReadonlyArray<PastedTextDraft>;
 }): {
   trimmedPrompt: string;
-  sendableTerminalContexts: TerminalContextDraft[];
-  expiredTerminalContextCount: number;
   sendablePastedTexts: PastedTextDraft[];
   hasSendableContent: boolean;
 } {
-  const trimmedPrompt = stripInlineTerminalContextPlaceholders(options.prompt).trim();
-  const sendableTerminalContexts = filterTerminalContextsWithText(options.terminalContexts);
-  const expiredTerminalContextCount =
-    options.terminalContexts.length - sendableTerminalContexts.length;
+  const trimmedPrompt = options.prompt.trim();
   const sendablePastedTexts = filterPastedTextsWithText(options.pastedTexts);
   return {
     trimmedPrompt,
-    sendableTerminalContexts,
-    expiredTerminalContextCount,
     sendablePastedTexts,
     hasSendableContent:
       trimmedPrompt.length > 0 ||
@@ -811,7 +790,6 @@ export function deriveComposerSendState(options: {
       options.fileCount > 0 ||
       options.assistantSelectionCount > 0 ||
       options.fileCommentCount > 0 ||
-      sendableTerminalContexts.length > 0 ||
       sendablePastedTexts.length > 0,
   };
 }
@@ -825,79 +803,6 @@ export function collectUserMessageAssistantSelections(
   return message.attachments.filter(
     (attachment): attachment is ChatAssistantSelectionAttachment =>
       attachment.type === "assistant-selection",
-  );
-}
-
-export function buildExpiredTerminalContextToastCopy(
-  expiredTerminalContextCount: number,
-  variant: "omitted" | "empty",
-): { title: string; description: string } {
-  const count = Math.max(1, Math.floor(expiredTerminalContextCount));
-  const noun = count === 1 ? "Expired terminal context" : "Expired terminal contexts";
-  if (variant === "empty") {
-    return {
-      title: `${noun} won't be sent`,
-      description: "Remove it or re-add it to include terminal output.",
-    };
-  }
-  return {
-    title: `${noun} omitted from message`,
-    description: "Re-add it if you want that terminal output included.",
-  };
-}
-
-export function shouldRenderTerminalWorkspace(options: {
-  presentationMode: "drawer" | "workspace";
-  terminalOpen: boolean;
-}): boolean {
-  // The workspace shell should paint immediately; the terminal viewport gates the
-  // backend attach until a valid cwd is available.
-  return options.terminalOpen && options.presentationMode === "workspace";
-}
-
-export function resolveProjectScriptTerminalTarget(options: {
-  baseTerminalId: string;
-  createTerminalId: () => string;
-  hasRunningTerminal: boolean;
-  preferNewTerminal?: boolean | undefined;
-  terminalOpen: boolean;
-}): { shouldCreateNewTerminal: boolean; terminalId: string } {
-  // Project scripts require their requested cwd/env before the command write;
-  // live PTYs keep their launch context, so visible or running terminals get a new tab.
-  const shouldCreateNewTerminal =
-    Boolean(options.preferNewTerminal) || options.terminalOpen || options.hasRunningTerminal;
-
-  return {
-    shouldCreateNewTerminal,
-    terminalId: shouldCreateNewTerminal ? options.createTerminalId() : options.baseTerminalId,
-  };
-}
-
-export function shouldAutoDeleteTerminalThreadOnLastClose(options: {
-  isLastTerminal: boolean;
-  isServerThread: boolean;
-  terminalEntryPoint: ThreadPrimarySurface;
-  thread:
-    | Pick<Thread, "activities" | "latestTurn" | "messages" | "proposedPlans" | "session" | "title">
-    | null
-    | undefined;
-}): boolean {
-  const { thread } = options;
-  if (
-    !options.isLastTerminal ||
-    !options.isServerThread ||
-    options.terminalEntryPoint !== "terminal" ||
-    !thread
-  ) {
-    return false;
-  }
-  return (
-    isGenericTerminalThreadTitle(thread.title) &&
-    thread.messages.length === 0 &&
-    thread.latestTurn === null &&
-    thread.session === null &&
-    thread.activities.length === 0 &&
-    thread.proposedPlans.length === 0
   );
 }
 

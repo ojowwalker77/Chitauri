@@ -89,13 +89,13 @@ describe("storageKeyMigration", () => {
 
   it("does not overwrite an existing TeaCode value when legacy keys still hold data", async () => {
     globalThis.localStorage.setItem("t3code:theme", "dark");
-    globalThis.localStorage.setItem("dpcode:theme", "light");
+    globalThis.localStorage.setItem("dpcode:theme", "stale");
     globalThis.localStorage.setItem("teacode:theme", "current");
 
     await importMigrationFresh();
 
     expect(globalThis.localStorage.getItem("teacode:theme")).toBe("current");
-    expect(globalThis.localStorage.getItem("dpcode:theme")).toBe("light");
+    expect(globalThis.localStorage.getItem("dpcode:theme")).toBe("stale");
     expect(globalThis.localStorage.getItem("t3code:theme")).toBe("dark");
   });
 

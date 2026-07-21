@@ -3,17 +3,13 @@ import type { useNavigate } from "@tanstack/react-router";
 import type { ThreadId } from "@t3tools/contracts";
 
 import type { LastThreadRoute } from "../chatRouteRestore";
-import { selectThreadTerminalState } from "../terminalStateStore";
 import type { SidebarThreadSummary } from "../types";
 
 type Navigate = ReturnType<typeof useNavigate>;
-type ThreadTerminalStateById = Parameters<typeof selectThreadTerminalState>[0];
 
 export type ThreadActivationControllerInput = {
   clearSelection: () => void;
   navigate: Navigate;
-  openChatThreadPage: (threadId: ThreadId) => void;
-  openTerminalThreadPage: (threadId: ThreadId) => void;
   prewarmThreadDetailForIntent: (threadId: ThreadId) => void;
   rememberLastThreadRouteNow: (nextLastThreadRoute: LastThreadRoute) => void;
   routeThreadId: ThreadId | null | undefined;
@@ -23,7 +19,6 @@ export type ThreadActivationControllerInput = {
   sidebarThreadSummaryById: Readonly<
     Partial<Record<ThreadId, Pick<SidebarThreadSummary, "id" | "projectId">>>
   >;
-  terminalStateByThreadId: ThreadTerminalStateById;
 };
 
 export function activateThreadFromSidebarIntent(
@@ -41,13 +36,6 @@ export function activateThreadFromSidebarIntent(
   }
   input.setSelectionAnchor(threadId);
   input.rememberLastThreadRouteNow({ threadId });
-
-  const entryPoint = selectThreadTerminalState(input.terminalStateByThreadId, threadId).entryPoint;
-  if (entryPoint === "terminal") {
-    input.openTerminalThreadPage(threadId);
-  } else {
-    input.openChatThreadPage(threadId);
-  }
 
   void input.navigate({
     to: "/$threadId",

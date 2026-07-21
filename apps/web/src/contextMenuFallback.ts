@@ -19,7 +19,7 @@ export function showContextMenuFallback<T extends string>(
 
     const menu = document.createElement("div");
     menu.className =
-      "fixed z-[10000] min-w-[180px] rounded-[10px] border border-panel-border bg-panel shadow-[0_16px_44px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95";
+      "fixed z-[10000] min-w-[180px] rounded-xl border border-panel-border bg-panel shadow-[0_16px_44px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95";
 
     const x = position?.x ?? 0;
     const y = position?.y ?? 0;

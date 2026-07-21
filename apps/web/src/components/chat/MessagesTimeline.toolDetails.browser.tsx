@@ -50,7 +50,6 @@ function ToolDetailsTimeline() {
       isRevertingCheckpoint={false}
       onImageExpand={() => {}}
       markdownCwd={undefined}
-      resolvedTheme="dark"
       timestampFormat="locale"
       workspaceRoot={undefined}
     />

@@ -1,9 +1,5 @@
 import { isBuiltInComposerSlashCommand, type ComposerSlashCommand } from "./composerSlashCommands";
 import {
-  INLINE_TERMINAL_CONTEXT_PLACEHOLDER,
-  type TerminalContextDraft,
-} from "./lib/terminalContext";
-import {
   createComposerMentionTokenRegex,
   extractComposerMentionPath,
   isPluginProviderMentionReference,
@@ -35,10 +31,6 @@ export type ComposerPromptSegment =
   | {
       type: "slash-command";
       command: ComposerSlashCommand;
-    }
-  | {
-      type: "terminal-context";
-      context: TerminalContextDraft | null;
     }
   | {
       /** Agent mention: @alias - chip for subagent reference (parens are plain text) */
@@ -357,48 +349,15 @@ export function splitPromptIntoDisplaySegments(
 
 export function splitPromptIntoComposerSegments(
   prompt: string,
-  terminalContexts: ReadonlyArray<TerminalContextDraft> = [],
   mentionReferences: ReadonlyArray<ProviderMentionReference> = [],
 ): ComposerPromptSegment[] {
   if (!prompt) {
     return [];
   }
 
-  const segments: ComposerPromptSegment[] = [];
-  let textCursor = 0;
-  let terminalContextIndex = 0;
-
-  for (let index = 0; index < prompt.length; index += 1) {
-    if (prompt[index] !== INLINE_TERMINAL_CONTEXT_PLACEHOLDER) {
-      continue;
-    }
-
-    if (index > textCursor) {
-      segments.push(
-        ...splitTextIntoPromptSegments(prompt.slice(textCursor, index), {
-          includeTrailingTokenAtEnd: false,
-          includeSlashCommandChips: true,
-          mentionReferences,
-        }),
-      );
-    }
-    segments.push({
-      type: "terminal-context",
-      context: terminalContexts[terminalContextIndex] ?? null,
-    });
-    terminalContextIndex += 1;
-    textCursor = index + 1;
-  }
-
-  if (textCursor < prompt.length) {
-    segments.push(
-      ...splitTextIntoPromptSegments(prompt.slice(textCursor), {
-        includeTrailingTokenAtEnd: false,
-        includeSlashCommandChips: true,
-        mentionReferences,
-      }),
-    );
-  }
-
-  return segments;
+  return splitTextIntoPromptSegments(prompt, {
+    includeTrailingTokenAtEnd: false,
+    includeSlashCommandChips: true,
+    mentionReferences,
+  });
 }

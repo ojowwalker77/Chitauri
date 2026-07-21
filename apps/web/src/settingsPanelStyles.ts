@@ -10,7 +10,7 @@ import { PANEL_SURFACE_CLASS_NAME } from "./components/ui/surface";
 export const SETTINGS_RADIUS_CLASS_NAME = "rounded-xl";
 
 /** Select triggers, segmented chips, inputs, and menu options (one step above app defaults). */
-export const SETTINGS_CONTROL_RADIUS_CLASS_NAME = "!rounded-[8px]";
+export const SETTINGS_CONTROL_RADIUS_CLASS_NAME = "!rounded-lg";
 
 /** Same border token as Button `outline` / `chrome-outline` variants. */
 export const SETTINGS_CONTROL_BORDER_CLASS_NAME = "border border-[color:var(--color-border)]";

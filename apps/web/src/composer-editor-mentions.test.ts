@@ -6,7 +6,6 @@ import {
   splitPromptIntoComposerSegments,
   splitPromptIntoDisplaySegments,
 } from "./composer-editor-mentions";
-import { INLINE_TERMINAL_CONTEXT_PLACEHOLDER } from "./lib/terminalContext";
 
 describe("matchComposerLinkToken", () => {
   it("matches a URL only once a delimiter follows it while typing", () => {
@@ -164,19 +163,6 @@ describe("splitPromptIntoComposerSegments", () => {
     ).toEqual([
       { type: "text", text: "Inspect " },
       { type: "mention", path: "/Users/test/Application Support" },
-      { type: "text", text: " please" },
-    ]);
-  });
-
-  it("keeps inline terminal context placeholders at their prompt positions", () => {
-    expect(
-      splitPromptIntoComposerSegments(
-        `Inspect ${INLINE_TERMINAL_CONTEXT_PLACEHOLDER}@AGENTS.md please`,
-      ),
-    ).toEqual([
-      { type: "text", text: "Inspect " },
-      { type: "terminal-context", context: null },
-      { type: "mention", path: "AGENTS.md" },
       { type: "text", text: " please" },
     ]);
   });

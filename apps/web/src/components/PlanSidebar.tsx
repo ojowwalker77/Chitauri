@@ -156,7 +156,7 @@ const PlanSidebar = memo(function PlanSidebar({
                 </span>
               </CollapsibleTrigger>
               <CollapsiblePanel>
-                <div className="mt-2 rounded-[8px] border border-panel-border bg-hover p-3">
+                <div className="mt-2 rounded-lg border border-panel-border bg-hover p-3">
                   <ChatMarkdown
                     text={displayedPlanMarkdown ?? ""}
                     cwd={markdownCwd}

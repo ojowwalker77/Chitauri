@@ -33,7 +33,7 @@ const headerButtonDarkBorderClassName =
 // family stays visually coherent. Prefer adding a variant over passing a
 // className override at the call site.
 //
-// Press feedback (`active:scale-[0.96]`) lives on the BASE, so every variant and size
+// Press feedback (`active:scale-[0.97]`) lives on the BASE, so every variant and size
 // answers a press instantly — that acknowledgement is what makes a control feel like it
 // heard you, and a button that only reacts on release reads as broken. `link` opts out
 // below (it renders as inline text, which shouldn't squash).
@@ -50,7 +50,7 @@ const headerButtonDarkBorderClassName =
 // silently drops the press tween. Prefer a variant over a call-site transition override.
 const buttonVariants = cva(
   extendButtonIconChildSelectors(
-    "[&_svg]:-mx-0.5 relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-medium text-[length:var(--app-font-size-ui,14px)] outline-none transition-[color,background-color,border-color,scale] duration-press ease-out active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100 pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-64 sm:text-[length:var(--app-font-size-ui,14px)] [&_svg:not([class*='opacity-'])]:opacity-80 [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+    "[&_svg]:-mx-0.5 relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-medium text-[length:var(--app-font-size-ui,14px)] outline-none transition-[color,background-color,border-color,scale] duration-press ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-64 sm:text-[length:var(--app-font-size-ui,14px)] [&_svg:not([class*='opacity-'])]:opacity-80 [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   ),
   {
     defaultVariants: {
@@ -109,7 +109,7 @@ const buttonVariants = cva(
         // landing under rest is what still registers as "pushed" on a touchscreen, where
         // the hover lift never happens.
         prominent:
-          "rounded-full border-transparent bg-foreground text-[#141414] transition-[background-color,scale,opacity] duration-press ease-out hover:bg-white active:scale-[0.96] disabled:opacity-20 disabled:active:scale-100",
+          "border-transparent bg-foreground text-[#141414] transition-[background-color,scale,opacity] duration-press ease-out hover:bg-white active:scale-[0.97] disabled:opacity-20 disabled:active:scale-100",
         secondary:
           "border-transparent bg-hover text-secondary-foreground hover:bg-selected data-pressed:bg-selected",
         "secondary-outline":

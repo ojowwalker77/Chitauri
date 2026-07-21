@@ -9,11 +9,7 @@
 import { FileDiff, type FileDiffMetadata, Virtualizer } from "@pierre/diffs/react";
 import { type ReactNode } from "react";
 
-import {
-  buildDiffPanelUnsafeCSS,
-  resolveDiffThemeName,
-  resolveFileDiffPath,
-} from "~/lib/diffRendering";
+import { buildDiffPanelUnsafeCSS, DIFF_THEME_NAME, resolveFileDiffPath } from "~/lib/diffRendering";
 import { cn } from "~/lib/utils";
 import { FileEntryIcon } from "./FileEntryIcon";
 
@@ -42,7 +38,6 @@ export function FileDiffSurface(props: { className?: string; children: ReactNode
 // themed addition/deletion backgrounds.
 export function FileDiffCard(props: {
   fileDiff: FileDiffMetadata;
-  theme: "light" | "dark";
   diffStyle?: "unified" | "split";
   overflow?: "scroll" | "wrap";
   collapsed?: boolean;
@@ -56,9 +51,9 @@ export function FileDiffCard(props: {
         diffStyle: props.diffStyle ?? "unified",
         lineDiffType: "none",
         overflow: props.overflow ?? "scroll",
-        theme: resolveDiffThemeName(props.theme),
-        themeType: props.theme,
-        unsafeCSS: buildDiffPanelUnsafeCSS(props.theme),
+        theme: DIFF_THEME_NAME,
+        themeType: "dark",
+        unsafeCSS: buildDiffPanelUnsafeCSS(),
         ...(props.collapsed !== undefined ? { collapsed: props.collapsed } : {}),
       }}
       renderHeaderPrefix={() => (
@@ -66,7 +61,6 @@ export function FileDiffCard(props: {
           <FileEntryIcon
             pathValue={filePath}
             kind="file"
-            theme={props.theme}
             className="size-3.5 text-muted-foreground/70"
           />
         </span>
