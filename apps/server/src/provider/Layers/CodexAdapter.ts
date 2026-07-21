@@ -1608,6 +1608,9 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
         ...(input.resumeCursor !== undefined ? { resumeCursor: input.resumeCursor } : {}),
         ...(input.providerOptions !== undefined ? { providerOptions: input.providerOptions } : {}),
+        ...(input.developerInstructions !== undefined
+          ? { developerInstructions: input.developerInstructions }
+          : {}),
         ...(input.mcpServers !== undefined ? { mcpServers: input.mcpServers } : {}),
         runtimeMode: input.runtimeMode,
         ...(input.modelSelection?.provider === "codex"

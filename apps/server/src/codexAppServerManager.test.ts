@@ -878,6 +878,31 @@ describe("sendTurn", () => {
     });
   });
 
+  it("appends repository Worker instructions to the Codex collaboration context", async () => {
+    const { manager, context, sendRequest } = createSendTurnHarness();
+    Object.assign(context, { developerInstructions: "Run integration tests before completion." });
+
+    await manager.sendTurn({
+      threadId: asThreadId("thread_1"),
+      input: "Implement the Task",
+    });
+
+    expect(sendRequest).toHaveBeenCalledWith(
+      context,
+      "turn/start",
+      expect.objectContaining({
+        collaborationMode: {
+          mode: "default",
+          settings: {
+            model: "gpt-5.3-codex",
+            reasoning_effort: "medium",
+            developer_instructions: `${CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS}\n\n<worker_instructions>\nRun integration tests before completion.\n</worker_instructions>`,
+          },
+        },
+      }),
+    );
+  });
+
   it("supports image-only turns", async () => {
     const { manager, context, sendRequest } = createSendTurnHarness();
 

@@ -684,6 +684,8 @@ const make = Effect.gen(function* () {
     const preferredProvider: ProviderKind = currentProvider ?? threadProvider;
     const desiredModelSelection = requestedModelSelection ?? thread.modelSelection;
     const effectiveCwd = yield* resolveProjectedThreadWorkspaceCwd(thread);
+    const workspaceProject = yield* resolveThreadWorkspaceProject(thread);
+    const workerInstructions = workspaceProject?.workerInstructions?.trim();
     const workspaceState = resolveThreadWorkspaceState({
       envMode: thread.envMode,
       worktreePath: thread.worktreePath,
@@ -714,6 +716,7 @@ const make = Effect.gen(function* () {
           ...(options?.providerOptions !== undefined
             ? { providerOptions: options.providerOptions }
             : {}),
+          ...(workerInstructions ? { developerInstructions: workerInstructions } : {}),
           ...(input?.resumeCursor !== undefined ? { resumeCursor: input.resumeCursor } : {}),
           runtimeMode: desiredRuntimeMode,
         });

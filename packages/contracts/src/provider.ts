@@ -57,6 +57,7 @@ export const ProviderSessionStartInput = Schema.Struct({
   approvalPolicy: Schema.optional(ProviderApprovalPolicy),
   sandboxMode: Schema.optional(ProviderSandboxMode),
   providerOptions: Schema.optional(ProviderStartOptions),
+  developerInstructions: Schema.optional(Schema.String),
   mcpServers: Schema.optional(
     Schema.Array(
       Schema.Struct({

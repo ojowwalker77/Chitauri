@@ -106,6 +106,7 @@ interface CodexSessionContext {
   pendingApprovals: Map<ApprovalRequestId, PendingApprovalRequest>;
   pendingUserInputs: Map<ApprovalRequestId, PendingUserInputRequest>;
   sessionApprovalOverride?: CodexSessionApprovalOverride;
+  developerInstructions?: string;
   collabReceiverTurns: Map<string, TurnId>;
   collabReceiverParents: Map<string, string>;
   reviewTurnIds: Set<TurnId>;
@@ -197,6 +198,7 @@ export interface CodexAppServerStartSessionInput {
   readonly serviceTier?: string;
   readonly resumeCursor?: unknown;
   readonly providerOptions?: ProviderSessionStartInput["providerOptions"];
+  readonly developerInstructions?: string;
   readonly mcpServers?: ProviderSessionStartInput["mcpServers"];
   readonly runtimeMode: RuntimeMode;
 }
@@ -492,6 +494,7 @@ export function buildCodexInitializeParams() {
 function buildCodexCollaborationMode(input: {
   readonly model?: string;
   readonly effort?: string;
+  readonly developerInstructions?: string;
 }): {
   mode: "default";
   settings: {
@@ -506,7 +509,9 @@ function buildCodexCollaborationMode(input: {
     settings: {
       model,
       reasoning_effort: input.effort ?? "medium",
-      developer_instructions: CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS,
+      developer_instructions: input.developerInstructions?.trim()
+        ? `${CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS}\n\n<worker_instructions>\n${input.developerInstructions.trim()}\n</worker_instructions>`
+        : CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS,
     },
   };
 }
@@ -689,6 +694,9 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
       context = {
         session,
+        ...(input.developerInstructions?.trim()
+          ? { developerInstructions: input.developerInstructions.trim() }
+          : {}),
         account: {
           type: "unknown",
           planType: null,
@@ -959,6 +967,9 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     const collaborationMode = buildCodexCollaborationMode({
       ...(normalizedModel !== undefined ? { model: normalizedModel } : {}),
       ...(input.effort !== undefined ? { effort: input.effort } : {}),
+      ...(context.developerInstructions
+        ? { developerInstructions: context.developerInstructions }
+        : {}),
     });
     if (!turnStartParams.model) {
       turnStartParams.model = collaborationMode.settings.model;
