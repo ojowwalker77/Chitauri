@@ -46,7 +46,7 @@ export const COMPOSER_PICKER_MODEL_LIST_SCROLL_CLASS_NAME = "composer-picker-scr
 export const COMPOSER_PICKER_RADIUS_CLASS_NAME = "rounded-xl";
 
 /** Tighter corner radius for option rows / selection pills inside picker panels. */
-export const COMPOSER_PICKER_OPTION_RADIUS_CLASS_NAME = "rounded-[0.5rem]";
+export const COMPOSER_PICKER_OPTION_RADIUS_CLASS_NAME = "rounded-lg";
 
 /** Collapsible section headers inside model provider lists. */
 export const COMPOSER_PICKER_MODEL_GROUP_HEADER_CLASS_NAME = `grid w-full grid-cols-[0.75rem_minmax(0,1fr)_2.5rem] items-center gap-x-1.5 ${COMPOSER_PICKER_RADIUS_CLASS_NAME} px-2 py-1 text-left text-[11px] font-medium text-muted-foreground/80 outline-none transition-colors hover:bg-hover focus-visible:ring-0`;

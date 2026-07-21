@@ -9,9 +9,7 @@ import {
   resolveAppNavigationState,
 } from "../appNavigation";
 import { useAppSettings } from "../appSettings";
-import { appBackgroundImageCss } from "../lib/appBackgrounds";
 import ShortcutsDialog from "../components/ShortcutsDialog";
-import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
 import ThreadSidebar from "../components/Sidebar";
 import { isElectron } from "../env";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
@@ -23,11 +21,9 @@ import {
   resolveNewThreadTarget,
 } from "../lib/projectShortcutTargets";
 import { resolveInheritedThreadContext } from "../lib/threadBootstrap";
-import { isTerminalFocused } from "../lib/terminalFocus";
 import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 import { resolveShortcutCommand } from "../keybindings";
 import { useStore } from "../store";
-import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
 import { useThreadSelectionStore } from "../threadSelectionStore";
 import { onServerMaintenanceUpdated } from "../wsNativeApi";
 import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
@@ -196,7 +192,6 @@ function ChatRouteGlobalShortcuts() {
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false);
   const clearSelection = useThreadSelectionStore((state) => state.clearSelection);
   const selectedThreadIdsSize = useThreadSelectionStore((state) => state.selectedThreadIds.size);
-  const terminalStateByThreadId = useTerminalStateStore((state) => state.terminalStateByThreadId);
   const {
     activeContextThreadId,
     activeDraftThread,
@@ -215,19 +210,11 @@ function ChatRouteGlobalShortcuts() {
   const platform = typeof navigator === "undefined" ? "" : navigator.platform;
   const providerStatuses = useProviderStatusesForLocalConfig();
   const refreshProviderStatuses = useRefreshProviderStatusesNow();
-  const activeThreadTerminalState = activeContextThreadId
-    ? selectThreadTerminalState(terminalStateByThreadId, activeContextThreadId)
-    : null;
-  const terminalOpen = activeThreadTerminalState?.terminalOpen ?? false;
   const activeProject =
     activeProjectId !== null
       ? (projects.find((project) => project.id === activeProjectId) ?? null)
       : null;
   const activeProjectScripts = activeProject?.kind === "project" ? activeProject.scripts : [];
-  const terminalWorkspaceOpen = shouldRenderTerminalWorkspace({
-    presentationMode: activeThreadTerminalState?.presentationMode ?? "drawer",
-    terminalOpen,
-  });
   const currentProjectId = resolveCurrentProjectTargetId(projects, activeProject?.id ?? null);
   const latestUsableProjectId = resolveLatestProjectTargetId(projects, latestProjectId);
 
@@ -247,11 +234,7 @@ function ChatRouteGlobalShortcuts() {
   useEffect(() => {
     const onWindowKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
-      const shortcutContext = {
-        terminalFocus: isTerminalFocused(),
-        terminalOpen,
-        terminalWorkspaceOpen,
-      };
+      const shortcutContext = {};
 
       const isShortcutsHelpShortcut =
         (event.metaKey || event.ctrlKey) &&
@@ -310,20 +293,6 @@ function ChatRouteGlobalShortcuts() {
         event.preventDefault();
         event.stopPropagation();
         void handleNewThread(latestUsableProjectId);
-        return;
-      }
-
-      if (command === "chat.newTerminal") {
-        const target = resolveNewThreadTarget({ currentProjectId, latestUsableProjectId });
-        if (!target) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void handleNewThread(target.projectId, {
-          ...(target.inheritContext
-            ? resolveInheritedThreadContext({ activeThread, activeDraftThread })
-            : {}),
-          entryPoint: "terminal",
-        });
         return;
       }
 
@@ -399,8 +368,6 @@ function ChatRouteGlobalShortcuts() {
     providerStatuses,
     refreshProviderStatuses,
     selectedThreadIdsSize,
-    terminalOpen,
-    terminalWorkspaceOpen,
     toggleSidebar,
   ]);
 
@@ -432,11 +399,6 @@ function ChatRouteGlobalShortcuts() {
         keybindings={keybindings}
         projectScripts={activeProjectScripts}
         platform={platform}
-        context={{
-          terminalFocus: isTerminalFocused(),
-          terminalOpen,
-          terminalWorkspaceOpen,
-        }}
       />
     </>
   );
@@ -477,20 +439,10 @@ function ChatRouteLayout() {
     </Sidebar>
   );
 
-  // Optional decorative canvas image. Applied here (not on <body>) so it stays
-  // behind the chat column only and never runs under the docked sidebar.
-  const canvasBackgroundImage = appBackgroundImageCss(settings.appBackground);
-
   // The resize rail sits on the seam between the sidebar and the main canvas.
   // It is interaction-only and paints no divider, so it has to follow the side.
   const mainContentShell = (
-    <div
-      className="claude-main-shell relative flex h-svh min-h-0 min-w-0 flex-1"
-      data-app-background={settings.appBackground === "none" ? undefined : "image"}
-      {...(canvasBackgroundImage
-        ? { style: { backgroundImage: canvasBackgroundImage } as CSSProperties }
-        : {})}
-    >
+    <div className="claude-main-shell relative flex h-svh min-h-0 min-w-0 flex-1">
       {isEditorView ? null : (
         <SidebarInstanceProvider side={sidebarSide} resizable={THREAD_SIDEBAR_RESIZABLE}>
           <SidebarRail placement="content-seam" />
@@ -507,7 +459,11 @@ function ChatRouteLayout() {
       onOpenChange={setSidebarOpen}
       className="chitauri-anthropic-shell isolate overflow-hidden"
       data-sidebar-side={sidebarSide}
-      style={{ "--sidebar-width": `${THREAD_SIDEBAR_DEFAULT_WIDTH}px` } as CSSProperties}
+      style={
+        {
+          "--sidebar-width": `${THREAD_SIDEBAR_DEFAULT_WIDTH}px`,
+        } as CSSProperties
+      }
     >
       {isElectron ? <div aria-hidden="true" className="desktop-window-drag-strip" /> : null}
       <ThreadRetentionMaintenanceToast />

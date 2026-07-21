@@ -17,7 +17,6 @@ export const DiffPanelPatchViewport = memo(
   function DiffPanelPatchViewport(props: {
     renderablePatch: RenderablePatch | null;
     renderableFiles: ReadonlyArray<FileDiffMetadata>;
-    resolvedTheme: "light" | "dark";
     diffRenderMode: DiffRenderMode;
     diffWordWrap: boolean;
     workspaceRoot: string | null;
@@ -76,7 +75,6 @@ export const DiffPanelPatchViewport = memo(
         <div className={viewportClassName}>
           <DiffPanelFileList
             renderableFiles={props.renderableFiles}
-            resolvedTheme={props.resolvedTheme}
             diffRenderMode={props.diffRenderMode}
             diffWordWrap={props.diffWordWrap}
             workspaceRoot={props.workspaceRoot}
@@ -110,7 +108,6 @@ export const DiffPanelPatchViewport = memo(
     return (
       previous.renderablePatch === next.renderablePatch &&
       previous.renderableFiles === next.renderableFiles &&
-      previous.resolvedTheme === next.resolvedTheme &&
       previous.diffRenderMode === next.diffRenderMode &&
       previous.diffWordWrap === next.diffWordWrap &&
       previous.workspaceRoot === next.workspaceRoot &&

@@ -6,7 +6,6 @@
  * - ComposerSkillNode: Skill mentions ($skill or /skill)
  * - ComposerSlashCommandNode: app-level slash commands (/automation)
  * - ComposerAgentMentionNode: Agent mentions (@alias(task))
- * - ComposerTerminalContextNode: Terminal context blocks
  */
 
 import {
@@ -22,10 +21,6 @@ import {
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import {
-  INLINE_TERMINAL_CONTEXT_PLACEHOLDER,
-  type TerminalContextDraft,
-} from "~/lib/terminalContext";
 import { formatComposerMentionToken } from "~/lib/composerMentions";
 import { basenameOfPath } from "~/file-icons";
 import { createCentralIconElement } from "~/lib/central-icons";
@@ -44,7 +39,6 @@ import {
 import { AGENT_ROBOT_ICON_NAME, ClockIcon } from "~/lib/icons";
 import type { ComposerSlashCommand } from "~/composerSlashCommands";
 import { InlineLinkChip } from "../InlineLinkChip";
-import { ComposerPendingTerminalContextChip } from "../chat/ComposerPendingTerminalContexts";
 import { createMentionChipIconElement, type MentionChipKind } from "../chat/MentionChipIcon";
 
 // ── Serialized Types ──────────────────────────────────────────────────
@@ -91,15 +85,6 @@ export type SerializedComposerLinkNode = Spread<
   {
     url: string;
     type: "composer-link";
-    version: 1;
-  },
-  SerializedLexicalNode
->;
-
-export type SerializedComposerTerminalContextNode = Spread<
-  {
-    context: TerminalContextDraft;
-    type: "composer-terminal-context";
     version: 1;
   },
   SerializedLexicalNode
@@ -574,79 +559,12 @@ export function $createComposerLinkNode(url: string): ComposerLinkNode {
   return $applyNodeReplacement(new ComposerLinkNode(url));
 }
 
-// ── ComposerTerminalContextNode ───────────────────────────────────────
-
-function ComposerTerminalContextDecorator(props: { context: TerminalContextDraft }) {
-  return <ComposerPendingTerminalContextChip context={props.context} />;
-}
-
-export class ComposerTerminalContextNode extends DecoratorNode<ReactElement> {
-  __context: TerminalContextDraft;
-
-  static override getType(): string {
-    return "composer-terminal-context";
-  }
-
-  static override clone(node: ComposerTerminalContextNode): ComposerTerminalContextNode {
-    return new ComposerTerminalContextNode(node.__context, node.__key);
-  }
-
-  static override importJSON(
-    serializedNode: SerializedComposerTerminalContextNode,
-  ): ComposerTerminalContextNode {
-    return $createComposerTerminalContextNode(serializedNode.context);
-  }
-
-  constructor(context: TerminalContextDraft, key?: NodeKey) {
-    super(key);
-    this.__context = context;
-  }
-
-  override exportJSON(): SerializedComposerTerminalContextNode {
-    return {
-      ...super.exportJSON(),
-      context: this.__context,
-      type: "composer-terminal-context",
-      version: 1,
-    };
-  }
-
-  override createDOM(): HTMLElement {
-    const dom = document.createElement("span");
-    dom.className = COMPOSER_INLINE_DECORATOR_HOST_CLASS_NAME;
-    return dom;
-  }
-
-  override updateDOM(): false {
-    return false;
-  }
-
-  override getTextContent(): string {
-    return INLINE_TERMINAL_CONTEXT_PLACEHOLDER;
-  }
-
-  override isInline(): true {
-    return true;
-  }
-
-  override decorate(): ReactElement {
-    return <ComposerTerminalContextDecorator context={this.__context} />;
-  }
-}
-
-export function $createComposerTerminalContextNode(
-  context: TerminalContextDraft,
-): ComposerTerminalContextNode {
-  return $applyNodeReplacement(new ComposerTerminalContextNode(context));
-}
-
 // ── Type Guards & Utilities ───────────────────────────────────────────
 
 export type ComposerInlineTokenNode =
   | ComposerMentionNode
   | ComposerSkillNode
   | ComposerSlashCommandNode
-  | ComposerTerminalContextNode
   | ComposerAgentMentionNode
   | ComposerLinkNode;
 
@@ -657,7 +575,6 @@ export function isComposerInlineTokenNode(
     candidate instanceof ComposerMentionNode ||
     candidate instanceof ComposerSkillNode ||
     candidate instanceof ComposerSlashCommandNode ||
-    candidate instanceof ComposerTerminalContextNode ||
     candidate instanceof ComposerAgentMentionNode ||
     candidate instanceof ComposerLinkNode
   );
@@ -668,7 +585,6 @@ export const COMPOSER_NODE_CLASSES = [
   ComposerMentionNode,
   ComposerSkillNode,
   ComposerSlashCommandNode,
-  ComposerTerminalContextNode,
   ComposerAgentMentionNode,
   ComposerLinkNode,
 ] as const;

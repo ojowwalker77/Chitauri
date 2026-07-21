@@ -114,10 +114,8 @@ function TranscriptPerfHarness(props: { onTranscriptRender: () => void }) {
           onRevertUserMessage={NOOP}
           onScrollToBottom={NOOP}
           onToggleWorkGroup={NOOP}
-          resolvedTheme="dark"
           revertTurnCountByUserMessageId={EMPTY_REVERT_COUNTS}
           scrollButtonVisible={false}
-          terminalWorkspaceTerminalTabActive={false}
           timelineEntries={TIMELINE_ENTRIES}
           timestampFormat="locale"
           turnDiffSummaryByAssistantMessageId={EMPTY_TURN_DIFFS}
@@ -196,10 +194,8 @@ describe("ChatTranscriptPane", () => {
         onOpenThread={NOOP}
         onRevertUserMessage={NOOP}
         onScrollToBottom={NOOP}
-        resolvedTheme="dark"
         revertTurnCountByUserMessageId={EMPTY_REVERT_COUNTS}
         scrollButtonVisible={false}
-        terminalWorkspaceTerminalTabActive={false}
         timelineEntries={[
           {
             id: "user-message-entry",
@@ -275,10 +271,8 @@ describe("ChatTranscriptPane", () => {
         onOpenThread={NOOP}
         onRevertUserMessage={NOOP}
         onScrollToBottom={NOOP}
-        resolvedTheme="dark"
         revertTurnCountByUserMessageId={EMPTY_REVERT_COUNTS}
         scrollButtonVisible={false}
-        terminalWorkspaceTerminalTabActive={false}
         timelineEntries={[
           {
             id: "user-message-entry-1",

@@ -1,34 +1,76 @@
 // FILE: useTheme.ts
-// Purpose: Persists the appearance mode and projects the fixed Claude palette into DOM CSS variables.
+// Purpose: Persists the theme state and projects it into DOM CSS variables.
 // Layer: Web appearance state hook
-// Exports: useTheme for the system, light, and dark appearance modes.
+// Exports: useTheme for keeping the DOM synced with the persisted (and cross-tab) theme state.
 
-import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { isElectron } from "../env";
 import { isMacPlatform } from "../lib/utils";
 import {
   DEFAULT_THEME_STATE,
-  type ThemeMode,
   type ThemeState,
+  type ThemeVariant,
   buildThemeCssVariables,
   parseStoredThemeState,
-  resolveThemePack,
-  resolveThemeVariant,
+  resolveThemePackForVariant,
   serializeThemeState,
 } from "../theme/theme.logic";
 
-type ThemeSnapshot = {
-  state: ThemeState;
-  systemDark: boolean;
-};
-
 const STORAGE_KEY = "teacode:theme";
-const MEDIA_QUERY = "(prefers-color-scheme: dark)";
+const APPEARANCE_MODE_KEY = "teacode:appearance-mode";
 
 let listeners: Array<() => void> = [];
-let lastSnapshot: ThemeSnapshot | null = null;
+let lastSnapshot: ThemeState | null = null;
 let lastSnapshotKey = "";
-let lastDesktopTheme: ThemeMode | null = null;
+let desktopThemeSynced = false;
+let lastSyncedVariant: ThemeVariant | null = null;
+
+// ─── Appearance mode (system / light / dark) ─────────────────────────────
+
+export type AppearanceMode = "system" | ThemeVariant;
+
+function readAppearanceMode(): AppearanceMode {
+  if (typeof localStorage === "undefined") return "dark";
+  const raw = localStorage.getItem(APPEARANCE_MODE_KEY);
+  if (raw === "light" || raw === "dark" || raw === "system") return raw;
+  return "dark";
+}
+
+function writeAppearanceMode(mode: AppearanceMode): void {
+  try {
+    localStorage.setItem(APPEARANCE_MODE_KEY, mode);
+  } catch {
+    /* noop */
+  }
+}
+
+const systemDarkQuery =
+  typeof window !== "undefined" ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+
+function resolveVariant(mode: AppearanceMode): ThemeVariant {
+  if (mode === "light") return "light";
+  if (mode === "dark") return "dark";
+  // system: follow OS preference, default dark
+  return systemDarkQuery?.matches !== false ? "dark" : "light";
+}
+
+let systemModeListeners: Array<() => void> = [];
+
+function onSystemColorSchemeChange() {
+  if (readAppearanceMode() !== "system") return;
+  for (const listener of systemModeListeners) listener();
+}
+
+if (systemDarkQuery) {
+  systemDarkQuery.addEventListener("change", onSystemColorSchemeChange);
+}
+
+function subscribeSystemMode(listener: () => void): () => void {
+  systemModeListeners.push(listener);
+  return () => {
+    systemModeListeners = systemModeListeners.filter((l) => l !== listener);
+  };
+}
 
 // ─── Store wiring ─────────────────────────────────────────────────────────
 
@@ -42,49 +84,32 @@ function hasThemeStorage(): boolean {
   return typeof window !== "undefined" && typeof localStorage !== "undefined";
 }
 
-function getSystemDark(): boolean {
-  return typeof window !== "undefined" && window.matchMedia(MEDIA_QUERY).matches;
-}
-
 function readStoredThemeState(): ThemeState {
   if (!hasThemeStorage()) {
     return DEFAULT_THEME_STATE;
   }
 
   try {
-    return parseStoredThemeState(localStorage.getItem(STORAGE_KEY));
+    const base = parseStoredThemeState(localStorage.getItem(STORAGE_KEY));
+    const mode = readAppearanceMode();
+    const variant = resolveVariant(mode);
+    return { ...base, variant };
   } catch {
     return DEFAULT_THEME_STATE;
   }
 }
 
-function writeStoredThemeState(state: ThemeState) {
-  if (!hasThemeStorage()) {
-    return;
-  }
-
-  localStorage.setItem(STORAGE_KEY, serializeThemeState(state));
-}
-
-function getSnapshot(): ThemeSnapshot {
+function getSnapshot(): ThemeState {
   const state = readStoredThemeState();
-  const systemDark = state.mode === "system" ? getSystemDark() : false;
-  const snapshotKey = `${serializeThemeState(state)}|${systemDark ? "dark" : "light"}`;
+  const snapshotKey = serializeThemeState(state);
 
   if (lastSnapshot && lastSnapshotKey === snapshotKey) {
     return lastSnapshot;
   }
 
   lastSnapshotKey = snapshotKey;
-  lastSnapshot = { state, systemDark };
+  lastSnapshot = state;
   return lastSnapshot;
-}
-
-function updateStoredThemeState(update: (state: ThemeState) => ThemeState) {
-  const nextState = update(readStoredThemeState());
-  writeStoredThemeState(nextState);
-  applyThemeState(nextState, true);
-  emitChange();
 }
 
 function subscribe(listener: () => void): () => void {
@@ -94,29 +119,25 @@ function subscribe(listener: () => void): () => void {
 
   listeners.push(listener);
 
-  const mediaQuery = window.matchMedia(MEDIA_QUERY);
-  const handleMediaChange = () => {
-    const state = readStoredThemeState();
-    if (state.mode === "system") {
-      applyThemeState(state, true);
-    }
-    emitChange();
-  };
+  // Another tab/window persisted a theme change; re-apply and notify.
   const handleStorage = (event: StorageEvent) => {
-    if (event.key !== STORAGE_KEY) {
+    if (event.key !== STORAGE_KEY && event.key !== APPEARANCE_MODE_KEY) {
       return;
     }
     applyThemeState(readStoredThemeState(), true);
     emitChange();
   };
 
-  mediaQuery.addEventListener("change", handleMediaChange);
   window.addEventListener("storage", handleStorage);
+  const unsubSystem = subscribeSystemMode(() => {
+    applyThemeState(readStoredThemeState(), true);
+    emitChange();
+  });
 
   return () => {
     listeners = listeners.filter((currentListener) => currentListener !== listener);
-    mediaQuery.removeEventListener("change", handleMediaChange);
     window.removeEventListener("storage", handleStorage);
+    unsubSystem();
   };
 }
 
@@ -130,7 +151,7 @@ function applyThemeState(state: ThemeState, suppressTransitions = false) {
   const root = document.documentElement;
   // Some server-rendered tests stub only the tiny DOM surface they need.
   if (
-    typeof root.classList?.toggle !== "function" ||
+    typeof root.classList?.add !== "function" ||
     typeof root.style?.setProperty !== "function" ||
     typeof root.style?.removeProperty !== "function"
   ) {
@@ -141,18 +162,24 @@ function applyThemeState(state: ThemeState, suppressTransitions = false) {
     root.classList.add("no-transitions");
   }
 
-  const variant = resolveThemeVariant(state.mode, getSystemDark());
-  const activeTheme = resolveThemePack(state, variant);
-  const cssVariableBuild = buildThemeCssVariables(activeTheme, variant, {
+  const variant = state.variant;
+  const activeTheme = resolveThemePackForVariant(state);
+  const cssVariableBuild = buildThemeCssVariables(activeTheme, {
     electron: isElectron,
     isMac: isMacPlatform(typeof navigator === "undefined" ? "" : navigator.platform),
+    variant,
   });
 
-  root.classList.toggle("dark", variant === "dark");
+  // Tailwind's `dark:` utilities key off this class everywhere.
+  if (variant === "dark") {
+    root.classList.add("dark");
+  } else {
+    root.classList.remove("dark");
+  }
   root.setAttribute("data-code-theme-id", activeTheme.codeThemeId);
-  root.setAttribute("data-theme-mode", state.mode);
   root.setAttribute("data-theme-variant", variant);
   root.setAttribute("data-window-material", cssVariableBuild.material);
+  root.style.setProperty("color-scheme", variant);
 
   for (const [name, value] of Object.entries(cssVariableBuild.variables)) {
     if (value.trim().length === 0) {
@@ -162,7 +189,7 @@ function applyThemeState(state: ThemeState, suppressTransitions = false) {
     root.style.setProperty(name, value);
   }
 
-  syncDesktopTheme(state.mode);
+  syncDesktopTheme(variant);
 
   if (suppressTransitions) {
     // Force a reflow so the no-transitions class takes effect before removal.
@@ -174,21 +201,25 @@ function applyThemeState(state: ThemeState, suppressTransitions = false) {
   }
 }
 
-function syncDesktopTheme(theme: ThemeMode) {
+function syncDesktopTheme(variant: ThemeVariant) {
   if (typeof window === "undefined") {
     return;
   }
 
   const bridge = window.desktopBridge;
-  if (!bridge || lastDesktopTheme === theme) {
+  if (!bridge) {
     return;
   }
 
-  lastDesktopTheme = theme;
-  void bridge.setTheme(theme).catch(() => {
-    if (lastDesktopTheme === theme) {
-      lastDesktopTheme = null;
-    }
+  if (desktopThemeSynced && lastSyncedVariant === variant) {
+    return;
+  }
+
+  desktopThemeSynced = true;
+  lastSyncedVariant = variant;
+  void bridge.setTheme(variant).catch(() => {
+    desktopThemeSynced = false;
+    lastSyncedVariant = null;
   });
 }
 
@@ -199,31 +230,29 @@ if (typeof document !== "undefined") {
 
 // ─── Public hook ──────────────────────────────────────────────────────────
 
-export function useTheme() {
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot, () => ({
-    state: DEFAULT_THEME_STATE,
-    systemDark: false,
-  }));
-  const theme = snapshot.state.mode;
-  const resolvedTheme = resolveThemeVariant(theme, snapshot.systemDark);
+/**
+ * Keeps the DOM theme projection in sync with the persisted theme state,
+ * including cross-tab updates via the "storage" event. The initial apply
+ * already happens at module load, so this is a no-op unless something else
+ * changes the persisted state out from under the current tab.
+ */
+export function useTheme(): void {
+  const state = useSyncExternalStore(subscribe, getSnapshot, () => DEFAULT_THEME_STATE);
 
-  const setTheme = useCallback((nextTheme: ThemeMode) => {
-    updateStoredThemeState((state) => ({
-      ...state,
-      mode: nextTheme,
-    }));
-  }, []);
-
-  // Keep the DOM synced if something bypassed the immediate module-load apply.
   useEffect(() => {
-    applyThemeState(snapshot.state);
-  }, [snapshot.state]);
-
-  return {
-    resolvedTheme,
-    setTheme,
-    theme,
-  } as const;
+    applyThemeState(state);
+  }, [state]);
 }
 
-export type { ThemeMode };
+// ─── Public helpers for settings UI ───────────────────────────────────────
+
+export function getAppearanceMode(): AppearanceMode {
+  return readAppearanceMode();
+}
+
+export function setAppearanceMode(mode: AppearanceMode): void {
+  writeAppearanceMode(mode);
+  // Trigger re-evaluation for the current tab.
+  applyThemeState(readStoredThemeState(), true);
+  emitChange();
+}

@@ -325,26 +325,15 @@ describe("wsNativeApi", () => {
     expect(lateListener).toHaveBeenCalledWith(payload);
   });
 
-  it("forwards valid terminal and orchestration events", async () => {
+  it("forwards valid orchestration events", async () => {
     const { createWsNativeApi } = await import("./wsNativeApi");
 
     const api = createWsNativeApi();
-    const onTerminalEvent = vi.fn();
     const onDomainEvent = vi.fn();
     const onActionProgress = vi.fn();
 
-    api.terminal.onEvent(onTerminalEvent);
     api.orchestration.onDomainEvent(onDomainEvent);
     api.git.onActionProgress(onActionProgress);
-
-    const terminalEvent = {
-      threadId: "thread-1",
-      terminalId: "terminal-1",
-      createdAt: "2026-02-24T00:00:00.000Z",
-      type: "output",
-      data: "hello",
-    } as const;
-    emitPush(WS_CHANNELS.terminalEvent, terminalEvent);
 
     const orchestrationEvent = {
       sequence: 1,
@@ -378,8 +367,6 @@ describe("wsNativeApi", () => {
       label: "Committing...",
     });
 
-    expect(onTerminalEvent).toHaveBeenCalledTimes(1);
-    expect(onTerminalEvent).toHaveBeenCalledWith(terminalEvent);
     expect(onDomainEvent).toHaveBeenCalledTimes(1);
     expect(onDomainEvent).toHaveBeenCalledWith(orchestrationEvent);
     expect(onActionProgress).toHaveBeenCalledTimes(1);
@@ -416,17 +403,6 @@ describe("wsNativeApi", () => {
     expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.dispatchCommand, {
       command,
     });
-  });
-
-  it("forwards terminal output ACKs to the websocket transport", async () => {
-    requestMock.mockResolvedValue(undefined);
-    const { createWsNativeApi } = await import("./wsNativeApi");
-
-    const api = createWsNativeApi();
-    const input = { threadId: "thread-1", terminalId: "default", bytes: 4096 };
-    await api.terminal.ackOutput(input);
-
-    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.terminalAckOutput, input);
   });
 
   it("omits null user-input answers before dispatching to orchestration", async () => {

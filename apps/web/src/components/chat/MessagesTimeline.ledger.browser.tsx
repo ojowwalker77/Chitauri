@@ -76,7 +76,6 @@ describe("MessagesTimeline activity trail", () => {
           isRevertingCheckpoint={false}
           onImageExpand={() => {}}
           markdownCwd={undefined}
-          resolvedTheme="dark"
           timestampFormat="locale"
           workspaceRoot={undefined}
         />

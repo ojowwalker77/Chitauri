@@ -133,7 +133,6 @@ import { reconcileDeletedThreadFromClient } from "../lib/deletedThreadClientReco
 import { dispatchThreadRename } from "../lib/threadRename";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useComposerDropzone } from "../hooks/useComposerDropzone";
-import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import {
   buildThreadBreadcrumbs,
   derivePromptHistoryFromMessages,
@@ -143,7 +142,6 @@ import {
   resolveActiveThreadTitle,
   resolveActiveTurnLiveDiffState,
   resolveCommittedProviderModel,
-  resolveProjectScriptTerminalTarget,
   resolvePromptHistoryNavigation,
   shouldHandlePromptHistoryNavigationKey,
   shouldEnableComposerPastedTextCollapse,
@@ -201,7 +199,7 @@ import {
   togglePendingUserInputOptionSelection,
   type PendingUserInputDraftAnswer,
 } from "../pendingUserInput";
-import { selectRightDockState, useRightDockStore } from "../rightDockStore";
+// rightDock removed
 import { useStore } from "../store";
 import { RenameThreadDialog } from "./RenameThreadDialog";
 import { getThreadFromState } from "../threadDerivation";
@@ -213,13 +211,7 @@ import {
   resolvePlanFollowUpSubmission,
 } from "../proposedPlan";
 import { truncateTitle } from "../truncateTitle";
-import {
-  DEFAULT_THREAD_TERMINAL_ID,
-  MAX_TERMINALS_PER_GROUP,
-  type ChatMessage,
-  type Thread,
-} from "../types";
-import { useTheme } from "../hooks/useTheme";
+import { type ChatMessage, type Thread } from "../types";
 import { useThreadWorkspaceHandoff } from "../hooks/useThreadWorkspaceHandoff";
 import { useComposerCommandMenuItems } from "../hooks/useComposerCommandMenuItems";
 import { useThreadHandoff } from "../hooks/useThreadHandoff";
@@ -232,8 +224,7 @@ import {
   shortcutLabelForCommand,
 } from "../keybindings";
 import PlanSidebar from "./PlanSidebar";
-import TerminalWorkspaceTabs from "./TerminalWorkspaceTabs";
-import ThreadTerminalDrawer from "./terminal/LazyThreadTerminalDrawer";
+// Terminal workspace tabs and drawer removed
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -251,7 +242,7 @@ import { DisclosureChevron } from "./ui/DisclosureChevron";
 import { DisclosureRegion } from "./ui/DisclosureRegion";
 import { Skeleton } from "./ui/skeleton";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "./ui/menu";
-import { disposeAndCloseTerminalSession, randomTerminalId } from "./terminal/terminalSession";
+// terminalSession removed
 import { cn, isMacPlatform, randomUUID } from "~/lib/utils";
 import { toastManager } from "./ui/toast";
 import { decodeProjectScriptKeybindingRule } from "~/lib/projectScriptKeybindings";
@@ -265,14 +256,10 @@ import {
   type ProjectScriptRunOptions,
   type ProjectScriptRunResult,
 } from "~/projectScripts";
-import { runProjectCommandInTerminal } from "~/projectTerminalRunner";
+// projectTerminalRunner removed
 import { newCommandId, newMessageId, newProjectId, newThreadId } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
-import {
-  confirmTerminalTabClose,
-  resolveTerminalCloseTitle,
-  shouldPromptForTerminalClose,
-} from "~/lib/terminalCloseConfirmation";
+// terminalCloseConfirmation removed
 import { promoteThreadCreate } from "~/lib/threadCreatePromotion";
 import {
   getAppModelOptions,
@@ -283,8 +270,7 @@ import {
   resolveAssistantDeliveryMode,
   useAppSettings,
 } from "../appSettings";
-import { resolveTerminalNewAction } from "../lib/terminalNewAction";
-import { isTerminalFocused } from "../lib/terminalFocus";
+// terminalNewAction and terminalFocus removed
 import { compareProvidersByOrder } from "../providerOrdering";
 import {
   type ComposerFileAttachment,
@@ -303,14 +289,7 @@ import {
 } from "../composerDraftStore";
 import { useComposerFocusRequestStore } from "../composerFocusRequestStore";
 import { appendComposerPromptText } from "../lib/chatReferences";
-import {
-  IMAGE_ONLY_BOOTSTRAP_PROMPT,
-  formatTerminalContextLabel,
-  insertInlineTerminalContextPlaceholder,
-  removeInlineTerminalContextPlaceholder,
-  type TerminalContextDraft,
-  type TerminalContextSelection,
-} from "../lib/terminalContext";
+import { IMAGE_ONLY_BOOTSTRAP_PROMPT } from "../lib/composerPlaceholders";
 import {
   appendComposerMessageContext,
   appendOriginalComposerPromptBlocks,
@@ -340,9 +319,8 @@ import {
   resolveNextComposerFooterTier,
   shouldUseCompactComposerFooter,
 } from "./composerFooterLayout";
-import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
-import { collectTerminalIdsFromLayout } from "../terminalPaneLayout";
-import type { ChatPanelState } from "../chatPanelState";
+// terminalStateStore and terminalPaneLayout removed
+
 import { ComposerPromptEditor, type ComposerPromptEditorHandle } from "./ComposerPromptEditor";
 import { PullRequestThreadDialog } from "./PullRequestThreadDialog";
 import { ChatHeader } from "./chat/ChatHeader";
@@ -423,12 +401,9 @@ import {
 import {
   ACTIVE_TURN_LAYOUT_SETTLE_DELAY_MS,
   shouldStartActiveTurnLayoutGrace,
-  shouldAutoDeleteTerminalThreadOnLastClose,
-  buildExpiredTerminalContextToastCopy,
   buildLocalDraftThread,
   DISMISSED_PROVIDER_HEALTH_BANNERS_KEY,
   DismissedProviderHealthBannersSchema,
-  shouldRenderTerminalWorkspace,
   collectUserMessageBlobPreviewUrls,
   deriveComposerSendState,
   failWorktreeSetupSnapshot,
@@ -443,7 +418,6 @@ import {
   PullRequestDialogState,
   type QueuedSteerGate,
   resolveQueuedSteerGateTransition,
-  shouldRenderProviderHealthBanner,
   resolveRuntimeModeAfterApprovalDecision,
   revokeBlobPreviewUrl,
   revokeUserMessagePreviewUrls,
@@ -491,88 +465,6 @@ const LOCAL_PROJECT_DRAFT_CONTEXT = {
 } as const;
 const DRAFT_PROJECT_SYNC_MAX_ATTEMPTS = 6;
 const DRAFT_PROJECT_SYNC_DELAY_MS = 50;
-const SETUP_SCRIPT_TERMINAL_ACTIVITY_START_TIMEOUT_MS = 1_000;
-const SETUP_SCRIPT_TERMINAL_MAX_RUNTIME_MS = 10 * 60 * 1000;
-
-function terminalHasRunningSubprocess(threadId: ThreadId, terminalId: string): boolean {
-  const terminalState = selectThreadTerminalState(
-    useTerminalStateStore.getState().terminalStateByThreadId,
-    threadId,
-  );
-  return terminalState.runningTerminalIds.includes(terminalId);
-}
-
-function waitForSetupScriptTerminalActivity(input: {
-  threadId: ThreadId;
-  terminalId: string;
-  observeStartTimeoutMs?: number;
-  maxRuntimeMs?: number;
-}): Promise<void> {
-  if (typeof window === "undefined") {
-    return Promise.resolve();
-  }
-
-  const observeStartTimeoutMs =
-    input.observeStartTimeoutMs ?? SETUP_SCRIPT_TERMINAL_ACTIVITY_START_TIMEOUT_MS;
-  const maxRuntimeMs = input.maxRuntimeMs ?? SETUP_SCRIPT_TERMINAL_MAX_RUNTIME_MS;
-
-  return new Promise((resolve) => {
-    let resolved = false;
-    let observedRunning = terminalHasRunningSubprocess(input.threadId, input.terminalId);
-    let observeStartTimer: number | null = null;
-    let maxRuntimeTimer: number | null = null;
-
-    const unsubscribe = useTerminalStateStore.subscribe(() => {
-      checkRunningState();
-    });
-
-    const clearTimers = () => {
-      if (observeStartTimer !== null) {
-        window.clearTimeout(observeStartTimer);
-        observeStartTimer = null;
-      }
-      if (maxRuntimeTimer !== null) {
-        window.clearTimeout(maxRuntimeTimer);
-        maxRuntimeTimer = null;
-      }
-    };
-
-    const finish = () => {
-      if (resolved) return;
-      resolved = true;
-      clearTimers();
-      unsubscribe();
-      resolve();
-    };
-
-    const ensureMaxRuntimeTimer = () => {
-      if (maxRuntimeTimer !== null) return;
-      maxRuntimeTimer = window.setTimeout(finish, maxRuntimeMs);
-    };
-
-    function checkRunningState() {
-      const running = terminalHasRunningSubprocess(input.threadId, input.terminalId);
-      if (running) {
-        observedRunning = true;
-        if (observeStartTimer !== null) {
-          window.clearTimeout(observeStartTimer);
-          observeStartTimer = null;
-        }
-        ensureMaxRuntimeTimer();
-        return;
-      }
-      if (observedRunning) {
-        finish();
-      }
-    }
-
-    checkRunningState();
-    if (!observedRunning) {
-      observeStartTimer = window.setTimeout(finish, observeStartTimeoutMs);
-    }
-  });
-}
-
 function waitForDraftProjectSyncDelay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms);
@@ -726,7 +618,6 @@ function buildQueuedComposerPreviewText(input: {
   images: ReadonlyArray<ComposerImageAttachment>;
   files: ReadonlyArray<ComposerFileAttachment>;
   assistantSelections: ReadonlyArray<{ id: string }>;
-  terminalContexts: ReadonlyArray<TerminalContextDraft>;
   fileComments: ReadonlyArray<FileCommentDraft>;
   pastedTexts: ReadonlyArray<PastedTextDraft>;
 }): string {
@@ -743,10 +634,6 @@ function buildQueuedComposerPreviewText(input: {
   }
   if (input.assistantSelections.length > 0) {
     return formatAssistantSelectionQueuePreview(input.assistantSelections.length);
-  }
-  const firstTerminalContext = input.terminalContexts[0];
-  if (firstTerminalContext) {
-    return formatTerminalContextLabel(firstTerminalContext);
   }
   const firstFileComment = input.fileComments[0];
   if (firstFileComment) {
@@ -770,22 +657,6 @@ function formatPastedTextTitleSeed(pastedTexts: ReadonlyArray<PastedTextDraft>):
 }
 
 const COMPOSER_PATH_QUERY_DEBOUNCE_MS = 120;
-const syncTerminalContextsByIds = (
-  contexts: ReadonlyArray<TerminalContextDraft>,
-  ids: ReadonlyArray<string>,
-): TerminalContextDraft[] => {
-  const contextsById = new Map(contexts.map((context) => [context.id, context]));
-  return ids.flatMap((id) => {
-    const context = contextsById.get(id);
-    return context ? [context] : [];
-  });
-};
-
-const terminalContextIdListsEqual = (
-  contexts: ReadonlyArray<TerminalContextDraft>,
-  ids: ReadonlyArray<string>,
-): boolean =>
-  contexts.length === ids.length && contexts.every((context, index) => context.id === ids[index]);
 
 function ComposerControlSkeleton(props: { widthClassName: string }) {
   return (
@@ -822,7 +693,6 @@ interface ChatViewProps {
   surfaceMode?: "single" | "split";
   presentationMode?: "default" | "editor";
   isFocusedPane?: boolean;
-  panelState?: ChatPanelState;
   onToggleDiffPanel?: () => void;
   onOpenTurnDiffPanel?: (turnId: TurnId, filePath?: string) => void;
   onSplitSurface?: () => void;
@@ -879,7 +749,6 @@ export default function ChatView({
   surfaceMode = "single",
   presentationMode = "default",
   isFocusedPane = true,
-  panelState,
   onToggleDiffPanel,
   onOpenTurnDiffPanel,
   onSplitSurface,
@@ -909,8 +778,7 @@ export default function ChatView({
   const { handleNewThread } = useHandleNewThread();
   const { handleNewChat } = useHandleNewChat();
   const { createThreadHandoff } = useThreadHandoff();
-  const rawSearch = useDiffRouteSearch();
-  const { resolvedTheme } = useTheme();
+  const rawSearch = { panel: null as string | null };
   const queryClient = useQueryClient();
   const isEditorRail = presentationMode === "editor";
   const isInactiveSplitPane = surfaceMode === "split" && !isFocusedPane;
@@ -926,7 +794,6 @@ export default function ChatView({
   const composerFiles = composerDraft.files;
   const composerAssistantSelections = composerDraft.assistantSelections;
   const composerFileComments = composerDraft.fileComments;
-  const composerTerminalContexts = composerDraft.terminalContexts;
   const composerPastedTexts = composerDraft.pastedTexts;
   const composerSkills = composerDraft.skills;
   const composerMentions = composerDraft.mentions;
@@ -940,7 +807,6 @@ export default function ChatView({
         fileCount: composerFiles.length,
         assistantSelectionCount: composerAssistantSelections.length,
         fileCommentCount: composerFileComments.length,
-        terminalContexts: composerTerminalContexts,
         pastedTexts: composerPastedTexts,
       }),
     [
@@ -948,7 +814,6 @@ export default function ChatView({
       composerFileComments.length,
       composerFiles.length,
       composerImages.length,
-      composerTerminalContexts,
       composerPastedTexts,
       prompt,
     ],
@@ -984,20 +849,8 @@ export default function ChatView({
   );
   const addComposerDraftFileComment = useComposerDraftStore((store) => store.addFileComment);
   const clearComposerDraftFileComments = useComposerDraftStore((store) => store.clearFileComments);
-  const insertComposerDraftTerminalContext = useComposerDraftStore(
-    (store) => store.insertTerminalContext,
-  );
-  const addComposerDraftTerminalContexts = useComposerDraftStore(
-    (store) => store.addTerminalContexts,
-  );
-  const removeComposerDraftTerminalContext = useComposerDraftStore(
-    (store) => store.removeTerminalContext,
-  );
   const addComposerDraftPastedTexts = useComposerDraftStore((store) => store.addPastedTexts);
   const removeComposerDraftPastedText = useComposerDraftStore((store) => store.removePastedText);
-  const setComposerDraftTerminalContexts = useComposerDraftStore(
-    (store) => store.setTerminalContexts,
-  );
   const setComposerDraftSkills = useComposerDraftStore((store) => store.setSkills);
   const setComposerDraftMentions = useComposerDraftStore((store) => store.setMentions);
   const syncComposerDraftPersistedAttachments = useComposerDraftStore(
@@ -1037,7 +890,6 @@ export default function ChatView({
   const composerAssistantSelectionsRef = useRef<ComposerAssistantSelectionAttachment[]>(
     composerAssistantSelections,
   );
-  const composerTerminalContextsRef = useRef<TerminalContextDraft[]>(composerTerminalContexts);
   const composerFileCommentsRef = useRef<FileCommentDraft[]>(composerFileComments);
   const composerPastedTextsRef = useRef<PastedTextDraft[]>(composerPastedTexts);
   const [localDraftErrorsByThreadId, setLocalDraftErrorsByThreadId] = useState<
@@ -1084,7 +936,6 @@ export default function ChatView({
   // When set, the thread-change reset effect will open the sidebar instead of closing it.
   // Used by "Implement in a new thread" to carry the sidebar-open intent across navigation.
   const planSidebarOpenOnNextThreadRef = useRef(false);
-  const [terminalFocusRequestId, setTerminalFocusRequestId] = useState(0);
   const [composerHighlightedItemId, setComposerHighlightedItemId] = useState<string | null>(null);
   const [pullRequestDialogState, setPullRequestDialogState] =
     useState<PullRequestDialogState | null>(null);
@@ -1212,7 +1063,6 @@ export default function ChatView({
   const sendInFlightRef = useRef(false);
   const sendPreflightInFlightRef = useRef(false);
   const dragDepthRef = useRef(0);
-  const terminalOpenByThreadRef = useRef<Record<string, boolean>>({});
   const activatedThreadIdRef = useRef<ThreadId | null>(null);
   useEffect(() => {
     promptHistoryNavigationRef.current = null;
@@ -1247,35 +1097,7 @@ export default function ChatView({
     restoredQueuedSourceProposedPlanRef.current = restoredSourceProposedPlan ?? null;
   }, [restoredSourceProposedPlan]);
 
-  const terminalState = useTerminalStateStore((state) =>
-    selectThreadTerminalState(state.terminalStateByThreadId, threadId),
-  );
-  const storeSetTerminalOpen = useTerminalStateStore((s) => s.setTerminalOpen);
-  const storeSetTerminalPresentationMode = useTerminalStateStore(
-    (s) => s.setTerminalPresentationMode,
-  );
-  const storeSetTerminalWorkspaceLayout = useTerminalStateStore(
-    (s) => s.setTerminalWorkspaceLayout,
-  );
-  const storeOpenChatThreadPage = useTerminalStateStore((s) => s.openChatThreadPage);
-  const storeOpenTerminalThreadPage = useTerminalStateStore((s) => s.openTerminalThreadPage);
-  const storeSetTerminalWorkspaceTab = useTerminalStateStore((s) => s.setTerminalWorkspaceTab);
-  const storeSetTerminalHeight = useTerminalStateStore((s) => s.setTerminalHeight);
-  const storeSetTerminalMetadata = useTerminalStateStore((s) => s.setTerminalMetadata);
-  const storeSetTerminalActivity = useTerminalStateStore((s) => s.setTerminalActivity);
-  const storeSplitTerminalLeft = useTerminalStateStore((s) => s.splitTerminalLeft);
-  const storeSplitTerminalRight = useTerminalStateStore((s) => s.splitTerminalRight);
-  const storeSplitTerminalDown = useTerminalStateStore((s) => s.splitTerminalDown);
-  const storeSplitTerminalUp = useTerminalStateStore((s) => s.splitTerminalUp);
-  const storeNewTerminal = useTerminalStateStore((s) => s.newTerminal);
-  const storeNewTerminalTab = useTerminalStateStore((s) => s.newTerminalTab);
-  const storeOpenNewFullWidthTerminal = useTerminalStateStore((s) => s.openNewFullWidthTerminal);
-  const storeCloseWorkspaceChat = useTerminalStateStore((s) => s.closeWorkspaceChat);
-  const storeSetActiveTerminal = useTerminalStateStore((s) => s.setActiveTerminal);
-  const storeCloseTerminal = useTerminalStateStore((s) => s.closeTerminal);
-  const storeCloseTerminalGroup = useTerminalStateStore((s) => s.closeTerminalGroup);
-  const storeResizeTerminalSplit = useTerminalStateStore((s) => s.resizeTerminalSplit);
-  const storeClearTerminalState = useTerminalStateStore((s) => s.clearTerminalState);
+  // terminal state store removed
 
   const setPrompt = useCallback(
     (nextPrompt: string) => {
@@ -1326,13 +1148,6 @@ export default function ChatView({
       threadId,
     ],
   );
-  const addComposerTerminalContextsToDraft = useCallback(
-    (contexts: TerminalContextDraft[]) => {
-      discardPromptHistoryNavigationForComposerMutation();
-      addComposerDraftTerminalContexts(threadId, contexts);
-    },
-    [addComposerDraftTerminalContexts, discardPromptHistoryNavigationForComposerMutation, threadId],
-  );
   const addComposerPastedTextsToDraft = useCallback(
     (pastedTexts: PastedTextDraft[]) => {
       discardPromptHistoryNavigationForComposerMutation();
@@ -1366,35 +1181,6 @@ export default function ChatView({
     discardPromptHistoryNavigationForComposerMutation();
     clearComposerDraftFileComments(threadId);
   }, [clearComposerDraftFileComments, discardPromptHistoryNavigationForComposerMutation, threadId]);
-  const removeComposerTerminalContextFromDraft = useCallback(
-    (contextId: string) => {
-      discardPromptHistoryNavigationForComposerMutation();
-      const contextIndex = composerTerminalContexts.findIndex(
-        (context) => context.id === contextId,
-      );
-      if (contextIndex < 0) {
-        return;
-      }
-      const nextPrompt = removeInlineTerminalContextPlaceholder(promptRef.current, contextIndex);
-      promptRef.current = nextPrompt.prompt;
-      setPrompt(nextPrompt.prompt);
-      removeComposerDraftTerminalContext(threadId, contextId);
-      setComposerCursor(nextPrompt.cursor);
-      setComposerTrigger(
-        detectComposerTrigger(
-          nextPrompt.prompt,
-          expandCollapsedComposerCursor(nextPrompt.prompt, nextPrompt.cursor),
-        ),
-      );
-    },
-    [
-      composerTerminalContexts,
-      discardPromptHistoryNavigationForComposerMutation,
-      removeComposerDraftTerminalContext,
-      setPrompt,
-      threadId,
-    ],
-  );
   const removeComposerPastedTextFromDraft = useCallback(
     (pastedTextId: string) => {
       discardPromptHistoryNavigationForComposerMutation();
@@ -1465,7 +1251,7 @@ export default function ChatView({
   const isLocalDraftThread = !isServerThread && localDraftThread !== undefined;
   const canCheckoutPullRequestIntoThread = isLocalDraftThread;
   const diffOpen = rawSearch.panel === "diff";
-  const resolvedDiffOpen = panelState ? panelState.panel === "diff" : diffOpen;
+  const resolvedDiffOpen = diffOpen;
   const activeThreadId = activeThread?.id ?? null;
   const activeLatestTurn = activeThread?.latestTurn ?? null;
   const threadActivities = activeThread?.activities ?? EMPTY_ACTIVITIES;
@@ -1623,11 +1409,7 @@ export default function ChatView({
       }
 
       const activeDraftThread = getDraftThread(threadId);
-      if (
-        !isServerThread &&
-        activeDraftThread?.projectId === activeProject.id &&
-        activeDraftThread.entryPoint === "chat"
-      ) {
+      if (!isServerThread && activeDraftThread?.projectId === activeProject.id) {
         setDraftThreadContext(threadId, draftThreadContext);
         setProjectDraftThreadId(activeProject.id, threadId, draftThreadContext);
         return;
@@ -3013,7 +2795,7 @@ export default function ChatView({
     canOfferReviewSlashCommand({
       prompt: composerPromptWithoutActiveSlashTrigger,
       imageCount: composerImages.length,
-      terminalContextCount: composerTerminalContexts.length,
+      terminalContextCount: 0,
       selectedSkillCount: selectedComposerSkills.length,
       selectedMentionCount: selectedComposerMentions.length,
     });
@@ -3023,7 +2805,7 @@ export default function ChatView({
     canOfferForkSlashCommand({
       prompt: composerPromptWithoutActiveSlashTrigger,
       imageCount: composerImages.length,
-      terminalContextCount: composerTerminalContexts.length,
+      terminalContextCount: 0,
       selectedSkillCount: selectedComposerSkills.length,
       selectedMentionCount: selectedComposerMentions.length,
     });
@@ -3287,28 +3069,7 @@ export default function ChatView({
       }),
     [activeLatestTurn?.turnId, rawWorkLogEntries, turnDiffSummaries],
   );
-  const splitTerminalShortcutLabel = useMemo(
-    () =>
-      shortcutLabelForCommand(keybindings, "terminal.splitRight") ??
-      shortcutLabelForCommand(keybindings, "terminal.split"),
-    [keybindings],
-  );
-  const splitTerminalDownShortcutLabel = useMemo(
-    () => shortcutLabelForCommand(keybindings, "terminal.splitDown"),
-    [keybindings],
-  );
-  const newTerminalShortcutLabel = useMemo(
-    () => shortcutLabelForCommand(keybindings, "terminal.new"),
-    [keybindings],
-  );
-  const closeTerminalShortcutLabel = useMemo(
-    () => shortcutLabelForCommand(keybindings, "terminal.close"),
-    [keybindings],
-  );
-  const closeWorkspaceShortcutLabel = useMemo(
-    () => shortcutLabelForCommand(keybindings, "terminal.workspace.closeActive"),
-    [keybindings],
-  );
+  // terminal shortcut labels removed
   const diffPanelShortcutLabel = useMemo(
     () => shortcutLabelForCommand(keybindings, "diff.toggle"),
     [keybindings],
@@ -3380,39 +3141,10 @@ export default function ChatView({
     (activeThread.messages.length > 0 ||
       (activeThread.session !== null && activeThread.session.status !== "closed")),
   );
-  const activeTerminalGroup =
-    terminalState.terminalGroups.find(
-      (group) => group.id === terminalState.activeTerminalGroupId,
-    ) ??
-    terminalState.terminalGroups.find((group) =>
-      collectTerminalIdsFromLayout(group.layout).includes(terminalState.activeTerminalId),
-    ) ??
-    null;
-  const hasReachedSplitLimit =
-    (activeTerminalGroup ? collectTerminalIdsFromLayout(activeTerminalGroup.layout).length : 0) >=
-    MAX_TERMINALS_PER_GROUP;
-  const terminalWorkspaceOpen = shouldRenderTerminalWorkspace({
-    presentationMode: terminalState.presentationMode,
-    terminalOpen: terminalState.terminalOpen,
-  });
-  const terminalWorkspaceTerminalTabActive =
-    terminalWorkspaceOpen &&
-    (terminalState.workspaceLayout === "terminal-only" ||
-      terminalState.workspaceActiveTab === "terminal");
-  const isTerminalPrimarySurface = terminalState.entryPoint === "terminal";
-  const isTerminalEnvironmentContext =
-    isTerminalPrimarySurface || terminalWorkspaceTerminalTabActive;
-  const shouldShowProviderHealthBanner = shouldRenderProviderHealthBanner({
-    threadEntryPoint: terminalState.entryPoint,
-    terminalWorkspaceTerminalTabActive,
-  });
-  // Terminal-only threads should not pay to mount the hidden chat/composer pane.
-  const shouldRenderChatPaneContent = !(
-    terminalWorkspaceTerminalTabActive && terminalState.workspaceLayout === "terminal-only"
-  );
+  const shouldShowProviderHealthBanner = true;
+  const shouldRenderChatPaneContent = true;
   const secondaryChromeThreadId = activeThread?.id ?? threadId;
-  const shouldDeferSecondaryChrome =
-    activeThread !== undefined && !isCenteredEmptyLanding && !terminalWorkspaceTerminalTabActive;
+  const shouldDeferSecondaryChrome = activeThread !== undefined && !isCenteredEmptyLanding;
   const [secondaryChromeState, setSecondaryChromeState] = useState(() => ({
     threadId: secondaryChromeThreadId,
     ready: true,
@@ -3445,10 +3177,7 @@ export default function ChatView({
       window.cancelAnimationFrame(frame);
     };
   }, [secondaryChromeThreadId, shouldDeferSecondaryChrome]);
-  const terminalWorkspaceChatTabActive =
-    terminalWorkspaceOpen &&
-    terminalState.workspaceLayout === "both" &&
-    terminalState.workspaceActiveTab === "chat";
+  // terminalWorkspaceChatTabActive removed
   const setThreadError = useCallback(
     (targetThreadId: ThreadId | null, error: string | null) => {
       if (!targetThreadId) return;
@@ -3533,56 +3262,6 @@ export default function ChatView({
       setIsModelPickerOpen(false);
     }
   }, []);
-  const addTerminalContextToDraft = useCallback(
-    (selection: TerminalContextSelection) => {
-      if (!activeThread) {
-        return;
-      }
-      discardPromptHistoryNavigationForComposerMutation();
-      const snapshot = composerEditorRef.current?.readSnapshot() ?? {
-        value: promptRef.current,
-        cursor: composerCursor,
-        expandedCursor: expandCollapsedComposerCursor(promptRef.current, composerCursor),
-        selectionCollapsed: true,
-        terminalContextIds: composerTerminalContexts.map((context) => context.id),
-      };
-      const insertion = insertInlineTerminalContextPlaceholder(
-        snapshot.value,
-        snapshot.expandedCursor,
-      );
-      const nextCollapsedCursor = collapseExpandedComposerCursor(
-        insertion.prompt,
-        insertion.cursor,
-      );
-      const inserted = insertComposerDraftTerminalContext(
-        activeThread.id,
-        insertion.prompt,
-        {
-          id: randomUUID(),
-          threadId: activeThread.id,
-          createdAt: new Date().toISOString(),
-          ...selection,
-        },
-        insertion.contextIndex,
-      );
-      if (!inserted) {
-        return;
-      }
-      promptRef.current = insertion.prompt;
-      setComposerCursor(nextCollapsedCursor);
-      setComposerTrigger(detectComposerTrigger(insertion.prompt, insertion.cursor));
-      window.requestAnimationFrame(() => {
-        composerEditorRef.current?.focusAt(nextCollapsedCursor);
-      });
-    },
-    [
-      activeThread,
-      composerCursor,
-      composerTerminalContexts,
-      discardPromptHistoryNavigationForComposerMutation,
-      insertComposerDraftTerminalContext,
-    ],
-  );
   // Collapse an oversized paste into an attachment card above the composer instead
   // of flooding the editor with raw text. The card holds the full content until the
   // user sends or clicks "Show in text field".
@@ -3602,382 +3281,10 @@ export default function ChatView({
     },
     [activeThread, addComposerDraftPastedTexts, discardPromptHistoryNavigationForComposerMutation],
   );
-  const setTerminalOpen = useCallback(
-    (open: boolean) => {
-      if (!activeThreadId) return;
-      storeSetTerminalOpen(activeThreadId, open);
-    },
-    [activeThreadId, storeSetTerminalOpen],
-  );
-  const setTerminalPresentationMode = useCallback(
-    (mode: "drawer" | "workspace") => {
-      if (!activeThreadId) return;
-      storeSetTerminalPresentationMode(activeThreadId, mode);
-    },
-    [activeThreadId, storeSetTerminalPresentationMode],
-  );
-  const setTerminalWorkspaceLayout = useCallback(
-    (layout: "both" | "terminal-only") => {
-      if (!activeThreadId) return;
-      storeSetTerminalWorkspaceLayout(activeThreadId, layout);
-    },
-    [activeThreadId, storeSetTerminalWorkspaceLayout],
-  );
-  const setTerminalWorkspaceTab = useCallback(
-    (tab: "terminal" | "chat") => {
-      if (!activeThreadId) return;
-      storeSetTerminalWorkspaceTab(activeThreadId, tab);
-    },
-    [activeThreadId, storeSetTerminalWorkspaceTab],
-  );
-  const setTerminalHeight = useCallback(
-    (height: number) => {
-      if (!activeThreadId) return;
-      storeSetTerminalHeight(activeThreadId, height);
-    },
-    [activeThreadId, storeSetTerminalHeight],
-  );
-  const toggleTerminalVisibility = useCallback(() => {
-    if (!activeThreadId) return;
-    if (!terminalState.terminalOpen) {
-      setTerminalPresentationMode("drawer");
-    }
-    setTerminalOpen(!terminalState.terminalOpen);
-  }, [activeThreadId, setTerminalOpen, setTerminalPresentationMode, terminalState.terminalOpen]);
-  const expandTerminalWorkspace = useCallback(() => {
-    if (!activeThreadId) return;
-    setTerminalPresentationMode("workspace");
-    setTerminalWorkspaceLayout("both");
-    setTerminalWorkspaceTab("terminal");
-  }, [
-    activeThreadId,
-    setTerminalPresentationMode,
-    setTerminalWorkspaceLayout,
-    setTerminalWorkspaceTab,
-  ]);
-  const collapseTerminalWorkspace = useCallback(() => {
-    if (!activeThreadId) return;
-    setTerminalPresentationMode("drawer");
-  }, [activeThreadId, setTerminalPresentationMode]);
-  const splitTerminalRight = useCallback(() => {
-    if (!activeThreadId || hasReachedSplitLimit) return;
-    const terminalId = randomTerminalId();
-    storeSplitTerminalRight(activeThreadId, terminalId);
-    setTerminalFocusRequestId((value) => value + 1);
-  }, [activeThreadId, hasReachedSplitLimit, storeSplitTerminalRight]);
-  const splitTerminalLeft = useCallback(() => {
-    if (!activeThreadId || hasReachedSplitLimit) return;
-    const terminalId = randomTerminalId();
-    storeSplitTerminalLeft(activeThreadId, terminalId);
-    setTerminalFocusRequestId((value) => value + 1);
-  }, [activeThreadId, hasReachedSplitLimit, storeSplitTerminalLeft]);
-  const splitTerminalDown = useCallback(() => {
-    if (!activeThreadId || hasReachedSplitLimit) return;
-    const terminalId = randomTerminalId();
-    storeSplitTerminalDown(activeThreadId, terminalId);
-    setTerminalFocusRequestId((value) => value + 1);
-  }, [activeThreadId, hasReachedSplitLimit, storeSplitTerminalDown]);
-  const splitTerminalUp = useCallback(() => {
-    if (!activeThreadId || hasReachedSplitLimit) return;
-    const terminalId = randomTerminalId();
-    storeSplitTerminalUp(activeThreadId, terminalId);
-    setTerminalFocusRequestId((value) => value + 1);
-  }, [activeThreadId, hasReachedSplitLimit, storeSplitTerminalUp]);
-  const createNewTerminal = useCallback(() => {
-    if (!activeThreadId) return;
-    const terminalId = randomTerminalId();
-    storeNewTerminal(activeThreadId, terminalId);
-    setTerminalFocusRequestId((value) => value + 1);
-  }, [activeThreadId, storeNewTerminal]);
-  const createNewTerminalTab = useCallback(
-    (targetTerminalId: string) => {
-      if (!activeThreadId) return;
-      const terminalId = randomTerminalId();
-      storeNewTerminalTab(activeThreadId, targetTerminalId, terminalId);
-      setTerminalFocusRequestId((value) => value + 1);
-    },
-    [activeThreadId, storeNewTerminalTab],
-  );
-  const createTerminalFromShortcut = useCallback(() => {
-    const action = resolveTerminalNewAction({
-      terminalOpen: terminalState.terminalOpen,
-      activeTerminalId: terminalState.activeTerminalId,
-      activeTerminalGroupId: terminalState.activeTerminalGroupId,
-      terminalGroups: terminalState.terminalGroups,
-    });
-
-    if (action.kind === "new-group") {
-      if (!terminalState.terminalOpen) {
-        setTerminalOpen(true);
-      }
-      createNewTerminal();
-      return;
-    }
-
-    createNewTerminalTab(action.targetTerminalId);
-  }, [
-    createNewTerminal,
-    createNewTerminalTab,
-    setTerminalOpen,
-    terminalState.activeTerminalGroupId,
-    terminalState.activeTerminalId,
-    terminalState.terminalGroups,
-    terminalState.terminalOpen,
-  ]);
-  const moveTerminalToNewGroup = useCallback(
-    (terminalId: string) => {
-      if (!activeThreadId) return;
-      storeNewTerminal(activeThreadId, terminalId);
-      setTerminalFocusRequestId((value) => value + 1);
-    },
-    [activeThreadId, storeNewTerminal],
-  );
-  const openNewFullWidthTerminal = useCallback(() => {
-    if (!activeThreadId || !activeProject) return;
-    const terminalId = randomTerminalId();
-    storeOpenNewFullWidthTerminal(activeThreadId, terminalId);
-    setTerminalFocusRequestId((value) => value + 1);
-  }, [activeProject, activeThreadId, storeOpenNewFullWidthTerminal]);
-  // Desktop accelerators like Cmd+T can be claimed by Electron before the page sees keydown.
-  useEffect(() => {
-    const onMenuAction = window.desktopBridge?.onMenuAction;
-    if (typeof onMenuAction !== "function" || !isFocusedPane) {
-      return;
-    }
-
-    const unsubscribe = onMenuAction((action) => {
-      if (action !== "new-terminal-tab") return;
-      createTerminalFromShortcut();
-    });
-
-    return () => {
-      unsubscribe?.();
-    };
-  }, [createTerminalFromShortcut, isFocusedPane]);
-  const activateTerminal = useCallback(
-    (terminalId: string) => {
-      if (!activeThreadId) return;
-      storeSetActiveTerminal(activeThreadId, terminalId);
-      setTerminalFocusRequestId((value) => value + 1);
-    },
-    [activeThreadId, storeSetActiveTerminal],
-  );
-  const closeTerminal = useCallback(
-    async (terminalId: string) => {
-      const api = readNativeApi();
-      if (!activeThreadId || !api) return;
-      const isFinalTerminal = terminalState.terminalIds.length <= 1;
-      const shouldDeletePlaceholderTerminalThread = shouldAutoDeleteTerminalThreadOnLastClose({
-        isLastTerminal: isFinalTerminal,
-        isServerThread,
-        terminalEntryPoint: terminalState.entryPoint,
-        thread: activeThread,
-      });
-      const confirmed = await confirmTerminalTabClose({
-        api,
-        enabled: shouldPromptForTerminalClose({
-          confirmationEnabled: settings.confirmTerminalTabClose,
-          runningTerminalIds: terminalState.runningTerminalIds,
-          terminalAttentionStatesById: terminalState.terminalAttentionStatesById,
-          terminalId,
-        }),
-        terminalTitle: resolveTerminalCloseTitle({
-          terminalId,
-          terminalLabelsById: terminalState.terminalLabelsById,
-          terminalTitleOverridesById: terminalState.terminalTitleOverridesById,
-        }),
-        willDeleteThread: shouldDeletePlaceholderTerminalThread,
-      });
-      if (!confirmed) {
-        return;
-      }
-      disposeAndCloseTerminalSession({
-        api,
-        threadId: activeThreadId,
-        terminalId,
-        clearHistoryBeforeClose: isFinalTerminal,
-      });
-      storeCloseTerminal(activeThreadId, terminalId);
-      setTerminalFocusRequestId((value) => value + 1);
-      if (!shouldDeletePlaceholderTerminalThread) {
-        return;
-      }
-      void (async () => {
-        try {
-          await api.orchestration.dispatchCommand({
-            type: "thread.delete",
-            commandId: newCommandId(),
-            threadId: activeThreadId,
-          });
-          void reconcileDeletedThreadFromClient({
-            threadId: activeThreadId,
-            removeDeletedThreadFromClientState:
-              useStore.getState().removeDeletedThreadFromClientState,
-          });
-          useComposerDraftStore.getState().clearDraftThread(activeThreadId);
-          storeClearTerminalState(activeThreadId);
-          await handleNewChat({ fresh: true });
-        } catch (error) {
-          console.error("Failed to delete empty terminal thread after closing its last terminal", {
-            threadId: activeThreadId,
-            error,
-          });
-        }
-      })();
-    },
-    [
-      activeThread,
-      activeThreadId,
-      handleNewChat,
-      isServerThread,
-      navigate,
-      storeClearTerminalState,
-      storeCloseTerminal,
-      syncServerShellSnapshot,
-      settings.confirmTerminalTabClose,
-      terminalState.entryPoint,
-      terminalState.runningTerminalIds,
-      terminalState.terminalAttentionStatesById,
-      terminalState.terminalIds.length,
-      terminalState.terminalLabelsById,
-      terminalState.terminalTitleOverridesById,
-    ],
-  );
-  const closeActiveWorkspaceView = useCallback(() => {
-    if (!activeThreadId || !terminalWorkspaceOpen) {
-      return;
-    }
-    if (terminalState.workspaceLayout === "both" && terminalState.workspaceActiveTab === "chat") {
-      // Going terminal-only hides the chat/terminal switcher, leaving chat-backed
-      // threads with no mouse path back to chat. For those, collapse the workspace
-      // to the normal chat + terminal-drawer layout instead of stranding the user.
-      if (terminalState.entryPoint === "chat") {
-        collapseTerminalWorkspace();
-        return;
-      }
-      storeCloseWorkspaceChat(activeThreadId);
-      return;
-    }
-    closeTerminal(terminalState.activeTerminalId);
-  }, [
-    activeThreadId,
-    closeTerminal,
-    collapseTerminalWorkspace,
-    storeCloseWorkspaceChat,
-    terminalState.activeTerminalId,
-    terminalState.entryPoint,
-    terminalState.workspaceActiveTab,
-    terminalState.workspaceLayout,
-    terminalWorkspaceOpen,
-  ]);
-  // The terminal's panel toggle mirrors the right dock's collapse control: it shows
-  // or hides the side panel only when this thread already has a pane to show.
-  const rightDockOpen = useRightDockStore((store) => selectRightDockState(threadId)(store).open);
-  const hasRightDockPanes = useRightDockStore(
-    (store) => selectRightDockState(threadId)(store).panes.length > 0,
-  );
-  const setRightDockOpen = useRightDockStore((store) => store.setDockOpen);
-  const toggleRightDock = useCallback(() => {
-    setRightDockOpen(threadId, !rightDockOpen);
-  }, [rightDockOpen, setRightDockOpen, threadId]);
-  const terminalDrawerProps = useMemo(
-    () => ({
-      threadId,
-      onTogglePanel: hasRightDockPanes ? toggleRightDock : undefined,
-      isPanelOpen: hasRightDockPanes ? rightDockOpen : undefined,
-      cwd: gitCwd ?? activeProject?.cwd ?? "",
-      runtimeEnv: threadTerminalRuntimeEnv,
-      height: terminalState.terminalHeight,
-      terminalIds: terminalState.terminalIds,
-      terminalLabelsById: terminalState.terminalLabelsById,
-      terminalTitleOverridesById: terminalState.terminalTitleOverridesById,
-      terminalCliKindsById: terminalState.terminalCliKindsById,
-      terminalAttentionStatesById: terminalState.terminalAttentionStatesById ?? {},
-      runningTerminalIds: terminalState.runningTerminalIds,
-      activeTerminalId: terminalState.activeTerminalId,
-      terminalGroups: terminalState.terminalGroups,
-      activeTerminalGroupId: terminalState.activeTerminalGroupId,
-      focusRequestId: terminalFocusRequestId,
-      onSplitTerminal: splitTerminalRight,
-      onSplitTerminalDown: splitTerminalDown,
-      onNewTerminal: createNewTerminal,
-      onNewTerminalTab: createNewTerminalTab,
-      onMoveTerminalToGroup: moveTerminalToNewGroup,
-      splitShortcutLabel: splitTerminalShortcutLabel ?? undefined,
-      splitDownShortcutLabel: splitTerminalDownShortcutLabel ?? undefined,
-      newShortcutLabel: newTerminalShortcutLabel ?? undefined,
-      closeShortcutLabel: closeTerminalShortcutLabel ?? undefined,
-      workspaceCloseShortcutLabel: closeWorkspaceShortcutLabel ?? undefined,
-      onActiveTerminalChange: activateTerminal,
-      onCloseTerminal: closeTerminal,
-      onCloseTerminalGroup: (groupId: string) => {
-        if (!activeThreadId) return;
-        storeCloseTerminalGroup(activeThreadId, groupId);
-      },
-      onHeightChange: setTerminalHeight,
-      onResizeTerminalSplit: (groupId: string, splitId: string, weights: number[]) => {
-        if (!activeThreadId) return;
-        storeResizeTerminalSplit(activeThreadId, groupId, splitId, weights);
-      },
-      onTerminalMetadataChange: (
-        terminalId: string,
-        metadata: { cliKind: "codex" | "claude" | null; label: string },
-      ) => {
-        if (!activeThreadId) return;
-        storeSetTerminalMetadata(activeThreadId, terminalId, metadata);
-      },
-      onTerminalActivityChange: (
-        terminalId: string,
-        activity: {
-          hasRunningSubprocess: boolean;
-          agentState: "running" | "attention" | "review" | null;
-        },
-      ) => {
-        if (!activeThreadId) return;
-        storeSetTerminalActivity(activeThreadId, terminalId, activity);
-      },
-      onAddTerminalContext: addTerminalContextToDraft,
-    }),
-    [
-      activeProject?.cwd,
-      activateTerminal,
-      addTerminalContextToDraft,
-      closeTerminal,
-      closeTerminalShortcutLabel,
-      closeWorkspaceShortcutLabel,
-      createNewTerminal,
-      createNewTerminalTab,
-      moveTerminalToNewGroup,
-      gitCwd,
-      activeThreadId,
-      newTerminalShortcutLabel,
-      setTerminalHeight,
-      splitTerminalRight,
-      splitTerminalDown,
-      splitTerminalShortcutLabel,
-      splitTerminalDownShortcutLabel,
-      storeCloseTerminalGroup,
-      storeResizeTerminalSplit,
-      storeSetTerminalActivity,
-      storeSetTerminalMetadata,
-      terminalFocusRequestId,
-      terminalState.activeTerminalGroupId,
-      terminalState.activeTerminalId,
-      terminalState.terminalAttentionStatesById,
-      terminalState.terminalCliKindsById,
-      terminalState.terminalGroups,
-      terminalState.terminalHeight,
-      terminalState.terminalIds,
-      terminalState.terminalLabelsById,
-      terminalState.terminalTitleOverridesById,
-      terminalState.runningTerminalIds,
-      threadId,
-      threadTerminalRuntimeEnv,
-      toggleRightDock,
-      rightDockOpen,
-      hasRightDockPanes,
-    ],
-  );
+  // terminal state callbacks removed
+  // Desktop menu terminal action removed
+  // terminal activate/close callbacks removed
+  // rightDock and terminalDrawerProps removed
   const runProjectScript = useCallback(
     async (
       script: ProjectScript,
@@ -3991,76 +3298,20 @@ export default function ChatView({
           return { ...current, [activeProject.id]: script.id };
         });
       }
-      const targetCwd = options?.cwd ?? gitCwd ?? activeProject.cwd;
-      const baseTerminalId =
-        terminalState.activeTerminalId ||
-        terminalState.terminalIds[0] ||
-        DEFAULT_THREAD_TERMINAL_ID;
-      const { shouldCreateNewTerminal, terminalId: targetTerminalId } =
-        resolveProjectScriptTerminalTarget({
-          baseTerminalId,
-          createTerminalId: randomTerminalId,
-          hasRunningTerminal: terminalState.runningTerminalIds.length > 0,
-          preferNewTerminal: options?.preferNewTerminal,
-          terminalOpen: terminalState.terminalOpen,
-        });
 
-      setTerminalOpen(true);
-      if (shouldCreateNewTerminal) {
-        storeNewTerminal(activeThreadId, targetTerminalId);
-      } else {
-        storeSetActiveTerminal(activeThreadId, targetTerminalId);
+      setThreadError(activeThreadId, `Script "${script.name}" cannot run without a terminal.`);
+      if (options?.throwOnError) {
+        throw new Error(`Script "${script.name}" cannot run without a terminal.`);
       }
-      setTerminalFocusRequestId((value) => value + 1);
-
-      try {
-        const { metadata } = await runProjectCommandInTerminal({
-          api,
-          threadId: activeThreadId,
-          terminalId: targetTerminalId,
-          project: {
-            cwd: activeProject.cwd,
-          },
-          cwd: targetCwd,
-          command: script.command,
-          worktreePath: options?.worktreePath ?? activeThread.worktreePath ?? null,
-          ...(options?.env ? { env: options.env } : {}),
-        });
-        if (metadata) {
-          storeSetTerminalMetadata(activeThreadId, targetTerminalId, {
-            cliKind: metadata.cliKind,
-            label: metadata.label,
-          });
-        }
-        return { terminalId: targetTerminalId };
-      } catch (error) {
-        setThreadError(
-          activeThreadId,
-          error instanceof Error ? error.message : `Failed to run script "${script.name}".`,
-        );
-        if (options?.throwOnError) {
-          throw error instanceof Error
-            ? error
-            : new Error(`Failed to run script "${script.name}".`);
-        }
-        return null;
-      }
+      return null;
     },
     [
       activeProject,
       activeThread,
       activeThreadId,
       gitCwd,
-      setTerminalOpen,
       setThreadError,
-      storeNewTerminal,
-      storeSetActiveTerminal,
-      storeSetTerminalMetadata,
       setLastInvokedScriptByProjectId,
-      terminalState.activeTerminalId,
-      terminalState.terminalOpen,
-      terminalState.runningTerminalIds,
-      terminalState.terminalIds,
     ],
   );
   const stopActiveThreadSession = useCallback(async () => {
@@ -4694,14 +3945,14 @@ export default function ChatView({
   }, [activeThread?.id]);
 
   useEffect(() => {
-    if (!activeThread?.id || terminalState.terminalOpen || isInactiveSplitPane) return;
+    if (!activeThread?.id || isInactiveSplitPane) return;
     const frame = window.requestAnimationFrame(() => {
       focusComposer();
     });
     return () => {
       window.cancelAnimationFrame(frame);
     };
-  }, [activeThread?.id, focusComposer, isInactiveSplitPane, terminalState.terminalOpen]);
+  }, [activeThread?.id, focusComposer, isInactiveSplitPane]);
 
   useEffect(() => {
     composerImagesRef.current = composerImages;
@@ -4714,10 +3965,6 @@ export default function ChatView({
   useEffect(() => {
     composerAssistantSelectionsRef.current = composerAssistantSelections;
   }, [composerAssistantSelections]);
-
-  useEffect(() => {
-    composerTerminalContextsRef.current = composerTerminalContexts;
-  }, [composerTerminalContexts]);
 
   useEffect(() => {
     composerFileCommentsRef.current = composerFileComments;
@@ -5079,28 +4326,6 @@ export default function ChatView({
   ]);
 
   useEffect(() => {
-    if (!activeThreadId) return;
-    const previous = terminalOpenByThreadRef.current[activeThreadId] ?? false;
-    const current = Boolean(terminalState.terminalOpen);
-
-    if (!previous && current) {
-      terminalOpenByThreadRef.current[activeThreadId] = current;
-      setTerminalFocusRequestId((value) => value + 1);
-      return;
-    } else if (previous && !current) {
-      terminalOpenByThreadRef.current[activeThreadId] = current;
-      const frame = window.requestAnimationFrame(() => {
-        focusComposer();
-      });
-      return () => {
-        window.cancelAnimationFrame(frame);
-      };
-    }
-
-    terminalOpenByThreadRef.current[activeThreadId] = current;
-  }, [activeThreadId, focusComposer, terminalState.terminalOpen]);
-
-  useEffect(() => {
     if (!activeThreadId) {
       activatedThreadIdRef.current = null;
       return;
@@ -5109,29 +4334,7 @@ export default function ChatView({
       return;
     }
     activatedThreadIdRef.current = activeThreadId;
-    if (terminalState.entryPoint !== "terminal") {
-      return;
-    }
-    storeOpenTerminalThreadPage(activeThreadId);
-  }, [activeThreadId, storeOpenTerminalThreadPage, terminalState.entryPoint]);
-
-  useEffect(() => {
-    if (!terminalWorkspaceOpen) {
-      return;
-    }
-
-    if (terminalState.workspaceActiveTab === "terminal") {
-      setTerminalFocusRequestId((value) => value + 1);
-      return;
-    }
-
-    const frame = window.requestAnimationFrame(() => {
-      focusComposer();
-    });
-    return () => {
-      window.cancelAnimationFrame(frame);
-    };
-  }, [focusComposer, terminalState.workspaceActiveTab, terminalWorkspaceOpen]);
+  }, [activeThreadId]);
 
   const onInterrupt = useCallback(async () => {
     const api = readNativeApi();
@@ -5168,17 +4371,8 @@ export default function ChatView({
         return;
       }
       const composerPickerShortcutActive =
-        !isTerminalFocused() &&
-        !isComposerApprovalState &&
-        canHandleComposerPickerShortcut(event, composerFormRef.current);
-      const shortcutContext = {
-        terminalFocus: isTerminalFocused(),
-        terminalOpen: Boolean(terminalState.terminalOpen),
-        terminalWorkspaceOpen,
-        terminalWorkspaceTerminalOnly: terminalState.workspaceLayout === "terminal-only",
-        terminalWorkspaceTerminalTabActive,
-        terminalWorkspaceChatTabActive,
-      };
+        !isComposerApprovalState && canHandleComposerPickerShortcut(event, composerFormRef.current);
+      const shortcutContext = {};
 
       const command = resolveShortcutCommand(event, keybindings, {
         context: shortcutContext,
@@ -5211,110 +4405,10 @@ export default function ChatView({
         return;
       }
 
-      if (command === "terminal.toggle") {
-        event.preventDefault();
-        event.stopPropagation();
-        toggleTerminalVisibility();
-        return;
-      }
-
-      if (command === "terminal.split" || command === "terminal.splitRight") {
-        event.preventDefault();
-        event.stopPropagation();
-        if (!terminalState.terminalOpen) {
-          setTerminalOpen(true);
-        }
-        splitTerminalRight();
-        return;
-      }
-
-      if (command === "terminal.splitLeft") {
-        event.preventDefault();
-        event.stopPropagation();
-        if (!terminalState.terminalOpen) {
-          setTerminalOpen(true);
-        }
-        splitTerminalLeft();
-        return;
-      }
-
-      if (command === "terminal.splitDown") {
-        event.preventDefault();
-        event.stopPropagation();
-        if (!terminalState.terminalOpen) {
-          setTerminalOpen(true);
-        }
-        splitTerminalDown();
-        return;
-      }
-
-      if (command === "terminal.splitUp") {
-        event.preventDefault();
-        event.stopPropagation();
-        if (!terminalState.terminalOpen) {
-          setTerminalOpen(true);
-        }
-        splitTerminalUp();
-        return;
-      }
-
-      if (command === "terminal.close") {
-        event.preventDefault();
-        event.stopPropagation();
-        if (!terminalState.terminalOpen) return;
-        closeTerminal(terminalState.activeTerminalId);
-        return;
-      }
-
-      if (command === "terminal.new") {
-        event.preventDefault();
-        event.stopPropagation();
-        createTerminalFromShortcut();
-        return;
-      }
-
-      if (command === "terminal.workspace.newFullWidth") {
-        event.preventDefault();
-        event.stopPropagation();
-        openNewFullWidthTerminal();
-        return;
-      }
-
-      if (command === "terminal.workspace.closeActive") {
-        event.preventDefault();
-        event.stopPropagation();
-        closeActiveWorkspaceView();
-        return;
-      }
-
-      if (command === "terminal.workspace.terminal") {
-        event.preventDefault();
-        event.stopPropagation();
-        if (!terminalWorkspaceOpen) return;
-        setTerminalWorkspaceTab("terminal");
-        return;
-      }
-
-      if (command === "terminal.workspace.chat") {
-        event.preventDefault();
-        event.stopPropagation();
-        if (!terminalWorkspaceOpen) return;
-        setTerminalWorkspaceTab("chat");
-        return;
-      }
-
       if (command === "diff.toggle") {
         event.preventDefault();
         event.stopPropagation();
         onToggleDiff();
-        return;
-      }
-
-      if (command === "rightPanel.toggle") {
-        event.preventDefault();
-        event.stopPropagation();
-        if (!hasRightDockPanes) return;
-        toggleRightDock();
         return;
       }
 
@@ -5339,24 +4433,9 @@ export default function ChatView({
     return () => window.removeEventListener("keydown", handler, { capture: true });
   }, [
     activeProject,
-    terminalState.terminalOpen,
-    terminalState.activeTerminalId,
-    terminalState.workspaceLayout,
     activeThreadId,
-    closeTerminal,
-    closeActiveWorkspaceView,
-    createTerminalFromShortcut,
-    setTerminalOpen,
-    openNewFullWidthTerminal,
     runProjectScript,
     keybindings,
-    splitTerminalDown,
-    splitTerminalLeft,
-    splitTerminalRight,
-    splitTerminalUp,
-    terminalWorkspaceChatTabActive,
-    terminalWorkspaceOpen,
-    terminalWorkspaceTerminalTabActive,
     onToggleDiff,
     onInterrupt,
     onSplitSurface,
@@ -5364,15 +4443,11 @@ export default function ChatView({
     hasLiveTurn,
     handleModelPickerOpenChange,
     handleTraitsPickerOpenChange,
-    hasRightDockPanes,
     isComposerApprovalState,
     pendingUserInputs.length,
-    setTerminalWorkspaceTab,
     surfaceMode,
     scheduleComposerFocus,
     toggleComposerFocus,
-    toggleRightDock,
-    toggleTerminalVisibility,
   ]);
 
   // --- Composer attachment entry points -------------------------------------
@@ -5583,9 +4658,6 @@ export default function ChatView({
         for (const comment of restoredFileComments) {
           addComposerFileCommentToDraft(comment);
         }
-        if (queuedTurn.terminalContexts.length > 0) {
-          addComposerTerminalContextsToDraft(queuedTurn.terminalContexts);
-        }
         if (queuedTurn.pastedTexts.length > 0) {
           addComposerPastedTextsToDraft(queuedTurn.pastedTexts);
         }
@@ -5617,7 +4689,6 @@ export default function ChatView({
       addComposerFileCommentToDraft,
       addComposerFilesToDraft,
       addComposerImagesToDraft,
-      addComposerTerminalContextsToDraft,
       addComposerPastedTextsToDraft,
       clearComposerDraftContent,
       scheduleComposerFocus,
@@ -5718,8 +4789,6 @@ export default function ChatView({
       queuedChatTurn?.assistantSelections ?? composerAssistantSelections;
     const composerImagesForSend = composerRegularImagesForSend;
     const composerFileCommentsForSend = queuedChatTurn?.fileComments ?? composerFileComments;
-    const composerTerminalContextsForSend =
-      queuedChatTurn?.terminalContexts ?? composerTerminalContexts;
     const composerPastedTextsForSend = queuedChatTurn?.pastedTexts ?? composerPastedTexts;
     const selectedComposerSkillsForSend =
       queuedChatTurn?.skills ?? selectedComposerSkillsRef.current;
@@ -5736,8 +4805,6 @@ export default function ChatView({
     const envModeForSend = queuedChatTurn?.envMode ?? envMode;
     const {
       trimmedPrompt: trimmed,
-      sendableTerminalContexts: sendableComposerTerminalContexts,
-      expiredTerminalContextCount,
       sendablePastedTexts: sendableComposerPastedTexts,
       hasSendableContent,
     } = deriveComposerSendState({
@@ -5746,7 +4813,6 @@ export default function ChatView({
       fileCount: composerFilesForSend.length,
       assistantSelectionCount: composerAssistantSelectionsForSend.length,
       fileCommentCount: composerFileCommentsForSend.length,
-      terminalContexts: composerTerminalContextsForSend,
       pastedTexts: composerPastedTextsForSend,
     });
     let trimmedPromptForSend = trimmed;
@@ -5770,7 +4836,6 @@ export default function ChatView({
       composerFilesForSend.length > 0 ||
       composerAssistantSelectionsForSend.length > 0 ||
       composerFileCommentsForSend.length > 0 ||
-      sendableComposerTerminalContexts.length > 0 ||
       sendableComposerPastedTexts.length > 0;
     // Queued chat turns already captured their intended mode. Live plan follow-ups
     // with attachments must use the normal send path so references are preserved.
@@ -5817,7 +4882,6 @@ export default function ChatView({
       composerFilesForSend.length === 0 &&
       composerAssistantSelectionsForSend.length === 0 &&
       composerFileCommentsForSend.length === 0 &&
-      sendableComposerTerminalContexts.length === 0 &&
       sendableComposerPastedTexts.length === 0 &&
       // Provider mentions are structured turn metadata, and automation definitions persist text only.
       selectedComposerMentionsForSend.length === 0;
@@ -5838,17 +4902,6 @@ export default function ChatView({
           })
         : undefined);
     if (!hasSendableContent) {
-      if (expiredTerminalContextCount > 0) {
-        const toastCopy = buildExpiredTerminalContextToastCopy(
-          expiredTerminalContextCount,
-          "empty",
-        );
-        toastManager.add({
-          type: "warning",
-          title: toastCopy.title,
-          description: toastCopy.description,
-        });
-      }
       return false;
     }
     if (!activeProject) return false;
@@ -5896,7 +4949,6 @@ export default function ChatView({
           images: queuedImagesForPersistence,
           files: composerFilesForSend,
           assistantSelections: composerAssistantSelectionsForSend,
-          terminalContexts: sendableComposerTerminalContexts,
           fileComments: composerFileCommentsForSend,
           pastedTexts: sendableComposerPastedTexts,
         }),
@@ -5905,7 +4957,6 @@ export default function ChatView({
         files: composerFilesForSend,
         assistantSelections: composerAssistantSelectionsForSend,
         fileComments: composerFileCommentsForSend,
-        terminalContexts: sendableComposerTerminalContexts,
         pastedTexts: sendableComposerPastedTexts,
         skills: selectedComposerSkillsForSend,
         mentions: selectedComposerMentionsForSend,
@@ -5937,8 +4988,7 @@ export default function ChatView({
         titleSeed = `File: ${composerFilesForSend[0]?.name ?? "attachment"}`;
       } else if (composerAssistantSelectionsForSend.length > 0) {
         titleSeed = formatAssistantSelectionTitleSeed(composerAssistantSelectionsForSend.length);
-      } else if (sendableComposerTerminalContexts.length > 0) {
-        titleSeed = formatTerminalContextLabel(sendableComposerTerminalContexts[0]!);
+      } else if (false) {
       } else if (composerFileCommentsForSend.length > 0) {
         titleSeed = formatFileCommentTitleSeed(composerFileCommentsForSend.length);
       } else if (sendableComposerPastedTexts.length > 0) {
@@ -6073,14 +5123,12 @@ export default function ChatView({
     const composerFilesSnapshot = [...composerFilesForSend];
     const composerAssistantSelectionsSnapshot = [...composerAssistantSelectionsForSend];
     const composerFileCommentsSnapshot = [...composerFileCommentsForSend];
-    const composerTerminalContextsSnapshot = [...sendableComposerTerminalContexts];
     const composerPastedTextsSnapshot = [...sendableComposerPastedTexts];
     const composerSkillsSnapshot = [...selectedComposerSkillsForSend];
     const composerMentionsSnapshot = [...selectedComposerMentionsForSend];
     const visibleMessageTextForSend = appendComposerMessageContext({
       prompt: promptForSend,
       assistantSelections: composerAssistantSelectionsSnapshot,
-      terminalContexts: composerTerminalContextsSnapshot,
       fileComments: composerFileCommentsSnapshot,
       pastedTexts: composerPastedTextsSnapshot,
     });
@@ -6155,17 +5203,6 @@ export default function ChatView({
     armTranscriptAutoFollow(threadIdForSend, true);
 
     setThreadError(threadIdForSend, null);
-    if (expiredTerminalContextCount > 0) {
-      const toastCopy = buildExpiredTerminalContextToastCopy(
-        expiredTerminalContextCount,
-        "omitted",
-      );
-      toastManager.add({
-        type: "warning",
-        title: toastCopy.title,
-        description: toastCopy.description,
-      });
-    }
     // Queued turns are dispatched from their captured snapshot, so this send path
     // must not clear a separate live draft the user may already be editing.
     if (queuedChatTurn === null) {
@@ -6313,13 +5350,7 @@ export default function ChatView({
           if (nextThreadWorktreePath) {
             setupScriptOptions.cwd = nextThreadWorktreePath;
           }
-          const setupTerminal = await runProjectScript(setupScript, setupScriptOptions);
-          if (setupTerminal) {
-            await waitForSetupScriptTerminalActivity({
-              threadId: threadIdForSend,
-              terminalId: setupTerminal.terminalId,
-            });
-          }
+          await runProjectScript(setupScript, setupScriptOptions);
         }
       }
 
@@ -6402,7 +5433,6 @@ export default function ChatView({
         composerFilesRef.current.length === 0 &&
         composerAssistantSelectionsRef.current.length === 0 &&
         composerFileCommentsRef.current.length === 0 &&
-        composerTerminalContextsRef.current.length === 0 &&
         composerPastedTextsRef.current.length === 0
       ) {
         setOptimisticUserMessages((existing) => {
@@ -6431,7 +5461,6 @@ export default function ChatView({
         for (const comment of composerFileCommentsSnapshot) {
           addComposerFileCommentToDraft(comment);
         }
-        addComposerTerminalContextsToDraft(composerTerminalContextsSnapshot);
         addComposerPastedTextsToDraft(composerPastedTextsSnapshot);
         updateSelectedComposerSkills(composerSkillsSnapshot);
         updateSelectedComposerMentions(composerMentionsSnapshot);
@@ -7693,7 +6722,6 @@ export default function ChatView({
     cursor: number;
     expandedCursor: number;
     selectionCollapsed: boolean;
-    terminalContextIds: string[];
   } => {
     const editorSnapshot = composerEditorRef.current?.readSnapshot();
     if (editorSnapshot) {
@@ -7704,9 +6732,8 @@ export default function ChatView({
       cursor: composerCursor,
       expandedCursor: expandCollapsedComposerCursor(promptRef.current, composerCursor),
       selectionCollapsed: true,
-      terminalContextIds: composerTerminalContexts.map((context) => context.id),
     };
-  }, [composerCursor, composerTerminalContexts]);
+  }, [composerCursor]);
 
   const resolveActiveComposerTrigger = useCallback((): {
     snapshot: {
@@ -7894,7 +6921,7 @@ export default function ChatView({
         });
         return;
       }
-      await handleNewThread(activeProject.id, { entryPoint: "chat" });
+      await handleNewThread(activeProject.id);
     },
     openForkTargetPicker: () => {
       setComposerCommandPicker("fork-target");
@@ -8073,7 +7100,6 @@ export default function ChatView({
       nextCursor: number,
       expandedCursor: number,
       cursorAdjacentToMention: boolean,
-      terminalContextIds: string[],
     ) => {
       if (activePendingProgress?.activeQuestion && activePendingUserInput) {
         const interruptedNavigation = promptHistoryNavigationRef.current;
@@ -8136,12 +7162,6 @@ export default function ChatView({
       if (composerCommandPicker !== null && nextPrompt.trim().length > 0) {
         setComposerCommandPicker(null);
       }
-      if (!terminalContextIdListsEqual(composerTerminalContexts, terminalContextIds)) {
-        setComposerDraftTerminalContexts(
-          threadId,
-          syncTerminalContextsByIds(composerTerminalContexts, terminalContextIds),
-        );
-      }
       setComposerCursor(nextCursor);
       setComposerTrigger(
         cursorAdjacentToMention ? null : detectComposerTrigger(nextPrompt, expandedCursor),
@@ -8150,14 +7170,12 @@ export default function ChatView({
     [
       activePendingProgress?.activeQuestion,
       activePendingUserInput,
-      composerTerminalContexts,
       composerCommandPicker,
       onChangeActivePendingUserInputCustomAnswer,
       promptHistory,
       restoreComposerDraftPromptHistorySavedDraft,
       setPrompt,
       setComposerDraftPromptHistorySavedDraft,
-      setComposerDraftTerminalContexts,
       setComposerCommandPicker,
       setRestoredQueuedSourceProposedPlan,
       threadId,
@@ -8362,28 +7380,6 @@ export default function ChatView({
       search: (previous) => ({ ...stripDiffSearchParams(previous), view: "editor" }),
     });
   }, [activeProjectIdForNewChat, handleNewThread]);
-  const onOpenEditorChat = useCallback(
-    (nextThreadId: ThreadId) => {
-      storeOpenChatThreadPage(nextThreadId);
-      onNavigateToThread(nextThreadId);
-    },
-    [onNavigateToThread, storeOpenChatThreadPage],
-  );
-  const onOpenEditorTerminal = useCallback(() => {
-    if (!activeThreadId) return;
-    setTerminalPresentationMode("workspace");
-    setTerminalWorkspaceLayout("terminal-only");
-    setTerminalWorkspaceTab("terminal");
-    setTerminalFocusRequestId((value) => value + 1);
-  }, [
-    activeThreadId,
-    setTerminalPresentationMode,
-    setTerminalWorkspaceLayout,
-    setTerminalWorkspaceTab,
-  ]);
-  const onCloseEditorTerminal = useCallback(() => {
-    void closeTerminal(terminalState.activeTerminalId);
-  }, [closeTerminal, terminalState.activeTerminalId]);
   const onRevertUserMessage = useCallback(
     (messageId: MessageId) => {
       const targetTurnCount = revertTurnCountByUserMessageId.get(messageId);
@@ -8756,7 +7752,6 @@ export default function ChatView({
                       ) : (
                         <ComposerCommandMenu
                           items={composerMenuItems}
-                          resolvedTheme={resolvedTheme}
                           isLoading={isComposerMenuLoading}
                           triggerKind={
                             composerCommandPicker !== null
@@ -8803,13 +7798,7 @@ export default function ChatView({
                           : prompt
                     }
                     cursor={composerCursor}
-                    terminalContexts={
-                      !isComposerApprovalState && pendingUserInputs.length === 0
-                        ? composerTerminalContexts
-                        : []
-                    }
                     mentionReferences={selectedComposerMentions}
-                    onRemoveTerminalContext={removeComposerTerminalContextFromDraft}
                     onChange={onPromptChange}
                     onCommandKeyDown={onComposerCommandKey}
                     onPaste={onComposerPaste}
@@ -8857,6 +7846,7 @@ export default function ChatView({
                           : "min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:min-w-max sm:overflow-visible",
                       )}
                     >
+                      {composerPickerControls}
                       {activeTaskList || sidebarProposedPlan || planSidebarOpen ? (
                         <Button
                           variant="ghost"
@@ -8877,12 +7867,11 @@ export default function ChatView({
                       data-chat-composer-actions="right"
                       className="flex shrink-0 items-center gap-1"
                     >
-                      {composerPickerControls}
                       {activePendingProgress ? (
                         <Button
                           type="submit"
                           size="sm"
-                          className="rounded-full px-4"
+                          className="rounded-lg px-4"
                           disabled={
                             activePendingIsResponding ||
                             (activePendingProgress.isLastQuestion
@@ -8917,7 +7906,7 @@ export default function ChatView({
                             <Button
                               type="submit"
                               size="sm"
-                              className="h-9 rounded-full px-4 sm:h-8"
+                              className="h-9 rounded-lg px-4 sm:h-8"
                               disabled={isSendBusy || isConnecting}
                             >
                               {isConnecting || isSendBusy ? "Sending..." : "Refine"}
@@ -8927,7 +7916,7 @@ export default function ChatView({
                               <Button
                                 type="submit"
                                 size="sm"
-                                className="h-9 rounded-l-full rounded-r-none px-4 sm:h-8"
+                                className="h-9 rounded-l-lg rounded-r-none px-4 sm:h-8"
                                 disabled={isSendBusy || isConnecting}
                               >
                                 {isConnecting || isSendBusy ? "Sending..." : "Implement"}
@@ -8938,7 +7927,7 @@ export default function ChatView({
                                     <Button
                                       size="sm"
                                       variant="default"
-                                      className="h-9 rounded-l-none rounded-r-full border-l-white/12 px-2 sm:h-8"
+                                      className="h-9 rounded-l-none rounded-r-lg border-l-white/12 px-2 sm:h-8"
                                       aria-label="Implementation actions"
                                       disabled={isSendBusy || isConnecting}
                                     />
@@ -8961,8 +7950,7 @@ export default function ChatView({
                           <Button
                             type="submit"
                             variant="prominent"
-                            size="icon-xs"
-                            className="size-8 rounded-full sm:size-8"
+                            size="icon-sm"
                             disabled={
                               isSendBusy || isConnecting || !composerSendState.hasSendableContent
                             }
@@ -8996,10 +7984,7 @@ export default function ChatView({
                                 />
                               </svg>
                             ) : (
-                              <ComposerSendArrowIcon
-                                aria-hidden="true"
-                                className="size-5 shrink-0"
-                              />
+                              <ComposerSendArrowIcon aria-hidden="true" className="size-4" />
                             )}
                           </Button>
                         )
@@ -9103,7 +8088,6 @@ export default function ChatView({
         <ChatHeader
           activeThreadId={activeThread.id}
           activeThreadTitle={surfaceTitle ?? activeThreadDisplayTitle}
-          activeThreadEntryPoint={terminalState.entryPoint}
           activeProvider={activeThread.modelSelection.provider ?? activeThread.session?.provider}
           activeProjectName={isEditorRail ? undefined : activeProjectDisplayName}
           threadBreadcrumbs={threadBreadcrumbs}
@@ -9111,7 +8095,7 @@ export default function ChatView({
             ? { className: cn(CHAT_SURFACE_HEADER_PADDING_X_CLASS, "h-full") }
             : {})}
           hideSidebarControls={isEditorRail}
-          hideHandoffControls={terminalWorkspaceTerminalTabActive || isEditorRail}
+          hideHandoffControls={isEditorRail}
           isGitRepo={isGitRepo}
           openInTarget={threadWorkspaceCwd}
           activeProjectScripts={isEditorRail ? undefined : activeProjectScripts}
@@ -9130,8 +8114,6 @@ export default function ChatView({
           gitCwd={threadWorkspaceCwd}
           diffTotals={repoDiffTotals}
           showGitActions={showGitActions && !isEditorRail}
-          showDiffToggle={!isEditorRail}
-          diffOpen={resolvedDiffOpen}
           diffDisabledReason={diffDisabledReason}
           surfaceMode={surfaceMode}
           chatLayoutAction={
@@ -9151,21 +8133,6 @@ export default function ChatView({
                   }
                 : null
           }
-          editorChatControls={
-            isEditorRail && activeProject
-              ? {
-                  projectId: activeProject.id,
-                  activeSurface: terminalWorkspaceTerminalTabActive ? "terminal" : "chat",
-                  terminalAvailable: terminalState.terminalOpen,
-                  terminalHasRunningActivity: terminalState.runningTerminalIds.length > 0,
-                  onNewChat: onNewEditorChat,
-                  onNewTerminal: onOpenEditorTerminal,
-                  onOpenChat: onOpenEditorChat,
-                  onOpenTerminal: onOpenEditorTerminal,
-                  onCloseTerminal: onCloseEditorTerminal,
-                }
-              : null
-          }
           changeThreadAction={
             surfaceMode === "split" && isFocusedPane && onChangeThreadInSplitPane
               ? {
@@ -9178,7 +8145,6 @@ export default function ChatView({
           onAddProjectScript={saveProjectScript}
           onUpdateProjectScript={updateProjectScript}
           onDeleteProjectScript={deleteProjectScript}
-          onToggleDiff={onToggleDiff}
           onCreateHandoff={onCreateHandoffThread}
           onNavigateToThread={onNavigateToThread}
           onRenameThread={() => setRenameDialogOpen(true)}
@@ -9202,27 +8168,11 @@ export default function ChatView({
         rateLimitStatus={visibleActiveRateLimitStatus}
         onDismiss={dismissActiveRateLimitBanner}
       />
-      {terminalWorkspaceOpen && !isEditorRail ? (
-        <TerminalWorkspaceTabs
-          activeTab={terminalState.workspaceActiveTab}
-          isWorking={isWorking}
-          terminalHasRunningActivity={terminalState.runningTerminalIds.length > 0}
-          terminalCount={terminalState.terminalIds.length}
-          workspaceLayout={terminalState.workspaceLayout}
-          onSelectTab={setTerminalWorkspaceTab}
-        />
-      ) : null}
       {/* Main content area with optional plan sidebar */}
       <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
         {/* Chat column */}
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          <div
-            aria-hidden={terminalWorkspaceTerminalTabActive}
-            className={cn(
-              "flex min-h-0 min-w-0 flex-1 flex-col",
-              terminalWorkspaceTerminalTabActive ? "pointer-events-none invisible" : "",
-            )}
-          >
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {shouldRenderChatPaneContent && isCenteredEmptyLanding ? (
               <div
                 className={cn(
@@ -9276,7 +8226,6 @@ export default function ChatView({
                       followLiveOutput={hasStreamingAssistantText}
                       onIsAtEndChange={onIsAtEndChange}
                       markdownCwd={threadWorkspaceCwd ?? undefined}
-                      resolvedTheme={resolvedTheme}
                       chatFontSizePx={settings.chatFontSizePx}
                       timestampFormat={timestampFormat}
                       workspaceRoot={activeProject?.cwd ?? undefined}
@@ -9296,7 +8245,6 @@ export default function ChatView({
                         ) : undefined
                       }
                       emptyStateProjectName={activeProjectDisplayName}
-                      terminalWorkspaceTerminalTabActive={terminalWorkspaceTerminalTabActive}
                       onMessagesScroll={onMessagesScroll}
                       onMessagesClickCapture={onMessagesClickCapture}
                       onMessagesMouseUp={onMessagesMouseUp}
@@ -9325,19 +8273,21 @@ export default function ChatView({
                     "relative z-10 w-full shrink-0 overflow-visible",
                     CHAT_COLUMN_GUTTER_CLASS_NAME,
                     composerDisclosure ? "pt-2" : "-mt-5 pt-0 sm:pt-0",
-                    // A trailing BranchToolbar only renders for legacy git threads; otherwise the
-                    // composer is the last element, so give it a comfortable bottom margin.
-                    isGitRepo ? "pb-0.5" : "pb-3 sm:pb-4",
+                    "pb-1 sm:pb-1.5",
                   )}
                   // Match the transcript's right inset so the composer stays aligned with chat
                   // content (and clear of the docked Environment overlay).
                 >
                   {composerSectionWithDisclosure}
                 </div>
-                {secondaryChromeReady && isGitRepo ? (
+                {secondaryChromeReady ? (
                   <div className={CHAT_COLUMN_GUTTER_CLASS_NAME}>
-                    <div className={COMPOSER_COLUMN_FRAME_CLASS_NAME}>
-                      <BranchToolbar {...branchToolbarProps} className="w-full min-w-0" />
+                    <div
+                      className={cn(COMPOSER_COLUMN_FRAME_CLASS_NAME, "flex items-center gap-2")}
+                    >
+                      {isGitRepo ? (
+                        <BranchToolbar {...branchToolbarProps} className="min-w-0 flex-1" />
+                      ) : null}
                     </div>
                   </div>
                 ) : null}
@@ -9359,28 +8309,6 @@ export default function ChatView({
               />
             ) : null}
           </div>
-
-          {terminalWorkspaceOpen ? (
-            <div
-              aria-hidden={!terminalWorkspaceTerminalTabActive}
-              className={cn(
-                "absolute inset-0 min-h-0 min-w-0 transition-[opacity,translate] duration-menu ease-out motion-reduce:transition-none",
-                terminalWorkspaceTerminalTabActive
-                  ? "translate-y-0 opacity-100"
-                  : "pointer-events-none translate-y-1 opacity-0",
-              )}
-            >
-              <ThreadTerminalDrawer
-                key={`${activeThread.id}-workspace`}
-                {...terminalDrawerProps}
-                presentationMode="workspace"
-                isVisible={terminalWorkspaceTerminalTabActive}
-                onTogglePresentationMode={
-                  terminalState.workspaceLayout === "both" ? collapseTerminalWorkspace : undefined
-                }
-              />
-            </div>
-          ) : null}
         </div>
         {/* end chat column */}
 
@@ -9404,20 +8332,6 @@ export default function ChatView({
         ) : null}
       </div>
       {/* end horizontal flex container */}
-
-      {(() => {
-        if (!terminalState.terminalOpen || terminalWorkspaceOpen) {
-          return null;
-        }
-        return (
-          <ThreadTerminalDrawer
-            key={activeThread.id}
-            {...terminalDrawerProps}
-            presentationMode="drawer"
-            onTogglePresentationMode={expandTerminalWorkspace}
-          />
-        );
-      })()}
 
       <ComposerSlashStatusDialog
         open={isSlashStatusDialogOpen}

@@ -18,19 +18,14 @@ import {
   resolveActiveThreadTitle,
   resolveActiveTurnLiveDiffState,
   resolveCommittedProviderModel,
-  resolveProjectScriptTerminalTarget,
   resolveQueuedSteerGateTransition,
   resolveRuntimeModeAfterApprovalDecision,
   QUEUED_STEER_GATE_TIMEOUT_MS,
-  buildExpiredTerminalContextToastCopy,
-  shouldAutoDeleteTerminalThreadOnLastClose,
   shouldConsumePendingCustomBinaryConfirmation,
   shouldEnableComposerPastedTextCollapse,
   shouldHandlePromptHistoryNavigationKey,
-  shouldRenderProviderHealthBanner,
   shouldShowComposerModelBootstrapSkeleton,
   shouldStartActiveTurnLayoutGrace,
-  shouldRenderTerminalWorkspace,
   worktreeSetupHasError,
 } from "./ChatView.logic";
 
@@ -103,7 +98,7 @@ describe("prompt history navigation", () => {
       },
       {
         role: "user",
-        text: "First prompt\n\n<terminal_context>\n# Terminal\noutput\n</terminal_context>",
+        text: "First prompt",
         source: "native",
       },
       {
@@ -762,61 +757,6 @@ describe("shouldConsumePendingCustomBinaryConfirmation", () => {
 });
 
 describe("deriveComposerSendState", () => {
-  it("treats expired terminal pills as non-sendable content", () => {
-    const state = deriveComposerSendState({
-      prompt: "\uFFFC",
-      imageCount: 0,
-      fileCount: 0,
-      assistantSelectionCount: 0,
-      fileCommentCount: 0,
-      terminalContexts: [
-        {
-          id: "ctx-expired",
-          threadId: ThreadId.makeUnsafe("thread-1"),
-          terminalId: "default",
-          terminalLabel: "Terminal 1",
-          lineStart: 4,
-          lineEnd: 4,
-          text: "",
-          createdAt: "2026-03-17T12:52:29.000Z",
-        },
-      ],
-      pastedTexts: [],
-    });
-
-    expect(state.trimmedPrompt).toBe("");
-    expect(state.sendableTerminalContexts).toEqual([]);
-    expect(state.expiredTerminalContextCount).toBe(1);
-    expect(state.hasSendableContent).toBe(false);
-  });
-
-  it("keeps text sendable while excluding expired terminal pills", () => {
-    const state = deriveComposerSendState({
-      prompt: `yoo \uFFFC waddup`,
-      imageCount: 0,
-      fileCount: 0,
-      assistantSelectionCount: 0,
-      fileCommentCount: 0,
-      terminalContexts: [
-        {
-          id: "ctx-expired",
-          threadId: ThreadId.makeUnsafe("thread-1"),
-          terminalId: "default",
-          terminalLabel: "Terminal 1",
-          lineStart: 4,
-          lineEnd: 4,
-          text: "",
-          createdAt: "2026-03-17T12:52:29.000Z",
-        },
-      ],
-      pastedTexts: [],
-    });
-
-    expect(state.trimmedPrompt).toBe("yoo  waddup");
-    expect(state.expiredTerminalContextCount).toBe(1);
-    expect(state.hasSendableContent).toBe(true);
-  });
-
   it("treats assistant selections as sendable content", () => {
     const state = deriveComposerSendState({
       prompt: "",
@@ -824,7 +764,6 @@ describe("deriveComposerSendState", () => {
       fileCount: 0,
       assistantSelectionCount: 1,
       fileCommentCount: 0,
-      terminalContexts: [],
       pastedTexts: [],
     });
 
@@ -838,7 +777,6 @@ describe("deriveComposerSendState", () => {
       fileCount: 0,
       assistantSelectionCount: 0,
       fileCommentCount: 1,
-      terminalContexts: [],
       pastedTexts: [],
     });
 
@@ -852,139 +790,10 @@ describe("deriveComposerSendState", () => {
       fileCount: 1,
       assistantSelectionCount: 0,
       fileCommentCount: 0,
-      terminalContexts: [],
       pastedTexts: [],
     });
 
     expect(state.hasSendableContent).toBe(true);
-  });
-});
-
-describe("buildExpiredTerminalContextToastCopy", () => {
-  it("formats clear empty-state guidance", () => {
-    expect(buildExpiredTerminalContextToastCopy(1, "empty")).toEqual({
-      title: "Expired terminal context won't be sent",
-      description: "Remove it or re-add it to include terminal output.",
-    });
-  });
-
-  it("formats omission guidance for sent messages", () => {
-    expect(buildExpiredTerminalContextToastCopy(2, "omitted")).toEqual({
-      title: "Expired terminal contexts omitted from message",
-      description: "Re-add it if you want that terminal output included.",
-    });
-  });
-});
-
-describe("shouldRenderTerminalWorkspace", () => {
-  it("renders the workspace shell before the active project has hydrated", () => {
-    expect(
-      shouldRenderTerminalWorkspace({
-        presentationMode: "workspace",
-        terminalOpen: true,
-      }),
-    ).toBe(true);
-  });
-
-  it("renders only for an open workspace terminal", () => {
-    expect(
-      shouldRenderTerminalWorkspace({
-        presentationMode: "workspace",
-        terminalOpen: true,
-      }),
-    ).toBe(true);
-    expect(
-      shouldRenderTerminalWorkspace({
-        presentationMode: "drawer",
-        terminalOpen: true,
-      }),
-    ).toBe(false);
-  });
-});
-
-describe("resolveProjectScriptTerminalTarget", () => {
-  it("reuses the base terminal only when no terminal is open or running", () => {
-    const target = resolveProjectScriptTerminalTarget({
-      baseTerminalId: "default",
-      createTerminalId: () => "new-terminal",
-      hasRunningTerminal: false,
-      terminalOpen: false,
-    });
-
-    expect(target).toEqual({
-      shouldCreateNewTerminal: false,
-      terminalId: "default",
-    });
-  });
-
-  it("creates a fresh terminal when a live terminal could keep stale cwd or env", () => {
-    expect(
-      resolveProjectScriptTerminalTarget({
-        baseTerminalId: "default",
-        createTerminalId: () => "visible-script-terminal",
-        hasRunningTerminal: false,
-        terminalOpen: true,
-      }),
-    ).toEqual({
-      shouldCreateNewTerminal: true,
-      terminalId: "visible-script-terminal",
-    });
-
-    expect(
-      resolveProjectScriptTerminalTarget({
-        baseTerminalId: "default",
-        createTerminalId: () => "running-script-terminal",
-        hasRunningTerminal: true,
-        terminalOpen: false,
-      }),
-    ).toEqual({
-      shouldCreateNewTerminal: true,
-      terminalId: "running-script-terminal",
-    });
-  });
-
-  it("honors explicit requests for a new terminal", () => {
-    const target = resolveProjectScriptTerminalTarget({
-      baseTerminalId: "default",
-      createTerminalId: () => "forced-script-terminal",
-      hasRunningTerminal: false,
-      preferNewTerminal: true,
-      terminalOpen: false,
-    });
-
-    expect(target).toEqual({
-      shouldCreateNewTerminal: true,
-      terminalId: "forced-script-terminal",
-    });
-  });
-});
-
-describe("shouldRenderProviderHealthBanner", () => {
-  it("does not show chat provider health while a terminal thread is active", () => {
-    expect(
-      shouldRenderProviderHealthBanner({
-        threadEntryPoint: "terminal",
-        terminalWorkspaceTerminalTabActive: false,
-      }),
-    ).toBe(false);
-  });
-
-  it("does not show chat provider health while the terminal workspace tab is active", () => {
-    expect(
-      shouldRenderProviderHealthBanner({
-        threadEntryPoint: "chat",
-        terminalWorkspaceTerminalTabActive: true,
-      }),
-    ).toBe(false);
-  });
-
-  it("shows chat provider health only on the chat surface", () => {
-    expect(
-      shouldRenderProviderHealthBanner({
-        threadEntryPoint: "chat",
-        terminalWorkspaceTerminalTabActive: false,
-      }),
-    ).toBe(true);
   });
 });
 
@@ -1258,68 +1067,6 @@ describe("hasServerAcknowledgedLocalDispatch", () => {
         threadError: "provider failed",
       }),
     ).toBe(true);
-  });
-});
-
-describe("shouldAutoDeleteTerminalThreadOnLastClose", () => {
-  it("deletes untouched terminal-first placeholder threads when the last terminal closes", () => {
-    expect(
-      shouldAutoDeleteTerminalThreadOnLastClose({
-        isLastTerminal: true,
-        isServerThread: true,
-        terminalEntryPoint: "terminal",
-        thread: {
-          title: "New terminal",
-          messages: [],
-          latestTurn: null,
-          session: null,
-          activities: [],
-          proposedPlans: [],
-        },
-      }),
-    ).toBe(true);
-  });
-
-  it("keeps non-placeholder or already-used threads", () => {
-    expect(
-      shouldAutoDeleteTerminalThreadOnLastClose({
-        isLastTerminal: true,
-        isServerThread: true,
-        terminalEntryPoint: "terminal",
-        thread: {
-          title: "Manual rename",
-          messages: [],
-          latestTurn: null,
-          session: null,
-          activities: [],
-          proposedPlans: [],
-        },
-      }),
-    ).toBe(false);
-
-    expect(
-      shouldAutoDeleteTerminalThreadOnLastClose({
-        isLastTerminal: true,
-        isServerThread: true,
-        terminalEntryPoint: "terminal",
-        thread: {
-          title: "New terminal",
-          messages: [
-            {
-              id: "msg-1" as never,
-              role: "user",
-              text: "hello",
-              createdAt: "2026-04-06T12:00:00.000Z",
-              streaming: false,
-            },
-          ],
-          latestTurn: null,
-          session: null,
-          activities: [],
-          proposedPlans: [],
-        },
-      }),
-    ).toBe(false);
   });
 });
 

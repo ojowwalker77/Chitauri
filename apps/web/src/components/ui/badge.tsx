@@ -18,7 +18,7 @@ const badgeVariants = cva(
         default:
           "h-5.5 min-w-5.5 px-[calc(--spacing(1)-1px)] text-[length:var(--app-font-size-ui-sm,13px)] sm:h-4.5 sm:min-w-4.5 sm:text-[length:var(--app-font-size-ui-xs,12px)]",
         lg: "h-6.5 min-w-6.5 px-[calc(--spacing(1.5)-1px)] text-[length:var(--app-font-size-ui,14px)] sm:h-5.5 sm:min-w-5.5 sm:text-[length:var(--app-font-size-ui-sm,13px)]",
-        sm: "h-5 min-w-5 rounded-[.25rem] px-[calc(--spacing(1)-1px)] text-[length:var(--app-font-size-ui-xs,12px)] sm:h-4 sm:min-w-4 sm:text-[length:var(--app-font-size-ui-2xs,11px)]",
+        sm: "h-5 min-w-5 rounded-sm px-[calc(--spacing(1)-1px)] text-[length:var(--app-font-size-ui-xs,12px)] sm:h-4 sm:min-w-4 sm:text-[length:var(--app-font-size-ui-2xs,11px)]",
       },
       variant: {
         default: "bg-primary text-primary-foreground [button&,a&]:hover:bg-primary/90",

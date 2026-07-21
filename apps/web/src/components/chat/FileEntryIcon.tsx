@@ -53,10 +53,6 @@ export const FileEntryIcon = memo(function FileEntryIcon(props: {
   // undefined for source-file surfaces (diff/editor/timeline) that key purely
   // off the path.
   mimeType?: string | null | undefined;
-  // Vestigial: Central icons are `currentColor` glyphs, so theme no longer
-  // affects icon selection. Optional so theme-less surfaces (e.g. markdown
-  // file links, code-block headers) can reuse this same primitive.
-  theme?: "light" | "dark" | undefined;
   className?: string;
   // Timeline changed-file rows pass their own muted color and should not pick
   // up extension-specific colors.

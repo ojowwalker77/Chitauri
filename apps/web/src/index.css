@@ -89,13 +89,18 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  /* Corner ladder anchored on BONSAI-DESIGN-SYSTEM `WindowChrome.radius = 14`:
+     `--radius` IS the chrome radius, so `rounded-lg` — the default for buttons,
+     rows and chips — lands exactly on it. The rest of the scale steps off that
+     anchor by fixed offsets rather than multipliers, so tuning the one knob
+     shifts the whole family without the ends drifting into slabs or circles. */
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) + 2px);
+  --radius-2xl: calc(var(--radius) + 6px);
+  --radius-3xl: calc(var(--radius) + 10px);
+  --radius-4xl: calc(var(--radius) + 14px);
   @keyframes skeleton {
     to {
       background-position: -200% 0;
@@ -138,7 +143,7 @@
      The namespace must be `--transition-duration-*`: that is what backs the `duration-*`
      utilities. A `--duration-*` token compiles clean and silently generates nothing, so
      every `duration-press` would quietly fall back to --default-transition-duration. */
-  --transition-duration-press: 140ms;
+  --transition-duration-press: 120ms;
   --transition-duration-tooltip: 160ms;
   --transition-duration-menu: 200ms;
   --transition-duration-disclosure: 220ms;
@@ -168,6 +173,59 @@
      gradients, glass, or a second content-card shadow competing for attention. */
   .chitauri-anthropic-shell {
     --app-content-card-radius: 0px;
+    /* One canvas for the whole window: the sidebar and the chat column are both
+       transparent, so a background image runs continuously across the seam
+       instead of stopping at the panel edge. */
+    background: var(--background);
+  }
+
+  /* ── Liquid glass ────────────────────────────────────────────────────────
+     macOS backs the window with an "under-window" vibrancy material (see
+     getWindowMaterialOptions in the desktop main process). When the active theme
+     is non-opaque, `useTheme` stamps data-window-material="translucent" and every
+     persistent chrome surface switches from a solid fill to a tint + blur so the
+     desktop shows through.
+
+     ONE recipe (BONSAI-DESIGN-SYSTEM §5): a single blur/saturate pair, and each
+     surface differs only by how much tint it carries. No per-surface frosts —
+     that is how blur radii drift apart. Each blurred layer is its own compositor
+     pass, so the recipe stays limited to the shell, the sidebar, the composer,
+     and buttons. */
+  :root {
+    --app-glass-filter: blur(20px) saturate(140%);
+  }
+
+  :root[data-window-material="translucent"] body {
+    background: transparent;
+  }
+
+  :root[data-window-material="translucent"] .chitauri-anthropic-shell,
+  :root[data-window-material="translucent"] .app-sidebar-surface,
+  :root[data-window-material="translucent"] .chat-composer-surface,
+  :root[data-window-material="translucent"] .chat-composer-shell,
+  :root[data-window-material="translucent"] .chat-composer-stacked-top,
+  :root[data-window-material="translucent"] .chat-composer-surface-banner,
+  :root[data-window-material="translucent"] [data-slot="button"]:not(.bg-transparent) {
+    backdrop-filter: var(--app-glass-filter);
+    -webkit-backdrop-filter: var(--app-glass-filter);
+  }
+
+  :root[data-window-material="translucent"] .chitauri-anthropic-shell {
+    background: color-mix(
+      in srgb,
+      var(--background) calc(100% - var(--app-window-transparency, 20%)),
+      transparent
+    );
+  }
+
+  /* The sidebar carries no material of its own — it is the composer surface,
+     verbatim, so the two read as the same pane of glass. */
+  :root[data-window-material="translucent"] .app-sidebar-surface,
+  :root[data-window-material="translucent"] .chat-composer-surface,
+  :root[data-window-material="translucent"] .chat-composer-shell,
+  :root[data-window-material="translucent"] .chat-composer-stacked-top,
+  :root[data-window-material="translucent"] .chat-composer-surface-banner {
+    background: color-mix(in srgb, var(--composer-surface) 55%, transparent);
   }
 
   .sidebar-icon-button {
@@ -183,7 +241,9 @@
      It runs full height and meets the canvas on a single hairline, so the only
      border is on the seam side — no card radius, no surrounding inset. */
   .app-sidebar-surface {
-    --app-sidebar-surface: var(--panel);
+    /* Transparent, not `--panel`: the shell paints the canvas (colour or image)
+       for both docks, and the sidebar reads as part of it. */
+    --app-sidebar-surface: transparent;
     /* Row metrics come from the density scale (`getDensityCssVariables`) so the
        sidebar honors the UI density setting instead of pinning its own height. */
     overflow: hidden;
@@ -205,14 +265,13 @@
 
   .app-sidebar-surface [data-slot="sidebar-footer"] {
     flex: none;
-    border-top: 1px solid var(--sidebar-border);
     padding: 0.625rem 0.75rem;
   }
 
   .app-sidebar-surface [data-slot="sidebar-menu-button"],
   .app-sidebar-surface [data-slot="sidebar-menu-sub-button"],
   .app-sidebar-surface [data-thread-item] {
-    border-radius: 8px;
+    border-radius: var(--radius-lg);
     transition-duration: 140ms;
   }
 
@@ -225,7 +284,7 @@
 
   /* Small icon badges inherit the persistent panel language. */
   .sidebar-icon-chip {
-    background: var(--app-sidebar-surface, var(--panel));
+    background: var(--panel);
     border: 1px solid var(--panel-border);
     box-shadow: none;
   }
@@ -353,9 +412,27 @@
 }
 
 :root {
-  color-scheme: light;
-  --radius: 0.5rem;
+  --radius: 0.75rem;
   --radius-user-message: var(--radius-2xl);
+
+  /* Fixed spacing scale for rows, chat gutters and the composer. These were once
+     driven by a user-facing "UI density" setting; density is a design decision,
+     not a preference, so the values are constants and the runtime writes nothing
+     to the document root. The `--app-density-*` names are kept because they are
+     referenced from Tailwind arbitrary values across the app. */
+  --app-density-row-height: 1.875rem;
+  --app-density-row-padding-y: 0.125rem;
+  --app-density-row-gap: 0.25rem;
+  --app-density-settings-row-padding-y: 0.625rem;
+  --app-density-chat-gutter-x: 0.75rem;
+  --app-density-chat-gutter-x-lg: 1.25rem;
+  --app-density-composer-editor-min-height: 2lh;
+  --app-density-composer-editor-padding-top: 0.75rem;
+  --app-density-composer-editor-padding-bottom: 0.5rem;
+  --app-density-composer-editor-padding-x: 0.75rem;
+  --app-density-composer-editor-padding-x-end: 0.875rem;
+  --app-density-composer-footer-padding: 0.375rem;
+  --app-density-composer-footer-padding-end: 0.5rem;
   --font-ui-family: "Inter", sans-serif;
   --font-mono-family: "0xProto", monospace;
   --font-chat-code-family: "0xProto", monospace;
@@ -363,14 +440,15 @@
   --app-sidebar-backdrop-filter: none;
   --app-sidebar-shadow: none;
   --app-sidebar-surface: var(--panel);
-  --background: #ffffff;
-  --foreground: #111318;
-  --panel: #f7f8fa;
-  --panel-border: #e5e7eb;
-  --hover: rgba(17, 19, 24, 0.05);
-  --selected: rgba(17, 19, 24, 0.08);
+  color-scheme: dark;
+  --background: #090909;
+  --foreground: #f7f8fa;
+  --panel: #141414;
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --hover: rgba(255, 255, 255, 0.05);
+  --selected: rgba(255, 255, 255, 0.08);
   --faint: color-mix(in srgb, var(--foreground) 45%, transparent);
-  --well: #f2f2f4;
+  --well: color-mix(in srgb, #141414 55%, #090909);
   --card: var(--panel);
   --card-foreground: var(--foreground);
   --popover: var(--panel);
@@ -380,13 +458,13 @@
   --secondary: var(--hover);
   --secondary-foreground: var(--foreground);
   --muted: var(--hover);
-  --muted-foreground: #6b7280;
+  --muted-foreground: #9aa1ad;
   --accent: var(--hover);
   --accent-foreground: var(--foreground);
   --danger: #e94b4b;
   --destructive: var(--danger);
   --border: var(--panel-border);
-  --input: #f7f8fa;
+  --input: #141414;
   --ring: #3b82f6;
   --destructive-foreground: color-mix(in srgb, var(--danger) 60%, var(--foreground));
   --chart-1: oklch(0.87 0 0);
@@ -397,7 +475,7 @@
   --info: #3b82f6;
   --info-foreground: #3b82f6;
   --success: #4cb782;
-  --success-foreground: #27694c;
+  --success-foreground: #a5d6b7;
   --sidebar: var(--card);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
@@ -407,6 +485,9 @@
   --sidebar-accent-foreground: var(--color-text-foreground, var(--foreground));
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
+  --app-sidebar-backdrop-filter: none;
+  --app-sidebar-shadow: none;
+  --app-sidebar-surface: var(--panel);
   --color-background-button-secondary-hover: var(--secondary);
   --color-background-button-secondary-active: var(--selected);
   --color-background-elevated-secondary: var(--secondary);
@@ -416,66 +497,6 @@
   --color-text-foreground-tertiary: var(--faint);
   --warning: var(--danger);
   --warning-foreground: color-mix(in srgb, var(--danger) 60%, var(--foreground));
-
-  @variant dark {
-    color-scheme: dark;
-    --background: #111318;
-    --foreground: #f7f8fa;
-    --panel: color-mix(in srgb, #ffffff 4%, #111318);
-    --panel-border: rgba(255, 255, 255, 0.08);
-    --hover: rgba(255, 255, 255, 0.05);
-    --selected: rgba(255, 255, 255, 0.08);
-    --faint: color-mix(in srgb, var(--foreground) 45%, transparent);
-    --well: color-mix(in srgb, #ffffff 2%, #111318);
-    --card: var(--panel);
-    --card-foreground: var(--foreground);
-    --popover: var(--panel);
-    --popover-foreground: var(--foreground);
-    --primary: var(--foreground);
-    --primary-foreground: var(--panel);
-    --secondary: var(--hover);
-    --secondary-foreground: var(--foreground);
-    --muted: var(--hover);
-    --muted-foreground: #9aa1ad;
-    --accent: var(--hover);
-    --accent-foreground: var(--foreground);
-    --danger: #e94b4b;
-    --destructive: var(--danger);
-    --border: var(--panel-border);
-    --input: color-mix(in srgb, #ffffff 5%, #111318);
-    --ring: #3b82f6;
-    --destructive-foreground: color-mix(in srgb, var(--danger) 60%, var(--foreground));
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --info: #3b82f6;
-    --info-foreground: #3b82f6;
-    --success: #4cb782;
-    --success-foreground: #a5d6b7;
-    --sidebar: var(--card);
-    --sidebar-foreground: var(--foreground);
-    --sidebar-primary: var(--primary);
-    --sidebar-primary-foreground: var(--primary-foreground);
-    --sidebar-accent: var(--secondary);
-    --sidebar-accent-active: var(--selected);
-    --sidebar-accent-foreground: var(--color-text-foreground, var(--foreground));
-    --sidebar-border: var(--border);
-    --sidebar-ring: var(--ring);
-    --app-sidebar-backdrop-filter: none;
-    --app-sidebar-shadow: none;
-    --app-sidebar-surface: var(--panel);
-    --color-background-button-secondary-hover: var(--secondary);
-    --color-background-button-secondary-active: var(--selected);
-    --color-background-elevated-secondary: var(--secondary);
-    --color-border: var(--border);
-    --color-text-foreground: var(--foreground);
-    --color-text-foreground-secondary: var(--muted-foreground);
-    --color-text-foreground-tertiary: var(--faint);
-    --warning: var(--danger);
-    --warning-foreground: color-mix(in srgb, var(--danger) 60%, var(--foreground));
-  }
 }
 
 body {
@@ -534,16 +555,9 @@ textarea:focus-visible {
    0.75rem right/top/bottom padding dated from the floating content card and now
    only leaves a frame of canvas showing around an opaque sheet. */
 .claude-main-shell {
-  background: var(--background);
-}
-
-/* Decorative canvas image (Settings → Appearance → Background). The inline style
-   supplies `background-image`; sizing/attachment live here so the flat default
-   stays a single solid paint with no extra layers. */
-.claude-main-shell[data-app-background="image"] {
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  /* The canvas — flat colour or the Settings → Appearance background image — is
+     painted once by `.chitauri-anthropic-shell` so it spans the sidebar too. */
+  background: transparent;
 }
 
 /* `.chat-content-card` is a marker class only (route-shell tests key off it); the
@@ -849,7 +863,7 @@ label:has(> select#reasoning-effort) select {
 }
 
 .chat-markdown :not(pre) > code {
-  border-radius: 0.4rem;
+  border-radius: var(--radius-md);
   background: var(--app-user-message-background);
   padding: 0.1rem 0.35rem;
   color: var(--foreground);
@@ -889,7 +903,7 @@ label:has(> select#reasoning-effort) select {
 .chat-markdown pre {
   max-width: 100%;
   overflow-x: auto;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-2xl);
   background: var(--app-chat-code-surface);
   padding: 0.5rem 0.6rem;
   font-family: var(--font-chat-code-family);
@@ -907,7 +921,7 @@ label:has(> select#reasoning-effort) select {
 .chat-markdown .chat-markdown-codeblock {
   margin: 0.65rem 0;
   overflow: hidden;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-lg);
   background: var(--app-chat-code-surface);
 }
 
@@ -1116,7 +1130,7 @@ label:has(> select#reasoning-effort) select {
   justify-content: center;
   width: 1.125rem;
   height: 1.125rem;
-  border-radius: 0.3125rem;
+  border-radius: var(--radius-md);
   background: var(--color-background-button-secondary);
   color: color-mix(in srgb, var(--color-text-foreground) 70%, transparent);
   transition:
@@ -1150,7 +1164,7 @@ label:has(> select#reasoning-effort) select {
   gap: 0.5rem;
   padding: 0.75rem 0.875rem;
   border: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
-  border-radius: 0.625rem;
+  border-radius: var(--radius-xl);
   background: var(--panel);
   /* The box lives inside the file viewer, which sets the monospace code font on
      its content; reset to the normal UI font so the comment chrome reads as app
@@ -1167,7 +1181,7 @@ label:has(> select#reasoning-effort) select {
   justify-content: center;
   width: 1.25rem;
   height: 1.25rem;
-  border-radius: 0.4375rem;
+  border-radius: var(--radius-lg);
   border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
   background: var(--color-background-surface);
 }
@@ -1319,7 +1333,7 @@ label:has(> select#reasoning-effort) select {
   display: block;
   max-width: 100%;
   object-fit: contain;
-  border-radius: 0.35rem;
+  border-radius: var(--radius-md);
   user-select: none;
   -webkit-user-drag: none;
 }
@@ -1344,7 +1358,7 @@ label:has(> select#reasoning-effort) select {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0.45rem;
+  border-radius: var(--radius-lg);
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   background: color-mix(in srgb, var(--background) 88%, transparent);
   color: var(--foreground);
@@ -1390,7 +1404,7 @@ label:has(> select#reasoning-effort) select {
   min-height: 0;
   gap: 0.6rem;
   padding: 0.6rem 0.75rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-lg);
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   background: color-mix(in srgb, var(--muted) 35%, transparent);
 }
@@ -1408,7 +1422,7 @@ label:has(> select#reasoning-effort) select {
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  border-radius: 0.45rem;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--destructive) 18%, transparent);
   color: var(--destructive);
 }
@@ -1460,7 +1474,7 @@ label:has(> select#reasoning-effort) select {
   margin: 0;
   border: 0;
   padding: 0;
-  border-radius: 0.625rem;
+  border-radius: var(--radius-xl);
   overflow: hidden;
   background: color-mix(in srgb, var(--muted) 55%, transparent);
   cursor: zoom-in;
@@ -2176,7 +2190,7 @@ diffs-container {
 
 .diff-render-file {
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-lg);
   overflow: clip;
   background: color-mix(in srgb, var(--card) 92%, var(--background));
 }

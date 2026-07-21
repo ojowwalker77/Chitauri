@@ -21,27 +21,19 @@ import {
   type ParsedFileCommentEntry,
 } from "./fileComments";
 import {
-  appendTerminalContextsToPrompt,
-  extractTrailingTerminalContexts,
   IMAGE_ONLY_BOOTSTRAP_PROMPT,
   IMAGE_ONLY_VISIBLE_PLACEHOLDER,
-  type ParsedTerminalContextEntry,
-  type TerminalContextDraft,
-} from "./terminalContext";
+} from "./composerPlaceholders";
 
 const TRAILING_SERIALIZED_COMPOSER_BLOCK_PATTERNS = [
   /\n*(<pasted_text>\n[\s\S]*?\n<\/pasted_text>)\s*$/u,
   /\n*(<file_comments>\n[\s\S]*?\n<\/file_comments>)\s*$/u,
-  /\n*(<terminal_context>\n[\s\S]*?\n<\/terminal_context>)\s*$/u,
   /\n*(<assistant_selection>\n[\s\S]*?\n<\/assistant_selection>)\s*$/u,
 ] as const;
 
 export interface DisplayedUserMessageState {
   visibleText: string;
   copyText: string;
-  contextCount: number;
-  previewTitle: string | null;
-  contexts: ParsedTerminalContextEntry[];
   assistantSelections: ParsedAssistantSelectionEntry[];
   fileComments: ParsedFileCommentEntry[];
   pastedTexts: ParsedPastedTextEntry[];
@@ -50,16 +42,12 @@ export interface DisplayedUserMessageState {
 export function appendComposerMessageContext(input: {
   prompt: string;
   assistantSelections: ReadonlyArray<ComposerAssistantSelectionAttachment>;
-  terminalContexts: ReadonlyArray<TerminalContextDraft>;
   fileComments: ReadonlyArray<FileCommentDraft>;
   pastedTexts: ReadonlyArray<PastedTextDraft>;
 }): string {
   return appendPastedTextsToPrompt(
     appendFileCommentsToPrompt(
-      appendTerminalContextsToPrompt(
-        appendAssistantSelectionsToPrompt(input.prompt, input.assistantSelections),
-        input.terminalContexts,
-      ),
+      appendAssistantSelectionsToPrompt(input.prompt, input.assistantSelections),
       input.fileComments,
     ),
     input.pastedTexts,
@@ -97,9 +85,8 @@ export function deriveDisplayedUserMessageState(
 ): DisplayedUserMessageState {
   const extractedPastedTexts = extractTrailingPastedTexts(prompt);
   const extractedFileComments = extractTrailingFileComments(extractedPastedTexts.promptText);
-  const extractedContexts = extractTrailingTerminalContexts(extractedFileComments.promptText);
   const extractedAssistantSelections = extractTrailingAssistantSelections(
-    extractedContexts.promptText,
+    extractedFileComments.promptText,
   );
   const hidePrompt =
     options?.hideImageOnlyBootstrapPrompt === true &&
@@ -109,9 +96,6 @@ export function deriveDisplayedUserMessageState(
       ? IMAGE_ONLY_VISIBLE_PLACEHOLDER
       : extractedAssistantSelections.promptText,
     copyText: hidePrompt ? "" : extractedAssistantSelections.promptText,
-    contextCount: extractedContexts.contextCount,
-    previewTitle: extractedContexts.previewTitle,
-    contexts: extractedContexts.contexts,
     assistantSelections: extractedAssistantSelections.selections,
     fileComments: extractedFileComments.comments,
     pastedTexts: extractedPastedTexts.pastedTexts,

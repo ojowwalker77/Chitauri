@@ -11,7 +11,7 @@ import {
 } from "@pierre/diffs";
 
 import { basenameOfPath } from "../file-icons";
-import { fnv1a32, resolveDiffThemeName, type DiffThemeName } from "./diffRendering";
+import { fnv1a32, DIFF_THEME_NAME, type DiffThemeName } from "./diffRendering";
 import { LRUCache } from "./lruCache";
 
 const MAX_HIGHLIGHT_CACHE_ENTRIES = 500;
@@ -62,7 +62,7 @@ export function getSyntaxHighlighterPromise(language: string): Promise<DiffsHigh
   if (cached) return cached;
 
   const promise = getSharedHighlighter({
-    themes: [resolveDiffThemeName("dark"), resolveDiffThemeName("light")],
+    themes: [DIFF_THEME_NAME],
     langs: [language as SupportedLanguages],
     preferredHighlighter: "shiki-js",
   }).catch((err) => {

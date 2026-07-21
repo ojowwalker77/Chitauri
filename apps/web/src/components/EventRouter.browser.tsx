@@ -254,7 +254,6 @@ const worker = setupWorker(
       if (
         method === WS_METHODS.subscribeServerProviderStatuses ||
         method === WS_METHODS.subscribeServerSettings ||
-        method === WS_METHODS.subscribeTerminalEvents ||
         method === WS_METHODS.subscribeOrchestrationDomainEvents
       ) {
         return;
@@ -887,7 +886,6 @@ describe("EventRouter scoped orchestration sync", () => {
           projectId: PROJECT_ID,
           createdAt: NOW_ISO,
           runtimeMode: "full-access",
-          entryPoint: "chat",
           branch: null,
           worktreePath: null,
           envMode: "local",

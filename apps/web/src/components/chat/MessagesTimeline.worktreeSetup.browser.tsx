@@ -85,7 +85,6 @@ function WorktreeSetupTimeline() {
           isRevertingCheckpoint={false}
           onImageExpand={() => {}}
           markdownCwd={undefined}
-          resolvedTheme="dark"
           timestampFormat="locale"
           workspaceRoot={undefined}
         />
@@ -114,7 +113,6 @@ function SetupActionTimeline() {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />
@@ -142,7 +140,6 @@ function FailedSetupWithoutMessagesTimeline() {
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
         markdownCwd={undefined}
-        resolvedTheme="dark"
         timestampFormat="locale"
         workspaceRoot={undefined}
       />

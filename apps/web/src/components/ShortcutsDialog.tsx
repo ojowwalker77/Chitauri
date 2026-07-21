@@ -30,7 +30,7 @@ export default function ShortcutsDialog(props: {
   keybindings: ResolvedKeybindingsConfig;
   projectScripts: ReadonlyArray<ProjectScript>;
   platform: string;
-  context: ShortcutSheetContext;
+  context?: ShortcutSheetContext;
 }) {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -57,7 +57,7 @@ export default function ShortcutsDialog(props: {
         keybindings: props.keybindings,
         projectScripts: props.projectScripts,
         platform: props.platform,
-        context: props.context,
+        context: props.context ?? {},
       }),
     [props.keybindings, props.projectScripts, props.platform, props.context],
   );

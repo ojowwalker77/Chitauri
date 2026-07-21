@@ -1107,12 +1107,6 @@ function configureApplicationMenu(): void {
       label: "View",
       submenu: [
         {
-          label: "New Terminal Tab",
-          ...acceleratorProps("CmdOrCtrl+T"),
-          click: () => dispatchMenuAction("new-terminal-tab"),
-        },
-        { type: "separator" },
-        {
           label: "Toggle Sidebar",
           ...acceleratorProps("CmdOrCtrl+B"),
           click: () => dispatchMenuAction("toggle-sidebar"),
@@ -2562,12 +2556,12 @@ function getIconOption(): { icon: string } | Record<string, never> {
 // transparent (`#00000000`) over the vibrancy material. Windows/Linux have no vibrancy:
 // a transparent window there leaves backdrop-filter surfaces bleeding through and, on
 // fractional DPI, rendering blurry. So off macOS we create an opaque window and skip the
-// macOS-only options. The background tracks the OS light/dark appearance purely to avoid
-// a bright flash before the renderer paints — the window is shown only after first paint
-// (`show: false`), so this color is not expected to match a custom in-app theme exactly.
+// macOS-only options. The background is a fixed dark tone purely to avoid a flash before
+// the renderer paints — the app is dark-only, and the window is shown only after first
+// paint (`show: false`), so this color need not match the in-app surface exactly.
 function getWindowMaterialOptions(): BrowserWindowConstructorOptions {
   if (process.platform !== "darwin") {
-    return { backgroundColor: nativeTheme.shouldUseDarkColors ? "#181818" : "#ffffff" };
+    return { backgroundColor: "#181818" };
   }
   return {
     vibrancy: "under-window",
@@ -2599,6 +2593,9 @@ function getTitleBarOptions(): BrowserWindowConstructorOptions {
 }
 
 function createWindow(): BrowserWindow {
+  // Let the renderer decide the theme via the setTheme IPC call.
+  // Start with system default; the renderer will override on first paint.
+
   const window = new BrowserWindow({
     width: 1100,
     height: 780,

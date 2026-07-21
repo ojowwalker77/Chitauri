@@ -26,13 +26,10 @@ function composerMentionChipCentralIconName(path: string, kind: MentionChipKind 
   return getFileIconName(path);
 }
 
-// `theme` is retained for call-site compatibility but no longer affects icon
-// selection (Central icons are theme-agnostic `currentColor` glyphs).
 // `className` lets callers size the glyph per surface (composer token vs timeline
 // echo) while keeping the file/folder/plugin selection logic in one place.
 export const MentionChipIcon = memo(function MentionChipIcon(props: {
   path: string;
-  theme: "light" | "dark";
   kind?: MentionChipKind;
   mentionReferences?: ReadonlyArray<ProviderMentionReference>;
   className?: string;

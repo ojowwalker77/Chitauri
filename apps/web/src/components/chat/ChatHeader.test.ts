@@ -8,15 +8,11 @@ import { describe, expect, it } from "vitest";
 import { resolveChatHeaderThreadIconKind } from "./ChatHeader";
 
 describe("resolveChatHeaderThreadIconKind", () => {
-  it("uses the terminal icon for terminal-first threads", () => {
-    expect(resolveChatHeaderThreadIconKind("terminal", "New terminal")).toBe("terminal");
-  });
-
-  it("keeps provider branding for chat-first threads", () => {
-    expect(resolveChatHeaderThreadIconKind("chat", "Fix auth flow")).toBe("provider");
+  it("keeps provider branding for named threads", () => {
+    expect(resolveChatHeaderThreadIconKind("Fix auth flow")).toBe("provider");
   });
 
   it("hides provider branding for untouched new chat threads", () => {
-    expect(resolveChatHeaderThreadIconKind("chat", "New thread")).toBe("none");
+    expect(resolveChatHeaderThreadIconKind("New thread")).toBe("none");
   });
 });

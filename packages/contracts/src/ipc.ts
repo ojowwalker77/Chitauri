@@ -145,17 +145,6 @@ import type {
 } from "./server";
 import type { PerformanceGetSnapshotInput, PerformanceGetSnapshotResult } from "./performance";
 import type {
-  TerminalAckOutputInput,
-  TerminalClearInput,
-  TerminalCloseInput,
-  TerminalEvent,
-  TerminalOpenInput,
-  TerminalResizeInput,
-  TerminalRestartInput,
-  TerminalSessionSnapshot,
-  TerminalWriteInput,
-} from "./terminal";
-import type {
   ClientOrchestrationCommand,
   OrchestrationGetFullThreadDiffInput,
   OrchestrationGetFullThreadDiffResult,
@@ -374,16 +363,6 @@ export interface NativeApi {
       filters?: ReadonlyArray<{ name: string; extensions: ReadonlyArray<string> }>;
     }) => Promise<string | null>;
     confirm: (message: string) => Promise<boolean>;
-  };
-  terminal: {
-    open: (input: TerminalOpenInput) => Promise<TerminalSessionSnapshot>;
-    write: (input: TerminalWriteInput) => Promise<void>;
-    ackOutput: (input: TerminalAckOutputInput) => Promise<void>;
-    resize: (input: TerminalResizeInput) => Promise<void>;
-    clear: (input: TerminalClearInput) => Promise<void>;
-    restart: (input: TerminalRestartInput) => Promise<TerminalSessionSnapshot>;
-    close: (input: TerminalCloseInput) => Promise<void>;
-    onEvent: (callback: (event: TerminalEvent) => void) => () => void;
   };
   projects: {
     discoverScripts: (input: ProjectDiscoverScriptsInput) => Promise<ProjectDiscoverScriptsResult>;

@@ -80,7 +80,6 @@ const HEADER_COMPACT_BREAKPOINT = 700;
 interface ChatHeaderProps {
   activeThreadId: ThreadId;
   activeThreadTitle: string;
-  activeThreadEntryPoint: ThreadPrimarySurface;
   activeProvider: ProviderKind;
   activeProjectName: string | undefined;
   threadBreadcrumbs: ReadonlyArray<{
@@ -106,8 +105,6 @@ interface ChatHeaderProps {
   gitCwd: string | null;
   diffTotals: RepoDiffTotals;
   showGitActions?: boolean;
-  showDiffToggle?: boolean;
-  diffOpen: boolean;
   diffDisabledReason?: string | null;
   surfaceMode?: "single" | "split";
   chatLayoutAction?: {
@@ -137,7 +134,6 @@ interface ChatHeaderProps {
   onAddProjectScript: (input: NewProjectScriptInput) => Promise<void>;
   onUpdateProjectScript: (scriptId: string, input: NewProjectScriptInput) => Promise<void>;
   onDeleteProjectScript: (scriptId: string) => Promise<void>;
-  onToggleDiff: () => void;
   onCreateHandoff: (targetProvider: ProviderKind) => void;
   onNavigateToThread: (threadId: ThreadId) => void;
   onRenameThread: () => void;
@@ -463,22 +459,15 @@ function EditorRailTabs(props: {
   );
 }
 
-export type ChatHeaderThreadIconKind = "none" | "provider" | "terminal";
+export type ChatHeaderThreadIconKind = "none" | "provider";
 
-export function resolveChatHeaderThreadIconKind(
-  entryPoint: ThreadPrimarySurface,
-  title?: string,
-): ChatHeaderThreadIconKind {
-  if (entryPoint === "chat" && isGenericChatThreadTitle(title)) {
-    return "none";
-  }
-  return entryPoint === "terminal" ? "terminal" : "provider";
+export function resolveChatHeaderThreadIconKind(title?: string): ChatHeaderThreadIconKind {
+  return isGenericChatThreadTitle(title) ? "none" : "provider";
 }
 
 export const ChatHeader = memo(function ChatHeader({
   activeThreadId,
   activeThreadTitle,
-  activeThreadEntryPoint,
   activeProvider,
   activeProjectName,
   threadBreadcrumbs,
@@ -501,8 +490,6 @@ export const ChatHeader = memo(function ChatHeader({
   gitCwd,
   diffTotals,
   showGitActions = true,
-  showDiffToggle = true,
-  diffOpen,
   diffDisabledReason = null,
   surfaceMode = "single",
   chatLayoutAction = null,
@@ -512,7 +499,6 @@ export const ChatHeader = memo(function ChatHeader({
   onAddProjectScript,
   onUpdateProjectScript,
   onDeleteProjectScript,
-  onToggleDiff,
   onCreateHandoff,
   onNavigateToThread,
   onRenameThread,
@@ -540,7 +526,7 @@ export const ChatHeader = memo(function ChatHeader({
   // Split-chat creation moved to a shortcut only; the header keeps just the inline
   // "maximize" affordance for an already-split focused pane.
   const inlineChatLayoutAction = chatLayoutAction?.kind === "maximize" ? chatLayoutAction : null;
-  const threadIconKind = resolveChatHeaderThreadIconKind(activeThreadEntryPoint, activeThreadTitle);
+  const threadIconKind = resolveChatHeaderThreadIconKind(activeThreadTitle);
 
   useEffect(() => {
     const el = headerRef.current;
@@ -582,9 +568,6 @@ export const ChatHeader = memo(function ChatHeader({
     if (activeProjectName && showGitActions) {
       available.add("gitActions");
     }
-    if (showDiffToggle) {
-      available.add("diff");
-    }
 
     const hidden = new Set<ChatHeaderControlId>(hiddenChatHeaderControls);
     return DEFAULT_CHAT_HEADER_CONTROL_ORDER.filter(
@@ -598,7 +581,6 @@ export const ChatHeader = memo(function ChatHeader({
     chatHeaderControlOrder,
     hiddenChatHeaderControls,
     hideHandoffControls,
-    showDiffToggle,
     showGitActions,
   ]);
 
@@ -669,48 +651,6 @@ export const ChatHeader = memo(function ChatHeader({
             hideQuickActionLabel={compact}
           />
         );
-      case "diff":
-        return (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Toggle
-                  className={cn(
-                    CHAT_HEADER_TOGGLE_CLASS_NAME,
-                    showDiffTotals ? null : "!size-7 [&_svg,&_[data-slot=central-icon]]:mx-0",
-                  )}
-                  pressed={diffOpen}
-                  onPressedChange={onToggleDiff}
-                  aria-label="Toggle diff panel"
-                  variant="default"
-                  size="xs"
-                  disabled={!isGitRepo || (diffDisabledReason !== null && !diffOpen)}
-                >
-                  {showDiffTotals ? (
-                    <span className="inline-flex items-center gap-1">
-                      <span className="font-system-ui text-[length:var(--app-font-size-ui-sm,13px)] sm:text-[length:var(--app-font-size-ui-xs,12px)] font-normal tracking-normal tabular-nums text-success">
-                        +{diffAdditions}
-                      </span>
-                      <span className="font-system-ui text-[length:var(--app-font-size-ui-sm,13px)] sm:text-[length:var(--app-font-size-ui-xs,12px)] font-normal tracking-normal tabular-nums text-destructive">
-                        -{diffDeletions}
-                      </span>
-                    </span>
-                  ) : null}
-                  <SurfaceChipIcon icon={PanelRightCloseIcon} className="size-4" />
-                </Toggle>
-              }
-            />
-            <TooltipPopup side="bottom">
-              {!isGitRepo
-                ? "Diff panel is unavailable because this project is not a git repository."
-                : diffDisabledReason && !diffOpen
-                  ? diffDisabledReason
-                  : diffToggleShortcutLabel
-                    ? `Toggle diff panel (${diffToggleShortcutLabel})`
-                    : "Toggle diff panel"}
-            </TooltipPopup>
-          </Tooltip>
-        );
     }
   };
 
@@ -757,17 +697,9 @@ export const ChatHeader = memo(function ChatHeader({
                 {threadIconKind === "none" ? null : (
                   <span
                     className="inline-flex size-3.5 shrink-0 items-center justify-center"
-                    title={
-                      threadIconKind === "terminal"
-                        ? "Terminal"
-                        : PROVIDER_DISPLAY_NAMES[activeProvider]
-                    }
+                    title={PROVIDER_DISPLAY_NAMES[activeProvider]}
                   >
-                    {threadIconKind === "terminal" ? (
-                      <TerminalIcon className="size-3.5 text-[var(--color-text-accent)]" />
-                    ) : (
-                      renderProviderIcon(activeProvider, "size-3.5")
-                    )}
+                    {renderProviderIcon(activeProvider, "size-3.5")}
                   </span>
                 )}
                 <h2

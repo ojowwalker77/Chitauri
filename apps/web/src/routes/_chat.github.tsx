@@ -56,7 +56,6 @@ import {
 } from "~/githubWorkbench.logic";
 import { useHandleNewThread } from "~/hooks/useHandleNewThread";
 import { useLatestProjectStore } from "~/latestProjectStore";
-import { useTheme } from "~/hooks/useTheme";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import {
   githubConnectionQueryOptions,
@@ -552,7 +551,6 @@ function TimelineView({ detail, cwd }: { detail: GitHubWorkItemDetail; cwd: stri
 }
 
 function CodeView({ detail, cwd }: { detail: GitHubWorkItemDetail; cwd: string | null }) {
-  const { resolvedTheme } = useTheme();
   const diffInput = {
     cwd,
     repository: detail.item.repository.nameWithOwner,
@@ -586,7 +584,6 @@ function CodeView({ detail, cwd }: { detail: GitHubWorkItemDetail; cwd: string |
       <DiffPanelPatchViewport
         renderablePatch={renderablePatch}
         renderableFiles={files}
-        resolvedTheme={resolvedTheme}
         diffRenderMode="stacked"
         diffWordWrap={false}
         workspaceRoot={cwd}

@@ -1,8 +1,7 @@
 import { WorkerPoolContextProvider, useWorkerPool } from "@pierre/diffs/react";
 import DiffsWorker from "@pierre/diffs/worker/worker.js?worker";
 import { useEffect, useMemo, type ReactNode } from "react";
-import { useTheme } from "../hooks/useTheme";
-import { resolveDiffThemeName, type DiffThemeName } from "../lib/diffRendering";
+import { DIFF_THEME_NAME, type DiffThemeName } from "../lib/diffRendering";
 
 function DiffWorkerThemeSync({ themeName }: { themeName: DiffThemeName }) {
   const workerPool = useWorkerPool();
@@ -29,8 +28,7 @@ function DiffWorkerThemeSync({ themeName }: { themeName: DiffThemeName }) {
 }
 
 export function DiffWorkerPoolProvider({ children }: { children?: ReactNode }) {
-  const { resolvedTheme } = useTheme();
-  const diffThemeName = resolveDiffThemeName(resolvedTheme);
+  const diffThemeName = DIFF_THEME_NAME;
   const workerPoolSize = useMemo(() => {
     const cores =
       typeof navigator === "undefined" ? 4 : Math.max(1, navigator.hardwareConcurrency || 4);

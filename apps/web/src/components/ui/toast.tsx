@@ -69,7 +69,7 @@ function isArchiveUndoToast(toast: ToastObject<ThreadToastData>): boolean {
 // toast root no-drag so Electron titlebar hit testing cannot swallow clicks.
 const ARCHIVE_UNDO_TOAST_SURFACE_CLASS_NAME = cn(
   APP_TOOLTIP_SURFACE_CLASS_NAME,
-  "absolute w-max max-w-[min(calc(100vw-2rem),28rem)] rounded-[8px] [--notification-fg:var(--popover-foreground)] [-webkit-app-region:no-drag]",
+  "absolute w-max max-w-[min(calc(100vw-2rem),28rem)] rounded-lg [--notification-fg:var(--popover-foreground)] [-webkit-app-region:no-drag]",
 );
 
 const ARCHIVE_UNDO_TOAST_LINK_CLASS_NAME =

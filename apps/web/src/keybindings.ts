@@ -20,8 +20,6 @@ export interface ShortcutEventLike {
 }
 
 export interface ShortcutMatchContext {
-  terminalFocus: boolean;
-  terminalOpen: boolean;
   [key: string]: boolean;
 }
 
@@ -65,166 +63,102 @@ function whenOr(left: KeybindingWhenNode, right: KeybindingWhenNode): Keybinding
   return { type: "or", left, right };
 }
 
-const whenNotTerminalFocus = whenNot(whenIdentifier("terminalFocus"));
-const whenThreadJumpAvailable = whenAnd(
-  whenNotTerminalFocus,
-  whenNot(whenIdentifier("terminalWorkspaceOpen")),
-);
-// New-surface creation chords (new chat/terminal/provider chat/split) bind to `mod`,
-// which is Cmd on macOS. xterm never forwards a Cmd-chord to the PTY, so a bare
-// `!terminalFocus` guard silently dropped these chords whenever the terminal had focus
-// — the chord did nothing instead of creating anything. `|| isMac` lets them fire from
-// the terminal on macOS while still yielding the chord to the shell on Linux/Windows,
-// where `mod` is Ctrl and keys like Ctrl+N are real shell input that must pass through.
-const whenCreationAllowed = whenOr(whenNotTerminalFocus, whenIdentifier("isMac"));
-
 export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
   {
     command: "sidebar.addProject",
     shortcut: commandShortcut("o", { shiftKey: true }),
-    whenAst: whenNotTerminalFocus,
   },
   {
     command: "rightPanel.toggle",
     shortcut: commandShortcut("b", { altKey: true }),
-    whenAst: whenNotTerminalFocus,
   },
   {
     command: "sidebar.importThread",
     shortcut: commandShortcut("i"),
-    whenAst: whenNotTerminalFocus,
   },
   {
     command: "chat.new",
     shortcut: commandShortcut("n"),
-    whenAst: whenCreationAllowed,
   },
   {
     command: "chat.newLatestProject",
     shortcut: commandShortcut("n", { shiftKey: true }),
-    whenAst: whenCreationAllowed,
   },
   {
     command: "chat.newClaude",
     shortcut: commandShortcut("c", { altKey: true }),
-    whenAst: whenCreationAllowed,
   },
   {
     command: "chat.newChat",
     shortcut: commandShortcut("n", { altKey: true }),
-    whenAst: whenCreationAllowed,
-  },
-  {
-    command: "chat.newTerminal",
-    shortcut: commandShortcut("t", { shiftKey: true }),
-    whenAst: whenCreationAllowed,
   },
   {
     command: "chat.newCodex",
     shortcut: commandShortcut("x", { altKey: true }),
-    whenAst: whenCreationAllowed,
   },
   {
     command: "chat.newCursor",
     shortcut: commandShortcut("r", { altKey: true }),
-    whenAst: whenCreationAllowed,
   },
   {
     command: "chat.split",
     shortcut: commandShortcut("\\"),
-    whenAst: whenCreationAllowed,
   },
   {
     command: "modelPicker.toggle",
     shortcut: commandShortcut("m", { shiftKey: true }),
-    whenAst: whenNotTerminalFocus,
   },
   {
     command: "traitsPicker.toggle",
     shortcut: commandShortcut("e", { shiftKey: true }),
-    whenAst: whenNotTerminalFocus,
   },
   // Cmd-only instead of mod so Ctrl+L remains available to shells on non-macOS.
   {
     command: "composer.focus.toggle",
     shortcut: commandShortcut("l", { metaKey: true, modKey: false }),
-    whenAst: whenNotTerminalFocus,
   },
   {
     command: "settings.usage",
     shortcut: commandShortcut("u", { shiftKey: true }),
-    whenAst: whenNotTerminalFocus,
   },
   {
     command: "thread.jump.1",
     shortcut: commandShortcut("1"),
-    whenAst: whenThreadJumpAvailable,
   },
   {
     command: "thread.jump.2",
     shortcut: commandShortcut("2"),
-    whenAst: whenThreadJumpAvailable,
   },
   {
     command: "thread.jump.3",
     shortcut: commandShortcut("3"),
-    whenAst: whenThreadJumpAvailable,
   },
   {
     command: "thread.jump.4",
     shortcut: commandShortcut("4"),
-    whenAst: whenThreadJumpAvailable,
   },
   {
     command: "thread.jump.5",
     shortcut: commandShortcut("5"),
-    whenAst: whenThreadJumpAvailable,
   },
   {
     command: "thread.jump.6",
     shortcut: commandShortcut("6"),
-    whenAst: whenThreadJumpAvailable,
   },
   {
     command: "thread.jump.7",
     shortcut: commandShortcut("7"),
-    whenAst: whenThreadJumpAvailable,
   },
   {
     command: "thread.jump.8",
     shortcut: commandShortcut("8"),
-    whenAst: whenThreadJumpAvailable,
   },
   {
     command: "thread.jump.9",
     shortcut: commandShortcut("9"),
-    whenAst: whenThreadJumpAvailable,
-  },
-  {
-    command: "terminal.workspace.newFullWidth",
-    shortcut: commandShortcut("j", { shiftKey: true }),
-  },
-  {
-    command: "terminal.workspace.closeActive",
-    shortcut: commandShortcut("w"),
-    whenAst: whenIdentifier("terminalWorkspaceOpen"),
-  },
-  {
-    command: "terminal.workspace.terminal",
-    shortcut: commandShortcut("1"),
-    whenAst: whenIdentifier("terminalWorkspaceOpen"),
-  },
-  {
-    command: "terminal.workspace.chat",
-    shortcut: commandShortcut("2"),
-    whenAst: whenIdentifier("terminalWorkspaceOpen"),
   },
 ];
 
-const TERMINAL_WORD_BACKWARD = "\u001bb";
-const TERMINAL_WORD_FORWARD = "\u001bf";
-const TERMINAL_LINE_START = "\u0001";
-const TERMINAL_LINE_END = "\u0005";
 const EVENT_CODE_KEY_ALIASES: Readonly<Record<string, readonly string[]>> = {
   BracketLeft: ["["],
   BracketRight: ["]"],
@@ -316,11 +250,9 @@ function resolvePlatform(options: ShortcutMatchOptions | undefined): string {
 
 function resolveContext(options: ShortcutMatchOptions | undefined): ShortcutMatchContext {
   // `isMac` is derived from the resolved platform so `when` clauses can gate on it
-  // (e.g. `whenCreationAllowed`) without every dispatch site having to thread the flag
+  // (e.g. platform-gated chords) without every dispatch site having to thread the flag
   // through `context`. An explicit `context.isMac` still wins via the spread below.
   return {
-    terminalFocus: false,
-    terminalOpen: false,
     isMac: isMacPlatform(resolvePlatform(options)),
     ...options?.context,
   };
@@ -570,38 +502,6 @@ export function shouldShowThreadJumpHints(
   return false;
 }
 
-export function isTerminalToggleShortcut(
-  event: ShortcutEventLike,
-  keybindings: ResolvedKeybindingsConfig,
-  options?: ShortcutMatchOptions,
-): boolean {
-  return matchesCommandShortcut(event, keybindings, "terminal.toggle", options);
-}
-
-export function isTerminalSplitShortcut(
-  event: ShortcutEventLike,
-  keybindings: ResolvedKeybindingsConfig,
-  options?: ShortcutMatchOptions,
-): boolean {
-  return matchesCommandShortcut(event, keybindings, "terminal.split", options);
-}
-
-export function isTerminalNewShortcut(
-  event: ShortcutEventLike,
-  keybindings: ResolvedKeybindingsConfig,
-  options?: ShortcutMatchOptions,
-): boolean {
-  return matchesCommandShortcut(event, keybindings, "terminal.new", options);
-}
-
-export function isTerminalCloseShortcut(
-  event: ShortcutEventLike,
-  keybindings: ResolvedKeybindingsConfig,
-  options?: ShortcutMatchOptions,
-): boolean {
-  return matchesCommandShortcut(event, keybindings, "terminal.close", options);
-}
-
 export function isSidebarToggleShortcut(
   event: ShortcutEventLike,
   keybindings: ResolvedKeybindingsConfig,
@@ -685,56 +585,4 @@ export function isOpenFavoriteEditorShortcut(
   options?: ShortcutMatchOptions,
 ): boolean {
   return matchesCommandShortcut(event, keybindings, "editor.openFavorite", options);
-}
-
-export function isTerminalClearShortcut(
-  event: ShortcutEventLike,
-  platform = navigator.platform,
-): boolean {
-  if (event.type !== undefined && event.type !== "keydown") {
-    return false;
-  }
-
-  const key = event.key.toLowerCase();
-
-  return key === "l" && event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey;
-}
-
-export function terminalNavigationShortcutData(
-  event: ShortcutEventLike,
-  platform = navigator.platform,
-): string | null {
-  if (event.type !== undefined && event.type !== "keydown") {
-    return null;
-  }
-
-  if (event.shiftKey) return null;
-
-  const key = normalizeEventKey(event.key);
-  if (key !== "arrowleft" && key !== "arrowright") {
-    return null;
-  }
-
-  const moveWord = key === "arrowleft" ? TERMINAL_WORD_BACKWARD : TERMINAL_WORD_FORWARD;
-  const moveLine = key === "arrowleft" ? TERMINAL_LINE_START : TERMINAL_LINE_END;
-
-  if (isMacPlatform(platform)) {
-    if (event.altKey && !event.metaKey && !event.ctrlKey) {
-      return moveWord;
-    }
-    if (event.metaKey && !event.altKey && !event.ctrlKey) {
-      return moveLine;
-    }
-    return null;
-  }
-
-  if (event.ctrlKey && !event.metaKey && !event.altKey) {
-    return moveWord;
-  }
-
-  if (event.altKey && !event.metaKey && !event.ctrlKey) {
-    return moveWord;
-  }
-
-  return null;
 }

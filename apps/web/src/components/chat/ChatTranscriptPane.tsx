@@ -34,8 +34,6 @@ import { DISCLOSURE_CONTENT_MOTION_CLASS } from "~/lib/disclosureMotion";
 import { type ExpandedImagePreview } from "./ExpandedImagePreview";
 import { ChatEmptyStateHero } from "./ChatEmptyStateHero";
 import { MessagesTimeline, type MessagesTimelineController } from "./MessagesTimeline";
-import { MessageTrail } from "./MessageTrail";
-import { createActiveTrailStore, deriveMessageTrailItems } from "./messageTrail.logic";
 import { AgentActivityDetailView } from "./AgentActivityDetailView";
 import type { AgentActivityDetail } from "./agentActivity.logic";
 
@@ -84,10 +82,8 @@ interface ChatTranscriptPaneProps {
   onEditUserMessage?: (messageId: MessageId, text: string) => boolean | Promise<boolean>;
   onScrollToBottom: () => void;
   onToggleWorkGroup?: (groupId: string) => void;
-  resolvedTheme: "light" | "dark";
   revertTurnCountByUserMessageId: Map<MessageId, number>;
   scrollButtonVisible: boolean;
-  terminalWorkspaceTerminalTabActive: boolean;
   timelineEntries: ComponentProps<typeof MessagesTimeline>["timelineEntries"];
   timestampFormat: TimestampFormat;
   turnDiffSummaryByAssistantMessageId: Map<MessageId, TurnDiffSummary>;
@@ -140,10 +136,8 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
   onEditUserMessage,
   onScrollToBottom,
   onToggleWorkGroup,
-  resolvedTheme,
   revertTurnCountByUserMessageId,
   scrollButtonVisible,
-  terminalWorkspaceTerminalTabActive,
   timelineEntries,
   timestampFormat,
   turnDiffSummaryByAssistantMessageId,
@@ -154,35 +148,10 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
     ? { paddingRight: contentInsetRightPx }
     : undefined;
 
-  // Left-edge navigation trail: one tick per sent message. Current + visible
-  // highlights are pushed up from MessagesTimeline as the viewport scrolls. They
-  // flow through a stable store (not pane state) so scroll updates re-render only
-  // the trail, not the memoized timeline; reset on thread switch so stale
-  // highlights can't linger.
-  const trailItems = useMemo(() => deriveMessageTrailItems(timelineEntries), [timelineEntries]);
-  const activeTrailStoreRef = useRef<ReturnType<typeof createActiveTrailStore> | null>(null);
-  if (activeTrailStoreRef.current === null) {
-    activeTrailStoreRef.current = createActiveTrailStore();
-  }
-  const activeTrailStore = activeTrailStoreRef.current;
-  useEffect(() => {
-    activeTrailStore.set(null);
-  }, [activeThreadId, activeTrailStore]);
-  const handleTrailSelect = useCallback(
-    (messageId: MessageId) => {
-      timelineControllerRef?.current?.scrollToMessage(messageId);
-    },
-    [timelineControllerRef],
-  );
-
   return (
     <div
       data-chat-transcript-pane="true"
-      aria-hidden={terminalWorkspaceTerminalTabActive}
-      className={cn(
-        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
-        terminalWorkspaceTerminalTabActive ? "pointer-events-none invisible" : "",
-      )}
+      className={cn("flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden")}
     >
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         {agentActivityDetail && onCloseAgentActivityDetail ? (
@@ -225,7 +194,6 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
             onImageExpand={onExpandTimelineImage}
             followLiveOutput={followLiveOutput}
             onIsAtEndChange={onIsAtEndChange}
-            onTrailHighlightsChange={activeTrailStore.set}
             onMessagesScroll={onMessagesScroll}
             onMessagesClickCapture={onMessagesClickCapture}
             onMessagesMouseUp={onMessagesMouseUp}
@@ -237,7 +205,6 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
             onMessagesTouchMove={onMessagesTouchMove}
             onMessagesTouchEnd={onMessagesTouchEnd}
             markdownCwd={markdownCwd}
-            resolvedTheme={resolvedTheme}
             chatFontSizePx={chatFontSizePx}
             timestampFormat={timestampFormat}
             workspaceRoot={workspaceRoot}
@@ -286,14 +253,6 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
               <ArrowDownIcon className="size-3.5" />
             </button>
           </div>
-        ) : null}
-
-        {!agentActivityDetail ? (
-          <MessageTrail
-            items={trailItems}
-            activeStore={activeTrailStore}
-            onSelect={handleTrailSelect}
-          />
         ) : null}
       </div>
     </div>

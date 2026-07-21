@@ -40,16 +40,14 @@ import {
 import { ensureNativeApi } from "./nativeApi";
 import { providerDiscoveryQueryKeys } from "./lib/providerDiscoveryReactQuery";
 import { serverQueryKeys, serverSettingsQueryOptions } from "./lib/serverReactQuery";
-import {
-  DEFAULT_UI_DENSITY,
-  UI_DENSITY_MODES,
-  normalizeUiDensity as normalizeUiDensityValue,
-} from "./lib/appDensity";
 
 const APP_SETTINGS_STORAGE_KEY = "teacode:app-settings:v1";
 const SERVER_SETTINGS_MIGRATION_STORAGE_KEY = "t3code:server-settings-migrated:v1";
 const MAX_CUSTOM_MODEL_COUNT = 32;
 export const MAX_CUSTOM_MODEL_LENGTH = 256;
+export const MIN_WINDOW_TRANSPARENCY = 0;
+export const MAX_WINDOW_TRANSPARENCY = 30;
+export const DEFAULT_WINDOW_TRANSPARENCY = 20;
 export const MIN_CHAT_FONT_SIZE_PX = 11;
 export const MAX_CHAT_FONT_SIZE_PX = 18;
 export const DEFAULT_CHAT_FONT_SIZE_PX = 14;
@@ -71,16 +69,9 @@ export const SidebarPosition = Schema.Literals(["left", "right"]);
 export type SidebarPosition = typeof SidebarPosition.Type;
 export const DEFAULT_SIDEBAR_POSITION: SidebarPosition = "left";
 /** Optional decorative image behind the main chat canvas. */
-export const AppBackground = Schema.Literals(["none", "london", "rio", "sf", "tokyo"]);
-export type AppBackground = typeof AppBackground.Type;
-export const DEFAULT_APP_BACKGROUND: AppBackground = "none";
 export const TaskListDisplayMode = Schema.Literals(["sidebar", "composer"]);
 export type TaskListDisplayMode = typeof TaskListDisplayMode.Type;
 export const DEFAULT_TASK_LIST_DISPLAY_MODE: TaskListDisplayMode = "sidebar";
-
-export const UiDensity = Schema.Literals(UI_DENSITY_MODES);
-export type UiDensity = typeof UiDensity.Type;
-export { DEFAULT_UI_DENSITY };
 
 export const ChatHeaderControlIdSchema = Schema.Literals(DEFAULT_CHAT_HEADER_CONTROL_ORDER);
 
@@ -131,10 +122,11 @@ const withDefaults =
 
 export const AppSettingsSchema = Schema.Struct({
   claudeBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
-  uiDensity: UiDensity.pipe(withDefaults(() => DEFAULT_UI_DENSITY)),
   // Default color applied when highlighting selected transcript text.
   highlightColor: ThreadMarkerColor.pipe(withDefaults(() => "yellow" as const)),
   chatFontSizePx: Schema.Number.pipe(withDefaults(() => DEFAULT_CHAT_FONT_SIZE_PX)),
+  /** How much of the desktop shows through the window canvas, as a percentage. */
+  windowTransparency: Schema.Number.pipe(withDefaults(() => DEFAULT_WINDOW_TRANSPARENCY)),
   terminalFontSizePx: Schema.Number.pipe(withDefaults(() => DEFAULT_TERMINAL_FONT_SIZE_PX)),
   codexBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   codexHomePath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
@@ -176,7 +168,6 @@ export const AppSettingsSchema = Schema.Struct({
     withDefaults(() => DEFAULT_SIDEBAR_THREAD_SORT_ORDER),
   ),
   sidebarPosition: SidebarPosition.pipe(withDefaults(() => DEFAULT_SIDEBAR_POSITION)),
-  appBackground: AppBackground.pipe(withDefaults(() => DEFAULT_APP_BACKGROUND)),
   timestampFormat: TimestampFormat.pipe(withDefaults(() => DEFAULT_TIMESTAMP_FORMAT)),
   customCodexModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customClaudeModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
@@ -322,6 +313,14 @@ export function normalizeCustomModelSlugs(
   return normalizedModels;
 }
 
+export function normalizeWindowTransparency(value: number | null | undefined): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return DEFAULT_WINDOW_TRANSPARENCY;
+  }
+
+  return Math.min(MAX_WINDOW_TRANSPARENCY, Math.max(MIN_WINDOW_TRANSPARENCY, Math.round(value)));
+}
+
 export function normalizeChatFontSizePx(value: number | null | undefined): number {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return DEFAULT_CHAT_FONT_SIZE_PX;
@@ -365,8 +364,8 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
       settings.openCodeBinaryPath,
     ),
     piBinaryPath: normalizeProviderBinaryPathOverride("pi", settings.piBinaryPath),
-    uiDensity: normalizeUiDensityValue(settings.uiDensity),
     chatFontSizePx: normalizeChatFontSizePx(settings.chatFontSizePx),
+    windowTransparency: normalizeWindowTransparency(settings.windowTransparency),
     terminalFontSizePx: normalizeTerminalFontSizePx(settings.terminalFontSizePx),
     customCodexModels: normalizeCustomModelSlugs(settings.customCodexModels, "codex"),
     customClaudeModels: normalizeCustomModelSlugs(settings.customClaudeModels, "claudeAgent"),

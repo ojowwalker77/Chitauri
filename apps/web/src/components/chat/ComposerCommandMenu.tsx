@@ -289,7 +289,6 @@ export function groupCommandItems(
 
 export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
   items: ComposerCommandItem[];
-  resolvedTheme: "light" | "dark";
   isLoading: boolean;
   triggerKind: ComposerTriggerKind | null;
   groupSlashCommandSections?: boolean;
@@ -340,7 +339,6 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
                   <ComposerCommandMenuItem
                     key={item.id}
                     item={item}
-                    resolvedTheme={props.resolvedTheme}
                     isActive={props.activeItemId === item.id}
                     itemRef={(node) => {
                       itemRefs.current[item.id] = node;
@@ -428,7 +426,7 @@ function commandMenuSlashGlyph(command: string, fallback: LucideIcon): ReactNode
   return <Icon className={COMPOSER_COMMAND_ITEM_GLYPH_CLASSNAME} />;
 }
 
-function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"): ReactNode {
+function commandMenuItemGlyph(item: ComposerCommandItem): ReactNode {
   const cls = COMPOSER_COMMAND_ITEM_GLYPH_CLASSNAME;
   switch (item.type) {
     case "path":
@@ -436,7 +434,6 @@ function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"
         <FileEntryIcon
           pathValue={item.path}
           kind={item.pathKind}
-          theme={theme}
           className={
             item.pathKind === "directory" ? cls : COMPOSER_COMMAND_ITEM_FILE_ICON_CLASSNAME
           }
@@ -478,7 +475,6 @@ function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"
 
 const ComposerCommandItemIcon = memo(function ComposerCommandItemIcon(props: {
   item: ComposerCommandItem;
-  resolvedTheme: "light" | "dark";
   isActive: boolean;
 }) {
   return (
@@ -488,14 +484,13 @@ const ComposerCommandItemIcon = memo(function ComposerCommandItemIcon(props: {
         props.isActive && "text-foreground/70",
       )}
     >
-      {commandMenuItemGlyph(props.item, props.resolvedTheme)}
+      {commandMenuItemGlyph(props.item)}
     </span>
   );
 });
 
 const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
   item: ComposerCommandItem;
-  resolvedTheme: "light" | "dark";
   isActive: boolean;
   itemRef: (node: HTMLElement | null) => void;
   onHighlight: (itemId: string | null) => void;
@@ -522,11 +517,7 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
         props.onSelect(props.item);
       }}
     >
-      <ComposerCommandItemIcon
-        item={props.item}
-        resolvedTheme={props.resolvedTheme}
-        isActive={props.isActive}
-      />
+      <ComposerCommandItemIcon item={props.item} isActive={props.isActive} />
       <div className="min-w-0 flex flex-1 items-center gap-3">
         <div className="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
           <span className="shrink-0 text-[11.5px] font-medium text-foreground/80">

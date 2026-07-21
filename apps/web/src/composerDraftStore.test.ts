@@ -20,11 +20,6 @@ import {
   useComposerDraftStore,
 } from "./composerDraftStore";
 import { removeLocalStorageItem, setLocalStorageItem } from "./hooks/useLocalStorage";
-import {
-  INLINE_TERMINAL_CONTEXT_PLACEHOLDER,
-  insertInlineTerminalContextPlaceholder,
-  type TerminalContextDraft,
-} from "./lib/terminalContext";
 import { createDebouncedStorage } from "./lib/storage";
 
 function makeImage(input: {
@@ -79,26 +74,6 @@ function makeFile(input: {
   };
 }
 
-function makeTerminalContext(input: {
-  id: string;
-  text?: string;
-  terminalId?: string;
-  terminalLabel?: string;
-  lineStart?: number;
-  lineEnd?: number;
-}): TerminalContextDraft {
-  return {
-    id: input.id,
-    threadId: ThreadId.makeUnsafe("thread-dedupe"),
-    terminalId: input.terminalId ?? "default",
-    terminalLabel: input.terminalLabel ?? "Terminal 1",
-    lineStart: input.lineStart ?? 4,
-    lineEnd: input.lineEnd ?? 5,
-    text: input.text ?? "git status\nOn branch main",
-    createdAt: "2026-03-13T12:00:00.000Z",
-  };
-}
-
 function makeQueuedTurn(id: string): QueuedComposerTurn {
   return {
     id,
@@ -128,7 +103,6 @@ function makeQueuedChatTurn(id: string, image?: ComposerImageAttachment): Queued
     images: image ? [image] : [],
     files: [],
     assistantSelections: [],
-    terminalContexts: [makeTerminalContext({ id: `ctx-${id}` })],
     fileComments: [],
     pastedTexts: [],
     skills: [{ name: "check-code", path: "/skills/check-code" }],
@@ -494,10 +468,6 @@ describe("composerDraftStore prompt history saved draft", () => {
       assistantMessageId: "assistant-1",
       text: "Use this assistant answer",
     };
-    const terminalContext = makeTerminalContext({
-      id: "ctx-history",
-      text: "bun run check",
-    });
     const fileComment = {
       id: "comment-history",
       path: "apps/web/src/App.tsx",
@@ -517,7 +487,6 @@ describe("composerDraftStore prompt history saved draft", () => {
 
     store.setPrompt(threadId, "draft with structured context");
     store.addAssistantSelection(threadId, assistantSelection);
-    store.addTerminalContext(threadId, terminalContext);
     store.addFileComment(threadId, fileComment);
     store.addPastedTexts(threadId, [pastedText]);
     store.setSkills(threadId, [selectedSkill]);
@@ -535,7 +504,6 @@ describe("composerDraftStore prompt history saved draft", () => {
 
     const browsingDraft = useComposerDraftStore.getState().draftsByThreadId[threadId]!;
     expect(browsingDraft.assistantSelections).toHaveLength(0);
-    expect(browsingDraft.terminalContexts).toHaveLength(0);
     expect(browsingDraft.fileComments).toHaveLength(0);
     expect(browsingDraft.pastedTexts).toHaveLength(0);
     expect(browsingDraft.skills).toHaveLength(0);
@@ -543,9 +511,6 @@ describe("composerDraftStore prompt history saved draft", () => {
     expect(
       browsingDraft.promptHistorySavedDraft?.assistantSelections.map((entry) => entry.id),
     ).toEqual(["sel-history"]);
-    expect(
-      browsingDraft.promptHistorySavedDraft?.terminalContexts.map((entry) => entry.id),
-    ).toEqual(["ctx-history"]);
     expect(browsingDraft.promptHistorySavedDraft?.fileComments.map((entry) => entry.id)).toEqual([
       "comment-history",
     ]);
@@ -561,7 +526,6 @@ describe("composerDraftStore prompt history saved draft", () => {
     const restoredDraft = useComposerDraftStore.getState().draftsByThreadId[threadId]!;
     expect(restoredDraft.prompt).toBe(draftBeforeBrowse.prompt);
     expect(restoredDraft.assistantSelections.map((entry) => entry.id)).toEqual(["sel-history"]);
-    expect(restoredDraft.terminalContexts.map((entry) => entry.id)).toEqual(["ctx-history"]);
     expect(restoredDraft.fileComments.map((entry) => entry.id)).toEqual(["comment-history"]);
     expect(restoredDraft.pastedTexts.map((entry) => entry.id)).toEqual(["paste-history"]);
     expect(restoredDraft.skills).toEqual([selectedSkill]);
@@ -578,10 +542,6 @@ describe("composerDraftStore prompt history saved draft", () => {
       sizeBytes: image.sizeBytes,
       dataUrl: "data:image/png;base64,aGk=",
     };
-    const terminalContext = makeTerminalContext({
-      id: "ctx-persist-history",
-      text: "bun run test",
-    });
     const pastedText = {
       id: "paste-persist-history",
       createdAt: "2026-03-13T12:00:00.000Z",
@@ -594,7 +554,6 @@ describe("composerDraftStore prompt history saved draft", () => {
     store.setPrompt(threadId, "persist me before history");
     store.addImage(threadId, image);
     store.syncPersistedAttachments(threadId, [persistedAttachment]);
-    store.addTerminalContext(threadId, terminalContext);
     store.addPastedTexts(threadId, [pastedText]);
     store.setSkills(threadId, [selectedSkill]);
     const draftBeforeBrowse = useComposerDraftStore.getState().draftsByThreadId[threadId]!;
@@ -624,13 +583,6 @@ describe("composerDraftStore prompt history saved draft", () => {
       persistedState.draftsByThreadId?.[threadId]?.promptHistorySavedDraft?.attachments,
     ).toEqual([persistedAttachment]);
     const persistedSnapshot = persistedState.draftsByThreadId?.[threadId]?.promptHistorySavedDraft;
-    const persistedTerminalContexts = persistedSnapshot?.terminalContexts as
-      | Array<Record<string, unknown>>
-      | undefined;
-    expect(persistedTerminalContexts?.[0]).toMatchObject({
-      id: "ctx-persist-history",
-    });
-    expect(persistedTerminalContexts?.[0]).not.toHaveProperty("text");
     expect(persistedSnapshot?.pastedTexts).toEqual([
       {
         id: "paste-persist-history",
@@ -647,12 +599,6 @@ describe("composerDraftStore prompt history saved draft", () => {
 
     expect(restoredSnapshot?.images.map((entry) => entry.id)).toEqual(["img-persist-history"]);
     expect(restoredSnapshot?.files).toEqual([]);
-    expect(restoredSnapshot?.terminalContexts).toEqual([
-      expect.objectContaining({
-        id: "ctx-persist-history",
-        text: "",
-      }),
-    ]);
     expect(restoredSnapshot?.pastedTexts.map((entry) => entry.id)).toEqual([
       "paste-persist-history",
     ]);
@@ -774,18 +720,8 @@ describe("composerDraftStore copyTransferableComposerState", () => {
     resetComposerDraftStore();
   });
 
-  it("copies the prompt and terminal contexts to the target thread", () => {
-    const sourceContext = makeTerminalContext({
-      id: "ctx-source",
-      text: "pnpm lint",
-    });
-    const copiedPrompt = insertInlineTerminalContextPlaceholder(
-      "Please reuse this context",
-      24,
-    ).prompt;
-
-    useComposerDraftStore.getState().setPrompt(sourceThreadId, copiedPrompt);
-    useComposerDraftStore.getState().setTerminalContexts(sourceThreadId, [sourceContext]);
+  it("copies the prompt, skills and mentions to the target thread", () => {
+    useComposerDraftStore.getState().setPrompt(sourceThreadId, "Please reuse this context");
     useComposerDraftStore
       .getState()
       .setSkills(sourceThreadId, [{ name: "check-code", path: "/skills/check-code" }]);
@@ -800,15 +736,6 @@ describe("composerDraftStore copyTransferableComposerState", () => {
 
     expect(targetDraft).toMatchObject({
       prompt: sourceDraft?.prompt,
-      terminalContexts: [
-        expect.objectContaining({
-          id: sourceContext.id,
-          threadId: targetThreadId,
-          terminalId: sourceContext.terminalId,
-          terminalLabel: sourceContext.terminalLabel,
-          text: sourceContext.text,
-        }),
-      ],
       skills: [{ name: "check-code", path: "/skills/check-code" }],
       mentions: [{ name: "linear", path: "plugin://linear" }],
     });
@@ -1010,7 +937,7 @@ describe("composerDraftStore syncPersistedAttachments", () => {
   });
 });
 
-describe("composerDraftStore terminal contexts", () => {
+describe("composerDraftStore persisted draft sanitization", () => {
   const threadId = ThreadId.makeUnsafe("thread-dedupe");
 
   beforeEach(() => {
@@ -1021,136 +948,6 @@ describe("composerDraftStore terminal contexts", () => {
       stickyModelSelectionByProvider: {},
       stickyActiveProvider: null,
     });
-  });
-
-  it("deduplicates identical terminal contexts by selection signature", () => {
-    const first = makeTerminalContext({ id: "ctx-1" });
-    const duplicate = makeTerminalContext({ id: "ctx-2" });
-
-    useComposerDraftStore.getState().addTerminalContexts(threadId, [first, duplicate]);
-
-    const draft = useComposerDraftStore.getState().draftsByThreadId[threadId];
-    expect(draft?.terminalContexts.map((context) => context.id)).toEqual(["ctx-1"]);
-  });
-
-  it("clears terminal contexts when clearing composer content", () => {
-    useComposerDraftStore
-      .getState()
-      .addTerminalContext(threadId, makeTerminalContext({ id: "ctx-1" }));
-
-    useComposerDraftStore.getState().clearComposerContent(threadId);
-
-    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]).toBeUndefined();
-  });
-
-  it("inserts terminal contexts at the requested inline prompt position", () => {
-    const firstInsertion = insertInlineTerminalContextPlaceholder("alpha beta", 6);
-    const secondInsertion = insertInlineTerminalContextPlaceholder(firstInsertion.prompt, 0);
-
-    expect(
-      useComposerDraftStore
-        .getState()
-        .insertTerminalContext(
-          threadId,
-          firstInsertion.prompt,
-          makeTerminalContext({ id: "ctx-1" }),
-          firstInsertion.contextIndex,
-        ),
-    ).toBe(true);
-    expect(
-      useComposerDraftStore.getState().insertTerminalContext(
-        threadId,
-        secondInsertion.prompt,
-        makeTerminalContext({
-          id: "ctx-2",
-          terminalLabel: "Terminal 2",
-          lineStart: 9,
-          lineEnd: 10,
-        }),
-        secondInsertion.contextIndex,
-      ),
-    ).toBe(true);
-
-    const draft = useComposerDraftStore.getState().draftsByThreadId[threadId];
-    expect(draft?.prompt).toBe(
-      `${INLINE_TERMINAL_CONTEXT_PLACEHOLDER} alpha ${INLINE_TERMINAL_CONTEXT_PLACEHOLDER} beta`,
-    );
-    expect(draft?.terminalContexts.map((context) => context.id)).toEqual(["ctx-2", "ctx-1"]);
-  });
-
-  it("omits terminal context text from persisted drafts", () => {
-    useComposerDraftStore
-      .getState()
-      .addTerminalContext(threadId, makeTerminalContext({ id: "ctx-persist" }));
-
-    const persistApi = useComposerDraftStore.persist as unknown as {
-      getOptions: () => {
-        partialize: (state: ReturnType<typeof useComposerDraftStore.getState>) => unknown;
-      };
-    };
-    const persistedState = persistApi.getOptions().partialize(useComposerDraftStore.getState()) as {
-      draftsByThreadId?: Record<string, { terminalContexts?: Array<Record<string, unknown>> }>;
-    };
-
-    expect(
-      persistedState.draftsByThreadId?.[threadId]?.terminalContexts?.[0],
-      "Expected terminal context metadata to be persisted.",
-    ).toMatchObject({
-      id: "ctx-persist",
-      terminalId: "default",
-      terminalLabel: "Terminal 1",
-      lineStart: 4,
-      lineEnd: 5,
-    });
-    expect(
-      persistedState.draftsByThreadId?.[threadId]?.terminalContexts?.[0]?.text,
-    ).toBeUndefined();
-  });
-
-  it("hydrates persisted terminal contexts without in-memory snapshot text", () => {
-    const persistApi = useComposerDraftStore.persist as unknown as {
-      getOptions: () => {
-        merge: (
-          persistedState: unknown,
-          currentState: ReturnType<typeof useComposerDraftStore.getState>,
-        ) => ReturnType<typeof useComposerDraftStore.getState>;
-      };
-    };
-    const mergedState = persistApi.getOptions().merge(
-      {
-        draftsByThreadId: {
-          [threadId]: {
-            prompt: INLINE_TERMINAL_CONTEXT_PLACEHOLDER,
-            attachments: [],
-            terminalContexts: [
-              {
-                id: "ctx-rehydrated",
-                threadId,
-                createdAt: "2026-03-13T12:00:00.000Z",
-                terminalId: "default",
-                terminalLabel: "Terminal 1",
-                lineStart: 4,
-                lineEnd: 5,
-              },
-            ],
-          },
-        },
-        draftThreadsByThreadId: {},
-        projectDraftThreadIdByProjectId: {},
-      },
-      useComposerDraftStore.getInitialState(),
-    );
-
-    expect(mergedState.draftsByThreadId[threadId]?.terminalContexts).toMatchObject([
-      {
-        id: "ctx-rehydrated",
-        terminalId: "default",
-        terminalLabel: "Terminal 1",
-        lineStart: 4,
-        lineEnd: 5,
-        text: "",
-      },
-    ]);
   });
 
   it("sanitizes malformed persisted drafts during merge", () => {
@@ -1168,7 +965,6 @@ describe("composerDraftStore terminal contexts", () => {
           [threadId]: {
             prompt: "",
             attachments: "not-an-array",
-            terminalContexts: "not-an-array",
             provider: "bogus-provider",
             modelOptions: "not-an-object",
           },
@@ -1250,7 +1046,6 @@ describe("composerDraftStore project draft thread mapping", () => {
     expect(useComposerDraftStore.getState().getDraftThreadByProjectId(projectId)).toEqual({
       threadId,
       projectId,
-      entryPoint: "chat",
       branch: "feature/test",
       worktreePath: "/tmp/worktree-test",
       envMode: "worktree",
@@ -1260,7 +1055,6 @@ describe("composerDraftStore project draft thread mapping", () => {
     });
     expect(useComposerDraftStore.getState().getDraftThread(threadId)).toEqual({
       projectId,
-      entryPoint: "chat",
       branch: "feature/test",
       worktreePath: "/tmp/worktree-test",
       envMode: "worktree",
@@ -1268,31 +1062,6 @@ describe("composerDraftStore project draft thread mapping", () => {
       createdAt: "2026-01-01T00:00:00.000Z",
       lastKnownPr: null,
     });
-  });
-
-  it("tracks chat and terminal draft threads independently for the same project", () => {
-    const store = useComposerDraftStore.getState();
-    store.setProjectDraftThreadId(projectId, threadId, { entryPoint: "chat" });
-    store.setProjectDraftThreadId(projectId, otherThreadId, { entryPoint: "terminal" });
-
-    expect(
-      useComposerDraftStore.getState().getDraftThreadByProjectId(projectId, "chat"),
-    ).toMatchObject({
-      threadId,
-      projectId,
-      entryPoint: "chat",
-    });
-    expect(
-      useComposerDraftStore.getState().getDraftThreadByProjectId(projectId, "terminal"),
-    ).toMatchObject({
-      threadId: otherThreadId,
-      projectId,
-      entryPoint: "terminal",
-    });
-    expect(useComposerDraftStore.getState().getDraftThread(threadId)?.entryPoint).toBe("chat");
-    expect(useComposerDraftStore.getState().getDraftThread(otherThreadId)?.entryPoint).toBe(
-      "terminal",
-    );
   });
 
   it("clears only matching project draft mapping entries", () => {
@@ -2053,7 +1822,6 @@ describe("composerDraftStore queued follow-ups", () => {
           threadId: "thread-source-plan",
           planId: "plan-1",
         },
-        terminalContexts: [{ text: "git status\nOn branch main" }],
       },
     ]);
   });

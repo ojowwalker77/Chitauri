@@ -9,8 +9,7 @@ export type ChatHeaderControlId =
   | "projectScripts"
   | "environment"
   | "openIn"
-  | "gitActions"
-  | "diff";
+  | "gitActions";
 
 export const DEFAULT_CHAT_HEADER_CONTROL_ORDER = [
   "usage",
@@ -19,7 +18,6 @@ export const DEFAULT_CHAT_HEADER_CONTROL_ORDER = [
   "environment",
   "openIn",
   "gitActions",
-  "diff",
 ] as const satisfies readonly ChatHeaderControlId[];
 
 export const CHAT_HEADER_CONTROL_LABELS: Record<
@@ -49,10 +47,6 @@ export const CHAT_HEADER_CONTROL_LABELS: Record<
   gitActions: {
     title: "Git actions",
     description: "Commit, push, and pull request shortcuts.",
-  },
-  diff: {
-    title: "Diff panel",
-    description: "Toggle the diff panel and the +/- change count.",
   },
 };
 

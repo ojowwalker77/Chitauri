@@ -66,16 +66,6 @@ import {
   GitHubWorkItemDetailInput,
   GitHubWorkListInput,
 } from "./github";
-import {
-  TerminalAckOutputInput,
-  TerminalClearInput,
-  TerminalCloseInput,
-  TerminalEvent,
-  TerminalOpenInput,
-  TerminalResizeInput,
-  TerminalRestartInput,
-  TerminalWriteInput,
-} from "./terminal";
 import { KeybindingRule } from "./keybindings";
 import {
   ProjectCreateLocalFilePreviewGrantInput,
@@ -185,15 +175,6 @@ export const WS_METHODS = {
   githubPullRequestDiff: "github.pullRequestDiff",
   githubWorkItemAction: "github.workItemAction",
 
-  // Terminal methods
-  terminalOpen: "terminal.open",
-  terminalWrite: "terminal.write",
-  terminalAckOutput: "terminal.ackOutput",
-  terminalResize: "terminal.resize",
-  terminalClear: "terminal.clear",
-  terminalRestart: "terminal.restart",
-  terminalClose: "terminal.close",
-
   // Server meta
   serverGetConfig: "server.getConfig",
   serverGetEnvironment: "server.getEnvironment",
@@ -219,7 +200,6 @@ export const WS_METHODS = {
   subscribeServerSettings: "server.subscribeSettings",
 
   // Streaming subscriptions
-  subscribeTerminalEvents: "terminal.subscribeEvents",
   subscribeOrchestrationDomainEvents: "orchestration.subscribeDomainEvents",
   subscribeGitActionProgress: "git.subscribeActionProgress",
 
@@ -251,7 +231,6 @@ export const WS_METHODS = {
 export const WS_CHANNELS = {
   automationEvent: "automation.event",
   gitActionProgress: "git.actionProgress",
-  terminalEvent: "terminal.event",
   projectDevServerEvent: "project.devServerEvent",
   serverWelcome: "server.welcome",
   serverMaintenanceUpdated: "server.maintenanceUpdated",
@@ -364,15 +343,6 @@ const WebSocketRequestBody = Schema.Union([
     Tuple.map(Schema.fieldsAssign({ _tag: Schema.tag(WS_METHODS.githubWorkItemAction) })),
   ).members,
 
-  // Terminal methods
-  tagRequestBody(WS_METHODS.terminalOpen, TerminalOpenInput),
-  tagRequestBody(WS_METHODS.terminalWrite, TerminalWriteInput),
-  tagRequestBody(WS_METHODS.terminalAckOutput, TerminalAckOutputInput),
-  tagRequestBody(WS_METHODS.terminalResize, TerminalResizeInput),
-  tagRequestBody(WS_METHODS.terminalClear, TerminalClearInput),
-  tagRequestBody(WS_METHODS.terminalRestart, TerminalRestartInput),
-  tagRequestBody(WS_METHODS.terminalClose, TerminalCloseInput),
-
   // Server meta
   tagRequestBody(WS_METHODS.serverGetConfig, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverGetEnvironment, Schema.Struct({})),
@@ -454,7 +424,6 @@ export interface WsPushPayloadByChannel {
   readonly [WS_CHANNELS.serverSettingsUpdated]: typeof ServerSettingsUpdatedPayload.Type;
   readonly [WS_CHANNELS.automationEvent]: typeof AutomationStreamEvent.Type;
   readonly [WS_CHANNELS.gitActionProgress]: typeof GitActionProgressEvent.Type;
-  readonly [WS_CHANNELS.terminalEvent]: typeof TerminalEvent.Type;
   readonly [WS_CHANNELS.projectDevServerEvent]: typeof ProjectDevServerEvent.Type;
   readonly [ORCHESTRATION_WS_CHANNELS.domainEvent]: OrchestrationEvent;
   readonly [ORCHESTRATION_WS_CHANNELS.shellEvent]: OrchestrationShellStreamItem;
@@ -500,7 +469,6 @@ export const WsPushGitActionProgress = makeWsPushSchema(
   WS_CHANNELS.gitActionProgress,
   GitActionProgressEvent,
 );
-export const WsPushTerminalEvent = makeWsPushSchema(WS_CHANNELS.terminalEvent, TerminalEvent);
 export const WsPushProjectDevServerEvent = makeWsPushSchema(
   WS_CHANNELS.projectDevServerEvent,
   ProjectDevServerEvent,
@@ -526,7 +494,6 @@ export const WsPushChannelSchema = Schema.Literals([
   WS_CHANNELS.serverProviderStatusesUpdated,
   WS_CHANNELS.serverSettingsUpdated,
   WS_CHANNELS.automationEvent,
-  WS_CHANNELS.terminalEvent,
   WS_CHANNELS.projectDevServerEvent,
   ORCHESTRATION_WS_CHANNELS.domainEvent,
   ORCHESTRATION_WS_CHANNELS.shellEvent,
@@ -542,7 +509,6 @@ export const WsPush = Schema.Union([
   WsPushServerSettingsUpdated,
   WsPushAutomationEvent,
   WsPushGitActionProgress,
-  WsPushTerminalEvent,
   WsPushProjectDevServerEvent,
   WsPushOrchestrationDomainEvent,
   WsPushOrchestrationShellEvent,
