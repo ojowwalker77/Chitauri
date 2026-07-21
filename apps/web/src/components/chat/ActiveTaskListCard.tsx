@@ -70,7 +70,7 @@ export const ActiveTaskListCard = memo(function ActiveTaskListCard({
             <PiSlidersHorizontal className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
           )}
           <ComposerStackedPanelRowLabel tone="meta">
-            {completedCount} out of {totalCount} tasks completed
+            Run checklist · {completedCount} of {totalCount} completed
           </ComposerStackedPanelRowLabel>
         </ComposerStackedPanelRowMain>
         <div className="flex shrink-0 items-center gap-0.5">
@@ -80,8 +80,8 @@ export const ActiveTaskListCard = memo(function ActiveTaskListCard({
             size="icon-xs"
             className={COMPOSER_STACKED_PANEL_ICON_BUTTON_CLASS_NAME}
             onClick={onOpenSidebar}
-            aria-label="Open tasks sidebar"
-            title="Open tasks sidebar"
+            aria-label="Open run checklist sidebar"
+            title="Open run checklist sidebar"
           >
             <PiSidebarSimple className="size-3" />
           </Button>
@@ -91,8 +91,8 @@ export const ActiveTaskListCard = memo(function ActiveTaskListCard({
             size="icon-xs"
             className={COMPOSER_STACKED_PANEL_ICON_BUTTON_CLASS_NAME}
             onClick={() => onCompactChange(!compact)}
-            aria-label={compact ? "Expand task banner" : "Collapse task banner"}
-            title={compact ? "Expand task banner" : "Collapse task banner"}
+            aria-label={compact ? "Expand run checklist" : "Collapse run checklist"}
+            title={compact ? "Expand run checklist" : "Collapse run checklist"}
           >
             {compact ? (
               <PiArrowsOutSimple className="size-3" />

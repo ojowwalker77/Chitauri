@@ -224,9 +224,9 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   {
     id: "behavior:task-list-location",
     section: "general",
-    title: "Task list location",
+    title: "Run checklist location",
     keywords:
-      "Choose where active tasks open by default. right sidebar vertical above composer inline plan steps",
+      "Choose where the provider run checklist opens by default. active steps right sidebar vertical above composer inline plan",
   },
   {
     id: "behavior:assistant-output",

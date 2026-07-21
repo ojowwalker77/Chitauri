@@ -3747,7 +3747,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("opens active turn tasks in the right sidebar by default", async () => {
+  it("opens the active run checklist in the right sidebar by default", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotWithActiveInlinePlan(),
@@ -3762,9 +3762,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("shows the skinny inline plan card when tasks default above the composer", async () => {
+  it("shows the inline run checklist when it defaults above the composer", async () => {
     localStorage.setItem(
-      "chitauri:app-settings:v1",
+      "teacode:app-settings:v1",
       JSON.stringify({ taskListDisplayMode: "composer" }),
     );
     const mounted = await mountChatView({
@@ -3775,7 +3775,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     try {
       await vi.waitFor(
         () => {
-          expect(document.body.textContent).toContain("1 out of 3 tasks completed");
+          expect(document.body.textContent).toContain("Run checklist · 1 of 3 completed");
           expect(document.body.textContent).toContain("Inspecting ChatView boundaries");
           expect(document.body.textContent).toContain("Patch the shared checklist receiver");
           expect(document.body.textContent).toContain("1 agent running");
@@ -3790,7 +3790,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(document.querySelector('[aria-label="Close plan sidebar"]')).toBeNull();
 
       const openPlanButton = await waitForElement(
-        () => document.querySelector<HTMLButtonElement>('button[title="Open tasks sidebar"]'),
+        () =>
+          document.querySelector<HTMLButtonElement>('button[title="Open run checklist sidebar"]'),
         "Unable to find inline active plan sidebar button.",
       );
       openPlanButton.click();
@@ -3811,7 +3812,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(
         () => {
           expect(document.body.textContent).toContain("Finished the investigation.");
-          expect(document.body.textContent).not.toContain("1 out of 3 tasks completed");
+          expect(document.body.textContent).not.toContain("Run checklist · 1 of 3 completed");
           expect(document.body.textContent).not.toContain("1 agent running");
         },
         { timeout: 8_000, interval: 16 },

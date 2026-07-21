@@ -56,8 +56,8 @@ export const FEATURE_FLAGS: readonly FeatureFlag[] = [
   {
     id: "show-debug-task-banner",
     kind: "toggle",
-    label: "Show debug task banner",
-    description: "Render a local sample active task banner for UI testing.",
+    label: "Show debug run checklist",
+    description: "Render a local sample provider run checklist for UI testing.",
     defaultEnabled: DEFAULT_FEATURE_FLAG_STATE["show-debug-task-banner"],
   },
   {

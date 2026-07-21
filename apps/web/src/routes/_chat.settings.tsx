@@ -1095,7 +1095,7 @@ function SettingsRouteView() {
       : []),
     ...(settings.diffWordWrap !== defaults.diffWordWrap ? ["Diff line wrapping"] : []),
     ...(settings.taskListDisplayMode !== defaults.taskListDisplayMode
-      ? ["Task list location"]
+      ? ["Run checklist location"]
       : []),
     ...(settings.autoArchiveMergedPrThreads !== defaults.autoArchiveMergedPrThreads
       ? ["Auto-archive merged PRs"]
@@ -2315,14 +2315,14 @@ function SettingsRouteView() {
 
   const renderBehaviorPanel = () => (
     <div className="space-y-6">
-      <SettingsSection title="Task lists">
+      <SettingsSection title="Run checklists">
         <SettingsRow
-          title="Task list location"
-          description="Choose where active task lists open by default. You can still switch views from the task controls."
+          title="Run checklist location"
+          description="Choose where the provider's active run checklist opens by default. You can still switch views from its controls."
           resetAction={
             settings.taskListDisplayMode !== defaults.taskListDisplayMode ? (
               <SettingResetButton
-                label="task list location"
+                label="run checklist location"
                 onClick={() =>
                   updateSettings({ taskListDisplayMode: defaults.taskListDisplayMode })
                 }
@@ -2333,7 +2333,7 @@ function SettingsRouteView() {
             <SettingsSegmentedControl
               value={settings.taskListDisplayMode}
               onValueChange={(value) => updateSettings({ taskListDisplayMode: value })}
-              ariaLabel="Default task list location"
+              ariaLabel="Default run checklist location"
               options={TASK_LIST_DISPLAY_OPTIONS}
             />
           }
