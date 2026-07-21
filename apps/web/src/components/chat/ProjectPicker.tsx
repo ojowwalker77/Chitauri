@@ -231,8 +231,10 @@ export const ProjectPicker = memo(function ProjectPicker({
         </span>
       ) : null}
     </span>
+  ) : isProjectSelectionMode ? (
+    "Choose a Worker"
   ) : (
-    "Work in a project"
+    "Choose a folder"
   );
 
   const handleOpenChange = useCallback((nextOpen: boolean) => {
@@ -302,10 +304,22 @@ export const ProjectPicker = memo(function ProjectPicker({
             setOpen(false);
           })
           .catch((error) => {
-            setErrorMessage(error instanceof Error ? error.message : "Unable to select project.");
+            setErrorMessage(
+              error instanceof Error
+                ? error.message
+                : isProjectSelectionMode
+                  ? "Unable to select Worker."
+                  : "Unable to select folder.",
+            );
           });
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Unable to select project.");
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : isProjectSelectionMode
+              ? "Unable to select Worker."
+              : "Unable to select folder.",
+        );
       }
     },
     [isProjectSelectionMode, onSelectProject, onSelectWorkspaceRoot],
@@ -347,17 +361,17 @@ export const ProjectPicker = memo(function ProjectPicker({
           setOpen(false);
         })
         .catch((error) => {
-          setErrorMessage(error instanceof Error ? error.message : "Unable to update project.");
+          setErrorMessage(error instanceof Error ? error.message : "Unable to update Worker.");
         });
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to update project.");
+      setErrorMessage(error instanceof Error ? error.message : "Unable to update Worker.");
     }
   }, [onResetToHome]);
 
   const shouldShowResetToHome = showResetToHome || isProjectSelectionMode;
-  const addProjectLabel = isProjectSelectionMode ? "New project" : "Add new project";
+  const addProjectLabel = isProjectSelectionMode ? "Add Worker" : "Add folder";
   const loadingAddProjectLabel = isProjectSelectionMode
-    ? "Adding project..."
+    ? "Adding Worker..."
     : "Opening folder picker...";
 
   const renderActiveFolderOption = (folder: ActiveFolderOption, index: number) => {
@@ -418,7 +432,7 @@ export const ProjectPicker = memo(function ProjectPicker({
       />
       <ComboboxPopup align={align} side={side} className="p-0">
         <PickerPanelShell
-          searchPlaceholder="Search projects"
+          searchPlaceholder={isProjectSelectionMode ? "Search Workers" : "Search folders"}
           query={query}
           onQueryChange={setQuery}
           footer={
@@ -441,7 +455,9 @@ export const ProjectPicker = memo(function ProjectPicker({
                   onClick={handleResetToHome}
                 >
                   <XIcon className="size-3.5 shrink-0 text-muted-foreground/70" />
-                  <span className="truncate">Don&apos;t work in a project</span>
+                  <span className="truncate">
+                    {isProjectSelectionMode ? "Use Home Chat" : "Use home folder"}
+                  </span>
                 </button>
               ) : null}
               {errorMessage ? (

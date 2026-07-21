@@ -1387,7 +1387,7 @@ export default function ChatView({
       lastKnownPr?: Thread["lastKnownPr"];
     }) => {
       if (!activeProject) {
-        throw new Error("No active project is available for this pull request.");
+        throw new Error("No active Worker is available for this pull request.");
       }
       const draftThreadContext = {
         branch: input.branch,
@@ -2498,7 +2498,7 @@ export default function ChatView({
       .then(() => {
         toastManager.add({
           type: "success",
-          title: "Project instructions added to notepad.",
+          title: "Worker instructions added to notepad.",
         });
       })
       .catch(() => {
@@ -5057,7 +5057,7 @@ export default function ChatView({
             firstSendTarget.creation.defaultModelSelection;
         } catch (error) {
           const description =
-            error instanceof Error ? error.message : "Failed to create the selected project.";
+            error instanceof Error ? error.message : "Failed to create the selected Worker.";
           if (!isDuplicateProjectCreateError(description)) {
             throw error;
           }
@@ -6597,7 +6597,7 @@ export default function ChatView({
         .getState()
         .projects.find((candidate) => candidate.id === projectId && candidate.kind === "project");
       if (!project) {
-        throw new Error("Selected project is not available.");
+        throw new Error("Selected Worker is not available.");
       }
       if (draftThread?.projectId === projectId) {
         scheduleComposerFocus();
@@ -6917,7 +6917,7 @@ export default function ChatView({
         toastManager.add({
           type: "warning",
           title: "Clear is unavailable",
-          description: "Open a project before starting a fresh thread.",
+          description: "Choose a Worker before starting a fresh Thread.",
         });
         return;
       }

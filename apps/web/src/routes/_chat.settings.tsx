@@ -1063,10 +1063,10 @@ function SettingsRouteView() {
   const changedSettingLabels = [
     ...(settings.defaultProvider !== defaults.defaultProvider ? ["Default provider"] : []),
     ...(settings.sidebarProjectSortOrder !== defaults.sidebarProjectSortOrder
-      ? ["Project sort order"]
+      ? ["Worker sort order"]
       : []),
     ...(settings.sidebarThreadSortOrder !== defaults.sidebarThreadSortOrder
-      ? ["Thread sort order"]
+      ? ["Unfiled Thread sort order"]
       : []),
     ...(settings.sidebarPosition !== defaults.sidebarPosition ? ["Sidebar position"] : []),
     ...(settings.showChatsSection !== defaults.showChatsSection ? ["Chats section"] : []),
@@ -1415,7 +1415,7 @@ function SettingsRouteView() {
     const confirmed = await api.dialogs.confirm(
       [
         "Repair local state?",
-        "This rebuilds local project indexes and refreshes project snapshots.",
+        "This rebuilds local Worker indexes and refreshes Worker snapshots.",
         "It keeps existing chats in place, but it may take a moment.",
       ].join("\n"),
     );
@@ -1430,7 +1430,7 @@ function SettingsRouteView() {
       toastManager.add({
         type: "success",
         title: "Local state repaired",
-        description: "Project indexes were rebuilt without clearing existing chats.",
+        description: "Worker indexes were rebuilt without clearing existing chats.",
       });
     } catch (error) {
       toastManager.add({
@@ -1874,12 +1874,12 @@ function SettingsRouteView() {
 
       <SettingsSection title="Sidebar organization">
         <SettingsRow
-          title="Project order"
-          description="Controls how projects are arranged in the main sidebar."
+          title="Worker order"
+          description="Controls how Workers are arranged in the main sidebar."
           resetAction={
             settings.sidebarProjectSortOrder !== defaults.sidebarProjectSortOrder ? (
               <SettingResetButton
-                label="project order"
+                label="Worker order"
                 onClick={() =>
                   updateSettings({
                     sidebarProjectSortOrder: defaults.sidebarProjectSortOrder,
@@ -1897,7 +1897,7 @@ function SettingsRouteView() {
                 }
                 updateSettings({ sidebarProjectSortOrder: value });
               }}
-              ariaLabel="Project sort order"
+              ariaLabel="Worker sort order"
               valueContent={SIDEBAR_PROJECT_SORT_ORDER_LABELS[settings.sidebarProjectSortOrder]}
             >
               <SelectItem hideIndicator value="updated_at">
@@ -1938,12 +1938,12 @@ function SettingsRouteView() {
         />
 
         <SettingsRow
-          title="Thread order"
-          description="Controls how threads are arranged inside each project in the main sidebar."
+          title="Unfiled Thread order"
+          description="Controls how Unfiled Threads are arranged inside each Worker in the main sidebar."
           resetAction={
             settings.sidebarThreadSortOrder !== defaults.sidebarThreadSortOrder ? (
               <SettingResetButton
-                label="thread order"
+                label="Unfiled Thread order"
                 onClick={() =>
                   updateSettings({
                     sidebarThreadSortOrder: defaults.sidebarThreadSortOrder,
@@ -1961,7 +1961,7 @@ function SettingsRouteView() {
                 }
                 updateSettings({ sidebarThreadSortOrder: value });
               }}
-              ariaLabel="Thread sort order"
+              ariaLabel="Unfiled Thread sort order"
               valueContent={SIDEBAR_THREAD_SORT_ORDER_LABELS[settings.sidebarThreadSortOrder]}
             >
               <SelectItem hideIndicator value="updated_at">
@@ -1980,7 +1980,7 @@ function SettingsRouteView() {
           settingKey: "showChatsSection",
           title: "Chats",
           description:
-            "Show the standalone Chats list in the sidebar footer (chats not tied to a project).",
+            "Show the standalone Chats list in the sidebar footer (chats not tied to a Worker).",
           resetLabel: "chats section",
           ariaLabel: "Show the Chats section in the sidebar",
         })}
@@ -2585,7 +2585,7 @@ function SettingsRouteView() {
         {archivedGroups.map(({ project, threads: projectThreads }) => (
           <SettingsSection
             key={project?.id ?? "unknown-project"}
-            title={project?.name ?? "Unknown project"}
+            title={project?.name ?? "Unknown Worker"}
           >
             {projectThreads.map((thread) => (
               <SettingsListRow
@@ -3462,10 +3462,10 @@ function SettingsRouteView() {
 
         <SettingsRow
           title="Recovery tools"
-          description="Rebuild local project indexes without clearing existing chats when the local state gets out of sync."
+          description="Rebuild local Worker indexes without clearing existing chats when the local state gets out of sync."
           status={
             shouldOfferRecoveryTools
-              ? "Visible because projects exist but no chat history is currently available."
+              ? "Visible because Workers exist but no chat history is currently available."
               : "Shown automatically only when recovery actions are relevant."
           }
           control={
@@ -3501,8 +3501,8 @@ function SettingsRouteView() {
                     SETTINGS_INSET_LIST_CLASS_NAME,
                   )}
                 >
-                  Rebuilds local project indexes and refreshes project snapshots. Existing chats
-                  stay in place.
+                  Rebuilds local Worker indexes and refreshes Worker snapshots. Existing chats stay
+                  in place.
                 </div>
               ) : null}
             </div>

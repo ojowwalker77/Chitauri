@@ -179,7 +179,7 @@ function EditorChatHistoryMenu(props: {
       />
       <ComposerPickerMenuPopup align="start" side="bottom" sideOffset={6} className="w-72 min-w-72">
         {historyThreads.length === 0 ? (
-          <MenuItem disabled>No chats in this project yet</MenuItem>
+          <MenuItem disabled>No Threads in this Worker yet</MenuItem>
         ) : (
           historyThreads.map((thread) => (
             <MenuItem

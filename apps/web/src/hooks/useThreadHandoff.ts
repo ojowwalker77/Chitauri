@@ -39,7 +39,7 @@ export function useThreadHandoff() {
 
       const project = projects.find((entry) => entry.id === thread.projectId);
       if (!project) {
-        throw new Error("Project not found for handoff thread.");
+        throw new Error("Worker not found for handoff Thread.");
       }
 
       if (!canCreateThreadHandoff({ thread })) {

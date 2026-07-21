@@ -292,7 +292,7 @@ export function useComposerSlashCommands(input: {
         toastManager.add({
           type: "warning",
           title: "Review is unavailable",
-          description: "Open a project thread before starting a native review.",
+          description: "Open a Worker Thread before starting a native review.",
         });
         return false;
       }
@@ -481,7 +481,7 @@ export function useComposerSlashCommands(input: {
     const params = new URLSearchParams({ threadId: threadId });
     void downloadUrlAsBlob({
       url: resolveWsHttpUrl(`/api/thread-export?${params.toString()}`),
-      filename: `chitauri-thread-${threadId}.zip`,
+      filename: `teacode-thread-${threadId}.zip`,
     }).catch((error: unknown) => {
       toastManager.add({
         type: "error",

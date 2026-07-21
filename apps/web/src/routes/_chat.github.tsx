@@ -882,7 +882,7 @@ function GitHubWorkbenchRoute() {
       toastManager.add({
         type: "warning",
         title: "Add this repository to TeaCode first",
-        description: "Agent work needs a local project or managed checkout.",
+        description: "Agent work needs a local Worker or managed checkout.",
         timeout: 5000,
       });
       return;
@@ -1012,7 +1012,7 @@ function GitHubWorkbenchRoute() {
                   </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {connection.error ??
-                      "Choose a project with a GitHub remote, or inspect this repository's remotes."}
+                      "Choose a Worker with a GitHub remote, or inspect this repository's remotes."}
                   </p>
                   {!connection.authenticated ? (
                     <code className="mt-3 block rounded-md bg-muted px-2 py-1.5 text-xs">

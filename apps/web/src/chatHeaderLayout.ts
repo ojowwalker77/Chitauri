@@ -33,8 +33,8 @@ export const CHAT_HEADER_CONTROL_LABELS: Record<
     description: "Hand the thread off to another provider.",
   },
   projectScripts: {
-    title: "Project actions",
-    description: "Run and manage project scripts.",
+    title: "Worker actions",
+    description: "Run and manage repository scripts for this Worker.",
   },
   environment: {
     title: "Environment",
@@ -42,7 +42,7 @@ export const CHAT_HEADER_CONTROL_LABELS: Record<
   },
   openIn: {
     title: "Open in editor",
-    description: "Open the project in your editor.",
+    description: "Open the Worker's repository in your editor.",
   },
   gitActions: {
     title: "Git actions",

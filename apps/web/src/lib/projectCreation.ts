@@ -21,9 +21,9 @@ import { newCommandId, newProjectId } from "./utils";
 const DEFAULT_PROJECT_CREATE_RECOVERY_MAX_ATTEMPTS = 6;
 const DEFAULT_PROJECT_CREATE_RECOVERY_DELAY_MS = 50;
 export const PROJECT_CREATE_EXISTING_SYNC_ERROR =
-  "This folder is already linked, but the existing project has not synced into the sidebar yet. Try again in a moment.";
+  "This folder is already linked, but the existing Worker has not synced into the sidebar yet. Try again in a moment.";
 export const PROJECT_CREATE_SYNC_ERROR =
-  "The project was created, but it has not synced into TeaCode yet. Try again in a moment.";
+  "The Worker was created, but it has not synced into TeaCode yet. Try again in a moment.";
 
 function buildProjectTitleFromWorkspaceRoot(workspaceRoot: string): string {
   return workspaceRoot.split(/[/\\]/).findLast((segment) => segment.length > 0) ?? workspaceRoot;
@@ -46,7 +46,7 @@ export async function createOrRecoverProjectFromPath(input: {
 }> {
   const workspaceRoot = input.workspaceRoot.trim();
   if (!workspaceRoot) {
-    throw new Error("Project folder path is empty.");
+    throw new Error("Worker folder path is empty.");
   }
 
   const maxAttempts = input.maxAttempts ?? DEFAULT_PROJECT_CREATE_RECOVERY_MAX_ATTEMPTS;
@@ -85,7 +85,7 @@ export async function createOrRecoverProjectFromPath(input: {
     };
   } catch (error) {
     const description =
-      error instanceof Error ? error.message : "An error occurred while adding the project.";
+      error instanceof Error ? error.message : "An error occurred while adding the Worker.";
     if (!isDuplicateProjectCreateError(description)) {
       throw error instanceof Error ? error : new Error(description);
     }

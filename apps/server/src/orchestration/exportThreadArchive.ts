@@ -253,5 +253,5 @@ export function threadArchiveFileName(input: {
   readonly isoTimestamp: string;
 }): string {
   const dateBucket = input.isoTimestamp.slice(0, 10).replaceAll("-", "");
-  return `chitauri-thread-${slugifyTitle(input.title)}-${dateBucket}.zip`;
+  return `teacode-thread-${slugifyTitle(input.title)}-${dateBucket}.zip`;
 }

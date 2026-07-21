@@ -279,7 +279,7 @@ export default function ProjectScriptsControl({
   return (
     <>
       {showInlineControls && primaryScript ? (
-        <ChatHeaderSplitGroup label="Project actions">
+        <ChatHeaderSplitGroup label="Worker actions">
           <ChatHeaderButton
             className={cn(
               CHAT_HEADER_SPLIT_LEADING_CLASS_NAME,

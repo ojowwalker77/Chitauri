@@ -68,6 +68,7 @@ import {
   MAX_PINNED_PROJECTS,
   type DesktopUpdateState,
   type OrchestrationShellSnapshot,
+  type OrchestrationTaskShell,
   PROVIDER_DISPLAY_NAMES,
   ProjectId,
   type ProviderKind,
@@ -315,6 +316,7 @@ import { useWorkspaceStore } from "../workspaceStore";
 import type {
   SidebarSearchAction,
   SidebarSearchProject,
+  SidebarSearchTask,
   SidebarSearchThread,
 } from "./SidebarSearchPalette.logic";
 import { useFocusedChatContext } from "../focusedChatContext";
@@ -828,8 +830,8 @@ function ProjectSortMenu({
       <SidebarIconButton
         render={<MenuTrigger />}
         icon={IoFilter}
-        label="Sort projects"
-        tooltip="Sort projects"
+        label="Sort Workers"
+        tooltip="Sort Workers"
         tooltipSide="right"
       />
       <MenuPopup
@@ -838,9 +840,7 @@ function ProjectSortMenu({
         className="min-w-44 rounded-xl border-panel-border bg-panel shadow-[0_16px_44px_rgba(0,0,0,0.5)]"
       >
         <MenuGroup>
-          <div className="px-2 py-1 sm:text-xs font-medium text-muted-foreground">
-            Sort projects
-          </div>
+          <div className="px-2 py-1 sm:text-xs font-medium text-muted-foreground">Sort Workers</div>
           <MenuRadioGroup
             value={projectSortOrder}
             onValueChange={(value) => {
@@ -858,7 +858,7 @@ function ProjectSortMenu({
         </MenuGroup>
         <MenuGroup>
           <div className="px-2 pt-2 pb-1 sm:text-xs font-medium text-muted-foreground">
-            Sort threads
+            Sort unfiled Threads
           </div>
           <ThreadSortMenuItems
             threadSortOrder={threadSortOrder}
@@ -1496,8 +1496,8 @@ export default function Sidebar() {
           clearOptimisticProjectPinned(projectId);
           toastManager.add({
             type: "warning",
-            title: "Project pin limit reached",
-            description: `You can pin up to ${MAX_PINNED_PROJECTS} projects.`,
+            title: "Worker pin limit reached",
+            description: `You can pin up to ${MAX_PINNED_PROJECTS} Workers.`,
           });
           return;
         }
@@ -1549,7 +1549,7 @@ export default function Sidebar() {
         });
         toastManager.add({
           type: "error",
-          title: isPinned ? "Unable to unpin project" : "Unable to pin project",
+          title: isPinned ? "Unable to unpin Worker" : "Unable to pin Worker",
           description: error instanceof Error ? error.message : undefined,
         });
       });
@@ -1906,7 +1906,7 @@ export default function Sidebar() {
         return;
       } catch (error) {
         const description =
-          error instanceof Error ? error.message : "An error occurred while adding the project.";
+          error instanceof Error ? error.message : "An error occurred while adding the Worker.";
         setIsAddingProject(false);
         throw error instanceof Error ? error : new Error(description);
       }
@@ -1937,11 +1937,11 @@ export default function Sidebar() {
         setAddProjectError(null);
         await addProjectFromPath(pickedPath).catch((error: unknown) => {
           const description =
-            error instanceof Error ? error.message : "An error occurred while adding the project.";
+            error instanceof Error ? error.message : "An error occurred while adding the Worker.";
           setAddProjectError(description);
           toastManager.add({
             type: "error",
-            title: "Unable to add project",
+            title: "Unable to add Worker",
             description,
           });
         });
@@ -2078,8 +2078,8 @@ export default function Sidebar() {
       if (!targetProjectId) {
         throw new Error(
           desktopCwd === null && request.kind === "desktop"
-            ? "This desktop thread does not include a workspace. Open a project and try again."
-            : "Add or open a project before importing this thread.",
+            ? "This desktop thread does not include a workspace. Open a Worker and try again."
+            : "Add or open a Worker before importing this thread.",
         );
       }
 
@@ -2632,8 +2632,8 @@ export default function Sidebar() {
           title: "Cannot archive threads",
           description:
             runningCount === 1
-              ? "The only thread in this project is running. Stop it before archiving."
-              : `All ${runningCount} threads in this project are running. Stop them before archiving.`,
+              ? "The only thread in this Worker is running. Stop it before archiving."
+              : `All ${runningCount} threads in this Worker are running. Stop them before archiving.`,
         });
         return;
       }
@@ -3245,10 +3245,13 @@ export default function Sidebar() {
       const confirmed = await api.dialogs.confirm(
         projectThreads.length > 0
           ? [
-              `Remove project "${project.name}"?`,
-              `This will delete ${projectThreads.length} ${pluralize(projectThreads.length, "thread")} in this folder and remove the project.`,
+              `Remove Worker "${project.name}"?`,
+              `This will delete ${projectThreads.length} linked ${pluralize(projectThreads.length, "Thread")} and remove the Worker. Open Tasks must be completed or cancelled first.`,
             ].join("\n")
-          : `Remove project "${project.name}"?`,
+          : [
+              `Remove Worker "${project.name}"?`,
+              "This removes the repository Worker. Open Tasks must be completed or cancelled first.",
+            ].join("\n"),
       );
       if (!confirmed) return;
 
@@ -3266,7 +3269,7 @@ export default function Sidebar() {
         if (deletionResult.failureCount > 0) {
           toastManager.add({
             type: "error",
-            title: `Failed to remove "${project.name}"`,
+            title: `Failed to remove Worker "${project.name}"`,
             description: `Could not delete ${deletionResult.failureCount} ${pluralize(deletionResult.failureCount, "thread")} in "${project.name}".`,
           });
           return;
@@ -3280,18 +3283,18 @@ export default function Sidebar() {
         clearProjectDraftThreads(projectId);
         toastManager.add({
           type: "success",
-          title: `Removed "${project.name}"`,
+          title: `Removed Worker "${project.name}"`,
           description:
             deletionResult.deletedCount > 0
-              ? `Deleted ${deletionResult.deletedCount} ${pluralize(deletionResult.deletedCount, "thread")} and removed the project.`
-              : "Project removed.",
+              ? `Deleted ${deletionResult.deletedCount} linked ${pluralize(deletionResult.deletedCount, "Thread")} and removed the Worker.`
+              : "Worker removed.",
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error removing project.";
+        const message = error instanceof Error ? error.message : "Unknown error removing Worker.";
         console.error("Failed to remove project", { projectId, error });
         toastManager.add({
           type: "error",
-          title: `Failed to remove "${project.name}"`,
+          title: `Failed to remove Worker "${project.name}"`,
           description: message,
         });
       }
@@ -5362,15 +5365,15 @@ export default function Sidebar() {
       },
       {
         id: "new-thread",
-        label: "New thread",
-        description: "Start a fresh thread in the current project.",
-        keywords: ["thread", "new", "project"],
+        label: "New unfiled Thread",
+        description: "Start a fresh execution outside a Task in the current Worker.",
+        keywords: ["thread", "new", "unfiled", "worker", "project"],
         shortcutLabel: newThreadShortcutLabel,
       },
       {
         id: "add-project",
-        label: "Add project",
-        description: "Open a repository or folder in the sidebar.",
+        label: "Add Worker",
+        description: "Open a repository or folder as a Worker.",
         keywords: ["folder", "repo", "repository", "open"],
         shortcutLabel: addProjectShortcutLabel,
       },
@@ -5842,18 +5845,18 @@ export default function Sidebar() {
                       label={
                         allProjectsExpanded
                           ? focusedProjectId
-                            ? "Collapse all projects except the active project"
-                            : "Collapse all projects"
-                          : "Expand all projects"
+                            ? "Collapse all Workers except the active Worker"
+                            : "Collapse all Workers"
+                          : "Expand all Workers"
                       }
                       className="disabled:cursor-default disabled:opacity-45"
                       onClick={handleToggleProjects}
                       tooltip={
                         allProjectsExpanded
                           ? focusedProjectId
-                            ? "Collapse all projects except the active chat's project"
-                            : "Collapse all projects"
-                          : "Expand all projects"
+                            ? "Collapse all Workers except the active Worker"
+                            : "Collapse all Workers"
+                          : "Expand all Workers"
                       }
                       tooltipSide="bottom"
                     />
@@ -5870,10 +5873,10 @@ export default function Sidebar() {
                   />
                   <SidebarIconButton
                     icon={FiPlus}
-                    label={shouldShowProjectPathEntry ? "Cancel add project" : "Add project"}
+                    label={shouldShowProjectPathEntry ? "Cancel adding Worker" : "Add Worker"}
                     aria-pressed={shouldShowProjectPathEntry}
                     onClick={handleStartAddProject}
-                    tooltip={shouldShowProjectPathEntry ? "Cancel add project" : "Add project"}
+                    tooltip={shouldShowProjectPathEntry ? "Cancel adding Worker" : "Add Worker"}
                     tooltipSide="right"
                   />
                 </>,
@@ -5890,7 +5893,11 @@ export default function Sidebar() {
                         disabled={isPickingFolder || isAddingProject}
                       >
                         <SidebarGlyph icon={FolderIcon} variant="chrome" />
-                        {isPickingFolder ? "Opening..." : isAddingProject ? "Adding..." : "Browse"}
+                        {isPickingFolder
+                          ? "Opening..."
+                          : isAddingProject
+                            ? "Adding Worker..."
+                            : "Browse"}
                       </button>
                     )}
                     <button
@@ -6254,7 +6261,7 @@ export default function Sidebar() {
                 }
               >
                 <ProjectContextMenuIcon icon={PinIcon} />
-                <span>{pinActionLabel("project", projectContextMenuIsPinned)}</span>
+                <span>{pinActionLabel("Worker", projectContextMenuIsPinned)}</span>
               </MenuItem>
               {projectContextMenuHasArchivableThreads || projectContextMenuHasAnyThreads ? (
                 <MenuSeparator />
@@ -6295,7 +6302,7 @@ export default function Sidebar() {
                 }
               >
                 <ProjectContextMenuIcon icon={XIcon} />
-                <span>Remove</span>
+                <span>Remove Worker</span>
               </MenuItem>
             </MenuGroup>
           </ComposerPickerMenuPopup>
@@ -6317,7 +6324,7 @@ export default function Sidebar() {
               Start dev
             </DialogTitle>
             <DialogDescription>
-              {projectRunDialogProject ? projectRunDialogProject.name : "Project"}
+              {projectRunDialogProject ? projectRunDialogProject.name : "Worker"}
             </DialogDescription>
           </DialogHeader>
           <DialogPanel className="space-y-2">
@@ -6385,7 +6392,7 @@ export default function Sidebar() {
 
       <RenameDialog
         open={renameProjectDialogId !== null && renameProjectDialogProject !== null}
-        title="Rename project"
+        title="Rename Worker"
         description="Keep it short and recognizable."
         initialValue={
           renameProjectDialogProject?.localName ?? renameProjectDialogProject?.name ?? ""
@@ -6420,6 +6427,7 @@ export default function Sidebar() {
           }}
           actions={searchPaletteActions}
           projects={searchPaletteProjects}
+          tasks={tasks}
           projectById={projectById}
           onCreateChat={() => void handleCreateHomeChat()}
           onCreateThread={handlePrimaryNewThread}
@@ -6435,6 +6443,12 @@ export default function Sidebar() {
             });
           }}
           onOpenProject={handleOpenProjectFromSearch}
+          onOpenTask={(taskId, workerId) => {
+            void navigate({
+              to: "/tasks",
+              search: { worker: workerId, task: taskId, create: undefined },
+            });
+          }}
           onImportThread={handleImportThread}
           onOpenThread={(threadId) => {
             activateThreadFromSidebarIntent(ThreadId.makeUnsafe(threadId));
@@ -6452,6 +6466,7 @@ function SidebarSearchPaletteController(props: {
   onOpenChange: (open: boolean) => void;
   actions: readonly SidebarSearchAction[];
   projects: readonly SidebarSearchProject[];
+  tasks: readonly OrchestrationTaskShell[];
   projectById: ReadonlyMap<ProjectId, { name: string; remoteName: string }>;
   onCreateChat: () => void;
   onCreateThread: () => void;
@@ -6461,6 +6476,7 @@ function SidebarSearchPaletteController(props: {
   onOpenSettings: () => void;
   onOpenUsageSettings: () => void;
   onOpenProject: (projectId: string) => void;
+  onOpenTask: (taskId: string, workerId: string) => void;
   onImportThread: (request: ImportThreadRequest) => Promise<void>;
   onOpenThread: (threadId: string) => void;
 }) {
@@ -6489,9 +6505,9 @@ function SidebarSearchPaletteController(props: {
           id: thread.id,
           title: thread.title,
           projectId: thread.projectId,
-          projectName: props.projectById.get(thread.projectId)?.name ?? "Unknown project",
+          projectName: props.projectById.get(thread.projectId)?.name ?? "Unknown Worker",
           projectRemoteName:
-            props.projectById.get(thread.projectId)?.remoteName ?? "Unknown project",
+            props.projectById.get(thread.projectId)?.remoteName ?? "Unknown Worker",
           provider: thread.modelSelection.provider,
           createdAt: thread.createdAt,
           updatedAt: thread.updatedAt,
@@ -6502,6 +6518,21 @@ function SidebarSearchPaletteController(props: {
       ];
     });
   }, [props.projectById, sidebarDisplayThreads, threads]);
+  const searchPaletteTasks = useMemo<SidebarSearchTask[]>(
+    () =>
+      props.tasks.map((task) => ({
+        id: task.id,
+        workerId: task.workerId,
+        workerName: props.projectById.get(task.workerId)?.name ?? "Unknown Worker",
+        workerRemoteName: props.projectById.get(task.workerId)?.remoteName ?? "Unknown Worker",
+        title: task.title,
+        brief: task.brief,
+        status: task.status,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+      })),
+    [props.projectById, props.tasks],
+  );
 
   return (
     <SidebarSearchPalette
@@ -6511,6 +6542,7 @@ function SidebarSearchPaletteController(props: {
       onOpenChange={props.onOpenChange}
       actions={props.actions}
       projects={props.projects}
+      tasks={searchPaletteTasks}
       threads={searchPaletteThreads}
       onCreateChat={props.onCreateChat}
       onCreateThread={props.onCreateThread}
@@ -6520,6 +6552,7 @@ function SidebarSearchPaletteController(props: {
       onOpenSettings={props.onOpenSettings}
       onOpenUsageSettings={props.onOpenUsageSettings}
       onOpenProject={props.onOpenProject}
+      onOpenTask={props.onOpenTask}
       importProviders={importProviders}
       onImportThread={props.onImportThread}
       onOpenThread={props.onOpenThread}

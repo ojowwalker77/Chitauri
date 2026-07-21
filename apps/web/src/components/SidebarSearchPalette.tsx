@@ -4,7 +4,8 @@
  * Keeps the sidebar search UX aligned with the shared command primitives so
  * keyboard navigation and shortcut labels behave like the rest of the app.
  */
-import { CheckIcon, NewThreadIcon, SearchIcon, SettingsIcon } from "~/lib/icons";
+import { CheckIcon, ListTodoIcon, NewThreadIcon, SearchIcon, SettingsIcon } from "~/lib/icons";
+import { TASK_STATUS_LABELS } from "~/components/tasks/TaskStatusPill";
 import {
   type FilesystemBrowseResult,
   type ImportableDesktopThread,
@@ -46,9 +47,11 @@ import {
 import {
   type SidebarSearchAction,
   type SidebarSearchProject,
+  type SidebarSearchTask,
   type SidebarSearchThread,
   matchSidebarSearchActions,
   matchSidebarSearchProjects,
+  matchSidebarSearchTasks,
   matchSidebarSearchThreads,
 } from "./SidebarSearchPalette.logic";
 import {
@@ -78,6 +81,7 @@ interface SidebarSearchPaletteProps {
   onOpenChange: (open: boolean) => void;
   actions: readonly SidebarSearchAction[];
   projects: readonly SidebarSearchProject[];
+  tasks: readonly SidebarSearchTask[];
   threads: readonly SidebarSearchThread[];
   onCreateChat: () => void;
   onCreateThread: () => void;
@@ -87,6 +91,7 @@ interface SidebarSearchPaletteProps {
   onOpenSettings: () => void;
   onOpenUsageSettings: () => void;
   onOpenProject: (projectId: string) => void;
+  onOpenTask: (taskId: string, workerId: string) => void;
   onOpenThread: (threadId: string) => void;
   importProviders: readonly ImportProviderKind[];
   onImportThread: (request: ImportThreadRequest) => Promise<void>;
@@ -178,7 +183,7 @@ function threadMatchLabel(input: {
     return input.messageMatchCount > 1 ? `${input.messageMatchCount} chat hits` : "Chat match";
   }
   if (input.matchKind === "project") {
-    return "Project match";
+    return "Worker match";
   }
   return null;
 }
@@ -364,12 +369,19 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
     () => (isBrowsing ? [] : matchSidebarSearchProjects(props.projects, query)),
     [isBrowsing, props.projects, query],
   );
+  const matchedTasks = useMemo(
+    () => (isBrowsing ? [] : matchSidebarSearchTasks(props.tasks, query)),
+    [isBrowsing, props.tasks, query],
+  );
   const matchedThreads = useMemo(
     () => (isBrowsing ? [] : matchSidebarSearchThreads(props.threads, query)),
     [isBrowsing, props.threads, query],
   );
   const hasSearchResults =
-    matchedActions.length > 0 || matchedProjects.length > 0 || matchedThreads.length > 0;
+    matchedActions.length > 0 ||
+    matchedProjects.length > 0 ||
+    matchedTasks.length > 0 ||
+    matchedThreads.length > 0;
   const importFieldLabel = importProvider === "codex" ? "Thread ID" : "Session ID";
   const importPlaceholder =
     importProvider === "claudeAgent"
@@ -435,7 +447,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
       });
       props.onOpenChange(false);
     } catch (cause) {
-      setAddProjectError(cause instanceof Error ? cause.message : "Failed to add project.");
+      setAddProjectError(cause instanceof Error ? cause.message : "Failed to add Worker.");
     } finally {
       setIsAddingProject(false);
     }
@@ -765,8 +777,8 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                   <CommandInput
                     placeholder={
                       isBrowsing
-                        ? "Enter project path (e.g. ~/projects/my-app)"
-                        : "Search projects, threads, and actions"
+                        ? "Enter Worker folder path (e.g. ~/projects/my-app)"
+                        : "Search Workers, Tasks, Threads, and actions"
                     }
                     value={query}
                     onChange={(event) => setQuery(event.currentTarget.value)}
@@ -932,6 +944,62 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
 
                   {!isBrowsing &&
                   matchedActions.length > 0 &&
+                  (matchedTasks.length > 0 ||
+                    matchedThreads.length > 0 ||
+                    matchedProjects.length > 0) ? (
+                    <CommandSeparator />
+                  ) : null}
+
+                  {!isBrowsing && matchedTasks.length > 0 ? (
+                    <CommandGroup>
+                      <CommandGroupLabel className="py-1.5 pl-3">Tasks</CommandGroupLabel>
+                      {matchedTasks.map(({ id, matchKind, task }) => (
+                        <CommandItem
+                          key={id}
+                          value={id}
+                          className="cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2"
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                          }}
+                          onClick={() => {
+                            props.onOpenChange(false);
+                            props.onOpenTask(task.id, task.workerId);
+                          }}
+                        >
+                          <PaletteIcon icon={ListTodoIcon} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline gap-3">
+                              <div className="min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,14px)] text-foreground">
+                                <HighlightedText text={task.title} query={query} />
+                              </div>
+                              <span className="w-24 shrink-0 truncate text-right text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/79">
+                                {task.workerName}
+                              </span>
+                              <span className="w-10 shrink-0 text-right text-[length:var(--app-font-size-ui-timestamp,11px)] text-muted-foreground/79">
+                                {formatRelativeTime(task.updatedAt || task.createdAt)}
+                              </span>
+                            </div>
+                            <div className="mt-0.5 flex items-center gap-2 text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/58">
+                              <span>{TASK_STATUS_LABELS[task.status]}</span>
+                              {matchKind === "brief" && task.brief ? (
+                                <>
+                                  <span aria-hidden>·</span>
+                                  <HighlightedText
+                                    text={task.brief}
+                                    query={query}
+                                    className="min-w-0 truncate"
+                                  />
+                                </>
+                              ) : null}
+                            </div>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  ) : null}
+
+                  {!isBrowsing &&
+                  matchedTasks.length > 0 &&
                   (matchedThreads.length > 0 || matchedProjects.length > 0) ? (
                     <CommandSeparator />
                   ) : null}
@@ -1008,7 +1076,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
 
                   {!isBrowsing && matchedProjects.length > 0 ? (
                     <CommandGroup>
-                      <CommandGroupLabel className="py-1.5 pl-3">Projects</CommandGroupLabel>
+                      <CommandGroupLabel className="py-1.5 pl-3">Workers</CommandGroupLabel>
                       {matchedProjects.map(({ id, project }) => (
                         <CommandItem
                           key={id}
@@ -1025,7 +1093,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                           <PaletteIcon icon={HiOutlineFolderOpen} />
                           <div className="min-w-0 flex-1">
                             <div className="truncate text-[length:var(--app-font-size-ui,14px)] text-foreground">
-                              {project.name || "Untitled project"}
+                              {project.name || "Untitled Worker"}
                             </div>
                             <div className="truncate text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/79">
                               {project.localName
@@ -1054,7 +1122,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                   <>
                     <span>
                       {isAddingProject
-                        ? "Adding project..."
+                        ? "Adding Worker..."
                         : "Type a path, ↑↓ to navigate folders."}
                     </span>
                     <span>
@@ -1062,12 +1130,12 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                         ? `Enter to open · ${submitModifierLabel}+Enter to add`
                         : hasHighlightedBrowseItem
                           ? "Enter to go up"
-                          : "Enter to add project"}
+                          : "Enter to add Worker"}
                     </span>
                   </>
                 ) : (
                   <>
-                    <span>Jump to threads, projects, or actions.</span>
+                    <span>Jump to Workers, Tasks, Threads, or actions.</span>
                     <span>Enter to open</span>
                   </>
                 )}

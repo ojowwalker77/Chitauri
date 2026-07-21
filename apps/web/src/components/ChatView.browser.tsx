@@ -1309,6 +1309,20 @@ async function triggerChatNewShortcutUntilPath(
   return triggerThreadShortcutUntilPath(router, dispatchChatNewShortcut, predicate, errorMessage);
 }
 
+async function createUnfiledThreadFromPalette(
+  router: ReturnType<typeof getRouter>,
+  predicate: (pathname: string) => boolean,
+  errorMessage: string,
+): Promise<string> {
+  await waitForComposerEditor();
+  await waitForLayout();
+  dispatchConfiguredShortcut(window, { key: "k" });
+  const action = page.getByText("New unfiled Thread");
+  await expect.element(action).toBeInTheDocument();
+  await action.click();
+  return waitForURL(router, predicate, errorMessage);
+}
+
 async function triggerTerminalThreadShortcutUntilPath(
   router: ReturnType<typeof getRouter>,
   predicate: (pathname: string) => boolean,
@@ -1339,12 +1353,6 @@ async function triggerThreadShortcutUntilPath(
     }
   }
   throw new Error(`${errorMessage} Last path: ${pathname}`);
-}
-
-async function waitForNewThreadShortcutLabel(): Promise<void> {
-  const newThreadButton = page.getByTestId("new-thread-button");
-  await expect.element(newThreadButton).toBeInTheDocument();
-  await waitForLayout();
 }
 
 async function waitForImagesToLoad(scope: ParentNode): Promise<void> {
@@ -2827,7 +2835,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("keeps the new thread selected after clicking the new-thread button", async () => {
+  it("keeps a new unfiled Thread selected after using the command palette", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({
@@ -2837,17 +2845,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      // Wait for the sidebar to render with the project.
-      const newThreadButton = page.getByLabelText("Create new thread in Project");
-      await expect.element(newThreadButton).toBeInTheDocument();
-
-      await newThreadButton.click();
-
-      // The route should change to a new draft thread ID.
-      const newThreadPath = await waitForURL(
+      const newThreadPath = await createUnfiledThreadFromPalette(
         mounted.router,
         (path) => UUID_ROUTE_RE.test(path),
-        "Route should have changed to a new draft thread UUID.",
+        "Route should have changed to a new unfiled Thread UUID.",
       );
       const newThreadId = newThreadPath.slice(1) as ThreadId;
 
@@ -2896,11 +2897,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const newThreadButton = page.getByLabelText("Create new thread in Project");
-      await expect.element(newThreadButton).toBeInTheDocument();
-      await newThreadButton.click();
-
-      const newThreadPath = await waitForURL(
+      const newThreadPath = await createUnfiledThreadFromPalette(
         mounted.router,
         (path) => UUID_ROUTE_RE.test(path),
         "Route should have changed to a new draft thread UUID.",
@@ -2919,8 +2916,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await expect.element(projectPickerTrigger).toHaveTextContent("project");
       await projectPickerTrigger.click();
 
-      await expect.element(page.getByText("New project")).toBeInTheDocument();
-      await expect.element(page.getByText("Don't work in a project")).toBeInTheDocument();
+      await expect.element(page.getByText("Add Worker")).toBeInTheDocument();
+      await expect.element(page.getByText("Use Home Chat")).toBeInTheDocument();
       await expect.element(page.getByText("Folders on this Mac")).not.toBeInTheDocument();
 
       const currentProjectOption = await waitForElement(
@@ -2986,11 +2983,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const newThreadButton = page.getByLabelText("Create new thread in Project");
-      await expect.element(newThreadButton).toBeInTheDocument();
-      await newThreadButton.click();
-
-      const newThreadPath = await waitForURL(
+      const newThreadPath = await createUnfiledThreadFromPalette(
         mounted.router,
         (path) => UUID_ROUTE_RE.test(path),
         "Route should have changed to a new draft thread UUID.",
@@ -3000,7 +2993,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const projectPickerTrigger = page.getByTestId("project-picker-trigger");
       await expect.element(projectPickerTrigger).toBeInTheDocument();
       await projectPickerTrigger.click();
-      await page.getByText("Don't work in a project").click();
+      await page.getByText("Use Home Chat").click();
 
       await vi.waitFor(
         () => {
@@ -3157,11 +3150,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const newThreadButton = page.getByLabelText("Create new thread in Project");
-      await expect.element(newThreadButton).toBeInTheDocument();
-      await newThreadButton.click();
-
-      const newThreadPath = await waitForURL(
+      const newThreadPath = await createUnfiledThreadFromPalette(
         mounted.router,
         (path) => UUID_ROUTE_RE.test(path),
         "Route should have changed to a new draft thread UUID.",
@@ -3171,7 +3160,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const projectPickerTrigger = page.getByTestId("project-picker-trigger");
       await expect.element(projectPickerTrigger).toBeInTheDocument();
       await projectPickerTrigger.click();
-      await page.getByText("New project").click();
+      await page.getByText("Add Worker").click();
       await vi.waitFor(() => {
         expect(pickFolder).toHaveBeenCalledTimes(1);
       });
@@ -3244,12 +3233,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const newThreadButton = page.getByTestId("new-thread-button");
-      await expect.element(newThreadButton).toBeInTheDocument();
-
-      await newThreadButton.click();
-
-      const newThreadPath = await waitForURL(
+      const newThreadPath = await createUnfiledThreadFromPalette(
         mounted.router,
         (path) => UUID_ROUTE_RE.test(path),
         "Route should have changed to a new draft thread UUID.",
@@ -3283,11 +3267,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const newThreadButton = page.getByTestId("new-thread-button");
-      await expect.element(newThreadButton).toBeInTheDocument();
-      await newThreadButton.click();
-
-      const newThreadPath = await waitForURL(
+      const newThreadPath = await createUnfiledThreadFromPalette(
         mounted.router,
         (path) => UUID_ROUTE_RE.test(path),
         "Route should have changed to a new draft thread UUID.",
@@ -3297,7 +3277,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const envPickerTrigger = await waitForEnvironmentModeButton("Worktree");
       envPickerTrigger.click();
 
-      const localOption = page.getByText("Local project");
+      const localOption = page.getByText("Local Worker");
       await expect.element(localOption).toBeInTheDocument();
       await localOption.click();
 
@@ -3324,11 +3304,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const newThreadButton = page.getByTestId("new-thread-button");
-      await expect.element(newThreadButton).toBeInTheDocument();
-      await newThreadButton.click();
-
-      const newThreadPath = await waitForURL(
+      const newThreadPath = await createUnfiledThreadFromPalette(
         mounted.router,
         (path) => UUID_ROUTE_RE.test(path),
         "Route should have changed to a new draft thread UUID.",
@@ -3415,12 +3391,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const newThreadButton = page.getByTestId("new-thread-button");
-      await expect.element(newThreadButton).toBeInTheDocument();
-
-      await newThreadButton.click();
-
-      const newThreadPath = await waitForURL(
+      const newThreadPath = await createUnfiledThreadFromPalette(
         mounted.router,
         (path) => UUID_ROUTE_RE.test(path),
         "Route should have changed to a new sticky claude draft thread UUID.",
@@ -3455,12 +3426,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const newThreadButton = page.getByTestId("new-thread-button");
-      await expect.element(newThreadButton).toBeInTheDocument();
-
-      await newThreadButton.click();
-
-      const newThreadPath = await waitForURL(
+      const newThreadPath = await createUnfiledThreadFromPalette(
         mounted.router,
         (path) => UUID_ROUTE_RE.test(path),
         "Route should have changed to a new draft thread UUID.",
@@ -3497,12 +3463,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const newThreadButton = page.getByTestId("new-thread-button");
-      await expect.element(newThreadButton).toBeInTheDocument();
-
-      await newThreadButton.click();
-
-      const threadPath = await waitForURL(
+      const threadPath = await createUnfiledThreadFromPalette(
         mounted.router,
         (path) => UUID_ROUTE_RE.test(path),
         "Route should have changed to a sticky draft thread UUID.",
@@ -3549,7 +3510,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
         { timeout: 8_000, interval: 16 },
       );
 
-      await newThreadButton.click();
+      dispatchConfiguredShortcut(window, { key: "k" });
+      const action = page.getByText("New unfiled Thread");
+      await expect.element(action).toBeInTheDocument();
+      await action.click();
       await new Promise<void>((resolve) => {
         window.setTimeout(resolve, 64);
       });
@@ -3595,7 +3559,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      await waitForNewThreadShortcutLabel();
       await waitForServerConfigToApply();
       const composerEditor = await waitForComposerEditor();
       composerEditor.focus();
@@ -3669,13 +3632,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const newThreadButton = page.getByTestId("new-thread-button");
-      await expect.element(newThreadButton).toBeInTheDocument();
-      await waitForNewThreadShortcutLabel();
       await waitForServerConfigToApply();
-      await newThreadButton.click();
-
-      const promotedThreadPath = await waitForURL(
+      const promotedThreadPath = await triggerChatNewShortcutUntilPath(
         mounted.router,
         (path) => UUID_ROUTE_RE.test(path),
         "Route should have changed to a promoted draft thread UUID.",

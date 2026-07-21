@@ -191,7 +191,7 @@ export function projectDiscoverScriptsQueryOptions(input: {
     queryFn: async () => {
       const api = ensureNativeApi();
       if (!input.cwd) {
-        throw new Error("Project script discovery is unavailable.");
+        throw new Error("Worker script discovery is unavailable.");
       }
       return api.projects.discoverScripts({
         cwd: input.cwd,

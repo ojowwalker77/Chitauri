@@ -3,9 +3,11 @@ import { assert, describe, it } from "vitest";
 import {
   matchSidebarSearchActions,
   matchSidebarSearchProjects,
+  matchSidebarSearchTasks,
   matchSidebarSearchThreads,
   type SidebarSearchAction,
   type SidebarSearchProject,
+  type SidebarSearchTask,
   type SidebarSearchThread,
 } from "./SidebarSearchPalette.logic";
 
@@ -103,6 +105,31 @@ const threads: SidebarSearchThread[] = [
   },
 ];
 
+const tasks: SidebarSearchTask[] = [
+  {
+    id: "task-passkeys",
+    workerId: "project-alpha",
+    workerName: "Alpha Repo",
+    workerRemoteName: "Alpha Repo",
+    title: "Implement passkey login",
+    brief: "Integrate the authentication endpoints and validate the client flow.",
+    status: "in_progress",
+    createdAt: "2026-04-09T08:00:00.000Z",
+    updatedAt: "2026-04-09T11:00:00.000Z",
+  },
+  {
+    id: "task-release",
+    workerId: "project-beta",
+    workerName: "Docs",
+    workerRemoteName: "Beta Repo",
+    title: "Prepare release notes",
+    brief: "Document account security changes.",
+    status: "waiting_on_worker",
+    createdAt: "2026-04-09T08:00:00.000Z",
+    updatedAt: "2026-04-09T10:00:00.000Z",
+  },
+];
+
 describe("SidebarSearchPalette.logic", () => {
   it("keeps suggested actions in source order for an empty query", () => {
     const result = matchSidebarSearchActions(actions, "");
@@ -135,6 +162,17 @@ describe("SidebarSearchPalette.logic", () => {
 
     assert.lengthOf(result, 1);
     assert.equal(result[0]?.project.id, "project-beta");
+  });
+
+  it("matches Tasks by title, brief, status, and Worker identity", () => {
+    assert.equal(matchSidebarSearchTasks(tasks, "passkey")[0]?.task.id, "task-passkeys");
+    assert.equal(matchSidebarSearchTasks(tasks, "authentication")[0]?.matchKind, "brief");
+    assert.equal(matchSidebarSearchTasks(tasks, "waiting on worker")[0]?.task.id, "task-release");
+    assert.equal(matchSidebarSearchTasks(tasks, "beta repo")[0]?.task.id, "task-release");
+  });
+
+  it("does not crowd the default palette with Tasks before a query", () => {
+    assert.deepEqual(matchSidebarSearchTasks(tasks, ""), []);
   });
 
   it("prefers thread title matches and then recency", () => {

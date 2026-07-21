@@ -396,7 +396,7 @@ function deriveInitials(name: string): string {
 
 function sanitizeHandle(basename: string): string {
   const slug = basename.toLowerCase().replace(/[^a-z0-9_]/gu, "");
-  return `@${slug || "chitauri"}`;
+  return `@${slug || "teacode"}`;
 }
 
 function formatHour(hour: number): string {

@@ -1,12 +1,12 @@
 // FILE: _chat.tasks.tsx
 // Purpose: Primary Worker-owned Task board and durable Task detail surface.
 
-import type {
-  OrchestrationTaskShell,
+import {
   ProjectId,
-  TaskArtifactKind,
-  TaskId,
-  TaskStatus,
+  type OrchestrationTaskShell,
+  type TaskArtifactKind,
+  type TaskId,
+  type TaskStatus,
 } from "@t3tools/contracts";
 import { getDefaultModel } from "@t3tools/shared/model";
 import { createFileRoute } from "@tanstack/react-router";
@@ -568,11 +568,27 @@ function TasksRoute() {
           model: defaultModel,
         },
         runtimeMode: "full-access",
-        envMode: "local",
+        envMode: "worktree",
         branch: null,
         worktreePath: null,
         createdAt: new Date().toISOString(),
       });
+      if (selectedTask.status === "open") {
+        try {
+          await api.orchestration.dispatchCommand({
+            type: "task.update",
+            commandId: newCommandId(),
+            taskId: selectedTask.id,
+            status: "in_progress",
+          });
+        } catch {
+          toastManager.add({
+            type: "warning",
+            title: "Thread started",
+            description: "The Task status could not be advanced automatically.",
+          });
+        }
+      }
       await navigate({ to: "/$threadId", params: { threadId } });
     } catch (error) {
       toastManager.add({

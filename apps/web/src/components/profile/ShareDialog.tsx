@@ -129,7 +129,7 @@ export function ShareDialog({
     try {
       const blob = await renderNodeToPngBlob(node, CARD_EXPORT_SIZE);
       if (blob) {
-        downloadBlob(blob, `chitauri-stats-${stats.timezone.today}.png`);
+        downloadBlob(blob, `teacode-stats-${stats.timezone.today}.png`);
         setStatus("Saved PNG to your downloads.");
       } else {
         setStatus("Could not render the image.");

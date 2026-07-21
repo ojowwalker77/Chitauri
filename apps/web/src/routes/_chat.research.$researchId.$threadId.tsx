@@ -132,7 +132,7 @@ function ResearchDetailRoute() {
           })
         : projectId;
       if (!targetProjectId) {
-        throw new Error("This research is not linked to a repository or project.");
+        throw new Error("This research is not linked to a repository Worker.");
       }
       await api.orchestration.dispatchCommand({
         type: "thread.create",

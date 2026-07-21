@@ -2229,6 +2229,7 @@ function sidebarThreadSummariesEqual(
     left !== undefined &&
     left.id === right.id &&
     left.projectId === right.projectId &&
+    (left.taskId ?? null) === (right.taskId ?? null) &&
     left.title === right.title &&
     left.modelSelection === right.modelSelection &&
     left.envMode === right.envMode &&
@@ -2270,6 +2271,7 @@ function buildSidebarThreadSummary(
   const nextSummary: SidebarThreadSummary = {
     id: thread.id,
     projectId: thread.projectId,
+    taskId: thread.taskId ?? null,
     title: thread.title,
     modelSelection: thread.modelSelection,
     envMode: thread.envMode,

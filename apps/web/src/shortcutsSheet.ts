@@ -44,12 +44,12 @@ interface ShortcutDefinition {
 const AVAILABLE_NOW_DEFINITIONS: readonly ShortcutDefinition[] = [
   {
     command: "sidebar.addProject",
-    label: "Add project",
-    description: "Open the folder picker to import a local project into the sidebar.",
+    label: "Add Worker",
+    description: "Open the folder picker to add a repository-owned Worker to the sidebar.",
   },
   {
     command: "sidebar.search",
-    label: "Search projects and threads",
+    label: "Search Workers, Tasks, and Threads",
     description: "Open the sidebar search palette from anywhere in the app.",
   },
   {
@@ -60,12 +60,12 @@ const AVAILABLE_NOW_DEFINITIONS: readonly ShortcutDefinition[] = [
   {
     command: "chat.new",
     label: "New thread",
-    description: "Start a fresh thread in the current project, or the most recent one.",
+    description: "Start a fresh Thread in the current Worker, or the most recent one.",
   },
   {
     command: "chat.newLatestProject",
-    label: "New thread in latest project",
-    description: "Jump back into the most recently used project with a new thread.",
+    label: "New Thread in latest Worker",
+    description: "Jump back into the most recently used Worker with a new Thread.",
   },
   {
     command: ["chat.newChat", "chat.newLocal"],
@@ -246,8 +246,8 @@ export function buildShortcutSheetSections(
         id: script.id,
         label: script.runOnWorktreeCreate ? `${script.name} setup script` : script.name,
         description: script.runOnWorktreeCreate
-          ? "Run the project setup script directly from the keyboard."
-          : "Run this project script without opening the scripts menu.",
+          ? "Run the Worker setup script directly from the keyboard."
+          : "Run this Worker script without opening the scripts menu.",
         shortcutLabel,
       } satisfies ShortcutSheetEntry;
     })
@@ -256,8 +256,8 @@ export function buildShortcutSheetSections(
   if (projectScriptEntries.length > 0) {
     sections.push({
       id: "project-scripts",
-      title: "Project scripts",
-      description: "Custom shortcuts defined for the active project's scripts.",
+      title: "Worker scripts",
+      description: "Custom shortcuts defined for the active Worker's repository scripts.",
       entries: projectScriptEntries,
     });
   }

@@ -1,7 +1,7 @@
-// Purpose: Scores sidebar palette results for actions, projects, and chat threads.
+// Purpose: Scores sidebar palette results for actions, Workers, Tasks, and chat Threads.
 // Keeps search local and deterministic so the palette can rank title hits above
 // message-content hits while still surfacing a useful snippet for chat matches.
-import type { ProviderKind } from "@t3tools/contracts";
+import type { ProviderKind, TaskStatus } from "@t3tools/contracts";
 import { basenameOfPath } from "../file-icons";
 
 export interface SidebarSearchAction {
@@ -26,6 +26,24 @@ export interface SidebarSearchProject {
 export interface SidebarSearchProjectMatch {
   id: string;
   project: SidebarSearchProject;
+}
+
+export interface SidebarSearchTask {
+  id: string;
+  workerId: string;
+  workerName: string;
+  workerRemoteName: string;
+  title: string;
+  brief: string;
+  status: TaskStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SidebarSearchTaskMatch {
+  id: string;
+  task: SidebarSearchTask;
+  matchKind: "brief" | "status" | "title" | "worker";
 }
 
 export interface SidebarSearchThread {
@@ -201,6 +219,35 @@ function scoreProject(project: SidebarSearchProject, query: string): number | nu
   return null;
 }
 
+function scoreTask(
+  task: SidebarSearchTask,
+  query: string,
+): { kind: SidebarSearchTaskMatch["matchKind"]; score: number } | null {
+  if (!query) return null;
+
+  const title = normalizeText(task.title);
+  const workerName = normalizeText(task.workerName);
+  const workerRemoteName = normalizeText(task.workerRemoteName);
+  const status = normalizeText(task.status.replaceAll("_", " "));
+  const brief = normalizeText(task.brief);
+
+  if (title === query) return { kind: "title", score: 165 };
+  if (title.startsWith(query)) return { kind: "title", score: 145 };
+  if (workerName === query || workerRemoteName === query) {
+    return { kind: "worker", score: 135 };
+  }
+  if (title.includes(query)) return { kind: "title", score: 125 };
+  if (workerName.startsWith(query) || workerRemoteName.startsWith(query)) {
+    return { kind: "worker", score: 115 };
+  }
+  if (workerName.includes(query) || workerRemoteName.includes(query)) {
+    return { kind: "worker", score: 100 };
+  }
+  if (status.includes(query)) return { kind: "status", score: 85 };
+  if (brief.includes(query)) return { kind: "brief", score: 75 };
+  return null;
+}
+
 export function matchSidebarSearchActions(
   actions: readonly SidebarSearchAction[],
   query: string,
@@ -244,6 +291,37 @@ export function matchSidebarSearchProjects(
     })
     .slice(0, limit)
     .map(({ id, project }) => ({ id, project }));
+}
+
+export function matchSidebarSearchTasks(
+  tasks: readonly SidebarSearchTask[],
+  query: string,
+  limit = 6,
+): SidebarSearchTaskMatch[] {
+  const normalizedQuery = normalizeText(query);
+  if (!normalizedQuery) return [];
+
+  return tasks
+    .map((task) => ({
+      id: `task:${task.id}`,
+      task,
+      match: scoreTask(task, normalizedQuery),
+      recency: Date.parse(task.updatedAt || task.createdAt) || 0,
+    }))
+    .filter((candidate) => candidate.match !== null)
+    .toSorted((left, right) => {
+      if (left.match?.score !== right.match?.score) {
+        return (right.match?.score ?? 0) - (left.match?.score ?? 0);
+      }
+      if (left.recency !== right.recency) return right.recency - left.recency;
+      return left.task.title.localeCompare(right.task.title);
+    })
+    .slice(0, limit)
+    .map(({ id, match, task }) => ({
+      id,
+      task,
+      matchKind: match?.kind ?? "title",
+    }));
 }
 
 export function matchSidebarSearchThreads(

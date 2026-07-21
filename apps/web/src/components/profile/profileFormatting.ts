@@ -59,7 +59,7 @@ export function normalizeHandle(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, "")
     .slice(0, 30);
-  return `@${slug || "chitauri"}`;
+  return `@${slug || "teacode"}`;
 }
 
 // Pretty short date for "peak day" tooltips ("Apr 3").

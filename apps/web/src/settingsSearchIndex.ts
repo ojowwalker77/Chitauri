@@ -67,22 +67,22 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   {
     id: "general:project-order",
     section: "general",
-    title: "Project order",
-    keywords: "Controls how projects are arranged in the main sidebar. sort updated created manual",
+    title: "Worker order",
+    keywords: "Controls how Workers are arranged in the main sidebar. sort updated created manual",
   },
   {
     id: "general:thread-order",
     section: "general",
-    title: "Thread order",
+    title: "Unfiled Thread order",
     keywords:
-      "Controls how threads are arranged inside each project in the main sidebar. sort updated created",
+      "Controls how Unfiled Threads are arranged inside each Worker in the main sidebar. sort updated created",
   },
   {
     id: "general:chats-section",
     section: "general",
     title: "Chats",
     keywords:
-      "Show the standalone Chats list in the sidebar footer chats not tied to a project. sidebar section",
+      "Show the standalone Chats list in the sidebar footer chats not tied to a Worker. sidebar section",
   },
   {
     id: "general:workspace-section",
@@ -201,7 +201,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     section: "appearance",
     title: "Header controls",
     keywords:
-      "Chat header. Drag to reorder the buttons in the chat header and hide the ones you don't use. top bar toolbar actions usage hand off project actions environment open in editor git actions diff panel visibility order clutter",
+      "Chat header. Drag to reorder the buttons in the chat header and hide the ones you don't use. top bar toolbar actions usage hand off Worker actions environment open in editor git actions diff panel visibility order clutter",
   },
 
   // ── Notifications ─────────────────────────────────────────────────────────────
@@ -360,7 +360,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     section: "advanced",
     title: "Recovery tools",
     keywords:
-      "Rebuild local project indexes without clearing existing chats when the local state gets out of sync.",
+      "Rebuild local Worker indexes without clearing existing chats when the local state gets out of sync.",
   },
   {
     id: "advanced:version",

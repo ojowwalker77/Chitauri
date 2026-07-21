@@ -188,7 +188,7 @@ function ProfileContent({
               }
             />
             <InsightRow label="Most active hour" value={peakHourLabel} />
-            <InsightRow label="Most worked project" value={mostWorkedProjectLabel} />
+            <InsightRow label="Most active Worker" value={mostWorkedProjectLabel} />
             <InsightRow
               label="Skills explored"
               value={formatNumber(stats.insights.skillsExplored)}
@@ -197,7 +197,10 @@ function ProfileContent({
               label="Total skills used"
               value={formatNumber(stats.insights.totalSkillsUsed)}
             />
-            <InsightRow label="Total threads" value={formatNumber(stats.activity.totalThreads)} />
+            <InsightRow
+              label="Execution Threads"
+              value={formatNumber(stats.activity.totalThreads)}
+            />
           </dl>
         </section>
 

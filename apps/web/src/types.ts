@@ -278,6 +278,7 @@ export interface ThreadTurnState {
 export interface SidebarThreadSummary {
   id: ThreadId;
   projectId: ProjectId;
+  taskId?: TaskId | null;
   title: string;
   modelSelection: ModelSelection;
   envMode?: ThreadEnvironmentMode | undefined;

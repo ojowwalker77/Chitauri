@@ -4,6 +4,7 @@ import {
   DEFAULT_PROVIDER_INTERACTION_MODE,
   MessageId,
   ProjectId,
+  TaskId,
   ThreadId,
   TurnId,
   type OrchestrationEvent,
@@ -23,6 +24,7 @@ import { OrchestrationEngineLive } from "./OrchestrationEngine.ts";
 import { OrchestrationProjectionPipelineLive } from "./ProjectionPipeline.ts";
 import { OrchestrationProjectionSnapshotQueryLive } from "./ProjectionSnapshotQuery.ts";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
+import { ProjectionSnapshotQuery } from "../Services/ProjectionSnapshotQuery.ts";
 import {
   OrchestrationProjectionPipeline,
   type OrchestrationProjectionPipelineShape,
@@ -41,7 +43,7 @@ async function createOrchestrationSystem() {
   });
   const orchestrationLayer = OrchestrationEngineLive.pipe(
     Layer.provide(OrchestrationProjectionPipelineLive),
-    Layer.provide(OrchestrationProjectionSnapshotQueryLive),
+    Layer.provideMerge(OrchestrationProjectionSnapshotQueryLive),
     Layer.provide(OrchestrationEventStoreLive),
     Layer.provide(OrchestrationCommandReceiptRepositoryLive),
     Layer.provide(SqlitePersistenceMemory),
@@ -50,8 +52,10 @@ async function createOrchestrationSystem() {
   );
   const runtime = ManagedRuntime.make(orchestrationLayer);
   const engine = await runtime.runPromise(Effect.service(OrchestrationEngineService));
+  const snapshotQuery = await runtime.runPromise(Effect.service(ProjectionSnapshotQuery));
   return {
     engine,
+    snapshotQuery,
     run: <A, E>(effect: Effect.Effect<A, E>) => runtime.runPromise(effect),
     dispose: () => runtime.dispose(),
   };
@@ -62,6 +66,148 @@ function now() {
 }
 
 describe("OrchestrationEngine", () => {
+  it("preserves repository ownership across a delegated Worker Task lifecycle", async () => {
+    const createdAt = "2026-07-21T12:00:00.000Z";
+    const workerAId = asProjectId("worker-a");
+    const workerBId = asProjectId("worker-b");
+    const parentTaskId = TaskId.makeUnsafe("task-parent");
+    const delegatedTaskId = TaskId.makeUnsafe("task-delegated");
+    const delegatedThreadId = ThreadId.makeUnsafe("thread-delegated");
+    const artifact = {
+      id: "artifact-test-report",
+      kind: "test_report" as const,
+      title: "Delegated Task tests",
+      reference: "42 tests passing",
+      createdAt,
+    };
+    const system = await createOrchestrationSystem();
+    const { engine, snapshotQuery } = system;
+
+    await system.run(
+      engine.dispatch({
+        type: "project.create",
+        commandId: CommandId.makeUnsafe("cmd-worker-a-create"),
+        projectId: workerAId,
+        title: "Worker A",
+        workspaceRoot: "/tmp/worker-a",
+        defaultModelSelection: { provider: "codex", model: "gpt-5-codex" },
+        createdAt,
+      }),
+    );
+    await system.run(
+      engine.dispatch({
+        type: "project.create",
+        commandId: CommandId.makeUnsafe("cmd-worker-b-create"),
+        projectId: workerBId,
+        title: "Worker B",
+        workspaceRoot: "/tmp/worker-b",
+        defaultModelSelection: { provider: "codex", model: "gpt-5-codex" },
+        createdAt,
+      }),
+    );
+    await system.run(
+      engine.dispatch({
+        type: "task.create",
+        commandId: CommandId.makeUnsafe("cmd-parent-task-create"),
+        taskId: parentTaskId,
+        workerId: workerAId,
+        title: "Coordinate API delivery",
+        brief: "Request the repository-owned API work.",
+        origin: "user",
+        createdAt,
+      }),
+    );
+    await system.run(
+      engine.dispatch({
+        type: "task.create",
+        commandId: CommandId.makeUnsafe("cmd-delegated-task-create"),
+        taskId: delegatedTaskId,
+        workerId: workerBId,
+        requesterWorkerId: workerAId,
+        requesterTaskId: parentTaskId,
+        title: "Implement API contract",
+        brief: "Implement and validate the API in Worker B.",
+        origin: "delegation",
+        createdAt,
+      }),
+    );
+    await system.run(
+      engine.dispatch({
+        type: "thread.create",
+        commandId: CommandId.makeUnsafe("cmd-delegated-thread-create"),
+        threadId: delegatedThreadId,
+        projectId: workerBId,
+        taskId: delegatedTaskId,
+        title: "Implement delegated API work",
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        runtimeMode: "approval-required",
+        envMode: "local",
+        branch: null,
+        worktreePath: null,
+        createdAt,
+      }),
+    );
+    await system.run(
+      engine.dispatch({
+        type: "task.update",
+        commandId: CommandId.makeUnsafe("cmd-delegated-task-complete"),
+        taskId: delegatedTaskId,
+        status: "completed",
+        completionSummary: "API contract implemented and verified.",
+        artifacts: [artifact],
+      }),
+    );
+
+    await expect(
+      system.run(
+        engine.dispatch({
+          type: "thread.create",
+          commandId: CommandId.makeUnsafe("cmd-cross-worker-thread-create"),
+          threadId: ThreadId.makeUnsafe("thread-cross-worker"),
+          projectId: workerAId,
+          taskId: delegatedTaskId,
+          title: "Wrong Worker execution",
+          modelSelection: { provider: "codex", model: "gpt-5-codex" },
+          runtimeMode: "approval-required",
+          envMode: "local",
+          branch: null,
+          worktreePath: null,
+          createdAt,
+        }),
+      ),
+    ).rejects.toThrow("belongs to Worker");
+
+    const readModel = await system.run(engine.getReadModel());
+    expect(readModel.tasks.find((task) => task.id === delegatedTaskId)).toMatchObject({
+      workerId: workerBId,
+      requesterWorkerId: workerAId,
+      requesterTaskId: parentTaskId,
+      status: "completed",
+      completionSummary: "API contract implemented and verified.",
+      artifacts: [artifact],
+    });
+    expect(readModel.threads.find((thread) => thread.id === delegatedThreadId)).toMatchObject({
+      projectId: workerBId,
+      taskId: delegatedTaskId,
+    });
+
+    const shell = await system.run(snapshotQuery.getShellSnapshot());
+    expect(shell.tasks.find((task) => task.id === delegatedTaskId)).toMatchObject({
+      workerId: workerBId,
+      requesterWorkerId: workerAId,
+      requesterTaskId: parentTaskId,
+      status: "completed",
+      completionSummary: "API contract implemented and verified.",
+      artifacts: [artifact],
+    });
+    expect(shell.threads.find((thread) => thread.id === delegatedThreadId)).toMatchObject({
+      projectId: workerBId,
+      taskId: delegatedTaskId,
+    });
+
+    await system.dispose();
+  });
+
   it("returns deterministic read models for repeated reads", async () => {
     const createdAt = now();
     const system = await createOrchestrationSystem();

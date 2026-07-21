@@ -150,6 +150,7 @@ function makeTaskShell(overrides: {
     brief: "User-owned work must remain under user control.",
     status: "in_progress",
     origin: overrides.origin ?? "user",
+    artifacts: [],
     completionSummary: null,
     createdAt: now,
     updatedAt: now,
