@@ -7,6 +7,7 @@ import {
   DEFAULT_AUTOMATION_STOP_CONFIDENCE_THRESHOLD,
   MessageId,
   ProjectId,
+  TaskId,
   ThreadId,
   TurnId,
   type AutomationCreateInput,
@@ -16,6 +17,7 @@ import {
   type GitRemoveWorktreeInput,
   type OrchestrationCommand,
   type OrchestrationProjectShell,
+  type OrchestrationTaskShell,
   type OrchestrationThreadShell,
 } from "@t3tools/contracts";
 import { Duration, Effect, Layer, Option, Stream } from "effect";
@@ -67,6 +69,7 @@ let createWorktreeHook: ((input: GitCreateWorktreeInput) => Effect.Effect<void>)
 // Configurable thread shell returned by the ProjectionSnapshotQuery mock; reconcile
 // tests set it to drive the run's latest-turn outcome.
 let threadShell: Option.Option<OrchestrationThreadShell> = Option.none();
+let taskShell: Option.Option<OrchestrationTaskShell> = Option.none();
 let threadDetail: Option.Option<unknown> = Option.none();
 let completionEvaluation: {
   readonly stopMatched: boolean;
@@ -99,6 +102,7 @@ function resetHarness() {
   gitStatusHook = null;
   createWorktreeHook = null;
   threadShell = Option.none();
+  taskShell = Option.none();
   threadDetail = Option.none();
   completionEvaluation = {
     stopMatched: false,
@@ -116,6 +120,7 @@ function resetHarness() {
 function makeThreadShell(overrides: {
   readonly id?: ThreadId;
   readonly projectId?: ProjectId;
+  readonly taskId?: TaskId | null;
   readonly latestTurn?: OrchestrationThreadShell["latestTurn"];
   readonly hasPendingApprovals?: boolean;
   readonly hasPendingUserInput?: boolean;
@@ -124,11 +129,32 @@ function makeThreadShell(overrides: {
   return {
     id: overrides.id ?? ThreadId.makeUnsafe("thread-shell"),
     projectId: overrides.projectId ?? projectId,
+    taskId: overrides.taskId ?? null,
     latestTurn: overrides.latestTurn ?? null,
     hasPendingApprovals: overrides.hasPendingApprovals,
     hasPendingUserInput: overrides.hasPendingUserInput,
     session: overrides.lastError !== undefined ? { lastError: overrides.lastError } : null,
   } as unknown as OrchestrationThreadShell;
+}
+
+function makeTaskShell(overrides: {
+  readonly id: TaskId;
+  readonly origin?: OrchestrationTaskShell["origin"];
+}): OrchestrationTaskShell {
+  return {
+    id: overrides.id,
+    workerId: projectId,
+    requesterWorkerId: null,
+    requesterTaskId: null,
+    title: "Existing user Task",
+    brief: "User-owned work must remain under user control.",
+    status: "in_progress",
+    origin: overrides.origin ?? "user",
+    completionSummary: null,
+    createdAt: now,
+    updatedAt: now,
+    completedAt: null,
+  };
 }
 
 function makeLatestTurn(
@@ -412,7 +438,7 @@ const projectionSnapshotQuery = {
     }),
   getActiveProjectByWorkspaceRoot: () => Effect.succeed(Option.some(project as never)),
   getProjectShellById: () => Effect.succeed(Option.some(project)),
-  getTaskShellById: () => Effect.succeed(Option.none()),
+  getTaskShellById: () => Effect.succeed(taskShell),
   getFirstActiveThreadIdByProjectId: () => Effect.succeed(Option.none()),
   getThreadCheckpointContext: () => Effect.succeed(Option.none()),
   getFullThreadDiffContext: () => Effect.succeed(Option.none()),
@@ -548,16 +574,35 @@ layer("AutomationService", (it) => {
       const created = yield* service.create(createInput("local"));
 
       const result = yield* service.runNow({ automationId: created.id });
-      const threadCreate = dispatchedCommands[0];
-      const turnStart = dispatchedCommands[1];
+      const taskCreate = dispatchedCommands.find((command) => command.type === "task.create");
+      const taskUpdate = dispatchedCommands.find((command) => command.type === "task.update");
+      const threadCreate = dispatchedCommands.find((command) => command.type === "thread.create");
+      const turnStart = dispatchedCommands.find((command) => command.type === "thread.turn.start");
 
       assert.strictEqual(result.run.status, "running");
-      assert.strictEqual(dispatchedCommands.length, 2);
+      assert.deepStrictEqual(
+        dispatchedCommands.map((command) => command.type),
+        ["task.create", "task.update", "thread.create", "thread.turn.start"],
+      );
+      assert.strictEqual(taskCreate?.type, "task.create");
+      assert.strictEqual(taskUpdate?.type, "task.update");
       assert.strictEqual(threadCreate?.type, "thread.create");
       assert.strictEqual(turnStart?.type, "thread.turn.start");
-      if (threadCreate?.type !== "thread.create" || turnStart?.type !== "thread.turn.start") {
-        assert.fail("Expected thread.create and thread.turn.start commands.");
+      if (
+        taskCreate?.type !== "task.create" ||
+        taskUpdate?.type !== "task.update" ||
+        threadCreate?.type !== "thread.create" ||
+        turnStart?.type !== "thread.turn.start"
+      ) {
+        assert.fail(
+          "Expected Task creation, Task start, thread creation, and turn start commands.",
+        );
       }
+      assert.strictEqual(taskCreate.workerId, projectId);
+      assert.strictEqual(taskCreate.origin, "automation");
+      assert.strictEqual(taskUpdate.taskId, taskCreate.taskId);
+      assert.strictEqual(taskUpdate.status, "in_progress");
+      assert.strictEqual(threadCreate.taskId, taskCreate.taskId);
       assert.strictEqual(threadCreate.envMode, "local");
       assert.strictEqual(threadCreate.runtimeMode, "approval-required");
       assert.strictEqual(turnStart.message.text, "Check stale dependencies.");
@@ -577,7 +622,7 @@ layer("AutomationService", (it) => {
       const created = yield* service.create(createInput("worktree"));
 
       yield* service.runNow({ automationId: created.id });
-      const threadCreate = dispatchedCommands[0];
+      const threadCreate = dispatchedCommands.find((command) => command.type === "thread.create");
 
       assert.strictEqual(createdWorktrees.length, 1);
       const createdWorktree = createdWorktrees[0];
@@ -722,7 +767,7 @@ layer("AutomationService", (it) => {
       assert.strictEqual(createdWorktrees.length, 1);
       assert.strictEqual(removedWorktrees.length, 0);
       assert.strictEqual(deletedBranches.length, 0);
-      assert.strictEqual(dispatchedCommands[0]?.type, "thread.create");
+      assert.isDefined(dispatchedCommands.find((command) => command.type === "thread.create"));
     }),
   );
 
@@ -1024,7 +1069,10 @@ layer("AutomationService", (it) => {
       assert.strictEqual(results.length, 1);
       assert.strictEqual(results[0]?.run.trigger.type, "scheduled");
       assert.strictEqual(results[0]?.run.scheduledFor, "2026-06-16T10:00:00.000Z");
-      assert.strictEqual(dispatchedCommands.length, 2);
+      assert.deepStrictEqual(
+        dispatchedCommands.map((command) => command.type),
+        ["task.create", "task.update", "thread.create", "thread.turn.start"],
+      );
       assert.strictEqual(
         listed.definitions.find((definition) => definition.id === automationId)?.nextRunAt,
         "2026-06-16T10:05:00.000Z",
@@ -1557,15 +1605,53 @@ layer("AutomationService", (it) => {
 
       const { run } = yield* service.runNow({ automationId: created.id });
 
-      // Heartbeat continues an existing thread: exactly one turn start, no thread create.
-      assert.strictEqual(dispatchedCommands.length, 1);
-      const command = dispatchedCommands[0];
+      // An Unfiled heartbeat gets one durable automation Task, links its existing
+      // thread to that Task, and then continues the thread without creating another.
+      assert.deepStrictEqual(
+        dispatchedCommands.map((command) => command.type),
+        ["task.create", "thread.meta.update", "thread.turn.start"],
+      );
+      const command = dispatchedCommands.find((entry) => entry.type === "thread.turn.start");
       assert.strictEqual(command?.type, "thread.turn.start");
       if (command?.type !== "thread.turn.start") {
         assert.fail("Expected a thread.turn.start command.");
       }
       assert.strictEqual(command.threadId, targetThreadId);
       assert.isUndefined(dispatchedCommands.find((entry) => entry.type === "thread.create"));
+      assert.strictEqual(run.threadId, targetThreadId);
+      assert.strictEqual(run.status, "running");
+    }),
+  );
+
+  it.effect("does not create or update Tasks for a heartbeat on a user-owned Task", () =>
+    Effect.gen(function* () {
+      resetHarness();
+      const service = yield* AutomationService;
+      const targetThreadId = ThreadId.makeUnsafe("heartbeat-user-task-thread");
+      const userTaskId = TaskId.makeUnsafe("user-owned-task");
+      threadShell = Option.some(makeThreadShell({ id: targetThreadId, taskId: userTaskId }));
+      taskShell = Option.some(makeTaskShell({ id: userTaskId }));
+
+      const created = yield* service.create({
+        ...createInput("local"),
+        mode: "heartbeat",
+        targetThreadId,
+      });
+
+      const { run } = yield* service.runNow({ automationId: created.id });
+
+      const turnStart = dispatchedCommands.find((command) => command.type === "thread.turn.start");
+      assert.strictEqual(turnStart?.type, "thread.turn.start");
+      if (turnStart?.type !== "thread.turn.start") {
+        assert.fail("Expected heartbeat turn start command.");
+      }
+      assert.strictEqual(turnStart.threadId, targetThreadId);
+      assert.isFalse(
+        dispatchedCommands.some(
+          (command) => command.type === "task.create" || command.type === "task.update",
+        ),
+      );
+      assert.isFalse(dispatchedCommands.some((command) => command.type === "thread.meta.update"));
       assert.strictEqual(run.threadId, targetThreadId);
       assert.strictEqual(run.status, "running");
     }),
@@ -2978,6 +3064,7 @@ layer("AutomationService", (it) => {
         id: automationId,
         now: "2026-06-16T10:01:00.000Z",
       });
+      threadShell = Option.some(makeThreadShell({ id: targetThreadId }));
 
       const result = yield* service.runNow({ automationId });
       const turnStart = dispatchedCommands.find((command) => command.type === "thread.turn.start");
@@ -3331,7 +3418,7 @@ layer("AutomationService", (it) => {
       });
 
       assert.strictEqual(results.length, 1);
-      assert.strictEqual(dispatchedCommands[0]?.type, "thread.create");
+      assert.isDefined(dispatchedCommands.find((command) => command.type === "thread.create"));
       assert.strictEqual(results[0]?.run.status, "failed");
 
       const reloaded = yield* service.list({ projectId });

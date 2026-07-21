@@ -7,6 +7,7 @@ import {
   DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS,
   DEFAULT_AUTOMATION_MINIMUM_INTERVAL_SECONDS,
   MessageId,
+  TaskId,
   ThreadId,
   type AutomationAllowedCapability,
   type AutomationCompletionPolicy,
@@ -93,10 +94,20 @@ function makeAutomationCommandId(runId: AutomationRunId, suffix: string): Comman
 
 function deriveAutomationRunIds(runId: AutomationRunId) {
   return {
+    taskId: TaskId.makeUnsafe(`automation:${runId}:task`),
     threadId: ThreadId.makeUnsafe(`automation:${runId}:thread`),
     messageId: MessageId.makeUnsafe(`automation:${runId}:message`),
+    taskCreateCommandId: CommandId.makeUnsafe(`automation:${runId}:task-create`),
     threadCreateCommandId: CommandId.makeUnsafe(`automation:${runId}:thread-create`),
     turnStartCommandId: CommandId.makeUnsafe(`automation:${runId}:turn-start`),
+  };
+}
+
+function heartbeatAutomationTaskIds(definition: AutomationDefinition) {
+  return {
+    taskId: TaskId.makeUnsafe(`automation:${definition.id}:task`),
+    taskCreateCommandId: CommandId.makeUnsafe(`automation:${definition.id}:task-create`),
+    taskLinkCommandId: CommandId.makeUnsafe(`automation:${definition.id}:task-link`),
   };
 }
 
@@ -611,6 +622,126 @@ export const AutomationServiceLive = Layer.effect(
         }),
       );
 
+    const ensureHeartbeatAutomationTask = (
+      definition: AutomationDefinition,
+      threadId: ThreadId,
+      now: string,
+    ) =>
+      projectionSnapshotQuery.getThreadShellById(threadId).pipe(
+        Effect.mapError(toServiceError("Failed to load heartbeat target thread.")),
+        Effect.flatMap((threadOption) =>
+          Option.match(threadOption, {
+            onNone: () =>
+              Effect.fail(
+                new AutomationServiceError({
+                  message: "Heartbeat target thread was not found.",
+                }),
+              ),
+            onSome: (thread) => {
+              if (thread.taskId) {
+                return Effect.succeed(thread.taskId);
+              }
+              const ids = heartbeatAutomationTaskIds(definition);
+              return orchestrationEngine
+                .dispatch({
+                  type: "task.create",
+                  commandId: ids.taskCreateCommandId,
+                  taskId: ids.taskId,
+                  workerId: definition.projectId,
+                  title: `Automation: ${definition.name}`,
+                  brief: definition.prompt,
+                  origin: "automation",
+                  createdAt: now,
+                })
+                .pipe(
+                  Effect.flatMap(() =>
+                    orchestrationEngine.dispatch({
+                      type: "thread.meta.update",
+                      commandId: ids.taskLinkCommandId,
+                      threadId,
+                      taskId: ids.taskId,
+                    }),
+                  ),
+                  Effect.as(ids.taskId),
+                  Effect.mapError(toServiceError("Failed to attach heartbeat run to a Task.")),
+                );
+            },
+          }),
+        ),
+      );
+
+    const automationOwnedTaskIdForRun = (run: AutomationRun) => {
+      if (!run.threadId) {
+        return Effect.succeed(null);
+      }
+      if (!runUsesExistingThread(run)) {
+        const taskId = deriveAutomationRunIds(run.id).taskId;
+        return projectionSnapshotQuery.getTaskShellById(taskId).pipe(
+          Effect.mapError(toServiceError("Failed to load automation Task.")),
+          Effect.map((taskOption) =>
+            Option.match(taskOption, {
+              onNone: () => null,
+              onSome: (task) => (task.origin === "automation" ? task.id : null),
+            }),
+          ),
+        );
+      }
+      return projectionSnapshotQuery.getThreadShellById(run.threadId).pipe(
+        Effect.mapError(toServiceError("Failed to load automation thread state.")),
+        Effect.flatMap((threadOption) =>
+          Option.match(threadOption, {
+            onNone: () => Effect.succeed(null),
+            onSome: (thread) => {
+              if (!thread.taskId) {
+                return Effect.succeed(null);
+              }
+              return projectionSnapshotQuery.getTaskShellById(thread.taskId).pipe(
+                Effect.mapError(toServiceError("Failed to load automation Task.")),
+                Effect.map((taskOption) =>
+                  Option.match(taskOption, {
+                    onNone: () => null,
+                    onSome: (task) => (task.origin === "automation" ? task.id : null),
+                  }),
+                ),
+              );
+            },
+          }),
+        ),
+      );
+    };
+
+    const syncAutomationTaskStatus = (
+      run: AutomationRun,
+      input: {
+        readonly status: "in_progress" | "blocked" | "completed" | "cancelled";
+        readonly completionSummary?: string | null;
+      },
+    ) =>
+      automationOwnedTaskIdForRun(run).pipe(
+        Effect.flatMap((taskId) =>
+          taskId
+            ? orchestrationEngine
+                .dispatch({
+                  type: "task.update",
+                  commandId: makeAutomationCommandId(run.id, `task-${input.status}`),
+                  taskId,
+                  status: input.status,
+                  ...(input.completionSummary !== undefined
+                    ? { completionSummary: input.completionSummary }
+                    : {}),
+                })
+                .pipe(Effect.asVoid)
+            : Effect.void,
+        ),
+        Effect.catch((error) =>
+          Effect.logWarning("automation Task status update failed", {
+            runId: run.id,
+            status: input.status,
+            error: errorMessage(error),
+          }),
+        ),
+      );
+
     const validateHeartbeatTarget = (input: {
       readonly mode: AutomationDefinition["mode"];
       readonly projectId: AutomationDefinition["projectId"];
@@ -944,7 +1075,9 @@ export const AutomationServiceLive = Layer.effect(
             );
           }
 
+          yield* ensureHeartbeatAutomationTask(definition, targetThreadId, now);
           const started = yield* markRunDispatchStarted(targetThreadId, null);
+          yield* syncAutomationTaskStatus(started, { status: "in_progress" });
           yield* requireRunStillDispatching(
             "Automation run was cancelled before continuing the thread.",
           );
@@ -1003,12 +1136,35 @@ export const AutomationServiceLive = Layer.effect(
           ),
         );
 
+        const automationIds = deriveAutomationRunIds(run.id);
+        yield* orchestrationEngine
+          .dispatch({
+            type: "task.create",
+            commandId: automationIds.taskCreateCommandId,
+            taskId: automationIds.taskId,
+            workerId: definition.projectId,
+            title: definition.name,
+            brief: definition.prompt,
+            origin: "automation",
+            createdAt: now,
+          })
+          .pipe(Effect.mapError(toServiceError("Failed to create automation Task.")));
+        yield* orchestrationEngine
+          .dispatch({
+            type: "task.update",
+            commandId: makeAutomationCommandId(run.id, "task-in_progress"),
+            taskId: automationIds.taskId,
+            status: "in_progress",
+          })
+          .pipe(Effect.mapError(toServiceError("Failed to start automation Task.")));
+
         yield* orchestrationEngine
           .dispatch({
             type: "thread.create",
             commandId: threadCreateCommandId,
             threadId: plannedThreadId,
             projectId: definition.projectId,
+            taskId: automationIds.taskId,
             title: `${definition.name} - ${now}`,
             modelSelection: definition.modelSelection,
             runtimeMode: definition.runtimeMode,
@@ -1081,6 +1237,10 @@ export const AutomationServiceLive = Layer.effect(
               })
               .pipe(Effect.mapError(toServiceError("Failed to update automation run result.")));
             yield* publish({ type: "run-upserted", run: withResult });
+            yield* syncAutomationTaskStatus(withResult, {
+              status: "blocked",
+              completionSummary: summary,
+            });
             yield* maybeStopLoop(withResult, "failed", failedAt);
             return yield* Effect.fail(error);
           }).pipe(Effect.catch(() => Effect.fail(error))),
@@ -1158,6 +1318,12 @@ export const AutomationServiceLive = Layer.effect(
                 })
                 .pipe(Effect.orElseSucceed(() => interrupted)),
         ),
+        Effect.tap((updated) =>
+          syncAutomationTaskStatus(updated, {
+            status: "blocked",
+            completionSummary: "Automation run was interrupted during recovery.",
+          }),
+        ),
         Effect.tap((updated) => publish({ type: "run-upserted", run: updated })),
       );
 
@@ -1193,6 +1359,25 @@ export const AutomationServiceLive = Layer.effect(
             : "",
         runThreadContext,
       };
+    };
+
+    const completionSummaryForRun = (run: AutomationRun) => {
+      if (!run.threadId) {
+        return Effect.succeed("Automation run completed successfully.");
+      }
+      return projectionSnapshotQuery.getThreadDetailById(run.threadId).pipe(
+        Effect.map((threadOption) =>
+          Option.match(threadOption, {
+            onNone: () => "Automation run completed successfully.",
+            onSome: (thread) => {
+              const { runAssistantText } = findRunCompletionMessages({ run, thread });
+              return resultSummary(runAssistantText, "Automation run completed successfully.");
+            },
+          }),
+        ),
+        Effect.map((summary) => summary ?? "Automation run completed successfully."),
+        Effect.catch(() => Effect.succeed("Automation run completed successfully.")),
+      );
     };
 
     const staleStopCheckEvaluation = (rawEvaluation: AutomationCompletionEvaluation) => ({
@@ -1664,6 +1849,10 @@ export const AutomationServiceLive = Layer.effect(
               })
               .pipe(Effect.mapError(toServiceError("Failed to update automation run result.")));
             yield* publish({ type: "run-upserted", run: withResult });
+            yield* syncAutomationTaskStatus(withResult, {
+              status: "blocked",
+              completionSummary: "Automation run is waiting for input or approval.",
+            });
           }
           return;
         }
@@ -1697,12 +1886,21 @@ export const AutomationServiceLive = Layer.effect(
               })
               .pipe(Effect.mapError(toServiceError("Failed to update automation run result.")));
             yield* publish({ type: "run-upserted", run: cleared });
+            yield* syncAutomationTaskStatus(cleared, {
+              status: "in_progress",
+              completionSummary: null,
+            });
           }
           return;
         }
 
         let updated: AutomationRun;
+        let taskCompletionSummary: string | null = null;
         if (turn.state === "completed") {
+          taskCompletionSummary = yield* completionSummaryForRun({
+            ...run,
+            turnId: turn.turnId,
+          });
           updated = yield* automationRepository
             .markRunSucceeded({
               id: run.id,
@@ -1747,6 +1945,20 @@ export const AutomationServiceLive = Layer.effect(
             .pipe(Effect.mapError(toServiceError("Failed to update automation run result.")));
         }
 
+        const taskStatus = updated.status === "succeeded" ? "completed" : "blocked";
+        const taskSummary =
+          taskCompletionSummary ??
+          updated.result?.summary ??
+          updated.error ??
+          (updated.status === "succeeded"
+            ? "Automation run completed successfully."
+            : updated.status === "interrupted"
+              ? "Automation run was interrupted."
+              : "Automation run needs attention.");
+        yield* syncAutomationTaskStatus(updated, {
+          status: taskStatus,
+          completionSummary: taskSummary,
+        });
         yield* publish({ type: "run-upserted", run: updated });
         yield* maybeStopLoop(updated, updated.status, now);
       });
@@ -1770,6 +1982,10 @@ export const AutomationServiceLive = Layer.effect(
           })
           .pipe(Effect.mapError(toServiceError("Failed to update automation run result.")));
         yield* publish({ type: "run-upserted", run: withResult });
+        yield* syncAutomationTaskStatus(withResult, {
+          status: "blocked",
+          completionSummary: summary,
+        });
         yield* maybeStopLoop(withResult, "failed", now);
       });
 
@@ -1987,6 +2203,10 @@ export const AutomationServiceLive = Layer.effect(
           })
           .pipe(Effect.mapError(toServiceError("Failed to update automation run result.")));
         yield* interruptRunBestEffort(withResult, now);
+        yield* syncAutomationTaskStatus(withResult, {
+          status: "cancelled",
+          completionSummary: "Automation run was cancelled.",
+        });
         yield* publish({ type: "run-upserted", run: withResult });
         return withResult;
       });
