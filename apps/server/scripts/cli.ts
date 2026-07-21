@@ -167,13 +167,19 @@ const buildCmd = Command.make(
       const webDist = path.join(repoRoot, "apps/web/dist");
       const clientTarget = path.join(serverDir, "dist/client");
 
-      if (yield* fs.exists(webDist)) {
-        yield* fs.copy(webDist, clientTarget);
-        yield* applyDevelopmentIconOverrides(repoRoot, serverDir);
-        yield* Effect.log("[cli] Bundled web app into dist/client");
-      } else {
-        yield* Effect.logWarning("[cli] Web dist not found — skipping client bundle.");
+      if (!(yield* fs.exists(path.join(webDist, "index.html")))) {
+        return yield* new CliError({
+          message: "Web dist is missing. Build @t3tools/web before the server package.",
+        });
       }
+
+      // Never merge a new renderer into an older client directory. A clean copy
+      // keeps index.html and its content-hashed CSS/JS graph from different builds
+      // from reaching the packaged desktop app together.
+      yield* fs.remove(clientTarget, { force: true, recursive: true });
+      yield* fs.copy(webDist, clientTarget);
+      yield* applyDevelopmentIconOverrides(repoRoot, serverDir);
+      yield* Effect.log("[cli] Bundled fresh web app into dist/client");
     }),
 ).pipe(Command.withDescription("Build the server package (tsdown + bundle web client)."));
 

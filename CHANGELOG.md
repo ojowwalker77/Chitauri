@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.5 - 2026-07-21
+
+### Fixed
+
+- Production desktop profiles that still held a previous built-in theme now migrate to the current palette and macOS translucent window material. Custom themes remain untouched.
+- Packaged renderer files are served with no-cache headers, preventing an older `index.html` or CSS/JavaScript asset graph from surviving an app update.
+- Desktop builds now bypass Turbo output caching, require a freshly built web client, and replace the bundled client directory instead of merging into older output.
+
 ## 0.9.3 - 2026-07-20
 
 ### Fixed

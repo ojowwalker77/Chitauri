@@ -40,7 +40,7 @@
     "start:marketing": "turbo run preview --filter=@t3tools/marketing",
     "build": "turbo run build",
     "build:marketing": "turbo run build --filter=@t3tools/marketing",
-    "build:desktop": "turbo run build --filter=@t3tools/desktop --filter=t3",
+    "build:desktop": "turbo run build --force --filter=@t3tools/desktop --filter=t3",
     "typecheck": "turbo run typecheck",
     "lint": "oxlint --report-unused-disable-directives",
     "test": "turbo run test",

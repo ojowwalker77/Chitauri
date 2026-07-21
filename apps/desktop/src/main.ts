@@ -59,6 +59,7 @@ import { isBackendReadinessAborted, waitForHttpReady } from "./backendReadiness"
 import { resolveBackendNodeArgs } from "./backendNodeOptions";
 import { waitForBackendStartupReady } from "./backendStartupReadiness";
 import { showDesktopConfirmDialog } from "./confirmDialog";
+import { createDesktopStaticFileResponse } from "./desktopStaticProtocol";
 import {
   LSREGISTER_PATH,
   parseLastLaunchVersion,
@@ -832,13 +833,13 @@ function registerDesktopProtocol(): void {
           callback({ error: -6 });
           return;
         }
-        callback({ path: fallbackIndex });
+        callback(createDesktopStaticFileResponse(fallbackIndex));
         return;
       }
 
-      callback({ path: resolvedCandidate });
+      callback(createDesktopStaticFileResponse(resolvedCandidate));
     } catch {
-      callback({ path: fallbackIndex });
+      callback(createDesktopStaticFileResponse(fallbackIndex));
     }
   };
 

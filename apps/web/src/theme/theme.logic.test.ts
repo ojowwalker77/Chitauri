@@ -71,7 +71,7 @@ describe("parseStoredThemeState", () => {
     expect(parsed.chromeTheme.surface).toBe("#000000");
   });
 
-  it("migrates only the legacy built-in palette while preserving fonts and the code theme", () => {
+  it("migrates the legacy built-in palette and material while preserving fonts and code theme", () => {
     const parsed = parseStoredThemeState(
       JSON.stringify({
         mode: "dark",
@@ -98,9 +98,34 @@ describe("parseStoredThemeState", () => {
     expect(parsed.chromeTheme).toMatchObject({
       ...DEFAULT_CHROME_THEME,
       fonts: { code: "0xProto", ui: "Inter" },
-      // The migration keeps the user's window-material choice; only the palette moves.
-      opaqueWindows: true,
     });
+  });
+
+  it("migrates the persisted v0.9 production default to the current translucent default", () => {
+    const parsed = parseStoredThemeState(
+      JSON.stringify({
+        mode: "system",
+        codeThemeIds: { dark: "codex", light: "codex" },
+        chromeThemes: {
+          dark: {
+            accent: "#3b82f6",
+            contrast: 60,
+            fonts: { code: null, ui: null },
+            ink: "#e6e4e1",
+            opaqueWindows: true,
+            semanticColors: {
+              diffAdded: "#4cb782",
+              diffRemoved: "#d9685f",
+              skill: "#9c9a96",
+            },
+            surface: "#171717",
+          },
+        },
+      }),
+    );
+
+    expect(parsed).toEqual(DEFAULT_THEME_STATE);
+    expect(parsed.chromeTheme.opaqueWindows).toBe(false);
   });
 
   it("migrates retired accents even when the rest of the palette was customized", () => {

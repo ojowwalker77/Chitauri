@@ -230,19 +230,66 @@ export const DEFAULT_LIGHT_CHROME_THEME: ChromeTheme = {
   surface: "#F5F4EF",
 };
 
-const LEGACY_DEFAULT_CHROME_THEME: ChromeTheme = {
-  accent: "#fb923c",
-  contrast: 60,
-  fonts: { code: null, ui: null },
-  ink: "#f4f4f5",
-  opaqueWindows: true,
-  semanticColors: {
-    diffAdded: "#4ade80",
-    diffRemoved: "#f43f5e",
-    skill: "#3b82f6",
+// Built-in defaults are source-owned, but they were historically persisted as if
+// they were user customizations. Keep every shipped dark default here so an update
+// can move untouched profiles to the current palette and window material. Fonts are
+// intentionally ignored by the matcher and preserved by the migration below.
+const HISTORICAL_DEFAULT_CHROME_THEMES: readonly ChromeTheme[] = [
+  {
+    accent: "#fb923c",
+    contrast: 60,
+    fonts: { code: null, ui: null },
+    ink: "#f4f4f5",
+    opaqueWindows: true,
+    semanticColors: {
+      diffAdded: "#4ade80",
+      diffRemoved: "#f43f5e",
+      skill: "#3b82f6",
+    },
+    surface: "#18181b",
   },
-  surface: "#18181b",
-};
+  {
+    accent: "#d97757",
+    contrast: 60,
+    fonts: { code: null, ui: null },
+    ink: "#e6e4e1",
+    opaqueWindows: true,
+    semanticColors: {
+      diffAdded: "#4cb782",
+      diffRemoved: "#d9685f",
+      skill: "#9c9a96",
+    },
+    surface: "#171717",
+  },
+  {
+    // This hybrid was produced when the retired coral accent migrated before the
+    // rest of the Claude-desktop default changed.
+    accent: "#3b82f6",
+    contrast: 60,
+    fonts: { code: null, ui: null },
+    ink: "#e6e4e1",
+    opaqueWindows: true,
+    semanticColors: {
+      diffAdded: "#4cb782",
+      diffRemoved: "#d9685f",
+      skill: "#9c9a96",
+    },
+    surface: "#171717",
+  },
+  {
+    accent: "#3b82f6",
+    contrast: 60,
+    fonts: { code: null, ui: null },
+    ink: "#f7f8fa",
+    opaqueWindows: true,
+    semanticColors: {
+      diffAdded: "#4cb782",
+      diffRemoved: "#e94b4b",
+      skill: "#9aa1ad",
+    },
+    surface: "#1b1c21",
+  },
+];
 
 export const DEFAULT_THEME_STATE: ThemeState = {
   chromeTheme: DEFAULT_CHROME_THEME,
@@ -334,11 +381,15 @@ function haveSameChromePalette(left: ChromeTheme, right: ChromeTheme): boolean {
 const LEGACY_ACCENT_COLORS: ReadonlySet<string> = new Set(["#fb923c", "#d97757", "#a96f35"]);
 
 function migrateLegacyDefaultChromeTheme(theme: ChromeTheme): ChromeTheme {
-  if (haveSameChromePalette(theme, LEGACY_DEFAULT_CHROME_THEME)) {
+  const isHistoricalDefault = HISTORICAL_DEFAULT_CHROME_THEMES.some(
+    (historicalTheme) =>
+      haveSameChromePalette(theme, historicalTheme) &&
+      theme.opaqueWindows === historicalTheme.opaqueWindows,
+  );
+  if (isHistoricalDefault) {
     return {
       ...DEFAULT_CHROME_THEME,
       fonts: theme.fonts,
-      opaqueWindows: theme.opaqueWindows,
     };
   }
 
