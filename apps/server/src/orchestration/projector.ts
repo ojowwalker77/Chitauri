@@ -305,6 +305,7 @@ export function projectEvent(
             brief: payload.brief,
             status: payload.status,
             origin: payload.origin,
+            artifacts: payload.artifacts ?? [],
             completionSummary: payload.completionSummary,
             createdAt: payload.createdAt,
             updatedAt: payload.updatedAt,
@@ -331,6 +332,7 @@ export function projectEvent(
                   ...(payload.title !== undefined ? { title: payload.title } : {}),
                   ...(payload.brief !== undefined ? { brief: payload.brief } : {}),
                   ...(payload.status !== undefined ? { status: payload.status } : {}),
+                  ...(payload.artifacts !== undefined ? { artifacts: payload.artifacts } : {}),
                   ...(payload.completionSummary !== undefined
                     ? { completionSummary: payload.completionSummary }
                     : {}),

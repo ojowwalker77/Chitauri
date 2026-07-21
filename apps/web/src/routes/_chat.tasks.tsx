@@ -1,7 +1,13 @@
 // FILE: _chat.tasks.tsx
 // Purpose: Primary Worker-owned Task board and durable Task detail surface.
 
-import type { ProjectId, TaskId, TaskStatus } from "@t3tools/contracts";
+import type {
+  OrchestrationTaskShell,
+  ProjectId,
+  TaskArtifactKind,
+  TaskId,
+  TaskStatus,
+} from "@t3tools/contracts";
 import { getDefaultModel } from "@t3tools/shared/model";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
@@ -14,6 +20,7 @@ import {
   TASK_STATUS_LABELS,
   TaskStatusPill,
 } from "~/components/tasks/TaskStatusPill";
+import { TASK_ARTIFACT_KINDS, TASK_ARTIFACT_KIND_LABELS } from "~/components/tasks/taskArtifacts";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
   CHAT_SURFACE_HEADER_HEIGHT_CLASS,
@@ -41,7 +48,7 @@ import {
   MessageCircleIcon,
   PlusIcon,
 } from "~/lib/icons";
-import { cn, newCommandId, newTaskId, newThreadId } from "~/lib/utils";
+import { cn, newCommandId, newTaskId, newThreadId, randomUUID } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
 
@@ -299,6 +306,113 @@ function DelegateTaskDialog({
   );
 }
 
+function AddArtifactDialog({
+  open,
+  task,
+  onOpenChange,
+}: {
+  open: boolean;
+  task: OrchestrationTaskShell;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [kind, setKind] = useState<TaskArtifactKind>("commit");
+  const [title, setTitle] = useState("");
+  const [reference, setReference] = useState("");
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (open) return;
+    setKind("commit");
+    setTitle("");
+    setReference("");
+    setPending(false);
+  }, [open]);
+
+  const submit = async () => {
+    const api = readNativeApi();
+    const trimmedTitle = title.trim();
+    if (!api || !trimmedTitle || pending) return;
+    setPending(true);
+    try {
+      await api.orchestration.dispatchCommand({
+        type: "task.update",
+        commandId: newCommandId(),
+        taskId: task.id,
+        artifacts: [
+          ...task.artifacts,
+          {
+            id: `artifact:${randomUUID()}`,
+            kind,
+            title: trimmedTitle,
+            reference: reference.trim(),
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      });
+      onOpenChange(false);
+    } catch (error) {
+      toastManager.add({
+        type: "error",
+        title: "Could not attach artifact",
+        description: error instanceof Error ? error.message : "The artifact was not saved.",
+      });
+      setPending(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => !pending && onOpenChange(nextOpen)}>
+      <DialogPopup>
+        <DialogHeader>
+          <DialogTitle>Attach durable result</DialogTitle>
+          <DialogDescription>
+            Keep the result inspectable after execution Threads are closed.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogPanel className="space-y-3">
+          <select
+            aria-label="Artifact kind"
+            className="h-9 w-full rounded-lg border border-border/60 bg-background px-2 text-sm text-foreground outline-hidden focus:border-ring"
+            value={kind}
+            onChange={(event) => setKind(event.target.value as TaskArtifactKind)}
+          >
+            {TASK_ARTIFACT_KINDS.map((value) => (
+              <option key={value} value={value}>
+                {TASK_ARTIFACT_KIND_LABELS[value]}
+              </option>
+            ))}
+          </select>
+          <Input
+            autoFocus
+            placeholder="Artifact title"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+          <Input
+            placeholder="Commit SHA, file path, pull request URL, or reference"
+            value={reference}
+            onChange={(event) => setReference(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void submit();
+              }
+            }}
+          />
+        </DialogPanel>
+        <DialogFooter>
+          <Button variant="ghost" disabled={pending} onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button disabled={!title.trim() || pending} onClick={() => void submit()}>
+            {pending ? "Attaching…" : "Attach artifact"}
+          </Button>
+        </DialogFooter>
+      </DialogPopup>
+    </Dialog>
+  );
+}
+
 function TasksRoute() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -343,6 +457,7 @@ function TasksRoute() {
   );
   const [threadPending, setThreadPending] = useState(false);
   const [delegateDialogOpen, setDelegateDialogOpen] = useState(false);
+  const [artifactDialogOpen, setArtifactDialogOpen] = useState(false);
 
   useEffect(() => {
     setCreateDialogOpen(search.create === true);
@@ -720,11 +835,34 @@ function TasksRoute() {
                     </div>
 
                     <div className="rounded-2xl border border-border/55 bg-card/45 p-4">
-                      <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-                        <GitBranchIcon className="size-4" />
-                        Artifacts
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <GitBranchIcon className="size-4" />
+                          Artifacts
+                        </div>
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          onClick={() => setArtifactDialogOpen(true)}
+                        >
+                          <PlusIcon />
+                          Attach
+                        </Button>
                       </div>
                       <div className="space-y-2 text-xs text-muted-foreground">
+                        {selectedTask.artifacts.map((artifact) => (
+                          <div key={artifact.id} className="rounded-lg bg-foreground/4 px-2 py-1.5">
+                            <div className="text-[10px] font-medium tracking-wide text-muted-foreground/65 uppercase">
+                              {TASK_ARTIFACT_KIND_LABELS[artifact.kind]}
+                            </div>
+                            <div className="mt-0.5 text-foreground/88">{artifact.title}</div>
+                            {artifact.reference ? (
+                              <div className="mt-0.5 truncate font-mono text-[10px]">
+                                {artifact.reference}
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
                         {taskThreads.flatMap((thread) => {
                           const artifacts = [];
                           if (thread.branch) artifacts.push(`Branch · ${thread.branch}`);
@@ -740,7 +878,8 @@ function TasksRoute() {
                             </div>
                           ));
                         })}
-                        {taskThreads.every(
+                        {selectedTask.artifacts.length === 0 &&
+                        taskThreads.every(
                           (thread) => !thread.branch && thread.lastKnownPr == null,
                         ) ? (
                           <p className="leading-5">
@@ -858,13 +997,20 @@ function TasksRoute() {
         onCreated={(taskId) => updateSearch({ task: taskId, create: undefined })}
       />
       {selectedTask && selectedWorker ? (
-        <DelegateTaskDialog
-          open={delegateDialogOpen}
-          requesterWorkerId={selectedWorker.id}
-          requesterTaskId={selectedTask.id}
-          workers={workers}
-          onOpenChange={setDelegateDialogOpen}
-        />
+        <>
+          <DelegateTaskDialog
+            open={delegateDialogOpen}
+            requesterWorkerId={selectedWorker.id}
+            requesterTaskId={selectedTask.id}
+            workers={workers}
+            onOpenChange={setDelegateDialogOpen}
+          />
+          <AddArtifactDialog
+            open={artifactDialogOpen}
+            task={selectedTask}
+            onOpenChange={setArtifactDialogOpen}
+          />
+        </>
       ) : null}
     </ProjectSurfaceFrame>
   );

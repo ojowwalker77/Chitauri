@@ -23,6 +23,7 @@ import {
   ProviderSkillReference,
   ThreadId,
   TaskId,
+  TaskArtifact,
   ThreadEnvironmentMode,
   TurnDispatchMode,
   TurnId,
@@ -84,7 +85,9 @@ const ProjectionProjectDbRowSchema = ProjectionProject.mapFields(
     isPinned: Schema.Number,
   }),
 );
-const ProjectionTaskDbRowSchema = ProjectionTask;
+const ProjectionTaskDbRowSchema = ProjectionTask.mapFields(
+  Struct.assign({ artifacts: Schema.fromJsonString(Schema.Array(TaskArtifact)) }),
+);
 type ProjectionTaskDbRow = typeof ProjectionTaskDbRowSchema.Type;
 const ProjectionThreadMessageDbRowSchema = ProjectionThreadMessage.mapFields(
   Struct.assign({
@@ -451,6 +454,7 @@ function toProjectedTask(row: ProjectionTaskDbRow): OrchestrationTask {
     brief: row.brief,
     status: row.status,
     origin: row.origin,
+    artifacts: row.artifacts,
     completionSummary: row.completionSummary,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -468,6 +472,7 @@ function toProjectedTaskShell(row: ProjectionTaskDbRow): OrchestrationTaskShell 
     brief: row.brief,
     status: row.status,
     origin: row.origin,
+    artifacts: row.artifacts,
     completionSummary: row.completionSummary,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -812,6 +817,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           brief,
           status,
           origin,
+          artifacts_json AS "artifacts",
           completion_summary AS "completionSummary",
           created_at AS "createdAt",
           updated_at AS "updatedAt",
@@ -1222,7 +1228,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         SELECT
           task_id AS "taskId", worker_id AS "workerId",
           requester_worker_id AS "requesterWorkerId", requester_task_id AS "requesterTaskId",
-          title, brief, status, origin,
+          title, brief, status, origin, artifacts_json AS "artifacts",
           completion_summary AS "completionSummary", created_at AS "createdAt",
           updated_at AS "updatedAt", completed_at AS "completedAt"
         FROM projection_tasks

@@ -2,7 +2,14 @@
 // Purpose: Durable Task projection repository contract.
 // Layer: Server persistence service
 
-import { IsoDateTime, ProjectId, TaskId, TaskOrigin, TaskStatus } from "@t3tools/contracts";
+import {
+  IsoDateTime,
+  ProjectId,
+  TaskArtifact,
+  TaskId,
+  TaskOrigin,
+  TaskStatus,
+} from "@t3tools/contracts";
 import { Option, Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
 
@@ -17,6 +24,7 @@ export const ProjectionTask = Schema.Struct({
   brief: Schema.String,
   status: TaskStatus,
   origin: TaskOrigin,
+  artifacts: Schema.Array(TaskArtifact),
   completionSummary: Schema.NullOr(Schema.String),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,

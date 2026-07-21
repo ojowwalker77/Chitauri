@@ -131,6 +131,7 @@ export function createShellSnapshotFromReadModel(
       brief: task.brief,
       status: task.status,
       origin: task.origin,
+      artifacts: task.artifacts,
       completionSummary: task.completionSummary,
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,

@@ -822,6 +822,18 @@ function taskShellsEqual(
     left.brief === right.brief &&
     left.status === right.status &&
     left.origin === right.origin &&
+    left.artifacts.length === right.artifacts.length &&
+    left.artifacts.every((artifact, index) => {
+      const other = right.artifacts[index];
+      return (
+        other !== undefined &&
+        artifact.id === other.id &&
+        artifact.kind === other.kind &&
+        artifact.title === other.title &&
+        artifact.reference === other.reference &&
+        artifact.createdAt === other.createdAt
+      );
+    }) &&
     left.completionSummary === right.completionSummary &&
     left.createdAt === right.createdAt &&
     left.updatedAt === right.updatedAt &&
@@ -839,6 +851,7 @@ function toTaskShell(task: OrchestrationReadModel["tasks"][number]): Orchestrati
     brief: task.brief,
     status: task.status,
     origin: task.origin,
+    artifacts: task.artifacts,
     completionSummary: task.completionSummary,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
@@ -3256,6 +3269,7 @@ function applyOrchestrationEvent(
         brief: event.payload.brief,
         status: event.payload.status,
         origin: event.payload.origin,
+        artifacts: event.payload.artifacts ?? [],
         completionSummary: event.payload.completionSummary,
         createdAt: event.payload.createdAt,
         updatedAt: event.payload.updatedAt,
@@ -3272,6 +3286,7 @@ function applyOrchestrationEvent(
         ...(event.payload.title !== undefined ? { title: event.payload.title } : {}),
         ...(event.payload.brief !== undefined ? { brief: event.payload.brief } : {}),
         ...(event.payload.status !== undefined ? { status: event.payload.status } : {}),
+        ...(event.payload.artifacts !== undefined ? { artifacts: event.payload.artifacts } : {}),
         ...(event.payload.completionSummary !== undefined
           ? { completionSummary: event.payload.completionSummary }
           : {}),

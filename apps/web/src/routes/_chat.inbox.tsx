@@ -9,6 +9,7 @@ import { ProjectSurfaceFrame } from "~/components/ProjectSurfaceFrame";
 import { RouteInsetSurface } from "~/components/RouteInsetSurface";
 import { SidebarHeaderNavigationControls } from "~/components/SidebarHeaderNavigationControls";
 import { TaskStatusPill } from "~/components/tasks/TaskStatusPill";
+import { TASK_ARTIFACT_KIND_LABELS } from "~/components/tasks/taskArtifacts";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
   CHAT_SURFACE_HEADER_HEIGHT_CLASS,
@@ -249,6 +250,29 @@ function InboxRoute() {
                       <p className="mt-3 whitespace-pre-wrap text-sm leading-6">
                         {selectedRequest.completionSummary}
                       </p>
+                    </div>
+                  ) : null}
+
+                  {selectedRequest.artifacts.length > 0 ? (
+                    <div className="rounded-2xl border border-border/55 bg-card/45 p-5">
+                      <div className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                        Attached artifacts
+                      </div>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {selectedRequest.artifacts.map((artifact) => (
+                          <div key={artifact.id} className="rounded-xl bg-foreground/4 p-3">
+                            <div className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+                              {TASK_ARTIFACT_KIND_LABELS[artifact.kind]}
+                            </div>
+                            <div className="mt-1 text-sm font-medium">{artifact.title}</div>
+                            {artifact.reference ? (
+                              <div className="mt-1 truncate font-mono text-[10px] text-muted-foreground">
+                                {artifact.reference}
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ) : null}
                 </div>

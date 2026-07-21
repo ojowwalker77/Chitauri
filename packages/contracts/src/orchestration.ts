@@ -417,6 +417,32 @@ export const TaskOrigin = Schema.Literals([
 ]);
 export type TaskOrigin = typeof TaskOrigin.Type;
 
+export const TaskArtifactKind = Schema.Literals([
+  "commit",
+  "diff",
+  "branch",
+  "pull_request",
+  "file",
+  "contract",
+  "screenshot",
+  "plan",
+  "test_report",
+  "build_log",
+  "review",
+  "release_notes",
+  "link",
+]);
+export type TaskArtifactKind = typeof TaskArtifactKind.Type;
+
+export const TaskArtifact = Schema.Struct({
+  id: TrimmedNonEmptyString,
+  kind: TaskArtifactKind,
+  title: TrimmedNonEmptyString,
+  reference: Schema.String,
+  createdAt: IsoDateTime,
+});
+export type TaskArtifact = typeof TaskArtifact.Type;
+
 export const OrchestrationTask = Schema.Struct({
   id: TaskId,
   workerId: ProjectId,
@@ -426,6 +452,7 @@ export const OrchestrationTask = Schema.Struct({
   brief: Schema.String,
   status: TaskStatus,
   origin: TaskOrigin,
+  artifacts: Schema.optional(Schema.Array(TaskArtifact)).pipe(Schema.withDecodingDefault(() => [])),
   completionSummary: Schema.NullOr(Schema.String),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
@@ -442,6 +469,7 @@ export const OrchestrationTaskShell = Schema.Struct({
   brief: Schema.String,
   status: TaskStatus,
   origin: TaskOrigin,
+  artifacts: Schema.optional(Schema.Array(TaskArtifact)).pipe(Schema.withDecodingDefault(() => [])),
   completionSummary: Schema.NullOr(Schema.String),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
@@ -899,6 +927,7 @@ export const TaskUpdateCommand = Schema.Struct({
   title: Schema.optional(TrimmedNonEmptyString),
   brief: Schema.optional(Schema.String),
   status: Schema.optional(TaskStatus),
+  artifacts: Schema.optional(Schema.Array(TaskArtifact)),
   completionSummary: Schema.optional(Schema.NullOr(Schema.String)),
 });
 
@@ -1505,6 +1534,7 @@ export const TaskCreatedPayload = Schema.Struct({
   brief: Schema.String,
   status: TaskStatus,
   origin: TaskOrigin,
+  artifacts: Schema.optional(Schema.Array(TaskArtifact)).pipe(Schema.withDecodingDefault(() => [])),
   completionSummary: Schema.NullOr(Schema.String),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
@@ -1516,6 +1546,7 @@ export const TaskUpdatedPayload = Schema.Struct({
   title: Schema.optional(TrimmedNonEmptyString),
   brief: Schema.optional(Schema.String),
   status: Schema.optional(TaskStatus),
+  artifacts: Schema.optional(Schema.Array(TaskArtifact)),
   completionSummary: Schema.optional(Schema.NullOr(Schema.String)),
   updatedAt: IsoDateTime,
   completedAt: Schema.optional(Schema.NullOr(IsoDateTime)),

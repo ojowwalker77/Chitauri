@@ -58,6 +58,13 @@ async function addProject(
 describe("Worker Task orchestration", () => {
   it("creates, completes, and reopens a durable Task", async () => {
     const now = "2026-07-21T12:00:00.000Z";
+    const testReportArtifact = {
+      id: "artifact-test-report",
+      kind: "test_report" as const,
+      title: "Worker Task tests",
+      reference: "38 tests passing",
+      createdAt: now,
+    };
     const withWorker = await addProject(createEmptyReadModel(now), {
       id: WORKER_ID,
       sequence: 1,
@@ -109,6 +116,7 @@ describe("Worker Task orchestration", () => {
             commandId: CommandId.makeUnsafe("command-task-complete"),
             taskId: TASK_ID,
             status: "completed",
+            artifacts: [testReportArtifact],
             completionSummary: "Workers foundation shipped.",
           },
         }),
@@ -118,12 +126,16 @@ describe("Worker Task orchestration", () => {
     if (!completed || completed.type !== "task.updated") return;
     expect(completed.payload).toMatchObject({
       status: "completed",
+      artifacts: [testReportArtifact],
       completedAt: expect.any(String),
     });
 
     const completedModel = await Effect.runPromise(
       projectEvent(withTask, { ...completed, sequence: 3 } as OrchestrationEvent),
     );
+    expect(completedModel.tasks.find((task) => task.id === TASK_ID)?.artifacts).toEqual([
+      testReportArtifact,
+    ]);
     const reopened = firstEvent(
       await Effect.runPromise(
         decideOrchestrationCommand({
@@ -140,6 +152,12 @@ describe("Worker Task orchestration", () => {
     expect(reopened?.type).toBe("task.updated");
     if (!reopened || reopened.type !== "task.updated") return;
     expect(reopened.payload).toMatchObject({ completedAt: null });
+    const reopenedModel = await Effect.runPromise(
+      projectEvent(completedModel, { ...reopened, sequence: 4 } as OrchestrationEvent),
+    );
+    expect(reopenedModel.tasks.find((task) => task.id === TASK_ID)?.artifacts).toEqual([
+      testReportArtifact,
+    ]);
   });
 
   it("rejects Tasks for Home Chat and cross-Worker Thread assignment", async () => {

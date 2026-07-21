@@ -716,6 +716,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             brief: event.payload.brief,
             status: event.payload.status,
             origin: event.payload.origin,
+            artifacts: event.payload.artifacts ?? [],
             completionSummary: event.payload.completionSummary,
             createdAt: event.payload.createdAt,
             updatedAt: event.payload.updatedAt,
@@ -732,6 +733,9 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             ...(event.payload.title !== undefined ? { title: event.payload.title } : {}),
             ...(event.payload.brief !== undefined ? { brief: event.payload.brief } : {}),
             ...(event.payload.status !== undefined ? { status: event.payload.status } : {}),
+            ...(event.payload.artifacts !== undefined
+              ? { artifacts: event.payload.artifacts }
+              : {}),
             ...(event.payload.completionSummary !== undefined
               ? { completionSummary: event.payload.completionSummary }
               : {}),

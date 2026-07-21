@@ -2,7 +2,8 @@
 // Purpose: SQLite implementation of the durable Task projection repository.
 // Layer: Server persistence layer
 
-import { Effect, Layer, Schema } from "effect";
+import { TaskArtifact } from "@t3tools/contracts";
+import { Effect, Layer, Schema, Struct } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";
 
@@ -18,16 +19,20 @@ import {
 const makeProjectionTaskRepository = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
 
+  const ProjectionTaskDbRow = ProjectionTask.mapFields(
+    Struct.assign({ artifacts: Schema.fromJsonString(Schema.Array(TaskArtifact)) }),
+  );
+
   const upsertRow = SqlSchema.void({
     Request: ProjectionTask,
     execute: (row) => sql`
       INSERT INTO projection_tasks (
         task_id, worker_id, requester_worker_id, requester_task_id,
-        title, brief, status, origin, completion_summary,
+        title, brief, status, origin, artifacts_json, completion_summary,
         created_at, updated_at, completed_at
       ) VALUES (
         ${row.taskId}, ${row.workerId}, ${row.requesterWorkerId}, ${row.requesterTaskId},
-        ${row.title}, ${row.brief}, ${row.status}, ${row.origin},
+        ${row.title}, ${row.brief}, ${row.status}, ${row.origin}, ${JSON.stringify(row.artifacts)},
         ${row.completionSummary}, ${row.createdAt}, ${row.updatedAt}, ${row.completedAt}
       )
       ON CONFLICT (task_id) DO UPDATE SET
@@ -38,6 +43,7 @@ const makeProjectionTaskRepository = Effect.gen(function* () {
         brief = excluded.brief,
         status = excluded.status,
         origin = excluded.origin,
+        artifacts_json = excluded.artifacts_json,
         completion_summary = excluded.completion_summary,
         created_at = excluded.created_at,
         updated_at = excluded.updated_at,
@@ -47,12 +53,12 @@ const makeProjectionTaskRepository = Effect.gen(function* () {
 
   const getByIdRow = SqlSchema.findOneOption({
     Request: GetProjectionTaskInput,
-    Result: ProjectionTask,
+    Result: ProjectionTaskDbRow,
     execute: ({ taskId }) => sql`
       SELECT
         task_id AS "taskId", worker_id AS "workerId",
         requester_worker_id AS "requesterWorkerId", requester_task_id AS "requesterTaskId",
-        title, brief, status, origin,
+        title, brief, status, origin, artifacts_json AS "artifacts",
         completion_summary AS "completionSummary", created_at AS "createdAt",
         updated_at AS "updatedAt", completed_at AS "completedAt"
       FROM projection_tasks
@@ -62,12 +68,12 @@ const makeProjectionTaskRepository = Effect.gen(function* () {
 
   const listAllRows = SqlSchema.findAll({
     Request: Schema.Void,
-    Result: ProjectionTask,
+    Result: ProjectionTaskDbRow,
     execute: () => sql`
       SELECT
         task_id AS "taskId", worker_id AS "workerId",
         requester_worker_id AS "requesterWorkerId", requester_task_id AS "requesterTaskId",
-        title, brief, status, origin,
+        title, brief, status, origin, artifacts_json AS "artifacts",
         completion_summary AS "completionSummary", created_at AS "createdAt",
         updated_at AS "updatedAt", completed_at AS "completedAt"
       FROM projection_tasks
@@ -77,12 +83,12 @@ const makeProjectionTaskRepository = Effect.gen(function* () {
 
   const listByWorkerRows = SqlSchema.findAll({
     Request: ListProjectionTasksByWorkerInput,
-    Result: ProjectionTask,
+    Result: ProjectionTaskDbRow,
     execute: ({ workerId }) => sql`
       SELECT
         task_id AS "taskId", worker_id AS "workerId",
         requester_worker_id AS "requesterWorkerId", requester_task_id AS "requesterTaskId",
-        title, brief, status, origin,
+        title, brief, status, origin, artifacts_json AS "artifacts",
         completion_summary AS "completionSummary", created_at AS "createdAt",
         updated_at AS "updatedAt", completed_at AS "completedAt"
       FROM projection_tasks

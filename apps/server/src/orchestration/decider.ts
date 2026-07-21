@@ -448,6 +448,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           brief: command.brief,
           status: "open",
           origin: command.origin,
+          artifacts: [],
           completionSummary: null,
           createdAt: command.createdAt,
           updatedAt: command.createdAt,
@@ -472,6 +473,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           ...(command.title !== undefined ? { title: command.title } : {}),
           ...(command.brief !== undefined ? { brief: command.brief } : {}),
           ...(command.status !== undefined ? { status: command.status } : {}),
+          ...(command.artifacts !== undefined ? { artifacts: command.artifacts } : {}),
           ...(command.completionSummary !== undefined
             ? { completionSummary: command.completionSummary }
             : {}),
