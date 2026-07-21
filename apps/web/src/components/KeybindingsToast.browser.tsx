@@ -84,6 +84,7 @@ function createMinimalSnapshot(): OrchestrationReadModel {
         deletedAt: null,
       },
     ],
+    tasks: [],
     threads: [
       {
         id: THREAD_ID,

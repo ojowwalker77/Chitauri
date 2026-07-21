@@ -120,6 +120,7 @@ function makeActivity(overrides: {
 function makeState(thread: Thread): AppState {
   return {
     projects: [makeProject()],
+    tasks: [],
     threads: [thread],
     sidebarThreadSummaryById: {},
     threadsHydrated: true,
@@ -196,6 +197,7 @@ function makeReadModel(thread: OrchestrationReadModel["threads"][number]): Orche
         scripts: [],
       },
     ],
+    tasks: [],
     threads: [thread],
   };
 }
@@ -218,6 +220,7 @@ function makeShellSnapshot(thread: OrchestrationShellSnapshot["threads"][number]
         scripts: [],
       },
     ],
+    tasks: [],
     threads: [thread],
   } satisfies OrchestrationShellSnapshot;
 }
@@ -532,6 +535,7 @@ describe("store pure functions", () => {
     const next = applyOrchestrationEvents(
       {
         projects: [],
+        tasks: [],
         threads: [],
         sidebarThreadSummaryById: {},
         threadsHydrated: false,
@@ -582,6 +586,7 @@ describe("store pure functions", () => {
           updatedAt: "2026-02-27T00:00:00.000Z",
         }),
       ],
+      tasks: [],
       threads: [],
       sidebarThreadSummaryById: {},
       threadsHydrated: true,
@@ -635,6 +640,7 @@ describe("store pure functions", () => {
     const next = applyOrchestrationEvents(
       {
         projects: [makeProject({ id: ProjectId.makeUnsafe("project-live") })],
+        tasks: [],
         threads: [],
         sidebarThreadSummaryById: {},
         threadsHydrated: true,
@@ -665,6 +671,7 @@ describe("store pure functions", () => {
           cwd: "/tmp/shared-root",
         }),
       ],
+      tasks: [],
       threads: [],
       sidebarThreadSummaryById: {},
       threadsHydrated: true,
@@ -715,6 +722,7 @@ describe("store pure functions", () => {
             cwd: "/tmp/project-other",
           }),
         ],
+        tasks: [],
         threads: [initialThread, untouchedThread],
         sidebarThreadSummaryById: {},
         threadsHydrated: true,
@@ -732,6 +740,7 @@ describe("store pure functions", () => {
             workspaceRoot: "/tmp/project-other",
           }),
         ],
+        tasks: [],
         threads: [
           makeReadModelThread({
             id: ThreadId.makeUnsafe("thread-project-1"),
@@ -1771,6 +1780,7 @@ describe("store pure functions", () => {
           cwd: "/tmp/project-3",
         }),
       ],
+      tasks: [],
       threads: [],
       sidebarThreadSummaryById: {},
       threadsHydrated: true,
@@ -1802,6 +1812,7 @@ describe("store pure functions", () => {
           expanded: false,
         }),
       ],
+      tasks: [],
       threads: [],
       sidebarThreadSummaryById: {},
       threadsHydrated: true,
@@ -1833,6 +1844,7 @@ describe("store pure functions", () => {
           cwd: "/tmp/project-2",
         }),
       ],
+      tasks: [],
       threads: [],
       sidebarThreadSummaryById: {},
       threadsHydrated: true,
@@ -1863,6 +1875,7 @@ describe("store pure functions", () => {
           cwd: "/tmp/project-2",
         }),
       ],
+      tasks: [],
       threads: [],
       sidebarThreadSummaryById: {},
       threadsHydrated: true,
@@ -3182,6 +3195,7 @@ describe("store read model sync", () => {
           cwd: "/tmp/project-1",
         }),
       ],
+      tasks: [],
       threads: [],
       sidebarThreadSummaryById: {},
       threadsHydrated: true,
@@ -3206,6 +3220,7 @@ describe("store read model sync", () => {
           workspaceRoot: "/tmp/project-3",
         }),
       ],
+      tasks: [],
       threads: [],
     };
 
@@ -3234,6 +3249,7 @@ describe("store read model sync", () => {
           cwd: "/tmp/project-2",
         }),
       ],
+      tasks: [],
       threads: [],
       sidebarThreadSummaryById: {},
       threadsHydrated: true,
@@ -3249,6 +3265,7 @@ describe("store read model sync", () => {
           workspaceRoot: "/tmp/project-1",
         }),
       ],
+      tasks: [],
       threads: [],
     };
     const snapshotWithProject2Restored: OrchestrationReadModel = {
@@ -3266,6 +3283,7 @@ describe("store read model sync", () => {
           workspaceRoot: "/tmp/project-2",
         }),
       ],
+      tasks: [],
       threads: [],
     };
 
@@ -3428,6 +3446,7 @@ describe("store read model sync", () => {
           updatedAt: "2026-02-27T00:00:00.000Z",
         }),
       ],
+      tasks: [],
       threads: [
         makeReadModelThread({
           modelSelection: {

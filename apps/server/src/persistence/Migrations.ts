@@ -75,6 +75,7 @@ import Migration0056 from "./Migrations/056_WorkspaceAttachments.ts";
 import Migration0057 from "./Migrations/057_CloudProjectBindings.ts";
 import Migration0058 from "./Migrations/058_RetireInteractionMode.ts";
 import Migration0059 from "./Migrations/059_RetireCloudProjectBindings.ts";
+import Migration0060 from "./Migrations/060_WorkersTasks.ts";
 
 /**
  * Migration loader with all migrations defined inline.
@@ -146,6 +147,7 @@ export const migrationEntries = [
   [57, "CloudProjectBindings", Migration0057],
   [58, "RetireInteractionMode", Migration0058],
   [59, "RetireCloudProjectBindings", Migration0059],
+  [60, "WorkersTasks", Migration0060],
 ] as const;
 
 export const makeMigrationLoader = (throughId?: number) =>

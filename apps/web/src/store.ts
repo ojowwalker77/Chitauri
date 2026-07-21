@@ -13,6 +13,7 @@ import {
   type OrchestrationShellSnapshot,
   type OrchestrationShellStreamEvent,
   type OrchestrationSessionStatus,
+  type OrchestrationTaskShell,
   type TurnId,
 } from "@t3tools/contracts";
 import { resolveThreadBranchRegressionGuard } from "@t3tools/shared/git";
@@ -53,6 +54,7 @@ import { isStalePendingRequestFailureDetail } from "./lib/pendingInteraction";
 
 export interface AppState {
   projects: Project[];
+  tasks: OrchestrationTaskShell[];
   threads: Thread[];
   sidebarThreadSummaryById: Record<string, SidebarThreadSummary>;
   threadsHydrated: boolean;
@@ -144,6 +146,7 @@ const PENDING_INTERACTION_REQUEST_KINDS = new Set(["approval.requested", "user-i
 
 const initialState: AppState = {
   projects: [],
+  tasks: [],
   threads: [],
   sidebarThreadSummaryById: {},
   threadsHydrated: false,
@@ -382,6 +385,7 @@ function threadShellsEqual(left: ThreadShell | undefined, right: ThreadShell): b
     left.id === right.id &&
     left.codexThreadId === right.codexThreadId &&
     left.projectId === right.projectId &&
+    (left.taskId ?? null) === (right.taskId ?? null) &&
     left.title === right.title &&
     left.modelSelection === right.modelSelection &&
     left.runtimeMode === right.runtimeMode &&
@@ -429,6 +433,7 @@ function toThreadShell(thread: Thread): ThreadShell {
     id: thread.id,
     codexThreadId: thread.codexThreadId,
     projectId: thread.projectId,
+    taskId: thread.taskId ?? null,
     title: thread.title,
     modelSelection: thread.modelSelection,
     runtimeMode: thread.runtimeMode,
@@ -796,6 +801,65 @@ function upsertProjectFromShell(state: AppState, incoming: ShellSnapshotProject)
   return {
     ...state,
     projects: [...state.projects, nextProject],
+  };
+}
+
+function taskShellsEqual(
+  left: OrchestrationTaskShell | undefined,
+  right: OrchestrationTaskShell,
+): boolean {
+  return (
+    left !== undefined &&
+    left.id === right.id &&
+    left.workerId === right.workerId &&
+    left.title === right.title &&
+    left.status === right.status &&
+    left.origin === right.origin &&
+    left.createdAt === right.createdAt &&
+    left.updatedAt === right.updatedAt &&
+    left.completedAt === right.completedAt
+  );
+}
+
+function toTaskShell(task: OrchestrationReadModel["tasks"][number]): OrchestrationTaskShell {
+  return {
+    id: task.id,
+    workerId: task.workerId,
+    title: task.title,
+    status: task.status,
+    origin: task.origin,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+    completedAt: task.completedAt,
+  };
+}
+
+function mapTasks(
+  incoming: ReadonlyArray<OrchestrationTaskShell>,
+  previous: ReadonlyArray<OrchestrationTaskShell>,
+): OrchestrationTaskShell[] {
+  const previousById = new Map(previous.map((task) => [task.id, task] as const));
+  const nextTasks = incoming.map((task) => {
+    const existing = previousById.get(task.id);
+    return taskShellsEqual(existing, task) ? (existing ?? task) : task;
+  });
+  return arraysShallowEqual(previous, nextTasks)
+    ? (previous as OrchestrationTaskShell[])
+    : nextTasks;
+}
+
+function upsertTask(state: AppState, task: OrchestrationTaskShell): AppState {
+  const existingIndex = state.tasks.findIndex((entry) => entry.id === task.id);
+  if (existingIndex < 0) {
+    return { ...state, tasks: [...state.tasks, task] };
+  }
+  const existing = state.tasks[existingIndex];
+  if (taskShellsEqual(existing, task)) {
+    return state;
+  }
+  return {
+    ...state,
+    tasks: state.tasks.map((entry) => (entry.id === task.id ? task : entry)),
   };
 }
 
@@ -1697,6 +1761,7 @@ function normalizeThreadFromReadModel(
   if (
     previous &&
     previous.projectId === incoming.projectId &&
+    (previous.taskId ?? null) === (incoming.taskId ?? null) &&
     previous.title === incoming.title &&
     previous.modelSelection === modelSelection &&
     previous.runtimeMode === incoming.runtimeMode &&
@@ -1743,6 +1808,7 @@ function normalizeThreadFromReadModel(
     id: incoming.id,
     codexThreadId: null,
     projectId: incoming.projectId,
+    taskId: incoming.taskId ?? null,
     title: incoming.title,
     modelSelection,
     runtimeMode: incoming.runtimeMode,
@@ -1841,6 +1907,7 @@ function normalizeThreadShellSnapshot(
     id: incoming.id,
     codexThreadId: previous?.codexThreadId ?? null,
     projectId: incoming.projectId,
+    taskId: incoming.taskId ?? null,
     title: incoming.title,
     modelSelection,
     runtimeMode: incoming.runtimeMode,
@@ -2491,20 +2558,24 @@ function removeProjectState(state: AppState, projectId: Project["id"]): AppState
   }
 
   const nextProjects = state.projects.filter((project) => project.id !== projectId);
+  const nextTasks = state.tasks.filter((task) => task.workerId !== projectId);
   const nextState = [...threadIds].reduce((currentState, threadId) => {
     return removeThreadState(currentState, threadId);
   }, state);
 
-  if (nextProjects === state.projects && nextState === state) {
+  if (
+    nextProjects.length === state.projects.length &&
+    nextTasks.length === state.tasks.length &&
+    nextState === state
+  ) {
     return state;
   }
 
-  return nextProjects === nextState.projects
-    ? nextState
-    : {
-        ...nextState,
-        projects: nextProjects,
-      };
+  return {
+    ...nextState,
+    projects: nextProjects,
+    tasks: nextTasks,
+  };
 }
 
 function commitThreadProjection(
@@ -3160,6 +3231,34 @@ function applyOrchestrationEvent(
       });
     }
 
+    case "task.created":
+      return upsertTask(state, {
+        id: event.payload.taskId,
+        workerId: event.payload.workerId,
+        title: event.payload.title,
+        status: event.payload.status,
+        origin: event.payload.origin,
+        createdAt: event.payload.createdAt,
+        updatedAt: event.payload.updatedAt,
+        completedAt: event.payload.completedAt,
+      });
+
+    case "task.updated": {
+      const existingTask = state.tasks.find((task) => task.id === event.payload.taskId);
+      if (!existingTask) {
+        return state;
+      }
+      return upsertTask(state, {
+        ...existingTask,
+        ...(event.payload.title !== undefined ? { title: event.payload.title } : {}),
+        ...(event.payload.status !== undefined ? { status: event.payload.status } : {}),
+        ...(event.payload.completedAt !== undefined
+          ? { completedAt: event.payload.completedAt }
+          : {}),
+        updatedAt: event.payload.updatedAt,
+      });
+    }
+
     case "project.deleted": {
       const existingIndex = state.projects.findIndex(
         (project) => project.id === event.payload.projectId,
@@ -3170,6 +3269,7 @@ function applyOrchestrationEvent(
       return {
         ...state,
         projects: state.projects.filter((project) => project.id !== event.payload.projectId),
+        tasks: state.tasks.filter((task) => task.workerId !== event.payload.projectId),
       };
     }
 
@@ -3981,6 +4081,7 @@ export function syncServerShellSnapshot(
     (thread) => deletedThreadIdsById[thread.id] !== true,
   );
   const projects = mapProjectsFromShellSnapshot(snapshot.projects, state.projects);
+  const tasks = mapTasks(snapshot.tasks, state.tasks);
   const nextThreadIds = new Set(snapshotThreads.map((thread) => thread.id));
 
   let normalizedState: AppState = {
@@ -4033,6 +4134,7 @@ export function syncServerShellSnapshot(
   return {
     ...normalizedState,
     projects,
+    tasks,
     threads,
     sidebarThreadSummaryById,
     threadsHydrated: true,
@@ -4096,6 +4198,13 @@ export function applyShellEvent(state: AppState, event: OrchestrationShellStream
       return upsertProjectFromShell(state, event.project);
     case "project-removed":
       return removeProjectState(state, event.projectId);
+    case "task-upserted":
+      return upsertTask(state, event.task);
+    case "task-removed":
+      return {
+        ...state,
+        tasks: state.tasks.filter((task) => task.id !== event.taskId),
+      };
     case "thread-upserted": {
       if (state.deletedThreadIdsById?.[event.thread.id] === true) {
         return removeThreadState(state, event.thread.id);
@@ -4173,6 +4282,7 @@ export function syncServerReadModel(state: AppState, readModel: OrchestrationRea
     readModel.projects.filter((project) => project.deletedAt === null),
     state.projects,
   );
+  const tasks = mapTasks(readModel.tasks.map(toTaskShell), state.tasks);
   const existingThreadById = new Map(state.threads.map((thread) => [thread.id, thread] as const));
   const nextThreads = readModel.threads
     .filter((thread) => thread.deletedAt === null && deletedThreadIdsById[thread.id] !== true)
@@ -4223,6 +4333,7 @@ export function syncServerReadModel(state: AppState, readModel: OrchestrationRea
     : nextSidebarThreadSummaryById;
   if (
     projects === state.projects &&
+    tasks === state.tasks &&
     threads === state.threads &&
     sidebarThreadSummaryById === state.sidebarThreadSummaryById &&
     normalizedState.threadIds === state.threadIds &&
@@ -4244,6 +4355,7 @@ export function syncServerReadModel(state: AppState, readModel: OrchestrationRea
   return {
     ...normalizedState,
     projects,
+    tasks,
     threads,
     sidebarThreadSummaryById,
     threadsHydrated: true,

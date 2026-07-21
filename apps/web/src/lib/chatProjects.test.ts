@@ -33,6 +33,7 @@ function makeShellSnapshot(
   return {
     snapshotSequence: 1,
     projects,
+    tasks: [],
     threads: [],
     updatedAt: NOW,
   };

@@ -25,6 +25,7 @@ export const ProjectionProject = Schema.Struct({
   workspaceRoot: Schema.String,
   defaultModelSelection: Schema.NullOr(ModelSelection),
   scripts: Schema.Array(ProjectScript),
+  workerInstructions: Schema.optional(Schema.String).pipe(Schema.withDecodingDefault(() => "")),
   isPinned: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,

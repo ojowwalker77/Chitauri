@@ -28,6 +28,7 @@ import {
   ProjectionPendingApprovalRepository,
 } from "../../persistence/Services/ProjectionPendingApprovals.ts";
 import { ProjectionProjectRepository } from "../../persistence/Services/ProjectionProjects.ts";
+import { ProjectionTaskRepository } from "../../persistence/Services/ProjectionTasks.ts";
 import { ProjectionStateRepository } from "../../persistence/Services/ProjectionState.ts";
 import {
   type ProjectionThreadActivity,
@@ -55,6 +56,7 @@ import {
 } from "../../persistence/Services/ProjectionThreads.ts";
 import { ProjectionPendingApprovalRepositoryLive } from "../../persistence/Layers/ProjectionPendingApprovals.ts";
 import { ProjectionProjectRepositoryLive } from "../../persistence/Layers/ProjectionProjects.ts";
+import { ProjectionTaskRepositoryLive } from "../../persistence/Layers/ProjectionTasks.ts";
 import { ProjectionStateRepositoryLive } from "../../persistence/Layers/ProjectionState.ts";
 import { ProjectionThreadActivityRepositoryLive } from "../../persistence/Layers/ProjectionThreadActivities.ts";
 import { ProjectionThreadMessageRepositoryLive } from "../../persistence/Layers/ProjectionThreadMessages.ts";
@@ -83,6 +85,7 @@ import { deriveThreadSummaryState } from "@t3tools/shared/threadSummary";
 
 export const ORCHESTRATION_PROJECTOR_NAMES = {
   projects: "projection.projects",
+  tasks: "projection.tasks",
   threads: "projection.threads",
   threadShellSummaries: "projection.thread-shell-summaries",
   threadMessages: "projection.thread-messages",
@@ -115,6 +118,7 @@ const eventTypeSet = (
  */
 export const ORCHESTRATION_PROJECTOR_EVENT_TYPES = {
   projects: eventTypeSet(["project.created", "project.meta-updated", "project.deleted"]),
+  tasks: eventTypeSet(["task.created", "task.updated"]),
   threads: eventTypeSet([
     "thread.created",
     "thread.meta-updated",
@@ -676,6 +680,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
   const eventStore = yield* OrchestrationEventStore;
   const projectionStateRepository = yield* ProjectionStateRepository;
   const projectionProjectRepository = yield* ProjectionProjectRepository;
+  const projectionTaskRepository = yield* ProjectionTaskRepository;
   const projectionThreadRepository = yield* ProjectionThreadRepository;
   const projectionThreadMessageRepository = yield* ProjectionThreadMessageRepository;
   const projectionThreadProposedPlanRepository = yield* ProjectionThreadProposedPlanRepository;
@@ -698,6 +703,48 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
         }).pipe(Effect.asVoid)
       : Effect.void;
 
+  const applyTasksProjection: ProjectorDefinition["apply"] = (event, _attachmentSideEffects) =>
+    Effect.gen(function* () {
+      switch (event.type) {
+        case "task.created":
+          yield* projectionTaskRepository.upsert({
+            taskId: event.payload.taskId,
+            workerId: event.payload.workerId,
+            title: event.payload.title,
+            brief: event.payload.brief,
+            status: event.payload.status,
+            origin: event.payload.origin,
+            completionSummary: event.payload.completionSummary,
+            createdAt: event.payload.createdAt,
+            updatedAt: event.payload.updatedAt,
+            completedAt: event.payload.completedAt,
+          });
+          return;
+        case "task.updated": {
+          const existing = yield* projectionTaskRepository.getById({
+            taskId: event.payload.taskId,
+          });
+          if (Option.isNone(existing)) return;
+          yield* projectionTaskRepository.upsert({
+            ...existing.value,
+            ...(event.payload.title !== undefined ? { title: event.payload.title } : {}),
+            ...(event.payload.brief !== undefined ? { brief: event.payload.brief } : {}),
+            ...(event.payload.status !== undefined ? { status: event.payload.status } : {}),
+            ...(event.payload.completionSummary !== undefined
+              ? { completionSummary: event.payload.completionSummary }
+              : {}),
+            ...(event.payload.completedAt !== undefined
+              ? { completedAt: event.payload.completedAt }
+              : {}),
+            updatedAt: event.payload.updatedAt,
+          });
+          return;
+        }
+        default:
+          return;
+      }
+    });
+
   const applyThreadsProjection: ProjectorDefinition["apply"] = (event, attachmentSideEffects) =>
     Effect.gen(function* () {
       switch (event.type) {
@@ -705,6 +752,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
           yield* projectionThreadRepository.upsert({
             threadId: event.payload.threadId,
             projectId: event.payload.projectId,
+            taskId: event.payload.taskId ?? null,
             title: event.payload.title,
             modelSelection: event.payload.modelSelection,
             runtimeMode: event.payload.runtimeMode,
@@ -756,6 +804,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
                 : undefined;
           yield* projectionThreadRepository.upsert({
             ...existingRow.value,
+            ...(event.payload.taskId !== undefined ? { taskId: event.payload.taskId } : {}),
             ...(event.payload.title !== undefined ? { title: event.payload.title } : {}),
             ...(event.payload.modelSelection !== undefined
               ? { modelSelection: event.payload.modelSelection }
@@ -1925,6 +1974,12 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
       apply: applyProjectsProjection,
     },
     {
+      name: ORCHESTRATION_PROJECTOR_NAMES.tasks,
+      phase: "hot",
+      handles: ORCHESTRATION_PROJECTOR_EVENT_TYPES.tasks,
+      apply: applyTasksProjection,
+    },
+    {
       name: ORCHESTRATION_PROJECTOR_NAMES.threadMessages,
       phase: "hot",
       handles: ORCHESTRATION_PROJECTOR_EVENT_TYPES.threadMessages,
@@ -2258,6 +2313,7 @@ export const OrchestrationProjectionPipelineLive = Layer.effect(
 ).pipe(
   Layer.provideMerge(NodeServices.layer),
   Layer.provideMerge(ProjectionProjectRepositoryLive),
+  Layer.provideMerge(ProjectionTaskRepositoryLive),
   Layer.provideMerge(ProjectionThreadRepositoryLive),
   Layer.provideMerge(ProjectionThreadMessageRepositoryLive),
   Layer.provideMerge(ProjectionThreadProposedPlanRepositoryLive),

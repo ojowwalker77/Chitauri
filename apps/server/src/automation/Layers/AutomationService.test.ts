@@ -344,6 +344,7 @@ const orchestrationEngine = {
     Effect.succeed({
       snapshotSequence: 0,
       projects: [],
+      tasks: [],
       threads: [],
       updatedAt: now,
     }),
@@ -351,6 +352,7 @@ const orchestrationEngine = {
     Effect.succeed({
       snapshotSequence: 0,
       projects: [],
+      tasks: [],
       threads: [],
       updatedAt: now,
     }),
@@ -374,6 +376,7 @@ const orchestrationEngine = {
     Effect.succeed({
       snapshotSequence: 0,
       projects: [],
+      tasks: [],
       threads: [],
       updatedAt: now,
     }),
@@ -385,6 +388,7 @@ const projectionSnapshotQuery = {
     Effect.succeed({
       snapshotSequence: 0,
       projects: [],
+      tasks: [],
       threads: [],
       updatedAt: now,
     }),
@@ -392,20 +396,23 @@ const projectionSnapshotQuery = {
     Effect.succeed({
       snapshotSequence: 0,
       projects: [],
+      tasks: [],
       threads: [],
       updatedAt: now,
     }),
-  getCounts: () => Effect.succeed({ projectCount: 1, threadCount: 0 }),
+  getCounts: () => Effect.succeed({ projectCount: 1, taskCount: 0, threadCount: 0 }),
   getSnapshotSequence: () => Effect.succeed({ snapshotSequence: 0 }),
   getShellSnapshot: () =>
     Effect.succeed({
       snapshotSequence: 0,
       projects: [project],
+      tasks: [],
       threads: [],
       updatedAt: now,
     }),
   getActiveProjectByWorkspaceRoot: () => Effect.succeed(Option.some(project as never)),
   getProjectShellById: () => Effect.succeed(Option.some(project)),
+  getTaskShellById: () => Effect.succeed(Option.none()),
   getFirstActiveThreadIdByProjectId: () => Effect.succeed(Option.none()),
   getThreadCheckpointContext: () => Effect.succeed(Option.none()),
   getFullThreadDiffContext: () => Effect.succeed(Option.none()),

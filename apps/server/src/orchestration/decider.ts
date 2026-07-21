@@ -30,12 +30,16 @@ import {
   listThreadsByProjectId,
   requireProject,
   requireProjectAbsent,
+  requireProjectHasNoTasks,
   requireProjectHasNoThreads,
   requireProjectWorkspaceRootAvailable,
   requireThread,
   requireThreadAbsent,
   requireThreadArchived,
   requireThreadNotArchived,
+  requireTask,
+  requireTaskAbsent,
+  requireTaskBelongsToWorker,
 } from "./commandInvariants.ts";
 
 const nowIso = () => new Date().toISOString();
@@ -293,6 +297,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           workspaceRoot: command.workspaceRoot,
           defaultModelSelection: command.defaultModelSelection ?? null,
           scripts: [],
+          workerInstructions: command.workerInstructions ?? "",
           isPinned: command.isPinned,
           createdAt: command.createdAt,
           updatedAt: command.createdAt,
@@ -348,6 +353,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
             ? { defaultModelSelection: command.defaultModelSelection }
             : {}),
           ...(command.scripts !== undefined ? { scripts: command.scripts } : {}),
+          ...(command.workerInstructions !== undefined
+            ? { workerInstructions: command.workerInstructions }
+            : {}),
           ...(command.isPinned !== undefined ? { isPinned: command.isPinned } : {}),
           updatedAt: occurredAt,
         },
@@ -361,6 +369,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         projectId: command.projectId,
       });
       yield* requireProjectHasNoThreads({
+        readModel,
+        command,
+        projectId: command.projectId,
+      });
+      yield* requireProjectHasNoTasks({
         readModel,
         command,
         projectId: command.projectId,
@@ -381,6 +394,69 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       };
     }
 
+    case "task.create": {
+      const worker = yield* requireProject({
+        readModel,
+        command,
+        projectId: command.workerId,
+      });
+      if (worker.kind !== "project" || worker.deletedAt !== null) {
+        return yield* new OrchestrationCommandInvariantError({
+          commandType: command.type,
+          detail: `Worker '${command.workerId}' is not an active repository Worker.`,
+        });
+      }
+      yield* requireTaskAbsent({ readModel, command, taskId: command.taskId });
+      return {
+        ...withEventBase({
+          aggregateKind: "task",
+          aggregateId: command.taskId,
+          occurredAt: command.createdAt,
+          commandId: command.commandId,
+        }),
+        type: "task.created",
+        payload: {
+          taskId: command.taskId,
+          workerId: command.workerId,
+          title: command.title,
+          brief: command.brief,
+          status: "open",
+          origin: command.origin,
+          completionSummary: null,
+          createdAt: command.createdAt,
+          updatedAt: command.createdAt,
+          completedAt: null,
+        },
+      };
+    }
+
+    case "task.update": {
+      yield* requireTask({ readModel, command, taskId: command.taskId });
+      const occurredAt = nowIso();
+      return {
+        ...withEventBase({
+          aggregateKind: "task",
+          aggregateId: command.taskId,
+          occurredAt,
+          commandId: command.commandId,
+        }),
+        type: "task.updated",
+        payload: {
+          taskId: command.taskId,
+          ...(command.title !== undefined ? { title: command.title } : {}),
+          ...(command.brief !== undefined ? { brief: command.brief } : {}),
+          ...(command.status !== undefined ? { status: command.status } : {}),
+          ...(command.completionSummary !== undefined
+            ? { completionSummary: command.completionSummary }
+            : {}),
+          ...(command.status !== undefined
+            ? { completedAt: command.status === "completed" ? occurredAt : null }
+            : {}),
+          updatedAt: occurredAt,
+        },
+      };
+    }
+
     case "thread.create": {
       yield* requireProject({
         readModel,
@@ -392,6 +468,19 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.threadId,
       });
+      const parentThread =
+        command.parentThreadId !== null && command.parentThreadId !== undefined
+          ? yield* requireThread({ readModel, command, threadId: command.parentThreadId })
+          : null;
+      const taskId = command.taskId === undefined ? (parentThread?.taskId ?? null) : command.taskId;
+      if (taskId !== null) {
+        yield* requireTaskBelongsToWorker({
+          readModel,
+          command,
+          taskId,
+          workerId: command.projectId,
+        });
+      }
       return {
         ...withEventBase({
           aggregateKind: "thread",
@@ -403,6 +492,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         payload: {
           threadId: command.threadId,
           projectId: command.projectId,
+          taskId,
           title: command.title,
           modelSelection: command.modelSelection,
           runtimeMode: command.runtimeMode,
@@ -459,6 +549,15 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.sourceThreadId,
       });
+      const taskId = command.taskId === undefined ? (sourceThread.taskId ?? null) : command.taskId;
+      if (taskId !== null) {
+        yield* requireTaskBelongsToWorker({
+          readModel,
+          command,
+          taskId,
+          workerId: command.projectId,
+        });
+      }
       if (sourceThread.projectId !== command.projectId) {
         return yield* new OrchestrationCommandInvariantError({
           commandType: command.type,
@@ -483,6 +582,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         payload: {
           threadId: command.threadId,
           projectId: command.projectId,
+          taskId,
           title: command.title,
           modelSelection: command.modelSelection,
           runtimeMode: command.runtimeMode,
@@ -568,6 +668,15 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.sourceThreadId,
       });
+      const taskId = command.taskId === undefined ? (sourceThread.taskId ?? null) : command.taskId;
+      if (taskId !== null) {
+        yield* requireTaskBelongsToWorker({
+          readModel,
+          command,
+          taskId,
+          workerId: command.projectId,
+        });
+      }
       if (sourceThread.projectId !== command.projectId) {
         return yield* new OrchestrationCommandInvariantError({
           commandType: command.type,
@@ -586,6 +695,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         payload: {
           threadId: command.threadId,
           projectId: command.projectId,
+          taskId,
           title: command.title,
           modelSelection: command.modelSelection,
           runtimeMode: command.runtimeMode,
@@ -713,11 +823,19 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
     }
 
     case "thread.meta.update": {
-      yield* requireThread({
+      const thread = yield* requireThread({
         readModel,
         command,
         threadId: command.threadId,
       });
+      if (command.taskId !== undefined && command.taskId !== null) {
+        yield* requireTaskBelongsToWorker({
+          readModel,
+          command,
+          taskId: command.taskId,
+          workerId: thread.projectId,
+        });
+      }
       const occurredAt = nowIso();
       return {
         ...withEventBase({
@@ -729,6 +847,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         type: "thread.meta-updated",
         payload: {
           threadId: command.threadId,
+          ...(command.taskId !== undefined ? { taskId: command.taskId } : {}),
           ...(command.title !== undefined ? { title: command.title } : {}),
           ...(command.modelSelection !== undefined
             ? { modelSelection: command.modelSelection }

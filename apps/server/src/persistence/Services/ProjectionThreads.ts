@@ -17,6 +17,7 @@ import {
   ThreadHandoff,
   ProjectId,
   RuntimeMode,
+  TaskId,
   ThreadEnvironmentMode,
   ThreadId,
   TurnId,
@@ -30,6 +31,7 @@ import type { ProjectionRepositoryError } from "../Errors.ts";
 export const ProjectionThread = Schema.Struct({
   threadId: ThreadId,
   projectId: ProjectId,
+  taskId: Schema.optional(Schema.NullOr(TaskId)).pipe(Schema.withDecodingDefault(() => null)),
   title: Schema.String,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,

@@ -25,6 +25,8 @@ import {
   ProjectCreatedPayload,
   ProjectDeletedPayload,
   ProjectMetaUpdatedPayload,
+  TaskCreatedPayload,
+  TaskUpdatedPayload,
   ThreadArchivedPayload,
   ThreadActivityAppendedPayload,
   ThreadCreatedPayload,
@@ -217,6 +219,7 @@ export function createEmptyReadModel(nowIso: string): OrchestrationReadModel {
   return {
     snapshotSequence: 0,
     projects: [],
+    tasks: [],
     threads: [],
     updatedAt: nowIso,
   };
@@ -244,6 +247,7 @@ export function projectEvent(
             workspaceRoot: payload.workspaceRoot,
             defaultModelSelection: payload.defaultModelSelection,
             scripts: payload.scripts,
+            workerInstructions: payload.workerInstructions ?? "",
             isPinned: payload.isPinned ?? false,
             createdAt: payload.createdAt,
             updatedAt: payload.updatedAt,
@@ -278,10 +282,62 @@ export function projectEvent(
                     ? { defaultModelSelection: payload.defaultModelSelection }
                     : {}),
                   ...(payload.scripts !== undefined ? { scripts: payload.scripts } : {}),
+                  ...(payload.workerInstructions !== undefined
+                    ? { workerInstructions: payload.workerInstructions }
+                    : {}),
                   ...(payload.isPinned !== undefined ? { isPinned: payload.isPinned } : {}),
                   updatedAt: payload.updatedAt,
                 }
               : project,
+          ),
+        })),
+      );
+
+    case "task.created":
+      return decodeForEvent(TaskCreatedPayload, event.payload, event.type, "payload").pipe(
+        Effect.map((payload) => {
+          const nextTask = {
+            id: payload.taskId,
+            workerId: payload.workerId,
+            title: payload.title,
+            brief: payload.brief,
+            status: payload.status,
+            origin: payload.origin,
+            completionSummary: payload.completionSummary,
+            createdAt: payload.createdAt,
+            updatedAt: payload.updatedAt,
+            completedAt: payload.completedAt,
+          };
+          const exists = nextBase.tasks.some((task) => task.id === payload.taskId);
+          return {
+            ...nextBase,
+            tasks: exists
+              ? nextBase.tasks.map((task) => (task.id === payload.taskId ? nextTask : task))
+              : [...nextBase.tasks, nextTask],
+          };
+        }),
+      );
+
+    case "task.updated":
+      return decodeForEvent(TaskUpdatedPayload, event.payload, event.type, "payload").pipe(
+        Effect.map((payload) => ({
+          ...nextBase,
+          tasks: nextBase.tasks.map((task) =>
+            task.id === payload.taskId
+              ? {
+                  ...task,
+                  ...(payload.title !== undefined ? { title: payload.title } : {}),
+                  ...(payload.brief !== undefined ? { brief: payload.brief } : {}),
+                  ...(payload.status !== undefined ? { status: payload.status } : {}),
+                  ...(payload.completionSummary !== undefined
+                    ? { completionSummary: payload.completionSummary }
+                    : {}),
+                  ...(payload.completedAt !== undefined
+                    ? { completedAt: payload.completedAt }
+                    : {}),
+                  updatedAt: payload.updatedAt,
+                }
+              : task,
           ),
         })),
       );
@@ -315,6 +371,7 @@ export function projectEvent(
           {
             id: payload.threadId,
             projectId: payload.projectId,
+            taskId: payload.taskId ?? null,
             title: payload.title,
             modelSelection: payload.modelSelection,
             runtimeMode: payload.runtimeMode,
@@ -411,6 +468,7 @@ export function projectEvent(
           return {
             ...nextBase,
             threads: updateThread(nextBase.threads, payload.threadId, {
+              ...(payload.taskId !== undefined ? { taskId: payload.taskId } : {}),
               ...(payload.title !== undefined ? { title: payload.title } : {}),
               ...(payload.modelSelection !== undefined
                 ? { modelSelection: payload.modelSelection }

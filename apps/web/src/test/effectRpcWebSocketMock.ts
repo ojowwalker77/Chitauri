@@ -122,11 +122,22 @@ export function createShellSnapshotFromReadModel(
         createdAt: project.createdAt,
         updatedAt: project.updatedAt,
       })),
+    tasks: snapshot.tasks.map((task) => ({
+      id: task.id,
+      workerId: task.workerId,
+      title: task.title,
+      status: task.status,
+      origin: task.origin,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt,
+      completedAt: task.completedAt,
+    })),
     threads: snapshot.threads
       .filter((thread) => thread.deletedAt === null)
       .map((thread) => ({
         id: thread.id,
         projectId: thread.projectId,
+        taskId: thread.taskId ?? null,
         title: thread.title,
         modelSelection: thread.modelSelection,
         runtimeMode: thread.runtimeMode,

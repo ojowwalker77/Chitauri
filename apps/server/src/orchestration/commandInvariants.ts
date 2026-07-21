@@ -2,9 +2,11 @@ import type {
   OrchestrationCommand,
   OrchestrationProject,
   OrchestrationReadModel,
+  OrchestrationTask,
   OrchestrationThread,
   ProjectKind,
   ProjectId,
+  TaskId,
   ThreadId,
 } from "@t3tools/contracts";
 import { THREAD_NOT_ARCHIVED_INVARIANT_MARKER } from "@t3tools/shared/errorMessages";
@@ -34,6 +36,13 @@ export function findProjectById(
   return readModel.projects.find((project) => project.id === projectId);
 }
 
+export function findTaskById(
+  readModel: OrchestrationReadModel,
+  taskId: TaskId,
+): OrchestrationTask | undefined {
+  return readModel.tasks.find((task) => task.id === taskId);
+}
+
 // Finds active projects by workspace root using the same comparison rules as import flows.
 export function listActiveProjectsByWorkspaceRoot(
   readModel: OrchestrationReadModel,
@@ -59,6 +68,13 @@ export function listThreadsByProjectId(
   projectId: ProjectId,
 ): ReadonlyArray<OrchestrationThread> {
   return readModel.threads.filter((thread) => thread.projectId === projectId);
+}
+
+export function listTasksByWorkerId(
+  readModel: OrchestrationReadModel,
+  workerId: ProjectId,
+): ReadonlyArray<OrchestrationTask> {
+  return readModel.tasks.filter((task) => task.workerId === workerId);
 }
 
 export function requireProject(input: {
@@ -134,6 +150,74 @@ export function requireProjectHasNoThreads(input: {
     invariantError(
       input.command.type,
       `Project '${input.projectId}' still has ${remainingThreads.length} thread${remainingThreads.length === 1 ? "" : "s"} and cannot be deleted.`,
+    ),
+  );
+}
+
+export function requireProjectHasNoTasks(input: {
+  readonly readModel: OrchestrationReadModel;
+  readonly command: OrchestrationCommand;
+  readonly projectId: ProjectId;
+}): Effect.Effect<void, OrchestrationCommandInvariantError> {
+  const remainingTasks = listTasksByWorkerId(input.readModel, input.projectId).filter(
+    (task) => task.status !== "completed" && task.status !== "cancelled",
+  );
+  if (remainingTasks.length === 0) return Effect.void;
+  return Effect.fail(
+    invariantError(
+      input.command.type,
+      `Worker '${input.projectId}' still has ${remainingTasks.length} active task${remainingTasks.length === 1 ? "" : "s"} and cannot be deleted.`,
+    ),
+  );
+}
+
+export function requireTask(input: {
+  readonly readModel: OrchestrationReadModel;
+  readonly command: OrchestrationCommand;
+  readonly taskId: TaskId;
+}): Effect.Effect<OrchestrationTask, OrchestrationCommandInvariantError> {
+  const task = findTaskById(input.readModel, input.taskId);
+  return task
+    ? Effect.succeed(task)
+    : Effect.fail(
+        invariantError(
+          input.command.type,
+          `Task '${input.taskId}' does not exist for command '${input.command.type}'.`,
+        ),
+      );
+}
+
+export function requireTaskAbsent(input: {
+  readonly readModel: OrchestrationReadModel;
+  readonly command: OrchestrationCommand;
+  readonly taskId: TaskId;
+}): Effect.Effect<void, OrchestrationCommandInvariantError> {
+  return findTaskById(input.readModel, input.taskId)
+    ? Effect.fail(
+        invariantError(
+          input.command.type,
+          `Task '${input.taskId}' already exists and cannot be created twice.`,
+        ),
+      )
+    : Effect.void;
+}
+
+export function requireTaskBelongsToWorker(input: {
+  readonly readModel: OrchestrationReadModel;
+  readonly command: OrchestrationCommand;
+  readonly taskId: TaskId;
+  readonly workerId: ProjectId;
+}): Effect.Effect<OrchestrationTask, OrchestrationCommandInvariantError> {
+  return requireTask(input).pipe(
+    Effect.flatMap((task) =>
+      task.workerId === input.workerId
+        ? Effect.succeed(task)
+        : Effect.fail(
+            invariantError(
+              input.command.type,
+              `Task '${input.taskId}' belongs to Worker '${task.workerId}', not '${input.workerId}'.`,
+            ),
+          ),
     ),
   );
 }

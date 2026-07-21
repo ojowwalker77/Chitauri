@@ -20,6 +20,7 @@ import {
   PositiveInt,
   ProjectId,
   ProviderItemId,
+  TaskId,
   ThreadId,
   ThreadMarkerId,
   TrimmedNonEmptyString,
@@ -369,12 +370,16 @@ export const OrchestrationProject = Schema.Struct({
   workspaceRoot: TrimmedNonEmptyString,
   defaultModelSelection: Schema.NullOr(ModelSelection),
   scripts: Schema.Array(ProjectScript),
+  workerInstructions: Schema.optional(Schema.String).pipe(Schema.withDecodingDefault(() => "")),
   isPinned: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => false)),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
   deletedAt: Schema.NullOr(IsoDateTime),
 });
 export type OrchestrationProject = typeof OrchestrationProject.Type;
+// Repository Projects are the compatibility persistence shape for the public Worker concept.
+export const OrchestrationWorker = OrchestrationProject;
+export type OrchestrationWorker = typeof OrchestrationWorker.Type;
 
 export const OrchestrationProjectShell = Schema.Struct({
   id: ProjectId,
@@ -383,11 +388,59 @@ export const OrchestrationProjectShell = Schema.Struct({
   workspaceRoot: TrimmedNonEmptyString,
   defaultModelSelection: Schema.NullOr(ModelSelection),
   scripts: Schema.Array(ProjectScript),
+  workerInstructions: Schema.optional(Schema.String).pipe(Schema.withDecodingDefault(() => "")),
   isPinned: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => false)),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
 export type OrchestrationProjectShell = typeof OrchestrationProjectShell.Type;
+export const OrchestrationWorkerShell = OrchestrationProjectShell;
+export type OrchestrationWorkerShell = typeof OrchestrationWorkerShell.Type;
+
+export const TaskStatus = Schema.Literals([
+  "open",
+  "in_progress",
+  "blocked",
+  "in_review",
+  "completed",
+  "cancelled",
+]);
+export type TaskStatus = typeof TaskStatus.Type;
+
+export const TaskOrigin = Schema.Literals([
+  "user",
+  "github",
+  "research",
+  "automation",
+  "delegation",
+]);
+export type TaskOrigin = typeof TaskOrigin.Type;
+
+export const OrchestrationTask = Schema.Struct({
+  id: TaskId,
+  workerId: ProjectId,
+  title: TrimmedNonEmptyString,
+  brief: Schema.String,
+  status: TaskStatus,
+  origin: TaskOrigin,
+  completionSummary: Schema.NullOr(Schema.String),
+  createdAt: IsoDateTime,
+  updatedAt: IsoDateTime,
+  completedAt: Schema.NullOr(IsoDateTime),
+});
+export type OrchestrationTask = typeof OrchestrationTask.Type;
+
+export const OrchestrationTaskShell = Schema.Struct({
+  id: TaskId,
+  workerId: ProjectId,
+  title: TrimmedNonEmptyString,
+  status: TaskStatus,
+  origin: TaskOrigin,
+  createdAt: IsoDateTime,
+  updatedAt: IsoDateTime,
+  completedAt: Schema.NullOr(IsoDateTime),
+});
+export type OrchestrationTaskShell = typeof OrchestrationTaskShell.Type;
 
 export const OrchestrationMessageRole = Schema.Literals(["user", "assistant", "system"]);
 export type OrchestrationMessageRole = typeof OrchestrationMessageRole.Type;
@@ -595,6 +648,7 @@ export type ThreadMarkers = typeof ThreadMarkers.Type;
 export const OrchestrationThread = Schema.Struct({
   id: ThreadId,
   projectId: ProjectId,
+  taskId: Schema.optional(Schema.NullOr(TaskId)).pipe(Schema.withDecodingDefault(() => null)),
   title: TrimmedNonEmptyString,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
@@ -662,6 +716,7 @@ export type OrchestrationThread = typeof OrchestrationThread.Type;
 export const OrchestrationThreadShell = Schema.Struct({
   id: ThreadId,
   projectId: ProjectId,
+  taskId: Schema.optional(Schema.NullOr(TaskId)).pipe(Schema.withDecodingDefault(() => null)),
   title: TrimmedNonEmptyString,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
@@ -721,6 +776,7 @@ export type OrchestrationThreadShell = typeof OrchestrationThreadShell.Type;
 export const OrchestrationReadModel = Schema.Struct({
   snapshotSequence: NonNegativeInt,
   projects: Schema.Array(OrchestrationProject),
+  tasks: Schema.Array(OrchestrationTask).pipe(Schema.withDecodingDefault(() => [])),
   threads: Schema.Array(OrchestrationThread),
   updatedAt: IsoDateTime,
 });
@@ -729,6 +785,7 @@ export type OrchestrationReadModel = typeof OrchestrationReadModel.Type;
 export const OrchestrationShellSnapshot = Schema.Struct({
   snapshotSequence: NonNegativeInt,
   projects: Schema.Array(OrchestrationProjectShell),
+  tasks: Schema.Array(OrchestrationTaskShell).pipe(Schema.withDecodingDefault(() => [])),
   threads: Schema.Array(OrchestrationThreadShell),
   updatedAt: IsoDateTime,
 });
@@ -744,6 +801,16 @@ export const OrchestrationShellStreamEvent = Schema.Union([
     kind: Schema.Literal("project-removed"),
     sequence: NonNegativeInt,
     projectId: ProjectId,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("task-upserted"),
+    sequence: NonNegativeInt,
+    task: OrchestrationTaskShell,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("task-removed"),
+    sequence: NonNegativeInt,
+    taskId: TaskId,
   }),
   Schema.Struct({
     kind: Schema.Literal("thread-upserted"),
@@ -778,6 +845,7 @@ export const ProjectCreateCommand = Schema.Struct({
     Schema.withDecodingDefault(() => false),
   ),
   defaultModelSelection: Schema.optional(Schema.NullOr(ModelSelection)),
+  workerInstructions: Schema.optional(Schema.String),
   isPinned: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => false)),
   createdAt: IsoDateTime,
 });
@@ -794,6 +862,7 @@ const ProjectMetaUpdateCommand = Schema.Struct({
   ),
   defaultModelSelection: Schema.optional(Schema.NullOr(ModelSelection)),
   scripts: Schema.optional(Schema.Array(ProjectScript)),
+  workerInstructions: Schema.optional(Schema.String),
   isPinned: Schema.optional(Schema.Boolean),
 });
 
@@ -803,11 +872,33 @@ const ProjectDeleteCommand = Schema.Struct({
   projectId: ProjectId,
 });
 
+export const TaskCreateCommand = Schema.Struct({
+  type: Schema.Literal("task.create"),
+  commandId: CommandId,
+  taskId: TaskId,
+  workerId: ProjectId,
+  title: TrimmedNonEmptyString,
+  brief: Schema.optional(Schema.String).pipe(Schema.withDecodingDefault(() => "")),
+  origin: Schema.optional(TaskOrigin).pipe(Schema.withDecodingDefault(() => "user")),
+  createdAt: IsoDateTime,
+});
+
+export const TaskUpdateCommand = Schema.Struct({
+  type: Schema.Literal("task.update"),
+  commandId: CommandId,
+  taskId: TaskId,
+  title: Schema.optional(TrimmedNonEmptyString),
+  brief: Schema.optional(Schema.String),
+  status: Schema.optional(TaskStatus),
+  completionSummary: Schema.optional(Schema.NullOr(Schema.String)),
+});
+
 const ThreadCreateCommand = Schema.Struct({
   type: Schema.Literal("thread.create"),
   commandId: CommandId,
   threadId: ThreadId,
   projectId: ProjectId,
+  taskId: Schema.optional(Schema.NullOr(TaskId)),
   title: TrimmedNonEmptyString,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
@@ -855,6 +946,7 @@ const ThreadHandoffCreateCommand = Schema.Struct({
   threadId: ThreadId,
   sourceThreadId: ThreadId,
   projectId: ProjectId,
+  taskId: Schema.optional(Schema.NullOr(TaskId)),
   title: TrimmedNonEmptyString,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
@@ -877,6 +969,7 @@ const ThreadForkCreateCommand = Schema.Struct({
   threadId: ThreadId,
   sourceThreadId: ThreadId,
   projectId: ProjectId,
+  taskId: Schema.optional(Schema.NullOr(TaskId)),
   title: TrimmedNonEmptyString,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
@@ -916,6 +1009,7 @@ const ThreadMetaUpdateCommand = Schema.Struct({
   type: Schema.Literal("thread.meta.update"),
   commandId: CommandId,
   threadId: ThreadId,
+  taskId: Schema.optional(Schema.NullOr(TaskId)),
   title: Schema.optional(TrimmedNonEmptyString),
   modelSelection: Schema.optional(ModelSelection),
   envMode: Schema.optional(ThreadEnvironmentMode),
@@ -1156,6 +1250,8 @@ const DispatchableClientOrchestrationCommand = Schema.Union([
   ProjectCreateCommand,
   ProjectMetaUpdateCommand,
   ProjectDeleteCommand,
+  TaskCreateCommand,
+  TaskUpdateCommand,
   ThreadCreateCommand,
   ThreadHandoffCreateCommand,
   ThreadForkCreateCommand,
@@ -1188,6 +1284,8 @@ export const ClientOrchestrationCommand = Schema.Union([
   ProjectCreateCommand,
   ProjectMetaUpdateCommand,
   ProjectDeleteCommand,
+  TaskCreateCommand,
+  TaskUpdateCommand,
   ThreadCreateCommand,
   ThreadHandoffCreateCommand,
   ThreadForkCreateCommand,
@@ -1316,6 +1414,8 @@ export const OrchestrationEventType = Schema.Literals([
   "project.created",
   "project.meta-updated",
   "project.deleted",
+  "task.created",
+  "task.updated",
   "thread.created",
   "thread.deleted",
   // Legacy desktop installs can still contain these rows in orchestration_events.
@@ -1353,7 +1453,7 @@ export const OrchestrationEventType = Schema.Literals([
 ]);
 export type OrchestrationEventType = typeof OrchestrationEventType.Type;
 
-export const OrchestrationAggregateKind = Schema.Literals(["project", "thread"]);
+export const OrchestrationAggregateKind = Schema.Literals(["project", "task", "thread"]);
 export type OrchestrationAggregateKind = typeof OrchestrationAggregateKind.Type;
 export const OrchestrationActorKind = Schema.Literals(["client", "server", "provider"]);
 
@@ -1364,6 +1464,7 @@ export const ProjectCreatedPayload = Schema.Struct({
   workspaceRoot: TrimmedNonEmptyString,
   defaultModelSelection: Schema.NullOr(ModelSelection),
   scripts: Schema.Array(ProjectScript),
+  workerInstructions: Schema.optional(Schema.String).pipe(Schema.withDecodingDefault(() => "")),
   isPinned: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => false)),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
@@ -1376,6 +1477,7 @@ export const ProjectMetaUpdatedPayload = Schema.Struct({
   workspaceRoot: Schema.optional(TrimmedNonEmptyString),
   defaultModelSelection: Schema.optional(Schema.NullOr(ModelSelection)),
   scripts: Schema.optional(Schema.Array(ProjectScript)),
+  workerInstructions: Schema.optional(Schema.String),
   isPinned: Schema.optional(Schema.Boolean),
   updatedAt: IsoDateTime,
 });
@@ -1385,9 +1487,33 @@ export const ProjectDeletedPayload = Schema.Struct({
   deletedAt: IsoDateTime,
 });
 
+export const TaskCreatedPayload = Schema.Struct({
+  taskId: TaskId,
+  workerId: ProjectId,
+  title: TrimmedNonEmptyString,
+  brief: Schema.String,
+  status: TaskStatus,
+  origin: TaskOrigin,
+  completionSummary: Schema.NullOr(Schema.String),
+  createdAt: IsoDateTime,
+  updatedAt: IsoDateTime,
+  completedAt: Schema.NullOr(IsoDateTime),
+});
+
+export const TaskUpdatedPayload = Schema.Struct({
+  taskId: TaskId,
+  title: Schema.optional(TrimmedNonEmptyString),
+  brief: Schema.optional(Schema.String),
+  status: Schema.optional(TaskStatus),
+  completionSummary: Schema.optional(Schema.NullOr(Schema.String)),
+  updatedAt: IsoDateTime,
+  completedAt: Schema.optional(Schema.NullOr(IsoDateTime)),
+});
+
 export const ThreadCreatedPayload = Schema.Struct({
   threadId: ThreadId,
   projectId: ProjectId,
+  taskId: Schema.optional(Schema.NullOr(TaskId)).pipe(Schema.withDecodingDefault(() => null)),
   title: TrimmedNonEmptyString,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
@@ -1453,6 +1579,7 @@ export const ThreadUnarchivedPayload = Schema.Struct({
 
 export const ThreadMetaUpdatedPayload = Schema.Struct({
   threadId: ThreadId,
+  taskId: Schema.optional(Schema.NullOr(TaskId)),
   title: Schema.optional(TrimmedNonEmptyString),
   modelSelection: Schema.optional(ModelSelection),
   envMode: Schema.optional(ThreadEnvironmentMode),
@@ -1676,7 +1803,7 @@ const EventBaseFields = {
   sequence: NonNegativeInt,
   eventId: EventId,
   aggregateKind: OrchestrationAggregateKind,
-  aggregateId: Schema.Union([ProjectId, ThreadId]),
+  aggregateId: Schema.Union([ProjectId, TaskId, ThreadId]),
   occurredAt: IsoDateTime,
   commandId: Schema.NullOr(CommandId),
   causationEventId: Schema.NullOr(EventId),
@@ -1699,6 +1826,16 @@ export const OrchestrationEvent = Schema.Union([
     ...EventBaseFields,
     type: Schema.Literal("project.deleted"),
     payload: ProjectDeletedPayload,
+  }),
+  Schema.Struct({
+    ...EventBaseFields,
+    type: Schema.Literal("task.created"),
+    payload: TaskCreatedPayload,
+  }),
+  Schema.Struct({
+    ...EventBaseFields,
+    type: Schema.Literal("task.updated"),
+    payload: TaskUpdatedPayload,
   }),
   Schema.Struct({
     ...EventBaseFields,

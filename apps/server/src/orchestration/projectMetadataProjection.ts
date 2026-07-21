@@ -12,6 +12,7 @@ export type ProjectMetadataOrchestrationEvent = Extract<
 
 export const PROJECT_METADATA_SNAPSHOT_PROJECTORS = [
   "projection.projects",
+  "projection.tasks",
   "projection.threads",
   "projection.thread-messages",
   "projection.thread-proposed-plans",
@@ -34,6 +35,7 @@ export const applyProjectMetadataProjection = (input: {
           workspaceRoot: input.event.payload.workspaceRoot,
           defaultModelSelection: input.event.payload.defaultModelSelection,
           scripts: input.event.payload.scripts,
+          workerInstructions: input.event.payload.workerInstructions ?? "",
           isPinned: input.event.payload.isPinned ?? false,
           createdAt: input.event.payload.createdAt,
           updatedAt: input.event.payload.updatedAt,
@@ -60,6 +62,9 @@ export const applyProjectMetadataProjection = (input: {
               : {}),
             ...(input.event.payload.scripts !== undefined
               ? { scripts: input.event.payload.scripts }
+              : {}),
+            ...(input.event.payload.workerInstructions !== undefined
+              ? { workerInstructions: input.event.payload.workerInstructions }
               : {}),
             ...(input.event.payload.isPinned !== undefined
               ? { isPinned: input.event.payload.isPinned }

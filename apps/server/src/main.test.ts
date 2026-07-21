@@ -276,6 +276,7 @@ it.layer(testLayer)("server CLI command", (it) => {
       const getCounts = vi.fn(() =>
         Effect.succeed({
           threadCount: 2,
+          taskCount: 3,
           projectCount: 1,
         }),
       );
@@ -286,6 +287,7 @@ it.layer(testLayer)("server CLI command", (it) => {
             Effect.succeed({
               snapshotSequence: 0,
               projects: [] as OrchestrationReadModel["projects"],
+              tasks: [] as OrchestrationReadModel["tasks"],
               threads: [] as OrchestrationReadModel["threads"],
               updatedAt: new Date(0).toISOString(),
             }),
@@ -293,6 +295,7 @@ it.layer(testLayer)("server CLI command", (it) => {
             Effect.succeed({
               snapshotSequence: 0,
               projects: [] as OrchestrationReadModel["projects"],
+              tasks: [] as OrchestrationReadModel["tasks"],
               threads: [] as OrchestrationReadModel["threads"],
               updatedAt: new Date(0).toISOString(),
             }),
@@ -301,6 +304,7 @@ it.layer(testLayer)("server CLI command", (it) => {
           getShellSnapshot: () => Effect.die("unused"),
           getActiveProjectByWorkspaceRoot: () => Effect.die("unused"),
           getProjectShellById: () => Effect.die("unused"),
+          getTaskShellById: () => Effect.die("unused"),
           getFirstActiveThreadIdByProjectId: () => Effect.die("unused"),
           getThreadCheckpointContext: () => Effect.die("unused"),
           getFullThreadDiffContext: () => Effect.die("unused"),
@@ -320,6 +324,7 @@ it.layer(testLayer)("server CLI command", (it) => {
         "server.boot.heartbeat",
         {
           threadCount: 2,
+          taskCount: 3,
           projectCount: 1,
         },
       ]);

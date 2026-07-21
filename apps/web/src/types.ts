@@ -17,6 +17,7 @@ import type {
   ThreadHandoff,
   ProjectScript as ContractProjectScript,
   ThreadId,
+  TaskId,
   ProjectId,
   TurnId,
   MessageId,
@@ -199,6 +200,7 @@ export interface Thread extends ThreadWorkspaceState {
   id: ThreadId;
   codexThreadId: string | null;
   projectId: ProjectId;
+  taskId?: TaskId | null;
   title: string;
   modelSelection: ModelSelection;
   runtimeMode: RuntimeMode;
@@ -236,6 +238,7 @@ export interface ThreadShell extends ThreadWorkspaceState {
   id: ThreadId;
   codexThreadId: string | null;
   projectId: ProjectId;
+  taskId?: TaskId | null;
   title: string;
   modelSelection: ModelSelection;
   runtimeMode: RuntimeMode;

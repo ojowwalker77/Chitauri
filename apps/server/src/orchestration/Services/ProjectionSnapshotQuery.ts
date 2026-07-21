@@ -10,6 +10,7 @@ import type {
   OrchestrationCheckpointSummary,
   OrchestrationProject,
   OrchestrationProjectShell,
+  OrchestrationTaskShell,
   OrchestrationReadModel,
   OrchestrationShellSnapshot,
   OrchestrationThreadDetailSnapshot,
@@ -18,6 +19,7 @@ import type {
   CheckpointRef,
   ProjectId,
   ProjectKind,
+  TaskId,
   ThreadId,
   ThreadEnvironmentMode,
 } from "@t3tools/contracts";
@@ -28,6 +30,7 @@ import type { ProjectionRepositoryError } from "../../persistence/Errors.ts";
 
 export interface ProjectionSnapshotCounts {
   readonly projectCount: number;
+  readonly taskCount: number;
   readonly threadCount: number;
 }
 
@@ -114,6 +117,11 @@ export interface ProjectionSnapshotQueryShape {
   readonly getProjectShellById: (
     projectId: ProjectId,
   ) => Effect.Effect<Option.Option<OrchestrationProjectShell>, ProjectionRepositoryError>;
+
+  /** Read a single Task shell row by id. */
+  readonly getTaskShellById: (
+    taskId: TaskId,
+  ) => Effect.Effect<Option.Option<OrchestrationTaskShell>, ProjectionRepositoryError>;
 
   /**
    * Read the earliest active thread for a project.

@@ -269,6 +269,7 @@ function createSnapshotForTargetUser(options: {
         deletedAt: null,
       },
     ],
+    tasks: [],
     threads: [
       {
         id: THREAD_ID,

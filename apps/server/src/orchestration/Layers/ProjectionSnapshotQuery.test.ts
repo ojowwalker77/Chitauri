@@ -298,6 +298,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
               runOnWorktreeCreate: false,
             },
           ],
+          workerInstructions: "",
           createdAt: "2026-02-24T00:00:00.000Z",
           updatedAt: "2026-02-24T00:00:01.000Z",
           deletedAt: null,
@@ -308,6 +309,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
         {
           id: ThreadId.makeUnsafe("thread-1"),
           projectId: asProjectId("project-1"),
+          taskId: null,
           title: "Thread 1",
           modelSelection: {
             provider: "codex",
@@ -1157,6 +1159,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
       const counts = yield* snapshotQuery.getCounts();
       assert.deepEqual(counts, {
         projectCount: 2,
+        taskCount: 0,
         threadCount: 3,
       });
 
@@ -1341,6 +1344,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
         {
           id: ThreadId.makeUnsafe("thread-shell"),
           projectId: asProjectId("project-shell"),
+          taskId: null,
           title: "Shell Thread",
           modelSelection: {
             provider: "codex",

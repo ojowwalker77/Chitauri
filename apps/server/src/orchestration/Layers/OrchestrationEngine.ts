@@ -2,6 +2,7 @@ import type {
   OrchestrationEvent,
   OrchestrationReadModel,
   ProjectId,
+  TaskId,
   ThreadId,
 } from "@t3tools/contracts";
 import { OrchestrationCommand, ORCHESTRATION_WS_METHODS } from "@t3tools/contracts";
@@ -81,8 +82,8 @@ type CommittedCommandResult = {
 };
 
 function commandToAggregateRef(command: OrchestrationCommand): {
-  readonly aggregateKind: "project" | "thread";
-  readonly aggregateId: ProjectId | ThreadId;
+  readonly aggregateKind: "project" | "task" | "thread";
+  readonly aggregateId: ProjectId | TaskId | ThreadId;
 } {
   switch (command.type) {
     case "project.create":
@@ -91,6 +92,12 @@ function commandToAggregateRef(command: OrchestrationCommand): {
       return {
         aggregateKind: "project",
         aggregateId: command.projectId,
+      };
+    case "task.create":
+    case "task.update":
+      return {
+        aggregateKind: "task",
+        aggregateId: command.taskId,
       };
     default:
       return {
@@ -305,11 +312,12 @@ const makeOrchestrationEngine = Effect.gen(function* () {
     }
   };
 
-  // Rebuild only the project projection rows and snapshot cursors.
+  // Rebuild only the Worker/Task projection rows and snapshot cursors.
   // Existing thread/chat projection rows stay in place so older installs do not
   // lose history that is no longer fully represented in orchestration_events.
   const resetDerivedProjectionState = sql.withTransaction(
     Effect.gen(function* () {
+      yield* sql`DELETE FROM projection_tasks`;
       yield* sql`DELETE FROM projection_projects`;
       yield* sql`
         DELETE FROM projection_state
@@ -321,8 +329,10 @@ const makeOrchestrationEngine = Effect.gen(function* () {
   const backupDerivedProjectionState = sql.withTransaction(
     Effect.gen(function* () {
       yield* sql`DROP TABLE IF EXISTS temp_repair_projection_projects`;
+      yield* sql`DROP TABLE IF EXISTS temp_repair_projection_tasks`;
       yield* sql`DROP TABLE IF EXISTS temp_repair_projection_state`;
       yield* sql`CREATE TEMP TABLE temp_repair_projection_projects AS SELECT * FROM projection_projects`;
+      yield* sql`CREATE TEMP TABLE temp_repair_projection_tasks AS SELECT * FROM projection_tasks`;
       yield* sql`CREATE TEMP TABLE temp_repair_projection_state AS SELECT * FROM projection_state`;
     }),
   );
@@ -331,6 +341,8 @@ const makeOrchestrationEngine = Effect.gen(function* () {
     Effect.gen(function* () {
       yield* sql`DELETE FROM projection_projects`;
       yield* sql`INSERT INTO projection_projects SELECT * FROM temp_repair_projection_projects`;
+      yield* sql`DELETE FROM projection_tasks`;
+      yield* sql`INSERT INTO projection_tasks SELECT * FROM temp_repair_projection_tasks`;
       yield* sql`DELETE FROM projection_state`;
       yield* sql`INSERT INTO projection_state SELECT * FROM temp_repair_projection_state`;
     }),
@@ -339,6 +351,7 @@ const makeOrchestrationEngine = Effect.gen(function* () {
   const dropProjectionRepairBackup = sql.withTransaction(
     Effect.gen(function* () {
       yield* sql`DROP TABLE IF EXISTS temp_repair_projection_projects`;
+      yield* sql`DROP TABLE IF EXISTS temp_repair_projection_tasks`;
       yield* sql`DROP TABLE IF EXISTS temp_repair_projection_state`;
     }),
   );

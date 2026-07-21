@@ -37,6 +37,7 @@ function makeSnapshot(
   return {
     snapshotSequence: 2,
     projects,
+    tasks: [],
     threads: [],
     updatedAt: NOW_ISO,
   };

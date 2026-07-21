@@ -4,6 +4,7 @@ import { stat as statPath } from "node:fs/promises";
 import {
   CommandId,
   ORCHESTRATION_WS_METHODS,
+  TaskId,
   ThreadId,
   WS_METHODS,
   WsRpcError,
@@ -296,6 +297,8 @@ function isShellRelevantEvent(event: OrchestrationEvent): boolean {
     case "project.created":
     case "project.meta-updated":
     case "project.deleted":
+    case "task.created":
+    case "task.updated":
     case "thread.deleted":
       return true;
     default:
@@ -725,6 +728,18 @@ export const makeWsRpcLayer = () =>
                 sequence: event.sequence,
                 projectId: event.payload.projectId,
               }),
+            );
+          case "task.created":
+          case "task.updated":
+            return projectionReadModelQuery.getTaskShellById(event.payload.taskId).pipe(
+              Effect.map((task) =>
+                Option.map(task, (nextTask) => ({
+                  kind: "task-upserted" as const,
+                  sequence: event.sequence,
+                  task: nextTask,
+                })),
+              ),
+              Effect.catch(() => Effect.succeed(Option.none())),
             );
           case "thread.deleted":
             return Effect.succeed(

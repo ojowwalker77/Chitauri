@@ -99,6 +99,7 @@ function createSnapshot(overrides?: Partial<OrchestrationReadModel["threads"][nu
         deletedAt: null,
       },
     ],
+    tasks: [],
     threads: [
       {
         id: THREAD_ID,
