@@ -19,18 +19,6 @@ describe("composerMessageContext", () => {
           text: "Selected answer",
         },
       ],
-      terminalContexts: [
-        {
-          id: "terminal",
-          threadId: ThreadId.makeUnsafe("thread-context-order"),
-          terminalId: "default",
-          terminalLabel: "Terminal",
-          lineStart: 1,
-          lineEnd: 1,
-          text: "bun lint",
-          createdAt: "2026-07-17T00:00:00.000Z",
-        },
-      ],
       fileComments: [
         {
           id: "comment",
@@ -50,13 +38,12 @@ describe("composerMessageContext", () => {
         },
       ],
     });
-    const blockNames = ["assistant_selection", "terminal_context", "file_comments", "pasted_text"];
+    const blockNames = ["assistant_selection", "file_comments", "pasted_text"];
     const blockPositions = blockNames.map((name) => serialized.indexOf(`<${name}`));
     expect(blockPositions).toEqual(blockPositions.toSorted((left, right) => left - right));
     expect(deriveDisplayedUserMessageState(serialized)).toMatchObject({
       visibleText: "Build this",
       copyText: "Build this",
-      contextCount: 1,
       assistantSelections: [{ text: "Selected answer" }],
       fileComments: [{ text: "Keep this typed." }],
       pastedTexts: [{ text: "large pasted text" }],
@@ -67,7 +54,6 @@ describe("composerMessageContext", () => {
     const originalPrompt = appendComposerMessageContext({
       prompt: "Before",
       assistantSelections: [],
-      terminalContexts: [],
       fileComments: [],
       pastedTexts: [
         {

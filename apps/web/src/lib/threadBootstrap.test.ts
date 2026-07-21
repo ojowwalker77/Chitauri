@@ -9,7 +9,7 @@ import {
   hasDraftContextOverrides,
   isConsumedDraftThread,
   resolveInheritedThreadContext,
-  resolveTerminalThreadCreationState,
+  resolveThreadCreationState,
   resolveThreadBootstrapPlan,
   shouldReuseActiveDraftThread,
 } from "./threadBootstrap";
@@ -34,7 +34,6 @@ function makeDraftThread(partial?: Partial<DraftThreadState>): DraftThreadState 
     projectId: PROJECT_ID,
     createdAt: "2026-04-05T10:00:00.000Z",
     runtimeMode: "approval-required",
-    entryPoint: "terminal",
     branch: "feature/terminal-bootstrap",
     worktreePath: "/repo/.worktrees/terminal-bootstrap",
     envMode: "worktree",
@@ -53,7 +52,6 @@ function makeComposerDraftState(
     nonPersistedImageIds: [],
     persistedAttachments: [],
     assistantSelections: [],
-    terminalContexts: [],
     fileComments: [],
     pastedTexts: [],
     skills: [],
@@ -75,25 +73,23 @@ describe("threadBootstrap", () => {
   });
 
   it("builds a draft patch only when overrides are provided", () => {
-    expect(buildDraftThreadContextPatch("terminal")).toBeNull();
+    expect(buildDraftThreadContextPatch()).toBeNull();
     expect(
-      buildDraftThreadContextPatch("terminal", {
+      buildDraftThreadContextPatch({
         branch: "feature/new-branch",
         worktreePath: "/repo/.worktrees/new-branch",
       }),
     ).toEqual({
       branch: "feature/new-branch",
       worktreePath: "/repo/.worktrees/new-branch",
-      entryPoint: "terminal",
     });
     expect(
-      buildDraftThreadContextPatch("terminal", {
+      buildDraftThreadContextPatch({
         envMode: "local",
       }),
     ).toEqual({
       envMode: "local",
       worktreePath: null,
-      entryPoint: "terminal",
     });
   });
 
@@ -101,38 +97,23 @@ describe("threadBootstrap", () => {
     expect(
       shouldReuseActiveDraftThread({
         draftThread: makeDraftThread(),
-        entryPoint: "terminal",
         projectId: PROJECT_ID,
         routeThreadId: THREAD_ID,
       }),
     ).toBe(true);
     expect(
       shouldReuseActiveDraftThread({
-        draftThread: makeDraftThread({ entryPoint: "chat" }),
-        entryPoint: "terminal",
+        draftThread: makeDraftThread(),
         projectId: PROJECT_ID,
-        routeThreadId: THREAD_ID,
+        routeThreadId: null,
       }),
     ).toBe(false);
   });
 
-  it("treats promoted chat drafts as consumed but keeps empty terminal drafts reusable", () => {
-    expect(
-      isConsumedDraftThread({ entryPoint: "chat", hasLatestTurn: false, hasServerThread: true }),
-    ).toBe(true);
-    expect(
-      isConsumedDraftThread({ entryPoint: "chat", hasLatestTurn: false, hasServerThread: false }),
-    ).toBe(false);
-    expect(
-      isConsumedDraftThread({
-        entryPoint: "terminal",
-        hasLatestTurn: false,
-        hasServerThread: true,
-      }),
-    ).toBe(false);
-    expect(
-      isConsumedDraftThread({ entryPoint: "terminal", hasLatestTurn: true, hasServerThread: true }),
-    ).toBe(true);
+  it("treats promoted drafts as consumed", () => {
+    expect(isConsumedDraftThread({ hasLatestTurn: false, hasServerThread: true })).toBe(true);
+    expect(isConsumedDraftThread({ hasLatestTurn: true, hasServerThread: false })).toBe(true);
+    expect(isConsumedDraftThread({ hasLatestTurn: false, hasServerThread: false })).toBe(false);
   });
 
   it("resolves bootstrap precedence as route draft, then stored draft, then fresh", () => {
@@ -140,7 +121,6 @@ describe("threadBootstrap", () => {
       resolveThreadBootstrapPlan({
         storedDraftThread: { threadId: ThreadId.makeUnsafe("stored-thread"), ...makeDraftThread() },
         latestActiveDraftThread: makeDraftThread({ branch: "feature/route-draft" }),
-        entryPoint: "terminal",
         projectId: PROJECT_ID,
         routeThreadId: THREAD_ID,
       }),
@@ -149,7 +129,6 @@ describe("threadBootstrap", () => {
       resolveThreadBootstrapPlan({
         storedDraftThread: { threadId: THREAD_ID, ...makeDraftThread() },
         latestActiveDraftThread: null,
-        entryPoint: "terminal",
         projectId: PROJECT_ID,
         routeThreadId: null,
       }),
@@ -158,7 +137,6 @@ describe("threadBootstrap", () => {
       resolveThreadBootstrapPlan({
         storedDraftThread: null,
         latestActiveDraftThread: null,
-        entryPoint: "terminal",
         projectId: PROJECT_ID,
         routeThreadId: null,
       }),
@@ -251,7 +229,6 @@ describe("threadBootstrap", () => {
     expect(
       createFreshDraftThreadSeed({
         createdAt: "2026-04-05T10:00:00.000Z",
-        entryPoint: "terminal",
         options: {
           branch: "feature/new-terminal",
           worktreePath: "/repo/.worktrees/new-terminal",
@@ -266,7 +243,6 @@ describe("threadBootstrap", () => {
       envMode: "worktree",
       runtimeMode: "approval-required",
       lastKnownPr: null,
-      entryPoint: "terminal",
     });
   });
 
@@ -274,7 +250,6 @@ describe("threadBootstrap", () => {
     expect(
       createFreshDraftThreadSeed({
         createdAt: "2026-04-05T10:00:00.000Z",
-        entryPoint: "chat",
         options: undefined,
       }),
     ).toMatchObject({ envMode: "worktree", branch: null, worktreePath: null });
@@ -284,7 +259,6 @@ describe("threadBootstrap", () => {
     expect(
       createFreshDraftThreadSeed({
         createdAt: "2026-04-05T10:00:00.000Z",
-        entryPoint: "chat",
         options: { envMode: "local" },
       }),
     ).toMatchObject({ envMode: "local" });
@@ -294,15 +268,14 @@ describe("threadBootstrap", () => {
     expect(
       createFreshDraftThreadSeed({
         createdAt: "2026-04-05T10:00:00.000Z",
-        entryPoint: "chat",
         options: { branch: "pr-42", worktreePath: "/repo/.worktrees/pr-42" },
       }),
     ).toMatchObject({ envMode: "worktree", worktreePath: "/repo/.worktrees/pr-42" });
   });
 
-  it("prefers draft state when resolving terminal creation payloads", () => {
+  it("prefers draft state when resolving creation payloads", () => {
     expect(
-      resolveTerminalThreadCreationState({
+      resolveThreadCreationState({
         activeDraftThread: null,
         activeThread: {
           projectId: PROJECT_ID,
@@ -329,7 +302,7 @@ describe("threadBootstrap", () => {
 
   it("clears inherited worktree state when an explicit local env override is requested", () => {
     expect(
-      resolveTerminalThreadCreationState({
+      resolveThreadCreationState({
         activeDraftThread: null,
         activeThread: {
           projectId: PROJECT_ID,

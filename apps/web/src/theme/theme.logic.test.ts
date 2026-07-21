@@ -98,6 +98,8 @@ describe("parseStoredThemeState", () => {
     expect(parsed.chromeTheme).toMatchObject({
       ...DEFAULT_CHROME_THEME,
       fonts: { code: "0xProto", ui: "Inter" },
+      // The migration keeps the user's window-material choice; only the palette moves.
+      opaqueWindows: true,
     });
   });
 
@@ -442,20 +444,20 @@ describe("buildThemeCssVariables", () => {
       theme: DEFAULT_CHROME_THEME,
     });
 
-    expect(tokens.derived.controlBackgroundOpaque).toBe("rgb(47, 48, 53)");
-    expect(tokens.aliases["--color-token-dropdown-background"]).toBe("rgb(47, 48, 53)");
+    expect(tokens.derived.controlBackgroundOpaque).toBe("rgb(39, 39, 38)");
+    expect(tokens.aliases["--color-token-dropdown-background"]).toBe("rgb(39, 39, 38)");
     expect(tokens.computed.surfaceUnder).toBe("#090909");
-    expect(tokens.derived.textForegroundSecondary).toBe("#9aa1ad");
-    expect(tokens.derived.textForegroundTertiary).toBe("#797a7e");
+    expect(tokens.derived.textForegroundSecondary).toBe("#807f7c");
+    expect(tokens.derived.textForegroundTertiary).toBe("#585856");
     expect(variables["--background"]).toBe("#090909");
-    expect(variables["--panel"]).toBe("#1b1c21");
-    expect(variables["--foreground"]).toBe("#f7f8fa");
+    expect(variables["--panel"]).toBe("#141414");
+    expect(variables["--foreground"]).toBe("#e3e2dd");
     expect(variables["--accent"]).toBe("#3b82f6");
     // The retired brand tokens are no longer emitted at all.
     expect(variables["--claude"]).toBeUndefined();
     expect(variables["--gold"]).toBeUndefined();
-    expect(variables["--composer-surface"]).toBe("#16181d");
-    expect(variables["--app-user-message-background"]).toBe("#1d1f24");
+    expect(variables["--composer-surface"]).toBe("#141414");
+    expect(variables["--app-user-message-background"]).toBe("#141414");
     expect(variables["--vscode-terminal-ansiBlue"]).toBe("#75a7e0");
     expect(variables["--vscode-terminal-ansiCyan"]).toBe("#66b8b0");
     expect(variables["--vscode-terminal-ansiMagenta"]).toBe("#b99ad6");

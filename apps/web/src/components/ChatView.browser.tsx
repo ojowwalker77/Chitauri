@@ -29,11 +29,6 @@ import {
   AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
   getScrollContainerDistanceFromBottom,
 } from "../chat-scroll";
-import {
-  INLINE_TERMINAL_CONTEXT_PLACEHOLDER,
-  type TerminalContextDraft,
-  removeInlineTerminalContextPlaceholder,
-} from "../lib/terminalContext";
 import { isMacPlatform } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
 import { getRouter } from "../router";
@@ -45,7 +40,6 @@ import {
   sendEffectRpcChunk,
   sendEffectRpcExit,
 } from "../test/effectRpcWebSocketMock";
-import { useTerminalStateStore } from "../terminalStateStore";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
 import { estimateTimelineMessageHeight } from "./timelineHeight";
 
@@ -189,25 +183,6 @@ function createAssistantMessage(options: { id: MessageId; text: string; offsetSe
     source: "native" as const,
     createdAt: isoAt(options.offsetSeconds),
     updatedAt: isoAt(options.offsetSeconds + 1),
-  };
-}
-
-function createTerminalContext(input: {
-  id: string;
-  terminalLabel: string;
-  lineStart: number;
-  lineEnd: number;
-  text: string;
-}): TerminalContextDraft {
-  return {
-    id: input.id,
-    threadId: THREAD_ID,
-    terminalId: `terminal-${input.id}`,
-    terminalLabel: input.terminalLabel,
-    lineStart: input.lineStart,
-    lineEnd: input.lineEnd,
-    text: input.text,
-    createdAt: NOW_ISO,
   };
 }
 
@@ -1038,20 +1013,7 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
       truncated: false,
     };
   }
-  if (tag === WS_METHODS.terminalOpen) {
-    return {
-      threadId: typeof body.threadId === "string" ? body.threadId : THREAD_ID,
-      terminalId: typeof body.terminalId === "string" ? body.terminalId : "default",
-      cwd: typeof body.cwd === "string" ? body.cwd : "/repo/project",
-      status: "running",
-      pid: 123,
-      history: "",
-      exitCode: null,
-      exitSignal: null,
-      updatedAt: NOW_ISO,
-    };
-  }
-  if (tag === WS_METHODS.shellOpenInEditor || tag === WS_METHODS.terminalWrite) {
+  if (tag === WS_METHODS.shellOpenInEditor) {
     return null;
   }
   return {};
@@ -1121,7 +1083,6 @@ const worker = setupWorker(
       if (
         method === WS_METHODS.subscribeServerProviderStatuses ||
         method === WS_METHODS.subscribeServerSettings ||
-        method === WS_METHODS.subscribeTerminalEvents ||
         method === WS_METHODS.subscribeOrchestrationDomainEvents
       ) {
         return;
@@ -1592,9 +1553,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
       threads: [],
       sidebarThreadSummaryById: {},
       threadsHydrated: false,
-    });
-    useTerminalStateStore.setState({
-      terminalStateByThreadId: {},
     });
   });
 
@@ -2095,7 +2053,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           projectId: PROJECT_ID,
           createdAt: NOW_ISO,
           runtimeMode: "full-access",
-          entryPoint: "chat",
           branch: "feature/draft-automation",
           worktreePath: "/repo/worktrees/draft-automation",
           envMode: "worktree",
@@ -2198,7 +2155,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           projectId: PROJECT_ID,
           createdAt: NOW_ISO,
           runtimeMode: "full-access",
-          entryPoint: "chat",
           branch: null,
           worktreePath: null,
           envMode: "local",
@@ -2284,7 +2240,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           projectId: PROJECT_ID,
           createdAt: NOW_ISO,
           runtimeMode: "full-access",
-          entryPoint: "chat",
           branch: null,
           worktreePath: null,
           envMode: "local",
@@ -2353,148 +2308,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await expect.element(page.getByText("What should we do in")).toBeInTheDocument();
       await expect.element(page.getByRole("button", { name: "Local" })).toBeInTheDocument();
       expect(document.body.textContent).toContain("main");
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("runs project scripts from local draft threads at the project cwd", async () => {
-    useComposerDraftStore.setState({
-      draftThreadsByThreadId: {
-        [THREAD_ID]: {
-          projectId: PROJECT_ID,
-          createdAt: NOW_ISO,
-          runtimeMode: "full-access",
-          entryPoint: "chat",
-          branch: null,
-          worktreePath: null,
-          envMode: "local",
-        },
-      },
-      projectDraftThreadIdByProjectId: {
-        [PROJECT_ID]: THREAD_ID,
-      },
-    });
-
-    const mounted = await mountChatView({
-      viewport: { ...DEFAULT_VIEWPORT, width: 1_400 },
-      snapshot: withProjectScripts(createDraftOnlySnapshot(), [
-        {
-          id: "lint",
-          name: "Lint",
-          command: "bun run lint",
-          icon: "lint",
-          runOnWorktreeCreate: false,
-        },
-      ]),
-    });
-
-    try {
-      const runButton = await waitForElement(
-        () =>
-          Array.from(document.querySelectorAll("button")).find(
-            (button) => button.title === "Run Lint",
-          ) as HTMLButtonElement | null,
-        "Unable to find Run Lint button.",
-      );
-      runButton.click();
-
-      await vi.waitFor(
-        () => {
-          const openRequest = wsRequests.find(
-            (request) =>
-              request._tag === WS_METHODS.terminalOpen && request.cwd === "/repo/project",
-          );
-          expect(openRequest).toMatchObject({
-            _tag: WS_METHODS.terminalOpen,
-            threadId: THREAD_ID,
-            cwd: "/repo/project",
-            env: {
-              CHITAURI_PROJECT_ROOT: "/repo/project",
-            },
-          });
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-
-      await vi.waitFor(
-        () => {
-          const writeRequest = wsRequests.find(
-            (request) => request._tag === WS_METHODS.terminalWrite,
-          );
-          expect(writeRequest).toMatchObject({
-            _tag: WS_METHODS.terminalWrite,
-            threadId: THREAD_ID,
-            data: "bun run lint\r",
-          });
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("runs project scripts from worktree draft threads at the worktree cwd", async () => {
-    useComposerDraftStore.setState({
-      draftThreadsByThreadId: {
-        [THREAD_ID]: {
-          projectId: PROJECT_ID,
-          createdAt: NOW_ISO,
-          runtimeMode: "full-access",
-          entryPoint: "chat",
-          branch: "feature/draft",
-          worktreePath: "/repo/worktrees/feature-draft",
-          envMode: "worktree",
-        },
-      },
-      projectDraftThreadIdByProjectId: {
-        [PROJECT_ID]: THREAD_ID,
-      },
-    });
-
-    const mounted = await mountChatView({
-      viewport: { ...DEFAULT_VIEWPORT, width: 1_400 },
-      snapshot: withProjectScripts(createDraftOnlySnapshot(), [
-        {
-          id: "test",
-          name: "Test",
-          command: "bun run test",
-          icon: "test",
-          runOnWorktreeCreate: false,
-        },
-      ]),
-    });
-
-    try {
-      const runButton = await waitForElement(
-        () =>
-          Array.from(document.querySelectorAll("button")).find(
-            (button) => button.title === "Run Test",
-          ) as HTMLButtonElement | null,
-        "Unable to find Run Test button.",
-      );
-      runButton.click();
-
-      await vi.waitFor(
-        () => {
-          const openRequest = wsRequests.find(
-            (request) =>
-              request._tag === WS_METHODS.terminalOpen &&
-              request.cwd === "/repo/worktrees/feature-draft",
-          );
-          expect(openRequest).toMatchObject({
-            _tag: WS_METHODS.terminalOpen,
-            threadId: THREAD_ID,
-            cwd: "/repo/worktrees/feature-draft",
-            env: {
-              CHITAURI_PROJECT_ROOT: "/repo/project",
-              CHITAURI_WORKTREE_PATH: "/repo/worktrees/feature-draft",
-            },
-          });
-        },
-        { timeout: 8_000, interval: 16 },
-      );
     } finally {
       await mounted.cleanup();
     }
@@ -2612,162 +2425,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
       dispatchComposerPickerShortcut(composerEditor, "e");
 
       await waitForComposerPickerSurfaceOpen();
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("keeps removed terminal context pills removed when a new one is added", async () => {
-    const removedLabel = "Terminal 1 lines 1-2";
-    const addedLabel = "Terminal 2 lines 9-10";
-    useComposerDraftStore.getState().addTerminalContext(
-      THREAD_ID,
-      createTerminalContext({
-        id: "ctx-removed",
-        terminalLabel: "Terminal 1",
-        lineStart: 1,
-        lineEnd: 2,
-        text: "bun i\nno changes",
-      }),
-    );
-
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-terminal-pill-backspace" as MessageId,
-        targetText: "terminal pill backspace target",
-      }),
-    });
-
-    try {
-      await vi.waitFor(
-        () => {
-          expect(document.body.textContent).toContain(removedLabel);
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-
-      const store = useComposerDraftStore.getState();
-      const currentPrompt = store.draftsByThreadId[THREAD_ID]?.prompt ?? "";
-      const nextPrompt = removeInlineTerminalContextPlaceholder(currentPrompt, 0);
-      store.setPrompt(THREAD_ID, nextPrompt.prompt);
-      store.removeTerminalContext(THREAD_ID, "ctx-removed");
-
-      await vi.waitFor(
-        () => {
-          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toBeUndefined();
-          expect(document.body.textContent).not.toContain(removedLabel);
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-
-      useComposerDraftStore.getState().addTerminalContext(
-        THREAD_ID,
-        createTerminalContext({
-          id: "ctx-added",
-          terminalLabel: "Terminal 2",
-          lineStart: 9,
-          lineEnd: 10,
-          text: "git status\nOn branch main",
-        }),
-      );
-
-      await vi.waitFor(
-        () => {
-          const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
-          expect(draft?.terminalContexts.map((context) => context.id)).toEqual(["ctx-added"]);
-          expect(document.body.textContent).toContain(addedLabel);
-          expect(document.body.textContent).not.toContain(removedLabel);
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("disables send when the composer only contains an expired terminal pill", async () => {
-    const expiredLabel = "Terminal 1 line 4";
-    useComposerDraftStore.getState().addTerminalContext(
-      THREAD_ID,
-      createTerminalContext({
-        id: "ctx-expired-only",
-        terminalLabel: "Terminal 1",
-        lineStart: 4,
-        lineEnd: 4,
-        text: "",
-      }),
-    );
-
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-expired-pill-disabled" as MessageId,
-        targetText: "expired pill disabled target",
-      }),
-    });
-
-    try {
-      await vi.waitFor(
-        () => {
-          expect(document.body.textContent).toContain(expiredLabel);
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-
-      const sendButton = await waitForSendButton();
-      expect(sendButton.disabled).toBe(true);
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("warns when sending text while omitting expired terminal pills", async () => {
-    const expiredLabel = "Terminal 1 line 4";
-    useComposerDraftStore.getState().addTerminalContext(
-      THREAD_ID,
-      createTerminalContext({
-        id: "ctx-expired-send-warning",
-        terminalLabel: "Terminal 1",
-        lineStart: 4,
-        lineEnd: 4,
-        text: "",
-      }),
-    );
-    useComposerDraftStore
-      .getState()
-      .setPrompt(THREAD_ID, `yoo${INLINE_TERMINAL_CONTEXT_PLACEHOLDER}waddup`);
-
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-expired-pill-warning" as MessageId,
-        targetText: "expired pill warning target",
-      }),
-    });
-
-    try {
-      await vi.waitFor(
-        () => {
-          expect(document.body.textContent).toContain(expiredLabel);
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-
-      const sendButton = await waitForSendButton();
-      expect(sendButton.disabled).toBe(false);
-      sendButton.click();
-
-      await vi.waitFor(
-        () => {
-          expect(document.body.textContent).toContain(
-            "Expired terminal context omitted from message",
-          );
-          expect(document.body.textContent).not.toContain(expiredLabel);
-          expect(document.body.textContent).toContain("yoowaddup");
-        },
-        { timeout: 8_000, interval: 16 },
-      );
     } finally {
       await mounted.cleanup();
     }
@@ -2929,7 +2586,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
         images: [queuedImage],
         files: [],
         assistantSelections: [],
-        terminalContexts: [],
         fileComments: [],
         pastedTexts: [],
         skills: [],
@@ -2953,7 +2609,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
         images: [],
         files: [],
         assistantSelections: [],
-        terminalContexts: [],
         fileComments: [],
         pastedTexts: [],
         skills: [],
@@ -3043,7 +2698,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
         images: [],
         files: [],
         assistantSelections: [],
-        terminalContexts: [],
         fileComments: [],
         pastedTexts: [],
         skills: [],
@@ -3119,7 +2773,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
         images: [queuedImage],
         files: [],
         assistantSelections: [],
-        terminalContexts: [],
         fileComments: [],
         pastedTexts: [],
         skills: [],
@@ -3372,7 +3025,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           projectId: HOME_PROJECT_ID,
           createdAt: NOW_ISO,
           runtimeMode: "full-access",
-          entryPoint: "chat",
           branch: null,
           worktreePath: null,
           envMode: "local",
@@ -3738,114 +3390,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("runs the setup action from the newly-created worktree before starting the turn", async () => {
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: withProjectScripts(
-        createSnapshotForTargetUser({
-          targetMessageId: "msg-user-new-worktree-setup-action-test" as MessageId,
-          targetText: "new worktree setup action test",
-        }),
-        [
-          {
-            id: "setup",
-            name: "Setup",
-            command: "printf setup",
-            icon: "configure",
-            runOnWorktreeCreate: true,
-          },
-        ],
-      ),
-    });
-
-    try {
-      const newThreadButton = page.getByTestId("new-thread-button");
-      await expect.element(newThreadButton).toBeInTheDocument();
-      await newThreadButton.click();
-
-      const newThreadPath = await waitForURL(
-        mounted.router,
-        (path) => UUID_ROUTE_RE.test(path),
-        "Route should have changed to a new draft thread UUID.",
-      );
-      const newThreadId = newThreadPath.slice(1) as ThreadId;
-
-      await waitForEnvironmentModeButton("Worktree");
-      await waitForServerConfigToApply();
-
-      useComposerDraftStore.getState().setPrompt(newThreadId, "Ship it with setup");
-      const composerEditor = await waitForComposerEditor();
-      await vi.waitFor(
-        () => {
-          expect(composerEditor.textContent ?? "").toContain("Ship it with setup");
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-
-      const sendButton = await waitForSendButton();
-      expect(sendButton.disabled).toBe(false);
-      await sendButton.click();
-
-      await vi.waitFor(
-        () => {
-          const createWorktreeIndex = wsRequests.findIndex((request) => {
-            return request._tag === WS_METHODS.workspaceProvisionThreadWorktree;
-          });
-          expect(createWorktreeIndex).toBeGreaterThanOrEqual(0);
-          const createWorktreeRequest = wsRequests[createWorktreeIndex];
-          if (
-            !createWorktreeRequest ||
-            createWorktreeRequest._tag !== WS_METHODS.workspaceProvisionThreadWorktree
-          ) {
-            throw new Error("Expected create worktree request.");
-          }
-          expect(createWorktreeRequest).toMatchObject({
-            baseBranch: null,
-            newBranch: expect.stringMatching(/^teacode\/[0-9a-f]{8}$/),
-          });
-          const worktreePath = `/repo/.codex/worktrees/project/${String(
-            createWorktreeRequest.newBranch,
-          ).replaceAll("/", "-")}`;
-
-          const terminalOpenIndex = wsRequests.findIndex((request) => {
-            return (
-              request._tag === WS_METHODS.terminalOpen &&
-              request.threadId === newThreadId &&
-              request.cwd === worktreePath
-            );
-          });
-          expect(terminalOpenIndex).toBeGreaterThan(createWorktreeIndex);
-          expect(wsRequests[terminalOpenIndex]).toMatchObject({
-            _tag: WS_METHODS.terminalOpen,
-            cwd: worktreePath,
-            env: {
-              CHITAURI_PROJECT_ROOT: "/repo/project",
-              CHITAURI_WORKTREE_PATH: worktreePath,
-            },
-          });
-
-          const terminalWriteIndex = wsRequests.findIndex((request) => {
-            return (
-              request._tag === WS_METHODS.terminalWrite &&
-              request.threadId === newThreadId &&
-              request.data === "printf setup\r"
-            );
-          });
-          expect(terminalWriteIndex).toBeGreaterThan(terminalOpenIndex);
-
-          const turnStartIndex = wsRequests.findIndex((request) => {
-            const command = readDispatchedCommand(request);
-            return command?.type === "thread.turn.start" && command.threadId === newThreadId;
-          });
-          expect(turnStartIndex).toBeGreaterThan(terminalWriteIndex);
-        },
-        { timeout: 10_000, interval: 16 },
-      );
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
   it("hydrates the provider alongside a sticky claude model", async () => {
     useComposerDraftStore.setState({
       stickyModelSelectionByProvider: {
@@ -4059,211 +3603,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
         mounted.router,
         (path) => UUID_ROUTE_RE.test(path),
         "Route should have changed to a new draft thread UUID from the shortcut.",
-      );
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("promotes terminal-first shortcut threads so they render as terminal rows", async () => {
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-terminal-shortcut-test" as MessageId,
-        targetText: "terminal shortcut test",
-      }),
-      configureFixture: (nextFixture) => {
-        nextFixture.serverConfig = {
-          ...nextFixture.serverConfig,
-          keybindings: [
-            {
-              command: "chat.newTerminal",
-              shortcut: {
-                key: "t",
-                metaKey: false,
-                ctrlKey: false,
-                shiftKey: true,
-                altKey: false,
-                modKey: true,
-              },
-              whenAst: {
-                type: "not",
-                node: { type: "identifier", name: "terminalFocus" },
-              },
-            },
-          ],
-        };
-      },
-    });
-
-    try {
-      await waitForServerConfigToApply();
-      const composerEditor = await waitForComposerEditor();
-      composerEditor.focus();
-      await waitForLayout();
-      const newThreadPath = await triggerTerminalThreadShortcutUntilPath(
-        mounted.router,
-        (path) => UUID_ROUTE_RE.test(path),
-        "Route should have changed to a new terminal-first draft thread UUID from the shortcut.",
-      );
-      const newThreadId = newThreadPath.slice(1) as ThreadId;
-
-      await vi.waitFor(
-        () => {
-          expect(
-            wsRequests.some(
-              (request) =>
-                request._tag === ORCHESTRATION_WS_METHODS.dispatchCommand &&
-                typeof request.command === "object" &&
-                request.command !== null &&
-                "type" in request.command &&
-                "threadId" in request.command &&
-                request.command.type === "thread.create" &&
-                request.command.threadId === newThreadId,
-            ),
-          ).toBe(true);
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-
-      useStore.getState().syncServerReadModel(addThreadToSnapshot(fixture.snapshot, newThreadId));
-      useComposerDraftStore.getState().clearDraftThread(newThreadId);
-
-      await vi.waitFor(
-        () => {
-          const terminalThreadRow = document.querySelector<HTMLElement>(
-            '[data-thread-entry-point="terminal"]',
-          );
-          expect(terminalThreadRow).not.toBeNull();
-          expect(terminalThreadRow?.textContent).toContain("New thread");
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("promotes a stored terminal draft using its saved context and model selection", async () => {
-    const draftThreadId = ThreadId.makeUnsafe("thread-terminal-draft-reuse");
-    useComposerDraftStore.setState({
-      draftsByThreadId: {
-        [draftThreadId]: {
-          prompt: "",
-          promptHistorySavedDraft: null,
-          images: [],
-          files: [],
-          nonPersistedImageIds: [],
-          persistedAttachments: [],
-          assistantSelections: [],
-          terminalContexts: [],
-          fileComments: [],
-          pastedTexts: [],
-          skills: [],
-          mentions: [],
-          queuedTurns: [],
-          modelSelectionByProvider: {
-            claudeAgent: {
-              provider: "claudeAgent",
-              model: "claude-opus-4-6",
-              options: {
-                effort: "max",
-              },
-            },
-          },
-          activeProvider: "claudeAgent",
-          runtimeMode: null,
-        },
-      },
-      draftThreadsByThreadId: {
-        [draftThreadId]: {
-          projectId: PROJECT_ID,
-          createdAt: NOW_ISO,
-          runtimeMode: "approval-required",
-          entryPoint: "terminal",
-          branch: "feature/terminal-title",
-          worktreePath: "/repo/project/.worktrees/terminal-title",
-          envMode: "worktree",
-        },
-      },
-      projectDraftThreadIdByProjectId: {
-        [`${PROJECT_ID}::terminal`]: draftThreadId,
-      },
-      stickyModelSelectionByProvider: {},
-      stickyActiveProvider: null,
-    });
-
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-terminal-draft-reuse-test" as MessageId,
-        targetText: "terminal draft reuse test",
-      }),
-      configureFixture: (nextFixture) => {
-        nextFixture.serverConfig = {
-          ...nextFixture.serverConfig,
-          keybindings: [
-            {
-              command: "chat.newTerminal",
-              shortcut: {
-                key: "t",
-                metaKey: false,
-                ctrlKey: false,
-                shiftKey: true,
-                altKey: false,
-                modKey: true,
-              },
-              whenAst: {
-                type: "not",
-                node: { type: "identifier", name: "terminalFocus" },
-              },
-            },
-          ],
-        };
-      },
-    });
-
-    try {
-      await waitForServerConfigToApply();
-      const composerEditor = await waitForComposerEditor();
-      composerEditor.focus();
-      await waitForLayout();
-      dispatchTerminalThreadShortcut();
-
-      await waitForURL(
-        mounted.router,
-        (path) => path === `/${draftThreadId}`,
-        "Shortcut should reuse the stored terminal draft thread route.",
-      );
-
-      await vi.waitFor(
-        () => {
-          const createRequest = wsRequests.find(
-            (request) =>
-              request._tag === ORCHESTRATION_WS_METHODS.dispatchCommand &&
-              typeof request.command === "object" &&
-              request.command !== null &&
-              "type" in request.command &&
-              "threadId" in request.command &&
-              request.command.type === "thread.create" &&
-              request.command.threadId === draftThreadId,
-          );
-
-          expect(createRequest).toBeTruthy();
-          expect(createRequest?.command).toMatchObject({
-            branch: "feature/terminal-title",
-            worktreePath: "/repo/project/.worktrees/terminal-title",
-            runtimeMode: "approval-required",
-            modelSelection: {
-              provider: "claudeAgent",
-              model: "claude-opus-4-6",
-              options: {
-                effort: "max",
-              },
-            },
-          });
-        },
-        { timeout: 8_000, interval: 16 },
       );
     } finally {
       await mounted.cleanup();

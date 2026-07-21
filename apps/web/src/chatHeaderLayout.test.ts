@@ -29,26 +29,25 @@ describe("chatHeaderLayout", () => {
   });
 
   it("rejects unknown control ids", () => {
-    expect(isChatHeaderControlId("diff")).toBe(true);
+    expect(isChatHeaderControlId("gitActions")).toBe(true);
     expect(isChatHeaderControlId("bogus")).toBe(false);
   });
 
   it("dedupes and drops unknown ids from the hidden set", () => {
-    expect(normalizeHiddenChatHeaderControls(["bogus", "diff", "diff", "usage"])).toEqual([
-      "diff",
-      "usage",
-    ]);
+    expect(
+      normalizeHiddenChatHeaderControls(["bogus", "gitActions", "gitActions", "usage"]),
+    ).toEqual(["gitActions", "usage"]);
   });
 
   it("dedupes and drops unknown ids from a persisted order", () => {
-    expect(normalizeChatHeaderControlOrder(["diff", "bogus", "diff", "usage"]).slice(0, 2)).toEqual(
-      ["diff", "usage"],
-    );
+    expect(
+      normalizeChatHeaderControlOrder(["gitActions", "bogus", "gitActions", "usage"]).slice(0, 2),
+    ).toEqual(["gitActions", "usage"]);
   });
 
   it("appends controls missing from a stale persisted order", () => {
-    const stale = normalizeChatHeaderControlOrder(["diff", "usage"]);
-    expect(stale.slice(0, 2)).toEqual(["diff", "usage"]);
+    const stale = normalizeChatHeaderControlOrder(["gitActions", "usage"]);
+    expect(stale.slice(0, 2)).toEqual(["gitActions", "usage"]);
     expect(new Set(stale)).toEqual(new Set(ALL_CHAT_HEADER_CONTROL_IDS));
     expect(stale).toHaveLength(ALL_CHAT_HEADER_CONTROL_IDS.length);
   });
@@ -60,25 +59,17 @@ describe("chatHeaderLayout", () => {
         DEFAULT_CHAT_HEADER_CONTROL_ORDER,
       ),
     ).toBe(true);
-    expect(sameChatHeaderControlOrder(["diff"], ["usage"])).toBe(false);
+    expect(sameChatHeaderControlOrder(["handoff"], ["usage"])).toBe(false);
   });
 
   it("sorts by the configured order and pushes unlisted controls last", () => {
-    const order: ChatHeaderControlId[] = ["diff", "usage"];
-    expect(compareChatHeaderControlsByOrder(order, "diff", "usage")).toBeLessThan(0);
+    const order: ChatHeaderControlId[] = ["gitActions", "usage"];
+    expect(compareChatHeaderControlsByOrder(order, "gitActions", "usage")).toBeLessThan(0);
     expect(compareChatHeaderControlsByOrder(order, "usage", "handoff")).toBeLessThan(0);
     expect(
       DEFAULT_CHAT_HEADER_CONTROL_ORDER.toSorted((left, right) =>
         compareChatHeaderControlsByOrder(order, left, right),
       ),
-    ).toEqual([
-      "diff",
-      "usage",
-      "handoff",
-      "projectScripts",
-      "environment",
-      "openIn",
-      "gitActions",
-    ]);
+    ).toEqual(["gitActions", "usage", "handoff", "projectScripts", "environment", "openIn"]);
   });
 });

@@ -14,15 +14,9 @@ import {
   isDiffToggleShortcut,
   isOpenFavoriteEditorShortcut,
   isSidebarToggleShortcut,
-  isTerminalClearShortcut,
-  isTerminalCloseShortcut,
-  isTerminalNewShortcut,
-  isTerminalSplitShortcut,
-  isTerminalToggleShortcut,
   resolveShortcutCommand,
   shouldShowThreadJumpHints,
   shortcutLabelForCommand,
-  terminalNavigationShortcutData,
   threadJumpCommandForIndex,
   threadJumpIndexFromCommand,
   type ShortcutEventLike,
@@ -109,301 +103,87 @@ function compile(bindings: TestBinding[]): ResolvedKeybindingsConfig {
 
 // Mirror the server defaults here so frontend shortcut resolution stays aligned.
 const DEFAULT_BINDINGS = compile([
-  {
-    shortcut: modShortcut("b"),
-    command: "sidebar.toggle",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
-  {
-    shortcut: modShortcut("b", { altKey: true }),
-    command: "rightPanel.toggle",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
+  { shortcut: modShortcut("b"), command: "sidebar.toggle" },
+  { shortcut: modShortcut("b", { altKey: true }), command: "rightPanel.toggle" },
   { shortcut: modShortcut("k"), command: "sidebar.search" },
-  { shortcut: modShortcut("j"), command: "terminal.toggle" },
-  {
-    shortcut: modShortcut("d"),
-    command: "terminal.split",
-    whenAst: whenIdentifier("terminalFocus"),
-  },
-  {
-    shortcut: modShortcut("t"),
-    command: "terminal.new",
-    whenAst: whenIdentifier("terminalFocus"),
-  },
-  {
-    shortcut: modShortcut("w"),
-    command: "terminal.close",
-    whenAst: whenIdentifier("terminalFocus"),
-  },
-  {
-    shortcut: modShortcut("j", { shiftKey: true }),
-    command: "terminal.workspace.newFullWidth",
-  },
-  {
-    shortcut: modShortcut("w"),
-    command: "terminal.workspace.closeActive",
-    whenAst: whenIdentifier("terminalWorkspaceOpen"),
-  },
-  {
-    shortcut: modShortcut("1"),
-    command: "terminal.workspace.terminal",
-    whenAst: whenIdentifier("terminalWorkspaceOpen"),
-  },
-  {
-    shortcut: modShortcut("2"),
-    command: "terminal.workspace.chat",
-    whenAst: whenIdentifier("terminalWorkspaceOpen"),
-  },
-  {
-    shortcut: modShortcut("d"),
-    command: "diff.toggle",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
-  {
-    shortcut: modShortcut("b", { shiftKey: true }),
-    command: "browser.toggle",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
-  {
-    shortcut: modShortcut("m", { shiftKey: true }),
-    command: "modelPicker.toggle",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
-  {
-    shortcut: modShortcut("e", { shiftKey: true }),
-    command: "traitsPicker.toggle",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
+  { shortcut: modShortcut("o", { shiftKey: true }), command: "sidebar.addProject" },
+  { shortcut: modShortcut("i"), command: "sidebar.importThread" },
+  { shortcut: modShortcut("b", { shiftKey: true }), command: "browser.toggle" },
+  { shortcut: modShortcut("d"), command: "diff.toggle" },
   {
     shortcut: modShortcut("l", { metaKey: true, modKey: false }),
     command: "composer.focus.toggle",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
   },
-  {
-    shortcut: modShortcut("u", { shiftKey: true }),
-    command: "settings.usage",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
-  {
-    shortcut: modShortcut("o", { shiftKey: true }),
-    command: "sidebar.addProject",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
-  {
-    shortcut: modShortcut("i"),
-    command: "sidebar.importThread",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
-  {
-    shortcut: modShortcut("n"),
-    command: "chat.new",
-    whenAst: whenCreationAllowed,
-  },
-  {
-    shortcut: modShortcut("n", { shiftKey: true }),
-    command: "chat.newLatestProject",
-    whenAst: whenCreationAllowed,
-  },
-  {
-    shortcut: modShortcut("n", { altKey: true }),
-    command: "chat.newChat",
-    whenAst: whenCreationAllowed,
-  },
-  {
-    shortcut: modShortcut("t", { shiftKey: true }),
-    command: "chat.newTerminal",
-    whenAst: whenCreationAllowed,
-  },
-  {
-    shortcut: modShortcut("c", { altKey: true }),
-    command: "chat.newClaude",
-    whenAst: whenCreationAllowed,
-  },
-  {
-    shortcut: modShortcut("x", { altKey: true }),
-    command: "chat.newCodex",
-    whenAst: whenCreationAllowed,
-  },
-  {
-    shortcut: modShortcut("r", { altKey: true }),
-    command: "chat.newCursor",
-    whenAst: whenCreationAllowed,
-  },
-  {
-    shortcut: modShortcut("1"),
-    command: "thread.jump.1",
-    whenAst: whenAnd(
-      whenNot(whenIdentifier("terminalFocus")),
-      whenNot(whenIdentifier("terminalWorkspaceOpen")),
-    ),
-  },
-  {
-    shortcut: modShortcut("2"),
-    command: "thread.jump.2",
-    whenAst: whenAnd(
-      whenNot(whenIdentifier("terminalFocus")),
-      whenNot(whenIdentifier("terminalWorkspaceOpen")),
-    ),
-  },
-  {
-    shortcut: modShortcut("3"),
-    command: "thread.jump.3",
-    whenAst: whenAnd(
-      whenNot(whenIdentifier("terminalFocus")),
-      whenNot(whenIdentifier("terminalWorkspaceOpen")),
-    ),
-  },
-  {
-    shortcut: modShortcut("4"),
-    command: "thread.jump.4",
-    whenAst: whenAnd(
-      whenNot(whenIdentifier("terminalFocus")),
-      whenNot(whenIdentifier("terminalWorkspaceOpen")),
-    ),
-  },
-  {
-    shortcut: modShortcut("5"),
-    command: "thread.jump.5",
-    whenAst: whenAnd(
-      whenNot(whenIdentifier("terminalFocus")),
-      whenNot(whenIdentifier("terminalWorkspaceOpen")),
-    ),
-  },
-  {
-    shortcut: modShortcut("6"),
-    command: "thread.jump.6",
-    whenAst: whenAnd(
-      whenNot(whenIdentifier("terminalFocus")),
-      whenNot(whenIdentifier("terminalWorkspaceOpen")),
-    ),
-  },
-  {
-    shortcut: modShortcut("7"),
-    command: "thread.jump.7",
-    whenAst: whenAnd(
-      whenNot(whenIdentifier("terminalFocus")),
-      whenNot(whenIdentifier("terminalWorkspaceOpen")),
-    ),
-  },
-  {
-    shortcut: modShortcut("8"),
-    command: "thread.jump.8",
-    whenAst: whenAnd(
-      whenNot(whenIdentifier("terminalFocus")),
-      whenNot(whenIdentifier("terminalWorkspaceOpen")),
-    ),
-  },
-  {
-    shortcut: modShortcut("9"),
-    command: "thread.jump.9",
-    whenAst: whenAnd(
-      whenNot(whenIdentifier("terminalFocus")),
-      whenNot(whenIdentifier("terminalWorkspaceOpen")),
-    ),
-  },
-  {
-    shortcut: modShortcut("]", { shiftKey: true }),
-    command: "chat.visible.next",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
-  {
-    shortcut: modShortcut("[", { shiftKey: true }),
-    command: "chat.visible.previous",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
+  { shortcut: modShortcut("m", { shiftKey: true }), command: "modelPicker.toggle" },
+  { shortcut: modShortcut("e", { shiftKey: true }), command: "traitsPicker.toggle" },
+  { shortcut: modShortcut("u", { shiftKey: true }), command: "settings.usage" },
+  { shortcut: modShortcut("n"), command: "chat.new" },
+  { shortcut: modShortcut("n", { shiftKey: true }), command: "chat.newLatestProject" },
+  { shortcut: modShortcut("n", { altKey: true }), command: "chat.newChat" },
+  { shortcut: modShortcut("c", { altKey: true }), command: "chat.newClaude" },
+  { shortcut: modShortcut("x", { altKey: true }), command: "chat.newCodex" },
+  { shortcut: modShortcut("r", { altKey: true }), command: "chat.newCursor" },
+  { shortcut: modShortcut("\\"), command: "chat.split" },
+  { shortcut: modShortcut("1"), command: "thread.jump.1" },
+  { shortcut: modShortcut("2"), command: "thread.jump.2" },
+  { shortcut: modShortcut("3"), command: "thread.jump.3" },
+  { shortcut: modShortcut("4"), command: "thread.jump.4" },
+  { shortcut: modShortcut("5"), command: "thread.jump.5" },
+  { shortcut: modShortcut("6"), command: "thread.jump.6" },
+  { shortcut: modShortcut("7"), command: "thread.jump.7" },
+  { shortcut: modShortcut("8"), command: "thread.jump.8" },
+  { shortcut: modShortcut("9"), command: "thread.jump.9" },
+  { shortcut: modShortcut("]", { shiftKey: true }), command: "chat.visible.next" },
+  { shortcut: modShortcut("[", { shiftKey: true }), command: "chat.visible.previous" },
   { shortcut: modShortcut("o"), command: "editor.openFavorite" },
 ]);
 
-describe("isTerminalToggleShortcut", () => {
-  it("matches Cmd+J on macOS", () => {
-    assert.isTrue(
-      isTerminalToggleShortcut(event({ metaKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-      }),
-    );
-  });
-
-  it("matches Ctrl+J on non-macOS", () => {
-    assert.isTrue(
-      isTerminalToggleShortcut(event({ ctrlKey: true }), DEFAULT_BINDINGS, { platform: "Win32" }),
-    );
-  });
-});
-
-describe("split/new/close terminal shortcuts", () => {
-  it("requires terminalFocus for default split/new/close bindings", () => {
-    assert.isFalse(
-      isTerminalSplitShortcut(event({ key: "d", metaKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-    );
-    assert.isFalse(
-      isTerminalNewShortcut(event({ key: "t", ctrlKey: true }), DEFAULT_BINDINGS, {
-        platform: "Linux",
-        context: { terminalFocus: false },
-      }),
-    );
-    assert.isFalse(
-      isTerminalCloseShortcut(event({ key: "w", ctrlKey: true }), DEFAULT_BINDINGS, {
-        platform: "Linux",
-        context: { terminalFocus: false },
-      }),
-    );
-  });
-
-  it("matches split/new when terminalFocus is true", () => {
-    assert.isTrue(
-      isTerminalSplitShortcut(event({ key: "d", metaKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: true },
-      }),
-    );
-    assert.isTrue(
-      isTerminalNewShortcut(event({ key: "t", ctrlKey: true }), DEFAULT_BINDINGS, {
-        platform: "Linux",
-        context: { terminalFocus: true },
-      }),
-    );
-    assert.isTrue(
-      isTerminalCloseShortcut(event({ key: "w", ctrlKey: true }), DEFAULT_BINDINGS, {
-        platform: "Linux",
-        context: { terminalFocus: true },
-      }),
-    );
-  });
-
-  it("supports when expressions", () => {
+describe("when expressions", () => {
+  it("supports and/not compositions", () => {
     const keybindings = compile([
       {
         shortcut: modShortcut("\\"),
-        command: "terminal.split",
-        whenAst: whenAnd(whenIdentifier("terminalOpen"), whenNot(whenIdentifier("terminalFocus"))),
+        command: "chat.split",
+        whenAst: whenAnd(whenIdentifier("chatOpen"), whenNot(whenIdentifier("composerFocus"))),
       },
-      {
-        shortcut: modShortcut("n", { shiftKey: true }),
-        command: "terminal.new",
-        whenAst: whenAnd(whenIdentifier("terminalOpen"), whenNot(whenIdentifier("terminalFocus"))),
-      },
-      { shortcut: modShortcut("j"), command: "terminal.toggle" },
     ]);
-    assert.isTrue(
-      isTerminalSplitShortcut(event({ key: "\\", ctrlKey: true }), keybindings, {
+
+    assert.strictEqual(
+      resolveShortcutCommand(event({ key: "\\", ctrlKey: true }), keybindings, {
         platform: "Win32",
-        context: { terminalOpen: true, terminalFocus: false },
+        context: { chatOpen: true, composerFocus: false },
+      }),
+      "chat.split",
+    );
+    assert.isNull(
+      resolveShortcutCommand(event({ key: "\\", ctrlKey: true }), keybindings, {
+        platform: "Win32",
+        context: { chatOpen: false, composerFocus: false },
       }),
     );
-    assert.isFalse(
-      isTerminalSplitShortcut(event({ key: "\\", ctrlKey: true }), keybindings, {
+    assert.isNull(
+      resolveShortcutCommand(event({ key: "\\", ctrlKey: true }), keybindings, {
         platform: "Win32",
-        context: { terminalOpen: false, terminalFocus: false },
+        context: { chatOpen: true, composerFocus: true },
       }),
     );
-    assert.isTrue(
-      isTerminalNewShortcut(event({ key: "n", ctrlKey: true, shiftKey: true }), keybindings, {
-        platform: "Win32",
-        context: { terminalOpen: true, terminalFocus: false },
+  });
+
+  it("supports when boolean literals", () => {
+    const keybindings = compile([
+      { shortcut: modShortcut("n"), command: "chat.new", whenAst: whenIdentifier("true") },
+      { shortcut: modShortcut("m"), command: "chat.newChat", whenAst: whenIdentifier("false") },
+    ]);
+
+    assert.strictEqual(
+      resolveShortcutCommand(event({ key: "n", ctrlKey: true }), keybindings, {
+        platform: "Linux",
+      }),
+      "chat.new",
+    );
+    assert.isNull(
+      resolveShortcutCommand(event({ key: "m", ctrlKey: true }), keybindings, {
+        platform: "Linux",
       }),
     );
   });
@@ -417,12 +197,9 @@ describe("split/new/close terminal shortcuts", () => {
           ctrlKey: true,
         }),
         DEFAULT_BINDINGS,
-        {
-          platform: "Win32",
-          context: { terminalWorkspaceOpen: true },
-        },
+        { platform: "Win32" },
       ),
-      "terminal.workspace.terminal",
+      "thread.jump.1",
     );
   });
 
@@ -431,7 +208,6 @@ describe("split/new/close terminal shortcuts", () => {
       {
         shortcut: modShortcut("[", { shiftKey: true }),
         command: "chat.visible.previous",
-        whenAst: whenNot(whenIdentifier("terminalFocus")),
       },
     ]);
 
@@ -444,66 +220,31 @@ describe("split/new/close terminal shortcuts", () => {
           shiftKey: true,
         }),
         keybindings,
-        {
-          platform: "Win32",
-          context: { terminalFocus: false },
-        },
+        { platform: "Win32" },
       ),
       "chat.visible.previous",
-    );
-  });
-
-  it("supports when boolean literals", () => {
-    const keybindings = compile([
-      { shortcut: modShortcut("n"), command: "terminal.new", whenAst: whenIdentifier("true") },
-      { shortcut: modShortcut("m"), command: "terminal.new", whenAst: whenIdentifier("false") },
-    ]);
-
-    assert.isTrue(
-      isTerminalNewShortcut(event({ key: "n", ctrlKey: true }), keybindings, {
-        platform: "Linux",
-      }),
-    );
-    assert.isFalse(
-      isTerminalNewShortcut(event({ key: "m", ctrlKey: true }), keybindings, {
-        platform: "Linux",
-      }),
     );
   });
 });
 
 describe("settings shortcuts", () => {
-  it("opens usage settings with Cmd+Shift+U outside terminal focus", () => {
+  it("opens usage settings with Cmd+Shift+U", () => {
     assert.equal(
       resolveShortcutCommand(event({ key: "u", metaKey: true, shiftKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
       }),
       "settings.usage",
-    );
-    assert.isNull(
-      resolveShortcutCommand(event({ key: "u", metaKey: true, shiftKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: true },
-      }),
     );
   });
 });
 
 describe("composer focus shortcuts", () => {
-  it("toggles composer focus with Cmd+L outside terminal focus", () => {
+  it("toggles composer focus with Cmd+L", () => {
     assert.equal(
       resolveShortcutCommand(event({ key: "l", metaKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
       }),
       "composer.focus.toggle",
-    );
-    assert.isNull(
-      resolveShortcutCommand(event({ key: "l", metaKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: true },
-      }),
     );
   });
 
@@ -511,7 +252,6 @@ describe("composer focus shortcuts", () => {
     assert.isNull(
       resolveShortcutCommand(event({ key: "l", ctrlKey: true }), DEFAULT_BINDINGS, {
         platform: "Linux",
-        context: { terminalFocus: false },
       }),
     );
   });
@@ -526,23 +266,12 @@ describe("thread jump shortcuts", () => {
     assert.isNull(threadJumpIndexFromCommand("chat.new"));
   });
 
-  it("resolves numbered thread jumps when the terminal workspace is closed", () => {
+  it("resolves numbered thread jumps", () => {
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "3", metaKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false, terminalWorkspaceOpen: false },
       }),
       "thread.jump.3",
-    );
-  });
-
-  it("preserves terminal workspace shortcuts when the workspace is open", () => {
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "1", metaKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: false, terminalWorkspaceOpen: true },
-      }),
-      "terminal.workspace.terminal",
     );
   });
 
@@ -550,106 +279,17 @@ describe("thread jump shortcuts", () => {
     assert.isTrue(
       shouldShowThreadJumpHints(event({ key: "Meta", metaKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalWorkspaceOpen: false },
       }),
     );
     assert.isTrue(
       shouldShowThreadJumpHints(event({ key: "Control", ctrlKey: true }), DEFAULT_BINDINGS, {
         platform: "Linux",
-        context: { terminalWorkspaceOpen: false },
       }),
     );
     assert.isFalse(
-      shouldShowThreadJumpHints(event({ key: "Meta", metaKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalWorkspaceOpen: true },
-      }),
-    );
-  });
-});
-
-describe("workspace terminal tab shortcuts", () => {
-  it("resolves the full-width terminal shortcut", () => {
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "j", metaKey: true, shiftKey: true }), DEFAULT_BINDINGS, {
+      shouldShowThreadJumpHints(event({ key: "Shift", shiftKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
       }),
-      "terminal.workspace.newFullWidth",
-    );
-  });
-
-  it("resolves the active workspace close shortcut only while the terminal workspace is open", () => {
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "w", metaKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalWorkspaceOpen: true, terminalFocus: true },
-      }),
-      "terminal.workspace.closeActive",
-    );
-    assert.isNull(
-      resolveShortcutCommand(event({ key: "w", metaKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalWorkspaceOpen: false, terminalFocus: false },
-      }),
-    );
-  });
-
-  it("prefers workspace tab shortcuts while open and thread jumps otherwise", () => {
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "1", metaKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalWorkspaceOpen: true },
-      }),
-      "terminal.workspace.terminal",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "2", ctrlKey: true }), DEFAULT_BINDINGS, {
-        platform: "Linux",
-        context: { terminalWorkspaceOpen: true },
-      }),
-      "terminal.workspace.chat",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "1", metaKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalWorkspaceOpen: false },
-      }),
-      "thread.jump.1",
-    );
-  });
-
-  it("falls back to workspace defaults when the runtime config is missing them", () => {
-    const legacyBindings = DEFAULT_BINDINGS.filter(
-      (binding) =>
-        binding.command !== "terminal.workspace.newFullWidth" &&
-        binding.command !== "terminal.workspace.closeActive" &&
-        binding.command !== "terminal.workspace.terminal" &&
-        binding.command !== "terminal.workspace.chat",
-    );
-
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "j", metaKey: true, shiftKey: true }), legacyBindings, {
-        platform: "MacIntel",
-      }),
-      "terminal.workspace.newFullWidth",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "w", metaKey: true }), legacyBindings, {
-        platform: "MacIntel",
-        context: { terminalWorkspaceOpen: true },
-      }),
-      "terminal.workspace.closeActive",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "1", metaKey: true }), legacyBindings, {
-        platform: "MacIntel",
-        context: { terminalWorkspaceOpen: true },
-      }),
-      "terminal.workspace.terminal",
-    );
-    assert.strictEqual(
-      shortcutLabelForCommand(legacyBindings, "terminal.workspace.chat", "Linux"),
-      "Ctrl+2",
     );
   });
 });
@@ -659,44 +299,41 @@ describe("shortcutLabelForCommand", () => {
     const bindings = compile([
       {
         shortcut: modShortcut("\\"),
-        command: "terminal.split",
-        whenAst: whenIdentifier("terminalFocus"),
+        command: "chat.split",
+        whenAst: whenIdentifier("composerFocus"),
       },
       {
         shortcut: modShortcut("\\", { shiftKey: true }),
-        command: "terminal.split",
-        whenAst: whenNot(whenIdentifier("terminalFocus")),
+        command: "chat.split",
+        whenAst: whenNot(whenIdentifier("composerFocus")),
       },
     ]);
-    assert.strictEqual(
-      shortcutLabelForCommand(bindings, "terminal.split", "Linux"),
-      "Ctrl+Shift+\\",
-    );
+    assert.strictEqual(shortcutLabelForCommand(bindings, "chat.split", "Linux"), "Ctrl+Shift+\\");
   });
 
   it("respects explicit context when resolving conflicting labels", () => {
     const bindings = compile([
       {
         shortcut: modShortcut("\\"),
-        command: "terminal.split",
-        whenAst: whenIdentifier("terminalFocus"),
+        command: "chat.split",
+        whenAst: whenIdentifier("composerFocus"),
       },
       {
         shortcut: modShortcut("\\", { shiftKey: true }),
-        command: "terminal.split",
-        whenAst: whenNot(whenIdentifier("terminalFocus")),
+        command: "chat.split",
+        whenAst: whenNot(whenIdentifier("composerFocus")),
       },
     ]);
     assert.strictEqual(
-      shortcutLabelForCommand(bindings, "terminal.split", {
+      shortcutLabelForCommand(bindings, "chat.split", {
         platform: "Linux",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "Ctrl+Shift+\\",
     );
   });
 
-  it("returns labels for non-terminal commands", () => {
+  it("returns labels for chrome and creation commands", () => {
     assert.strictEqual(
       shortcutLabelForCommand(DEFAULT_BINDINGS, "sidebar.addProject", "MacIntel"),
       "⇧⌘O",
@@ -709,11 +346,6 @@ describe("shortcutLabelForCommand", () => {
     assert.strictEqual(
       shortcutLabelForCommand(DEFAULT_BINDINGS, "chat.newChat", "MacIntel"),
       "⌥⌘N",
-    );
-    assert.strictEqual(shortcutLabelForCommand(DEFAULT_BINDINGS, "terminal.new", "MacIntel"), "⌘T");
-    assert.strictEqual(
-      shortcutLabelForCommand(DEFAULT_BINDINGS, "chat.newTerminal", "MacIntel"),
-      "⇧⌘T",
     );
     assert.strictEqual(shortcutLabelForCommand(DEFAULT_BINDINGS, "diff.toggle", "Linux"), "Ctrl+D");
     assert.strictEqual(
@@ -741,15 +373,11 @@ describe("shortcutLabelForCommand", () => {
       "⌘L",
     );
     assert.strictEqual(
-      shortcutLabelForCommand(DEFAULT_BINDINGS, "terminal.workspace.terminal", "MacIntel"),
+      shortcutLabelForCommand(DEFAULT_BINDINGS, "thread.jump.1", "MacIntel"),
       "⌘1",
     );
     assert.strictEqual(
-      shortcutLabelForCommand(DEFAULT_BINDINGS, "terminal.workspace.newFullWidth", "MacIntel"),
-      "⇧⌘J",
-    );
-    assert.strictEqual(
-      shortcutLabelForCommand(DEFAULT_BINDINGS, "terminal.workspace.chat", "Linux"),
+      shortcutLabelForCommand(DEFAULT_BINDINGS, "thread.jump.2", "Linux"),
       "Ctrl+2",
     );
     assert.strictEqual(
@@ -779,21 +407,6 @@ describe("chat/editor shortcuts", () => {
         platform: "Linux",
       }),
     );
-    // macOS: Cmd+N still creates a new chat even from terminal focus — xterm never
-    // forwards the Cmd-chord to the shell, so the old `!terminalFocus` block just lost it.
-    assert.isTrue(
-      isChatNewShortcut(event({ key: "n", metaKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: true },
-      }),
-    );
-    // Linux/Windows: Ctrl+N is real shell input, so terminal focus must still block it.
-    assert.isFalse(
-      isChatNewShortcut(event({ key: "n", ctrlKey: true }), DEFAULT_BINDINGS, {
-        platform: "Linux",
-        context: { terminalFocus: true },
-      }),
-    );
   });
 
   it("matches chat.newChat shortcut", () => {
@@ -813,14 +426,14 @@ describe("chat/editor shortcuts", () => {
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "n", metaKey: true, shiftKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "chat.newLatestProject",
     );
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "n", ctrlKey: true, shiftKey: true }), DEFAULT_BINDINGS, {
         platform: "Linux",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "chat.newLatestProject",
     );
@@ -830,26 +443,16 @@ describe("chat/editor shortcuts", () => {
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "o", metaKey: true, shiftKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "sidebar.addProject",
     );
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "o", ctrlKey: true, shiftKey: true }), DEFAULT_BINDINGS, {
         platform: "Linux",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "sidebar.addProject",
-    );
-  });
-
-  it("resolves chat.newTerminal shortcut", () => {
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "t", metaKey: true, shiftKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "chat.newTerminal",
     );
   });
 
@@ -857,21 +460,21 @@ describe("chat/editor shortcuts", () => {
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "c", metaKey: true, altKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "chat.newClaude",
     );
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "x", metaKey: true, altKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "chat.newCodex",
     );
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "r", metaKey: true, altKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "chat.newCursor",
     );
@@ -881,7 +484,7 @@ describe("chat/editor shortcuts", () => {
         DEFAULT_BINDINGS,
         {
           platform: "MacIntel",
-          context: { terminalFocus: false },
+          context: { composerFocus: false },
         },
       ),
       "chat.newClaude",
@@ -892,7 +495,7 @@ describe("chat/editor shortcuts", () => {
         DEFAULT_BINDINGS,
         {
           platform: "MacIntel",
-          context: { terminalFocus: false },
+          context: { composerFocus: false },
         },
       ),
       "chat.newCodex",
@@ -903,72 +506,10 @@ describe("chat/editor shortcuts", () => {
         DEFAULT_BINDINGS,
         {
           platform: "MacIntel",
-          context: { terminalFocus: false },
+          context: { composerFocus: false },
         },
       ),
       "chat.newCursor",
-    );
-  });
-
-  it("resolves new-surface chords from terminal focus on macOS but not on other platforms", () => {
-    const macTerminal = { platform: "MacIntel", context: { terminalFocus: true } } as const;
-    const linuxTerminal = { platform: "Linux", context: { terminalFocus: true } } as const;
-
-    // macOS: Cmd-chords never reach the shell, so creating a new surface still works.
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ key: "t", metaKey: true, shiftKey: true }),
-        DEFAULT_BINDINGS,
-        macTerminal,
-      ),
-      "chat.newTerminal",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ key: "n", metaKey: true, shiftKey: true }),
-        DEFAULT_BINDINGS,
-        macTerminal,
-      ),
-      "chat.newLatestProject",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ key: "n", metaKey: true, altKey: true }),
-        DEFAULT_BINDINGS,
-        macTerminal,
-      ),
-      "chat.newChat",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ key: "c", metaKey: true, altKey: true }),
-        DEFAULT_BINDINGS,
-        macTerminal,
-      ),
-      "chat.newClaude",
-    );
-
-    // Linux/Windows: the same chords are real shell input, so terminal focus blocks them.
-    assert.isNull(
-      resolveShortcutCommand(
-        event({ key: "t", ctrlKey: true, shiftKey: true }),
-        DEFAULT_BINDINGS,
-        linuxTerminal,
-      ),
-    );
-    assert.isNull(
-      resolveShortcutCommand(
-        event({ key: "c", ctrlKey: true, altKey: true }),
-        DEFAULT_BINDINGS,
-        linuxTerminal,
-      ),
-    );
-    assert.isNull(
-      resolveShortcutCommand(
-        event({ key: "n", ctrlKey: true, altKey: true }),
-        DEFAULT_BINDINGS,
-        linuxTerminal,
-      ),
     );
   });
 
@@ -976,36 +517,30 @@ describe("chat/editor shortcuts", () => {
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "]", metaKey: true, shiftKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "chat.visible.next",
     );
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "[", metaKey: true, shiftKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "chat.visible.previous",
     );
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "}", metaKey: true, shiftKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "chat.visible.next",
     );
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "{", metaKey: true, shiftKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "chat.visible.previous",
-    );
-    assert.isNull(
-      resolveShortcutCommand(event({ key: "]", metaKey: true, shiftKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: true },
-      }),
     );
   });
 
@@ -1022,87 +557,55 @@ describe("chat/editor shortcuts", () => {
     );
   });
 
-  it("matches diff.toggle shortcut outside terminal focus", () => {
+  it("matches diff.toggle shortcut", () => {
     assert.isTrue(
       isDiffToggleShortcut(event({ key: "d", metaKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-    );
-    assert.isFalse(
-      isDiffToggleShortcut(event({ key: "d", metaKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: true },
       }),
     );
   });
 
-  it("matches sidebar.toggle shortcut outside terminal focus", () => {
+  it("matches sidebar.toggle shortcut", () => {
     assert.isTrue(
       isSidebarToggleShortcut(event({ key: "b", metaKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-    );
-    assert.isFalse(
-      isSidebarToggleShortcut(event({ key: "b", metaKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: true },
       }),
     );
   });
 
-  it("resolves rightPanel.toggle outside terminal focus", () => {
+  it("resolves rightPanel.toggle", () => {
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "b", metaKey: true, altKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
       }),
       "rightPanel.toggle",
     );
-    assert.isNull(
-      resolveShortcutCommand(event({ key: "b", metaKey: true, altKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: true },
-      }),
-    );
   });
 
-  it("resolves sidebar.search regardless of terminal focus", () => {
+  it("resolves sidebar.search regardless of composer focus", () => {
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "k", metaKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "sidebar.search",
     );
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "k", metaKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
-        context: { terminalFocus: true },
+        context: { composerFocus: true },
       }),
       "sidebar.search",
     );
   });
 
-  it("matches browser.toggle shortcut outside terminal focus", () => {
+  it("matches browser.toggle shortcut", () => {
     assert.isTrue(
       isBrowserToggleShortcut(
         event({ key: "b", metaKey: true, shiftKey: true }),
         DEFAULT_BINDINGS,
         {
           platform: "MacIntel",
-          context: { terminalFocus: false },
-        },
-      ),
-    );
-    assert.isFalse(
-      isBrowserToggleShortcut(
-        event({ key: "b", metaKey: true, shiftKey: true }),
-        DEFAULT_BINDINGS,
-        {
-          platform: "MacIntel",
-          context: { terminalFocus: true },
         },
       ),
     );
@@ -1115,33 +618,33 @@ describe("cross-command precedence", () => {
       { shortcut: modShortcut("n"), command: "chat.new" },
       {
         shortcut: modShortcut("n"),
-        command: "terminal.new",
-        whenAst: whenIdentifier("terminalFocus"),
+        command: "chat.newChat",
+        whenAst: whenIdentifier("composerFocus"),
       },
     ]);
 
     assert.isTrue(
-      isTerminalNewShortcut(event({ key: "n", metaKey: true }), keybindings, {
+      isChatNewChatShortcut(event({ key: "n", metaKey: true }), keybindings, {
         platform: "MacIntel",
-        context: { terminalFocus: true },
+        context: { composerFocus: true },
       }),
     );
     assert.isFalse(
       isChatNewShortcut(event({ key: "n", metaKey: true }), keybindings, {
         platform: "MacIntel",
-        context: { terminalFocus: true },
+        context: { composerFocus: true },
       }),
     );
     assert.isFalse(
-      isTerminalNewShortcut(event({ key: "n", metaKey: true }), keybindings, {
+      isChatNewChatShortcut(event({ key: "n", metaKey: true }), keybindings, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
     );
     assert.isTrue(
       isChatNewShortcut(event({ key: "n", metaKey: true }), keybindings, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
     );
   });
@@ -1150,22 +653,22 @@ describe("cross-command precedence", () => {
     const keybindings = compile([
       {
         shortcut: modShortcut("n"),
-        command: "terminal.new",
-        whenAst: whenIdentifier("terminalFocus"),
+        command: "chat.newChat",
+        whenAst: whenIdentifier("composerFocus"),
       },
       { shortcut: modShortcut("n"), command: "chat.new" },
     ]);
 
     assert.isFalse(
-      isTerminalNewShortcut(event({ key: "n", ctrlKey: true }), keybindings, {
+      isChatNewChatShortcut(event({ key: "n", ctrlKey: true }), keybindings, {
         platform: "Linux",
-        context: { terminalFocus: true },
+        context: { composerFocus: true },
       }),
     );
     assert.isTrue(
       isChatNewShortcut(event({ key: "n", ctrlKey: true }), keybindings, {
         platform: "Linux",
-        context: { terminalFocus: true },
+        context: { composerFocus: true },
       }),
     );
   });
@@ -1188,33 +691,33 @@ describe("resolveShortcutCommand", () => {
       {
         shortcut: modShortcut("m", { altKey: true }),
         command: "modelPicker.toggle",
-        whenAst: whenNot(whenIdentifier("terminalFocus")),
+        whenAst: whenNot(whenIdentifier("composerFocus")),
       },
       {
         shortcut: modShortcut("e", { altKey: true }),
         command: "traitsPicker.toggle",
-        whenAst: whenNot(whenIdentifier("terminalFocus")),
+        whenAst: whenNot(whenIdentifier("composerFocus")),
       },
     ]);
 
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "m", metaKey: true, altKey: true }), keybindings, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "modelPicker.toggle",
     );
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "e", metaKey: true, altKey: true }), keybindings, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "traitsPicker.toggle",
     );
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "m", metaKey: true, altKey: true }), keybindings, {
         platform: "MacIntel",
-        context: { terminalFocus: true },
+        context: { composerFocus: true },
       }),
       null,
     );
@@ -1229,40 +732,33 @@ describe("resolveShortcutCommand", () => {
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "m", metaKey: true, shiftKey: true }), legacyBindings, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "modelPicker.toggle",
     );
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "e", metaKey: true, shiftKey: true }), legacyBindings, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "traitsPicker.toggle",
     );
   });
 
-  it("falls back to creation defaults with the macOS terminal-focus escape hatch", () => {
-    const legacyBindings = DEFAULT_BINDINGS.filter(
-      (binding) => binding.command !== "chat.new" && binding.command !== "chat.newTerminal",
-    );
-    const macTerminal = { platform: "MacIntel", context: { terminalFocus: true } } as const;
-    const linuxTerminal = { platform: "Linux", context: { terminalFocus: true } } as const;
+  it("falls back to creation defaults when the runtime config is missing them", () => {
+    const legacyBindings = DEFAULT_BINDINGS.filter((binding) => binding.command !== "chat.new");
 
     assert.strictEqual(
-      resolveShortcutCommand(event({ key: "n", metaKey: true }), legacyBindings, macTerminal),
+      resolveShortcutCommand(event({ key: "n", metaKey: true }), legacyBindings, {
+        platform: "MacIntel",
+      }),
       "chat.new",
     );
     assert.strictEqual(
-      resolveShortcutCommand(
-        event({ key: "t", metaKey: true, shiftKey: true }),
-        legacyBindings,
-        macTerminal,
-      ),
-      "chat.newTerminal",
-    );
-    assert.isNull(
-      resolveShortcutCommand(event({ key: "n", ctrlKey: true }), legacyBindings, linuxTerminal),
+      resolveShortcutCommand(event({ key: "n", ctrlKey: true }), legacyBindings, {
+        platform: "Linux",
+      }),
+      "chat.new",
     );
   });
 
@@ -1274,7 +770,7 @@ describe("resolveShortcutCommand", () => {
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "l", metaKey: true }), legacyBindings, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "composer.focus.toggle",
     );
@@ -1291,21 +787,21 @@ describe("resolveShortcutCommand", () => {
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "c", metaKey: true, altKey: true }), legacyBindings, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "chat.newClaude",
     );
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "x", metaKey: true, altKey: true }), legacyBindings, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "chat.newCodex",
     );
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "r", metaKey: true, altKey: true }), legacyBindings, {
         platform: "MacIntel",
-        context: { terminalFocus: false },
+        context: { composerFocus: false },
       }),
       "chat.newCursor",
     );
@@ -1315,7 +811,7 @@ describe("resolveShortcutCommand", () => {
         legacyBindings,
         {
           platform: "MacIntel",
-          context: { terminalFocus: false },
+          context: { composerFocus: false },
         },
       ),
       "chat.newClaude",
@@ -1326,7 +822,7 @@ describe("resolveShortcutCommand", () => {
         legacyBindings,
         {
           platform: "MacIntel",
-          context: { terminalFocus: false },
+          context: { composerFocus: false },
         },
       ),
       "chat.newCodex",
@@ -1337,7 +833,7 @@ describe("resolveShortcutCommand", () => {
         legacyBindings,
         {
           platform: "MacIntel",
-          context: { terminalFocus: false },
+          context: { composerFocus: false },
         },
       ),
       "chat.newCursor",
@@ -1366,90 +862,16 @@ describe("formatShortcutLabel", () => {
   });
 });
 
-describe("isTerminalClearShortcut", () => {
-  it("matches Ctrl+L on all platforms", () => {
-    assert.isTrue(isTerminalClearShortcut(event({ key: "l", ctrlKey: true }), "Linux"));
-    assert.isTrue(isTerminalClearShortcut(event({ key: "l", ctrlKey: true }), "MacIntel"));
-  });
-
-  it("does not match Cmd+K (reserved for sidebar search)", () => {
-    assert.isFalse(isTerminalClearShortcut(event({ key: "k", metaKey: true }), "MacIntel"));
-  });
-
-  it("ignores non-keydown events", () => {
-    assert.isFalse(
-      isTerminalClearShortcut(event({ type: "keyup", key: "l", ctrlKey: true }), "Linux"),
-    );
-  });
-});
-
-describe("terminalNavigationShortcutData", () => {
-  it("maps Option+Arrow on macOS to word movement", () => {
-    assert.strictEqual(
-      terminalNavigationShortcutData(event({ key: "ArrowLeft", altKey: true }), "MacIntel"),
-      "\u001bb",
-    );
-    assert.strictEqual(
-      terminalNavigationShortcutData(event({ key: "ArrowRight", altKey: true }), "MacIntel"),
-      "\u001bf",
-    );
-  });
-
-  it("maps Cmd+Arrow on macOS to line movement", () => {
-    assert.strictEqual(
-      terminalNavigationShortcutData(event({ key: "ArrowLeft", metaKey: true }), "MacIntel"),
-      "\u0001",
-    );
-    assert.strictEqual(
-      terminalNavigationShortcutData(event({ key: "ArrowRight", metaKey: true }), "MacIntel"),
-      "\u0005",
-    );
-  });
-
-  it("maps Ctrl+Arrow on non-macOS to word movement", () => {
-    assert.strictEqual(
-      terminalNavigationShortcutData(event({ key: "ArrowLeft", ctrlKey: true }), "Win32"),
-      "\u001bb",
-    );
-    assert.strictEqual(
-      terminalNavigationShortcutData(event({ key: "ArrowRight", ctrlKey: true }), "Linux"),
-      "\u001bf",
-    );
-  });
-
-  it("rejects unsupported combinations", () => {
-    assert.isNull(
-      terminalNavigationShortcutData(
-        event({ key: "ArrowLeft", shiftKey: true, altKey: true }),
-        "MacIntel",
-      ),
-    );
-    assert.isNull(
-      terminalNavigationShortcutData(event({ key: "ArrowLeft", metaKey: true }), "Linux"),
-    );
-    assert.isNull(terminalNavigationShortcutData(event({ key: "a", altKey: true }), "MacIntel"));
-  });
-
-  it("ignores non-keydown events", () => {
-    assert.isNull(
-      terminalNavigationShortcutData(
-        event({ type: "keyup", key: "ArrowLeft", altKey: true }),
-        "MacIntel",
-      ),
-    );
-  });
-});
-
 describe("plus key parsing", () => {
   it("matches the plus key shortcut", () => {
-    const plusBindings = compile([{ shortcut: modShortcut("+"), command: "terminal.toggle" }]);
+    const plusBindings = compile([{ shortcut: modShortcut("+"), command: "sidebar.toggle" }]);
     assert.isTrue(
-      isTerminalToggleShortcut(event({ key: "+", metaKey: true }), plusBindings, {
+      isSidebarToggleShortcut(event({ key: "+", metaKey: true }), plusBindings, {
         platform: "MacIntel",
       }),
     );
     assert.isTrue(
-      isTerminalToggleShortcut(event({ key: "+", ctrlKey: true }), plusBindings, {
+      isSidebarToggleShortcut(event({ key: "+", ctrlKey: true }), plusBindings, {
         platform: "Linux",
       }),
     );

@@ -42,7 +42,6 @@ function renderTranscriptPaneMarkup(
       onScrollToBottom={() => {}}
       revertTurnCountByUserMessageId={new Map()}
       scrollButtonVisible
-      terminalWorkspaceTerminalTabActive={false}
       timelineEntries={[]}
       timestampFormat="locale"
       turnDiffSummaryByAssistantMessageId={new Map()}

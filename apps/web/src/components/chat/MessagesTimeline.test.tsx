@@ -694,56 +694,6 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain(hiddenTail);
   });
 
-  it("renders inline terminal labels with the composer chip UI", async () => {
-    const { MessagesTimeline } = await import("./MessagesTimeline");
-    const markup = renderToStaticMarkup(
-      <MessagesTimeline
-        hasMessages
-        isWorking={false}
-        activeTurnInProgress={false}
-        activeTurnStartedAt={null}
-        timelineEntries={[
-          {
-            id: "entry-1",
-            kind: "message",
-            createdAt: "2026-03-17T19:12:28.000Z",
-            message: {
-              id: MessageId.makeUnsafe("message-2"),
-              role: "user",
-              text: [
-                "yoo what's @terminal-1:1-5 mean",
-                "",
-                "<terminal_context>",
-                "- Terminal 1 lines 1-5:",
-                "  1 | julius@mac effect-http-ws-cli % bun i",
-                "  2 | bun install v1.3.9 (cf6cdbbb)",
-                "</terminal_context>",
-              ].join("\n"),
-              createdAt: "2026-03-17T19:12:28.000Z",
-              streaming: false,
-            },
-          },
-        ]}
-        turnDiffSummaryByAssistantMessageId={new Map()}
-        nowIso="2026-03-17T19:12:30.000Z"
-        expandedWorkGroups={{}}
-        onToggleWorkGroup={() => {}}
-        onOpenTurnDiff={() => {}}
-        revertTurnCountByUserMessageId={new Map()}
-        onRevertUserMessage={() => {}}
-        isRevertingCheckpoint={false}
-        onImageExpand={() => {}}
-        markdownCwd={undefined}
-        timestampFormat="locale"
-        workspaceRoot={undefined}
-      />,
-    );
-
-    expect(markup).toContain("Terminal 1 lines 1-5");
-    expect(markup).toContain("/central-icons-reversed/console.svg");
-    expect(markup).toContain("yoo what&#x27;s ");
-  });
-
   it("renders assistant selection chips from hidden prompt markup when attachments are missing", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const markup = renderToStaticMarkup(
