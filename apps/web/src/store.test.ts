@@ -9,6 +9,7 @@ import {
   MessageId,
   OrchestrationProposedPlanId,
   ProjectId,
+  TaskId,
   ThreadId,
   ThreadMarkerId,
   TurnId,
@@ -570,6 +571,52 @@ describe("store pure functions", () => {
       createdAt: "2026-02-27T00:00:00.000Z",
       updatedAt: "2026-02-27T00:00:00.000Z",
     });
+  });
+
+  it("projects durable Task lifecycle events into Worker-owned client state", () => {
+    const taskId = TaskId.makeUnsafe("task-live");
+    const created = applyOrchestrationEvents(makeState(makeThread()), [
+      makeDomainEvent(
+        "task.created",
+        {
+          taskId,
+          workerId: ProjectId.makeUnsafe("project-1"),
+          title: "Ship the Worker pivot",
+          brief: "Keep responsibility durable across Threads.",
+          status: "open",
+          origin: "user",
+          completionSummary: null,
+          createdAt: "2026-02-27T00:00:00.000Z",
+          updatedAt: "2026-02-27T00:00:00.000Z",
+          completedAt: null,
+        },
+        { aggregateKind: "task", aggregateId: taskId },
+      ),
+    ]);
+
+    const completed = applyOrchestrationEvents(created, [
+      makeDomainEvent(
+        "task.updated",
+        {
+          taskId,
+          status: "completed",
+          completionSummary: "Committed and verified.",
+          completedAt: "2026-02-27T01:00:00.000Z",
+          updatedAt: "2026-02-27T01:00:00.000Z",
+        },
+        { aggregateKind: "task", aggregateId: taskId },
+      ),
+    ]);
+
+    expect(completed.tasks).toEqual([
+      expect.objectContaining({
+        id: taskId,
+        workerId: ProjectId.makeUnsafe("project-1"),
+        title: "Ship the Worker pivot",
+        status: "completed",
+        completionSummary: "Committed and verified.",
+      }),
+    ]);
   });
 
   it("updates existing projects immediately from live project.meta-updated events", () => {

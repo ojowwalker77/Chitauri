@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ChatRouteImport } from './routes/_chat'
 import { Route as ChatIndexRouteImport } from './routes/_chat.index'
+import { Route as ChatTasksRouteImport } from './routes/_chat.tasks'
 import { Route as ChatSettingsRouteImport } from './routes/_chat.settings'
 import { Route as ChatResearchRouteImport } from './routes/_chat.research'
 import { Route as ChatGithubRouteImport } from './routes/_chat.github'
@@ -25,6 +26,11 @@ const ChatRoute = ChatRouteImport.update({
 const ChatIndexRoute = ChatIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => ChatRoute,
+} as any)
+const ChatTasksRoute = ChatTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
   getParentRoute: () => ChatRoute,
 } as any)
 const ChatSettingsRoute = ChatSettingsRouteImport.update({
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/github': typeof ChatGithubRoute
   '/research': typeof ChatResearchRouteWithChildren
   '/settings': typeof ChatSettingsRoute
+  '/tasks': typeof ChatTasksRoute
   '/research/': typeof ChatResearchIndexRoute
   '/research/$researchId/$threadId': typeof ChatResearchResearchIdThreadIdRoute
 }
@@ -72,6 +79,7 @@ export interface FileRoutesByTo {
   '/$threadId': typeof ChatThreadIdRoute
   '/github': typeof ChatGithubRoute
   '/settings': typeof ChatSettingsRoute
+  '/tasks': typeof ChatTasksRoute
   '/': typeof ChatIndexRoute
   '/research': typeof ChatResearchIndexRoute
   '/research/$researchId/$threadId': typeof ChatResearchResearchIdThreadIdRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   '/_chat/github': typeof ChatGithubRoute
   '/_chat/research': typeof ChatResearchRouteWithChildren
   '/_chat/settings': typeof ChatSettingsRoute
+  '/_chat/tasks': typeof ChatTasksRoute
   '/_chat/': typeof ChatIndexRoute
   '/_chat/research/': typeof ChatResearchIndexRoute
   '/_chat/research/$researchId/$threadId': typeof ChatResearchResearchIdThreadIdRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
     | '/github'
     | '/research'
     | '/settings'
+    | '/tasks'
     | '/research/'
     | '/research/$researchId/$threadId'
   fileRoutesByTo: FileRoutesByTo
@@ -102,6 +112,7 @@ export interface FileRouteTypes {
     | '/$threadId'
     | '/github'
     | '/settings'
+    | '/tasks'
     | '/'
     | '/research'
     | '/research/$researchId/$threadId'
@@ -112,6 +123,7 @@ export interface FileRouteTypes {
     | '/_chat/github'
     | '/_chat/research'
     | '/_chat/settings'
+    | '/_chat/tasks'
     | '/_chat/'
     | '/_chat/research/'
     | '/_chat/research/$researchId/$threadId'
@@ -135,6 +147,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof ChatIndexRouteImport
+      parentRoute: typeof ChatRoute
+    }
+    '/_chat/tasks': {
+      id: '/_chat/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof ChatTasksRouteImport
       parentRoute: typeof ChatRoute
     }
     '/_chat/settings': {
@@ -201,6 +220,7 @@ interface ChatRouteChildren {
   ChatGithubRoute: typeof ChatGithubRoute
   ChatResearchRoute: typeof ChatResearchRouteWithChildren
   ChatSettingsRoute: typeof ChatSettingsRoute
+  ChatTasksRoute: typeof ChatTasksRoute
   ChatIndexRoute: typeof ChatIndexRoute
 }
 
@@ -209,6 +229,7 @@ const ChatRouteChildren: ChatRouteChildren = {
   ChatGithubRoute: ChatGithubRoute,
   ChatResearchRoute: ChatResearchRouteWithChildren,
   ChatSettingsRoute: ChatSettingsRoute,
+  ChatTasksRoute: ChatTasksRoute,
   ChatIndexRoute: ChatIndexRoute,
 }
 

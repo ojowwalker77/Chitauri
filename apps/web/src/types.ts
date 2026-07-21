@@ -169,6 +169,7 @@ export interface Project {
   localName: string | null;
   cwd: string;
   defaultModelSelection: ModelSelection | null;
+  workerInstructions?: string;
   expanded: boolean;
   isPinned?: boolean;
   createdAt?: string | undefined;

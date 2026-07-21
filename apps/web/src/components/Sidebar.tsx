@@ -15,6 +15,7 @@ import {
   GitMergedSimpleIcon,
   GitHubIcon,
   GitPullRequestIcon,
+  ListTodoIcon,
   type LucideIcon,
   NewThreadIcon,
   PencilIcon,
@@ -968,6 +969,7 @@ export default function Sidebar() {
     readDebugFeatureFlagsMenuVisibility,
   );
   const projects = useStore((store) => store.projects);
+  const tasks = useStore((store) => store.tasks);
   const threadsHydrated = useStore((store) => store.threadsHydrated);
   const sidebarThreadSummaryById = useStore((store) => store.sidebarThreadSummaryById);
   const sidebarThreadSummaryByIdRef = useRef(sidebarThreadSummaryById);
@@ -1005,6 +1007,7 @@ export default function Sidebar() {
   const isOnSettings = routePathname === "/settings";
   const isOnResearch = routePathname.startsWith("/research");
   const isOnGitHub = routePathname === "/github";
+  const isOnTasks = routePathname === "/tasks";
   const { settings: appSettings, updateSettings } = useAppSettings();
   // Rootless chats can be hidden independently from the project thread list.
   const chatsSectionVisible = appSettings.showChatsSection;
@@ -1991,6 +1994,20 @@ export default function Sidebar() {
       projects,
       routeSearch.project,
     ],
+  );
+
+  const navigateToWorkerTasks = useCallback(
+    (workerId?: ProjectId) => {
+      const worker =
+        workerId ??
+        currentProjectShortcutTargetId ??
+        projects.find((project) => project.kind === "project")?.id;
+      void navigate({
+        to: "/tasks",
+        search: { worker, task: undefined, create: undefined },
+      });
+    },
+    [currentProjectShortcutTargetId, navigate, projects],
   );
 
   const handlePrimaryNewThread = useCallback(() => {
@@ -4713,6 +4730,7 @@ export default function Sidebar() {
     const projectToolbarReserveClassName =
       "group-hover/project-header:pr-[4.75rem] group-has-[:focus-visible]/project-header:pr-[4.75rem]";
     const showProjectThreadCount = focusedProjectId === project.id && allProjectThreadCount > 0;
+    const workerTaskCount = tasks.filter((task) => task.workerId === project.id).length;
 
     return (
       <div className="group/collapsible" data-sidebar-tree-project={project.id}>
@@ -4807,17 +4825,18 @@ export default function Sidebar() {
           </button>
           <SidebarSectionToolbar placement="overlay" revealOnHover>
             <SidebarIconButton
-              icon={NewThreadIcon}
-              label={`Create new thread in ${project.name}`}
-              tooltip={
-                newThreadShortcutLabel ? `New thread (${newThreadShortcutLabel})` : "New thread"
-              }
+              icon={ListTodoIcon}
+              label={`Create new Task for ${project.name} Worker`}
+              tooltip="New Task"
               tooltipSide="top"
               data-testid="new-thread-button"
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                void handleNewThread(project.id);
+                void navigate({
+                  to: "/tasks",
+                  search: { worker: project.id, task: undefined, create: true },
+                });
               }}
             />
           </SidebarSectionToolbar>
@@ -4839,6 +4858,23 @@ export default function Sidebar() {
                 disclosureContentClassName(project.expanded),
               )}
             >
+              <SidebarMenuSubItem className="w-full">
+                <SidebarMenuSubButton
+                  render={<button type="button" />}
+                  data-thread-selection-safe
+                  size="sm"
+                  className="h-7 translate-x-0 rounded-lg pr-2 text-left text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]"
+                  onClick={() => navigateToWorkerTasks(project.id)}
+                >
+                  <SidebarGlyph icon={ListTodoIcon} variant="compact" />
+                  <span className="min-w-0 flex-1 truncate">Tasks</span>
+                  {workerTaskCount > 0 ? (
+                    <span className="text-[11px] tabular-nums text-muted-foreground/55">
+                      {workerTaskCount}
+                    </span>
+                  ) : null}
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
               {visibleEntries.map((entry) =>
                 renderThreadRow(
                   entry.thread,
@@ -5642,8 +5678,33 @@ export default function Sidebar() {
           </SidebarGroup>
         ) : (
           <>
-            <SidebarGroup className="px-1.5 py-1" data-sidebar-tree-section="projects">
-              <SidebarMenu className="mb-1 gap-0.5" aria-label="Project tools">
+            <SidebarGroup className="px-1.5 py-1" data-sidebar-tree-section="workers">
+              <SidebarMenu className="mb-1 gap-0.5" aria-label="Worker tools">
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    size="sm"
+                    aria-current={isOnTasks ? "page" : undefined}
+                    className={cn(
+                      SIDEBAR_HEADER_ROW_CLASS_NAME,
+                      isOnTasks
+                        ? SIDEBAR_ROW_ACTIVE_CLASS_NAME
+                        : cn(SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME, SIDEBAR_ROW_HOVER_CLASS_NAME),
+                    )}
+                    onClick={() => navigateToWorkerTasks()}
+                  >
+                    <SidebarLeadingIcon
+                      size="sm"
+                      tone={
+                        isOnTasks
+                          ? "text-[var(--sidebar-accent-foreground)]"
+                          : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME
+                      }
+                    >
+                      <SidebarGlyph icon={ListTodoIcon} variant="leading" />
+                    </SidebarLeadingIcon>
+                    <span className="truncate">Tasks</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     size="sm"
@@ -5697,7 +5758,7 @@ export default function Sidebar() {
               </SidebarMenu>
               {renderPinnedThreadsSection()}
               {renderListSectionHeader(
-                "Projects",
+                "Workers",
                 <>
                   {standardProjects.length > 0 ? (
                     <SidebarIconButton
@@ -5819,10 +5880,10 @@ export default function Sidebar() {
                 <div
                   className="space-y-2 px-2 pt-4"
                   aria-live="polite"
-                  aria-label="Loading projects"
+                  aria-label="Loading Workers"
                 >
                   <div className="text-center text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/58">
-                    Loading projects...
+                    Loading Workers...
                   </div>
                   <div className="mx-auto grid w-full max-w-42 gap-1.5 opacity-70">
                     <div className="h-2 rounded-full bg-muted/55 animate-pulse" />
@@ -5834,7 +5895,7 @@ export default function Sidebar() {
 
               {projectEmptyState === "empty" && (
                 <div className="px-2 pt-4 text-center text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/58">
-                  No projects yet
+                  No Workers yet
                 </div>
               )}
             </SidebarGroup>

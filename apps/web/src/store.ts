@@ -676,6 +676,7 @@ function normalizeProjectFromReadModel(
     previous.localName === localName &&
     previous.cwd === incoming.workspaceRoot &&
     previous.defaultModelSelection === defaultModelSelection &&
+    (previous.workerInstructions ?? "") === (incoming.workerInstructions ?? "") &&
     previous.expanded === expanded &&
     (previous.isPinned ?? false) === (incoming.isPinned ?? false) &&
     previous.createdAt === incoming.createdAt &&
@@ -694,6 +695,7 @@ function normalizeProjectFromReadModel(
     localName,
     cwd: incoming.workspaceRoot,
     defaultModelSelection,
+    workerInstructions: incoming.workerInstructions ?? "",
     expanded,
     isPinned: incoming.isPinned ?? false,
     createdAt: incoming.createdAt,
@@ -730,6 +732,7 @@ function normalizeProjectFromShell(
     previous.localName === localName &&
     previous.cwd === incoming.workspaceRoot &&
     previous.defaultModelSelection === defaultModelSelection &&
+    (previous.workerInstructions ?? "") === (incoming.workerInstructions ?? "") &&
     previous.expanded === expanded &&
     (previous.isPinned ?? false) === (incoming.isPinned ?? false) &&
     previous.createdAt === incoming.createdAt &&
@@ -748,6 +751,7 @@ function normalizeProjectFromShell(
     localName,
     cwd: incoming.workspaceRoot,
     defaultModelSelection,
+    workerInstructions: incoming.workerInstructions ?? "",
     expanded,
     isPinned: incoming.isPinned ?? false,
     createdAt: incoming.createdAt,
@@ -813,8 +817,10 @@ function taskShellsEqual(
     left.id === right.id &&
     left.workerId === right.workerId &&
     left.title === right.title &&
+    left.brief === right.brief &&
     left.status === right.status &&
     left.origin === right.origin &&
+    left.completionSummary === right.completionSummary &&
     left.createdAt === right.createdAt &&
     left.updatedAt === right.updatedAt &&
     left.completedAt === right.completedAt
@@ -826,8 +832,10 @@ function toTaskShell(task: OrchestrationReadModel["tasks"][number]): Orchestrati
     id: task.id,
     workerId: task.workerId,
     title: task.title,
+    brief: task.brief,
     status: task.status,
     origin: task.origin,
+    completionSummary: task.completionSummary,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
     completedAt: task.completedAt,
@@ -3201,6 +3209,7 @@ function applyOrchestrationEvent(
         workspaceRoot: event.payload.workspaceRoot,
         defaultModelSelection: event.payload.defaultModelSelection,
         scripts: event.payload.scripts,
+        workerInstructions: event.payload.workerInstructions ?? "",
         isPinned: event.payload.isPinned ?? false,
         createdAt: event.payload.createdAt,
         updatedAt: event.payload.updatedAt,
@@ -3224,6 +3233,8 @@ function applyOrchestrationEvent(
             ? event.payload.defaultModelSelection
             : existingProject.defaultModelSelection,
         scripts: event.payload.scripts ?? existingProject.scripts,
+        workerInstructions:
+          event.payload.workerInstructions ?? existingProject.workerInstructions ?? "",
         isPinned: event.payload.isPinned ?? existingProject.isPinned ?? false,
         createdAt: existingProject.createdAt ?? event.payload.updatedAt,
         updatedAt: event.payload.updatedAt,
@@ -3236,8 +3247,10 @@ function applyOrchestrationEvent(
         id: event.payload.taskId,
         workerId: event.payload.workerId,
         title: event.payload.title,
+        brief: event.payload.brief,
         status: event.payload.status,
         origin: event.payload.origin,
+        completionSummary: event.payload.completionSummary,
         createdAt: event.payload.createdAt,
         updatedAt: event.payload.updatedAt,
         completedAt: event.payload.completedAt,
@@ -3251,7 +3264,11 @@ function applyOrchestrationEvent(
       return upsertTask(state, {
         ...existingTask,
         ...(event.payload.title !== undefined ? { title: event.payload.title } : {}),
+        ...(event.payload.brief !== undefined ? { brief: event.payload.brief } : {}),
         ...(event.payload.status !== undefined ? { status: event.payload.status } : {}),
+        ...(event.payload.completionSummary !== undefined
+          ? { completionSummary: event.payload.completionSummary }
+          : {}),
         ...(event.payload.completedAt !== undefined
           ? { completedAt: event.payload.completedAt }
           : {}),
