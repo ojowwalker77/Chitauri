@@ -50,13 +50,10 @@ import {
   getCustomModelsForProvider,
   getGitTextGenerationModelOptions,
   MAX_CUSTOM_MODEL_LENGTH,
-  MAX_WINDOW_TRANSPARENCY,
   MIN_CHAT_FONT_SIZE_PX,
-  MIN_WINDOW_TRANSPARENCY,
   MIN_TERMINAL_FONT_SIZE_PX,
   MODEL_PROVIDER_SETTINGS,
   normalizeChatFontSizePx,
-  normalizeWindowTransparency,
   normalizeTerminalFontSizePx,
   patchCustomModels,
   useAppSettings,
@@ -377,7 +374,7 @@ function SortableProviderVisibilityRow(props: {
           {...attributes}
           {...listeners}
         >
-          <CentralIcon name="dot-grid-2x3" className="size-4" />
+          <CentralIcon name="dot-grid-2x3" className="size-3.5" />
         </button>
         <span className="min-w-0 text-sm text-foreground">{props.option.title}</span>
       </div>
@@ -430,7 +427,7 @@ function SortableChatHeaderControlRow(props: {
           {...attributes}
           {...listeners}
         >
-          <CentralIcon name="dot-grid-2x3" className="size-4" />
+          <CentralIcon name="dot-grid-2x3" className="size-3.5" />
         </button>
         <div className="min-w-0 space-y-0.5">
           <div className="text-sm text-foreground">{title}</div>
@@ -614,7 +611,7 @@ function ProviderDocsLinks({ docs }: { docs: InstallProviderSettings["docs"] }) 
               )}
             >
               <span>{doc.label}</span>
-              <ExternalLinkIcon className="size-3" />
+              <ExternalLinkIcon className="size-3.5" />
             </a>
           ))}
         </div>
@@ -2028,42 +2025,6 @@ function SettingsRouteView() {
           />
 
           <SettingsRow
-            title="Window transparency"
-            description="How much of the desktop shows through the window. Only applies to the translucent macOS window material; the composer keeps its own surface."
-            resetAction={
-              settings.windowTransparency !== defaults.windowTransparency ? (
-                <SettingResetButton
-                  label="window transparency"
-                  onClick={() =>
-                    updateSettings({ windowTransparency: defaults.windowTransparency })
-                  }
-                />
-              ) : null
-            }
-            control={
-              <div className="flex w-full items-center justify-end gap-3 sm:w-auto">
-                <input
-                  type="range"
-                  className="theme-slider h-1 w-full cursor-pointer appearance-none rounded-full bg-[var(--selected)] sm:w-40"
-                  min={MIN_WINDOW_TRANSPARENCY}
-                  max={MAX_WINDOW_TRANSPARENCY}
-                  step={1}
-                  value={settings.windowTransparency}
-                  onChange={(event) => {
-                    updateSettings({
-                      windowTransparency: normalizeWindowTransparency(Number(event.target.value)),
-                    });
-                  }}
-                  aria-label="Window transparency"
-                />
-                <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
-                  {settings.windowTransparency}%
-                </span>
-              </div>
-            }
-          />
-
-          <SettingsRow
             title="Base font size"
             description="Adjust the app text base in pixels. Chat and UI typography scale proportionally from this value."
             resetAction={
@@ -2471,7 +2432,7 @@ function SettingsRouteView() {
                       </div>
 
                       <div className="space-y-1">
-                        <div className="text-[11px] font-medium text-muted-foreground">
+                        <div className="text-xs font-medium text-muted-foreground">
                           Conversations
                         </div>
                         {worktree.linkedThreads.length > 0 ? (
@@ -2566,7 +2527,7 @@ function SettingsRouteView() {
     if (archivedGroups.length === 0) {
       return (
         <div className={cn(SETTINGS_EMPTY_STATE_CLASS_NAME, "px-5 py-10 text-center")}>
-          <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-full border border-border/70 bg-background/70 text-muted-foreground">
+          <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-full border border-border bg-background text-muted-foreground">
             <ArchiveIcon className="size-5" />
           </div>
           <div className="text-sm font-medium text-foreground">No archived threads</div>
@@ -2953,7 +2914,7 @@ function SettingsRouteView() {
                           {isProviderUpdateActive ? "Updating" : "Update"}
                         </Button>
                       ) : (
-                        <span className="text-[11px] text-muted-foreground">Manual update</span>
+                        <span className="text-xs text-muted-foreground">Manual update</span>
                       )
                     }
                   />
@@ -3104,7 +3065,7 @@ function SettingsRouteView() {
                       }))
                     }
                   >
-                    <div className="border-t border-border/70 first:border-t-0">
+                    <div className="border-t border-border first:border-t-0">
                       <div className="flex min-h-11 items-center gap-2 px-3 py-2">
                         <button
                           type="button"
@@ -3120,14 +3081,12 @@ function SettingsRouteView() {
                             {providerSettings.title}
                           </span>
                           {isDirty ? (
-                            <span className="shrink-0 text-[11px] text-muted-foreground">
-                              Custom
-                            </span>
+                            <span className="shrink-0 text-xs text-muted-foreground">Custom</span>
                           ) : null}
                           {providerUpdateLabel ? (
                             <span
                               className={cn(
-                                "shrink-0 text-[11px]",
+                                "shrink-0 text-xs",
                                 updateAdvisory?.status === "behind_latest"
                                   ? "text-foreground"
                                   : "text-muted-foreground",
@@ -3138,7 +3097,7 @@ function SettingsRouteView() {
                           ) : null}
                           <ChevronDownIcon
                             className={cn(
-                              "size-4 shrink-0 text-muted-foreground transition-transform",
+                              "size-3.5 shrink-0 text-muted-foreground transition-transform",
                               isOpen && "rotate-180",
                             )}
                           />
@@ -3170,7 +3129,7 @@ function SettingsRouteView() {
                       </div>
 
                       <CollapsibleContent>
-                        <div className="border-t border-border/70 bg-muted/20 px-3 py-3">
+                        <div className="border-t border-border bg-muted px-3 py-3">
                           <div className="space-y-3">
                             <ProviderDocsLinks docs={providerSettings.docs} />
                             {showProviderUpdateStatus &&
@@ -3393,7 +3352,7 @@ function SettingsRouteView() {
                             {providerSettings.experimentalWebSocketsKey ? (
                               <label
                                 htmlFor={`provider-install-${providerSettings.experimentalWebSocketsKey}`}
-                                className="flex items-start justify-between gap-3 rounded-md border border-border/70 bg-background/60 px-3 py-2"
+                                className="flex items-start justify-between gap-3 rounded-md border border-border bg-background px-3 py-2"
                               >
                                 <span className="min-w-0">
                                   <span className="block text-xs font-medium text-foreground">
@@ -3438,7 +3397,7 @@ function SettingsRouteView() {
           description="Open the persisted `keybindings.json` file to edit advanced bindings directly."
           status={
             <>
-              <span className="block break-all font-mono text-[11px] text-foreground">
+              <span className="block break-all font-mono text-xs text-foreground">
                 {keybindingsConfigPath ?? "Resolving keybindings path..."}
               </span>
               {openKeybindingsError ? (
@@ -3480,7 +3439,7 @@ function SettingsRouteView() {
           }
         >
           {shouldOfferRecoveryTools ? (
-            <div className="mt-3 border-t border-border/70 pt-3">
+            <div className="mt-3 border-t border-border pt-3">
               <button
                 type="button"
                 className="flex w-full items-center justify-between text-left"
@@ -3489,7 +3448,7 @@ function SettingsRouteView() {
                 <span className="text-xs font-medium text-muted-foreground">What this does</span>
                 <ChevronDownIcon
                   className={cn(
-                    "size-4 shrink-0 text-muted-foreground transition-transform",
+                    "size-3.5 shrink-0 text-muted-foreground transition-transform",
                     showRecoveryTools && "rotate-180",
                   )}
                 />

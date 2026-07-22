@@ -23,8 +23,8 @@ export function SidebarTreeBranchChip(props: {
   return (
     <span
       className={cn(
-        "inline-flex h-4 max-w-24 min-w-0 shrink items-center truncate rounded-md border border-foreground/[0.08] bg-foreground/[0.025] px-1.5 font-system-ui text-[11px] font-normal leading-none",
-        props.highlighted ? "text-foreground/64" : "text-muted-foreground/48",
+        "inline-flex h-4 max-w-24 min-w-0 shrink items-center truncate rounded-md border border-foreground/[0.08] bg-foreground/[0.025] px-1.5 font-system-ui text-xs font-normal leading-none",
+        props.highlighted ? "text-muted-foreground" : "text-faint",
         props.className,
       )}
       data-sidebar-tree-branch={label}
@@ -46,7 +46,7 @@ export function SidebarTreeStatusPill(props: {
     <span
       aria-label={props.status.label}
       className={cn(
-        "inline-flex h-5 max-w-24 shrink-0 items-center gap-1.5 rounded-md border border-foreground/[0.08] bg-foreground/[0.025] px-1.5 font-system-ui text-[11px] font-medium leading-none",
+        "inline-flex h-5 max-w-24 shrink-0 items-center gap-1.5 rounded-md border border-foreground/[0.08] bg-foreground/[0.025] px-1.5 font-system-ui text-xs font-medium leading-none",
         props.status.colorClass,
         props.className,
       )}

@@ -70,14 +70,14 @@ function ChangelogAccordionRow({
   const featureLabel = `${featureCount} ${pluralize(featureCount, "update")}`;
 
   return (
-    <li className={cn(!isLast && "border-b border-border/40")}>
+    <li className={cn(!isLast && "border-b border-border")}>
       <Collapsible open={open} onOpenChange={setOpen}>
         <CollapsibleTrigger className="group flex w-full items-center gap-3 py-3 text-left">
           <DisclosureChevron open={open} />
           <span className="flex flex-1 items-baseline gap-2">
             <span className="text-xs text-muted-foreground">{entry.date}</span>
             <span className="text-sm font-semibold text-foreground">Version {entry.version}</span>
-            <span className="text-xs text-muted-foreground/70">({featureLabel})</span>
+            <span className="text-xs text-muted-foreground">({featureLabel})</span>
           </span>
         </CollapsibleTrigger>
         <CollapsiblePanel>

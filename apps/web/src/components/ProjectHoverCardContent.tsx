@@ -63,18 +63,18 @@ export function ProjectHoverCardContent({
           onClick={onTogglePin}
           className={cn(
             "-mr-1 shrink-0 cursor-pointer rounded-sm p-1 transition-colors",
-            isPinned ? "text-foreground" : "text-muted-foreground/55 hover:text-foreground",
+            isPinned ? "text-foreground" : "text-faint hover:text-foreground",
           )}
         >
-          <PinStatusIcon pinned={isPinned} className="size-3" aria-hidden />
+          <PinStatusIcon pinned={isPinned} className="size-3.5" aria-hidden />
         </button>
       </div>
-      <div className={cn(ROW_CLASS_NAME, "text-foreground/80")}>
+      <div className={cn(ROW_CLASS_NAME, "text-foreground")}>
         <MessageCircleIcon className={ICON_CLASS_NAME} aria-hidden />
         <span className="min-w-0 truncate">{formatThreadCount(chatCount)}</span>
       </div>
       <div className="-mx-0.5 my-0.5 h-px bg-[color:var(--color-border)]" aria-hidden />
-      <div className={cn(ROW_CLASS_NAME, "text-foreground/80")}>
+      <div className={cn(ROW_CLASS_NAME, "text-foreground")}>
         <FolderClosed className={ICON_CLASS_NAME} aria-hidden />
         <span className="min-w-0 truncate">{path}</span>
       </div>
@@ -84,7 +84,7 @@ export function ProjectHoverCardContent({
         onClick={onEditProject}
         className={cn(
           ROW_CLASS_NAME,
-          "cursor-pointer text-left text-foreground/80 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground",
+          "cursor-pointer text-left text-foreground transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground",
         )}
       >
         <SettingsIcon className={ICON_CLASS_NAME} aria-hidden />

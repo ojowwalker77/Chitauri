@@ -214,10 +214,10 @@ function ProfileContent({
                   className="flex items-center justify-between gap-3"
                 >
                   <span className="flex min-w-0 items-center gap-2.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted/60">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted">
                       <CentralIcon
                         name={skill.kind === "agent" ? "agent" : "building-blocks"}
-                        className="size-3"
+                        className="size-3.5"
                       />
                     </span>
                     <span className="truncate text-sm">{skill.displayName}</span>

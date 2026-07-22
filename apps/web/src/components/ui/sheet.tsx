@@ -5,6 +5,7 @@ import { XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { SURFACE_DESCRIPTION_CLASS_NAME, SURFACE_TITLE_CLASS_NAME } from "./typography";
 
 const Sheet = SheetPrimitive.Root;
 
@@ -133,7 +134,7 @@ function SheetFooter({
     <div
       className={cn(
         "flex flex-col-reverse gap-2 px-6 sm:flex-row sm:justify-end",
-        variant === "default" && "border-t bg-muted/72 py-4",
+        variant === "default" && "border-t bg-muted py-4",
         variant === "bare" &&
           "in-[[data-slot=sheet-popup]:has([data-slot=sheet-panel])]:pt-3 pt-4 pb-6",
         className,
@@ -147,7 +148,7 @@ function SheetFooter({
 function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
   return (
     <SheetPrimitive.Title
-      className={cn("font-heading font-semibold text-xl leading-none", className)}
+      className={cn(SURFACE_TITLE_CLASS_NAME, className)}
       data-slot="sheet-title"
       {...props}
     />
@@ -157,7 +158,7 @@ function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
 function SheetDescription({ className, ...props }: SheetPrimitive.Description.Props) {
   return (
     <SheetPrimitive.Description
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn(SURFACE_DESCRIPTION_CLASS_NAME, className)}
       data-slot="sheet-description"
       {...props}
     />

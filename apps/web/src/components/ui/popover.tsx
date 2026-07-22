@@ -4,6 +4,7 @@ import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 
 import { cn } from "~/lib/utils";
 import { APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME } from "../chat/composerPickerStyles";
+import { SURFACE_DESCRIPTION_CLASS_NAME, SURFACE_TITLE_CLASS_NAME } from "./typography";
 
 const PopoverCreateHandle = PopoverPrimitive.createHandle;
 
@@ -80,7 +81,7 @@ function PopoverClose({ ...props }: PopoverPrimitive.Close.Props) {
 function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {
   return (
     <PopoverPrimitive.Title
-      className={cn("font-semibold text-lg leading-none", className)}
+      className={cn(SURFACE_TITLE_CLASS_NAME, className)}
       data-slot="popover-title"
       {...props}
     />
@@ -90,7 +91,7 @@ function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {
 function PopoverDescription({ className, ...props }: PopoverPrimitive.Description.Props) {
   return (
     <PopoverPrimitive.Description
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn(SURFACE_DESCRIPTION_CLASS_NAME, className)}
       data-slot="popover-description"
       {...props}
     />

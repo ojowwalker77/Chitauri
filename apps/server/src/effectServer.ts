@@ -6,6 +6,7 @@ import { Effect, Exit, FileSystem, Layer, Path, Schema, Scope, ServiceMap } from
 import { HttpRouter } from "effect/unstable/http";
 
 import { AutomationRunReactor } from "./automation/Services/AutomationRunReactor";
+import { WorkerInboxReactor } from "./orchestration/Services/WorkerInboxReactor";
 import { AutomationScheduler } from "./automation/Services/AutomationScheduler";
 import { AutomationService } from "./automation/Services/AutomationService";
 import {
@@ -41,6 +42,7 @@ export interface ServerShape {
     | Path.Path
     | Keybindings
     | AutomationRunReactor
+    | WorkerInboxReactor
     | AutomationScheduler
     | AutomationService
     | ServerLifecycleEvents
@@ -69,6 +71,7 @@ export class ServerLifecycleError extends Schema.TaggedErrorClass<ServerLifecycl
 export const createEffectServer = Effect.fn(function* () {
   const config = yield* ServerConfig;
   const automationRunReactor = yield* AutomationRunReactor;
+  const workerInboxReactor = yield* WorkerInboxReactor;
   const automationScheduler = yield* AutomationScheduler;
   const keybindings = yield* Keybindings;
   const lifecycleEvents = yield* ServerLifecycleEvents;
@@ -135,6 +138,7 @@ export const createEffectServer = Effect.fn(function* () {
   yield* Scope.provide(orchestrationReactor.start, subscriptionsScope);
   yield* Scope.provide(automationScheduler.start(), subscriptionsScope);
   yield* Scope.provide(automationRunReactor.start(), subscriptionsScope);
+  yield* Scope.provide(workerInboxReactor.start(), subscriptionsScope);
   yield* Scope.provide(threadDeletionReactor.start(), subscriptionsScope);
   yield* Scope.provide(providerSessionReaper.start(), subscriptionsScope);
   yield* readiness.markOrchestrationSubscriptionsReady;

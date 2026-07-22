@@ -187,7 +187,7 @@ export default function ProjectScriptsControl({
   }, [preferredScriptId, scripts]);
   const isEditing = editingScriptId !== null;
   const actionMenuItemClassName =
-    "group grid min-h-9 grid-cols-[1rem_minmax(0,1fr)_1.5rem] items-center gap-2 rounded-xl px-2.5 py-1.5 text-[13px] leading-none data-highlighted:bg-transparent data-highlighted:text-foreground hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground focus-visible:bg-[var(--color-background-button-secondary-hover)] focus-visible:text-foreground data-highlighted:hover:bg-[var(--color-background-button-secondary-hover)] data-highlighted:hover:text-foreground data-highlighted:focus-visible:bg-[var(--color-background-button-secondary-hover)] data-highlighted:focus-visible:text-foreground [&>svg]:mx-0 [&>svg]:size-4";
+    "group grid min-h-9 grid-cols-[1rem_minmax(0,1fr)_1.5rem] items-center gap-2 rounded-xl px-2.5 py-1.5 text-sm leading-none data-highlighted:bg-transparent data-highlighted:text-foreground hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground focus-visible:bg-[var(--color-background-button-secondary-hover)] focus-visible:text-foreground data-highlighted:hover:bg-[var(--color-background-button-secondary-hover)] data-highlighted:hover:text-foreground data-highlighted:focus-visible:bg-[var(--color-background-button-secondary-hover)] data-highlighted:focus-visible:text-foreground [&>svg]:mx-0 [&>svg]:size-4";
 
   const captureKeybinding = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Tab") return;
@@ -325,7 +325,7 @@ export default function ProjectScriptsControl({
                     className={actionMenuItemClassName}
                     onClick={() => onRunScript(script)}
                   >
-                    <ScriptIcon icon={script.icon} className="size-4 text-muted-foreground" />
+                    <ScriptIcon icon={script.icon} className="size-3.5 text-muted-foreground" />
                     <span className="min-w-0 truncate">
                       {script.runOnWorktreeCreate ? `${script.name} (setup)` : script.name}
                     </span>
@@ -358,7 +358,7 @@ export default function ProjectScriptsControl({
                 );
               })}
               <MenuItem className={actionMenuItemClassName} onClick={openAddDialog}>
-                <PlusIcon className="size-4 text-muted-foreground" />
+                <PlusIcon className="size-3.5 text-muted-foreground" />
                 <span className="col-span-2 min-w-0 truncate">Add action</span>
               </MenuItem>
             </MenuPopup>
@@ -420,7 +420,7 @@ export default function ProjectScriptsControl({
                         />
                       }
                     >
-                      <ScriptIcon icon={icon} className="size-4.5" />
+                      <ScriptIcon icon={icon} className="size-3.5" />
                     </PopoverTrigger>
                     <PopoverPopup align="start">
                       <div className="grid grid-cols-3 gap-2">
@@ -440,7 +440,7 @@ export default function ProjectScriptsControl({
                                 setIconPickerOpen(false);
                               }}
                             >
-                              <ScriptIcon icon={entry.id} className="size-4" />
+                              <ScriptIcon icon={entry.id} className="size-3.5" />
                               <span>{entry.label}</span>
                             </button>
                           );
@@ -479,7 +479,7 @@ export default function ProjectScriptsControl({
                   onChange={(event) => setCommand(event.target.value)}
                 />
               </div>
-              <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2 text-sm">
+              <label className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm">
                 <span>Run automatically on worktree creation</span>
                 <Switch
                   checked={runOnWorktreeCreate}

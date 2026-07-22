@@ -3,6 +3,8 @@
 
 import {
   CommandId,
+  DEFAULT_RUNTIME_MODE,
+  MessageId,
   ProjectId,
   TaskId,
   ThreadId,
@@ -16,6 +18,12 @@ import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstab
 import type { ServerConfigShape } from "../config.ts";
 import { OrchestrationEngineService } from "./Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "./Services/ProjectionSnapshotQuery.ts";
+import {
+  buildDelegationReplyPrompt,
+  peerThreadFor,
+  responderThreadIdFor,
+  CHANNEL_CLOSED_STATUSES,
+} from "./workerInboxChannel.ts";
 
 export const WORKER_TOOLS_MCP_PATH = "/api/worker-tools/mcp";
 const WORKER_TOOLS_TOKEN = crypto.randomUUID();
@@ -121,7 +129,7 @@ const toolDefinitions = [
   {
     name: "inbox_send",
     description:
-      "Send a structured work request to another repository Worker. The recipient receives a Task in its Inbox, but no Thread is created.",
+      "Send a structured work request to another repository Worker. The recipient automatically starts a session to answer it and replies on the same channel, so do not ask the user to relay anything. Returns a request_id identifying the channel.",
     inputSchema: {
       type: "object",
       properties: {
@@ -131,6 +139,21 @@ const toolDefinitions = [
         related_task_id: { type: "string" },
       },
       required: ["worker_id", "subject", "body"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "inbox_reply",
+    description:
+      "Reply on an open cross-Worker request channel. The message is delivered to the Worker at the other end, which resumes automatically. Set close to true on the final reply to end the channel.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        request_id: { type: "string" },
+        body: { type: "string" },
+        close: { type: "boolean" },
+      },
+      required: ["request_id", "body"],
       additionalProperties: false,
     },
   },
@@ -166,7 +189,10 @@ function ownedTask(scope: WorkerScope, rawTaskId: string) {
   return task;
 }
 
-function taskResult(task: OrchestrationShellSnapshot["tasks"][number]) {
+function taskResult(
+  task: OrchestrationShellSnapshot["tasks"][number],
+  snapshot?: OrchestrationShellSnapshot,
+) {
   return {
     id: task.id,
     workerId: task.workerId,
@@ -177,6 +203,17 @@ function taskResult(task: OrchestrationShellSnapshot["tasks"][number]) {
     requesterWorkerId: task.requesterWorkerId,
     requesterTaskId: task.requesterTaskId,
     updatedAt: task.updatedAt,
+    // Delegation Tasks are channels; surfacing both ends lets the agent see whether
+    // a request is still answerable without a second tool call.
+    ...(task.origin === "delegation"
+      ? {
+          channelOpen: !CHANNEL_CLOSED_STATUSES.has(task.status),
+          requesterThreadId: task.requesterThreadId,
+          responderThreadId: snapshot
+            ? responderThreadIdFor({ taskId: task.id, threads: snapshot.threads })
+            : null,
+        }
+      : {}),
   };
 }
 
@@ -217,7 +254,7 @@ export function runWorkerTool(input: {
             task.workerId === scope.workerId &&
             (includeClosed || (task.status !== "completed" && task.status !== "cancelled")),
         )
-        .map(taskResult);
+        .map((task) => taskResult(task));
     }
 
     if (input.name === "tasks_create") {
@@ -303,7 +340,7 @@ export function runWorkerTool(input: {
     if (input.name === "inbox_list") {
       return scope.snapshot.tasks
         .filter((task) => task.workerId === scope.workerId && task.origin === "delegation")
-        .map(taskResult);
+        .map((task) => taskResult(task, scope.snapshot));
     }
 
     if (input.name === "inbox_send") {
@@ -325,6 +362,7 @@ export function runWorkerTool(input: {
         workerId: recipient.id,
         requesterWorkerId: scope.workerId,
         ...(relatedTask ? { requesterTaskId: relatedTask.id } : {}),
+        requesterThreadId: scope.threadId,
         title: requiredString(args, "subject"),
         brief: requiredString(args, "body"),
         origin: "delegation",
@@ -334,7 +372,71 @@ export function runWorkerTool(input: {
         requestId: taskId,
         recipientWorkerId: recipient.id,
         relatedTaskId: relatedTask?.id ?? null,
-        threadCreated: false,
+        // The recipient Worker spawns its own session and replies on this channel.
+        // Report progress and keep working; do not wait on the user to relay it.
+        autoDispatched: true,
+      };
+    }
+
+    if (input.name === "inbox_reply") {
+      const requestId = requiredString(args, "request_id");
+      const task = scope.snapshot.tasks.find((candidate) => candidate.id === requestId);
+      if (!task || task.origin !== "delegation") {
+        throw new Error(`Request '${requestId}' is not a cross-Worker request channel.`);
+      }
+      if (CHANNEL_CLOSED_STATUSES.has(task.status)) {
+        throw new Error(`Request '${requestId}' is closed. Use inbox_send to open a new request.`);
+      }
+      const peer = peerThreadFor({
+        task,
+        threads: scope.snapshot.threads,
+        callerThreadId: scope.threadId,
+      });
+      if (!peer) {
+        throw new Error(`This Thread is not part of request channel '${requestId}'.`);
+      }
+      const body = requiredString(args, "body");
+      const close = args.close === true;
+      const fromWorker = scope.snapshot.projects.find(
+        (candidate) => candidate.id === scope.workerId,
+      );
+
+      if (close) {
+        yield* engine.dispatch({
+          type: "task.update",
+          commandId: commandId(),
+          taskId: task.id,
+          status: "completed",
+          ...(peer.callerSide === "responder" ? { completionSummary: body } : {}),
+        });
+      }
+      const now = new Date().toISOString();
+      yield* engine.dispatch({
+        type: "thread.turn.start",
+        commandId: commandId(),
+        threadId: peer.peerThreadId,
+        message: {
+          messageId: MessageId.makeUnsafe(crypto.randomUUID()),
+          role: "user",
+          text: buildDelegationReplyPrompt({
+            task,
+            fromWorkerTitle: fromWorker?.title ?? "peer",
+            body,
+            closed: close,
+          }),
+          attachments: [],
+        },
+        dispatchMode: "queue",
+        // Same rationale as the inbox reactor: "automation" already means
+        // system-dispatched, and a new origin would break persisted message decoding.
+        dispatchOrigin: "automation",
+        runtimeMode: DEFAULT_RUNTIME_MODE,
+        createdAt: now,
+      });
+      return {
+        requestId: task.id,
+        deliveredToThreadId: peer.peerThreadId,
+        channelOpen: !close,
       };
     }
 

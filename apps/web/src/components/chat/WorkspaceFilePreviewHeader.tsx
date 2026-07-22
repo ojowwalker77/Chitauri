@@ -105,10 +105,7 @@ export const WorkspaceFilePreviewHeader = memo(function WorkspaceFilePreviewHead
         CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
       )}
     >
-      <nav
-        aria-label="File path"
-        className="flex min-w-0 flex-1 items-center text-[12px] leading-none"
-      >
+      <nav aria-label="File path" className="flex min-w-0 flex-1 items-center text-xs leading-none">
         {/* Dir prefix shrinks far faster than the filename (shrink-[9999]), so under
             width pressure it collapses to nothing before the filename gives up any
             room; only once the prefix is gone does the filename itself truncate.
@@ -117,10 +114,10 @@ export const WorkspaceFilePreviewHeader = memo(function WorkspaceFilePreviewHead
         <span className="flex min-w-0 shrink-[9999] items-center overflow-hidden">
           {prefixSegments.map((segment) => (
             <Fragment key={segment.key}>
-              <span className="truncate text-muted-foreground/80">{segment.name}</span>
+              <span className="truncate text-muted-foreground">{segment.name}</span>
               <ChevronRightIcon
                 aria-hidden="true"
-                className="mx-0.5 size-3 shrink-0 text-muted-foreground/40"
+                className="mx-0.5 size-3.5 shrink-0 text-faint"
               />
             </Fragment>
           ))}
@@ -131,7 +128,7 @@ export const WorkspaceFilePreviewHeader = memo(function WorkspaceFilePreviewHead
       </nav>
 
       {props.truncated ? (
-        <span className="hidden shrink-0 text-[11px] text-muted-foreground/70 @sm/header-actions:inline">
+        <span className="hidden shrink-0 text-xs text-muted-foreground @sm/header-actions:inline">
           Shown partially
         </span>
       ) : null}
@@ -153,7 +150,7 @@ export const WorkspaceFilePreviewHeader = memo(function WorkspaceFilePreviewHead
                   aria-checked={selected}
                   title={segment.title}
                   className={cn(
-                    "flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 text-[11px] transition-colors",
+                    "flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs transition-colors",
                     selected
                       ? "bg-[var(--color-background-button-secondary)] text-[var(--color-text-foreground)]"
                       : "text-muted-foreground hover:text-foreground",

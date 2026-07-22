@@ -38,8 +38,8 @@ export function ThreadPinToggleButton({
         // No `transition-*` here on purpose: tailwind-merge collapses `transition-*` to a
         // single class, so any list here would REPLACE the Button base's and silently drop
         // the press tween. Inherit the base (`duration-press ease-out`, colors + scale).
-        "sidebar-icon-button pointer-events-auto size-5 rounded-sm border-transparent bg-transparent shadow-none hover:text-foreground/82 sm:size-5",
-        toneClassName ?? "text-muted-foreground/34",
+        "sidebar-icon-button pointer-events-auto size-5 rounded-sm border-transparent bg-transparent shadow-none hover:text-foreground sm:size-5",
+        toneClassName ?? "text-faint",
         presentation === "overlay"
           ? cn(
               "absolute left-1.5 top-1/2 z-30 -translate-y-1/2",
@@ -48,7 +48,7 @@ export function ThreadPinToggleButton({
               "opacity-0 group-hover/thread-row:opacity-100 focus-visible:opacity-100",
             )
           : presentation === "leading"
-            ? "relative z-10 shrink-0 text-muted-foreground/50"
+            ? "relative z-10 shrink-0 text-faint"
             : "relative z-10 shrink-0",
       )}
       onMouseDown={(event) => {

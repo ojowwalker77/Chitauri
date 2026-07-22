@@ -110,17 +110,17 @@ export const ComposerPendingApprovalPanel = memo(function ComposerPendingApprova
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2">
           <span aria-hidden="true" className="mt-1 size-1.5 shrink-0 rounded-full bg-info" />
-          <p className="min-w-0 text-[13px] font-medium leading-snug text-foreground/90">
+          <p className="min-w-0 text-sm font-medium leading-snug text-foreground">
             {KIND_PROMPT[approval.requestKind]}
             {parsed.tool ? (
-              <span className="ml-1.5 text-[11px] font-normal text-muted-foreground/70">
+              <span className="ml-1.5 text-xs font-normal text-muted-foreground">
                 {parsed.tool}
               </span>
             ) : null}
           </p>
         </div>
         {pendingCount > 1 ? (
-          <span className="flex h-5 shrink-0 items-center rounded-md bg-selected px-1.5 text-[11px] font-medium tabular-nums text-muted-foreground">
+          <span className="flex h-5 shrink-0 items-center rounded-md bg-selected px-1.5 text-xs font-medium tabular-nums text-muted-foreground">
             1/{pendingCount}
           </span>
         ) : null}
@@ -148,14 +148,14 @@ function ApprovalDetail({ parsed }: { parsed: ParsedApproval }) {
     return (
       <div className="mt-2">
         <p
-          className="truncate text-[13px] font-medium leading-tight text-foreground/85"
+          className="truncate text-sm font-medium leading-tight text-foreground"
           title={parsed.fileDir ? `${parsed.fileDir}/${parsed.fileName}` : parsed.fileName}
         >
           {parsed.fileName}
         </p>
         {parsed.fileDir ? (
           <p
-            className="mt-0.5 truncate font-mono text-[11px] leading-tight text-muted-foreground/55"
+            className="mt-0.5 truncate font-mono text-xs leading-tight text-faint"
             title={parsed.fileDir}
           >
             {shortenPath(parsed.fileDir)}
@@ -169,7 +169,7 @@ function ApprovalDetail({ parsed }: { parsed: ParsedApproval }) {
   if (code) {
     return (
       <pre
-        className="mt-2.5 overflow-hidden rounded-lg bg-[var(--color-background-elevated-secondary)] px-3 py-2 font-mono text-[12px] leading-snug text-foreground/85"
+        className="mt-2.5 overflow-hidden rounded-lg bg-[var(--color-background-elevated-secondary)] px-3 py-2 font-mono text-xs leading-snug text-foreground"
         title={code}
       >
         <code className="block truncate">{code}</code>
@@ -177,9 +177,7 @@ function ApprovalDetail({ parsed }: { parsed: ParsedApproval }) {
     );
   }
 
-  return (
-    <p className="mt-2 text-[12px] text-muted-foreground/65">Review the request to continue.</p>
-  );
+  return <p className="mt-2 text-xs text-muted-foreground">Review the request to continue.</p>;
 }
 
 /**

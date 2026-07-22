@@ -310,7 +310,7 @@ function isShellRelevantEvent(event: OrchestrationEvent): boolean {
 export function toTaskCreatedShellStreamEvent(
   event: Extract<OrchestrationEvent, { type: "task.created" }>,
 ): OrchestrationShellStreamEvent {
-  const { taskId, artifacts, ...task } = event.payload;
+  const { taskId, artifacts, requesterThreadId, ...task } = event.payload;
   return {
     kind: "task-upserted",
     sequence: event.sequence,
@@ -318,6 +318,8 @@ export function toTaskCreatedShellStreamEvent(
       id: taskId,
       ...task,
       artifacts: artifacts ?? [],
+      // Absent on task.created events recorded before Worker channels shipped.
+      requesterThreadId: requesterThreadId ?? null,
     } satisfies OrchestrationTaskShell,
   };
 }

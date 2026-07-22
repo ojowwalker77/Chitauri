@@ -144,8 +144,30 @@ const INFO_COLOR = "#3b82f6";
 // "Warning" no longer has its own hue: it collapses onto the danger red so old
 // call sites stay legible until they migrate to the semantic tokens.
 const WARNING_COLOR = "#e94b4b";
-const MUTED_COLOR = "#807f7c";
-const FAINT_COLOR = "#585856";
+/* ─── The ink ladder ──────────────────────────────────────────────────────────
+   Three levels of emphasis, and nothing between them. Every piece of text and
+   every icon in the app is one of these three.
+
+     PRIMARY    what the user came to read — titles, values, active rows
+     SECONDARY  supporting text, most icons, inactive rows
+     TERTIARY   metadata, placeholders, disabled, timestamps
+
+   Light is the blueprint's ladder exactly. Dark reuses two of the same three
+   greys shifted one rung down, so the whole app across both modes is built from
+   four greys total — and the two ladders have the same shape rather than being
+   independently hand-tuned:
+
+     light   #292929 13.2:1   #5D5D5D 6.0:1   #9E9E9E 2.4:1   (on #F5F4EF)
+     dark    #E8E8E8 16.3:1   #9E9E9E 7.4:1   #5D5D5D 3.0:1   (on #090909)
+
+   These apply to the default themes. A user-authored palette still derives its
+   ladder from its own ink by alpha, because there is no third colour to borrow. */
+const INK_LIGHT_PRIMARY = "#292929";
+const INK_LIGHT_SECONDARY = "#5d5d5d";
+const INK_LIGHT_TERTIARY = "#9e9e9e";
+const INK_DARK_PRIMARY = "#e8e8e8";
+const INK_DARK_SECONDARY = "#9e9e9e";
+const INK_DARK_TERTIARY = "#5d5d5d";
 const SUCCESS_FOREGROUND = "#a5d6b7";
 const DESTRUCTIVE_FOREGROUND = "#ef9091";
 const WARNING_FOREGROUND = "#ef9091";
@@ -206,8 +228,9 @@ export const DEFAULT_CHROME_THEME: ChromeTheme = {
   accent: "#3b82f6",
   contrast: 60,
   fonts: { code: null, ui: null },
-  ink: "#e3e2dd",
-  opaqueWindows: false,
+  ink: INK_DARK_PRIMARY,
+  // Every surface is opaque. See the "No glass" note in index.css.
+  opaqueWindows: true,
   semanticColors: {
     diffAdded: "#4cb782",
     diffRemoved: "#e94b4b",
@@ -220,8 +243,8 @@ export const DEFAULT_LIGHT_CHROME_THEME: ChromeTheme = {
   accent: "#5A7FA8",
   contrast: 60,
   fonts: { code: null, ui: null },
-  ink: "#575757",
-  opaqueWindows: false,
+  ink: INK_LIGHT_PRIMARY,
+  opaqueWindows: true,
   semanticColors: {
     diffAdded: "#6E9B5C",
     diffRemoved: "#C25A50",
@@ -683,12 +706,13 @@ export function buildThemeCssVariables(
   const resolvedTokens = buildResolvedThemeTokens(pack, variant);
   const codexVariables = resolvedTokens.codexVariables;
   const readCodexVariable = (name: string) => getRequiredVariable(codexVariables, name);
-  // On macOS the window is created over an "under-window" vibrancy material, so a
-  // non-opaque theme lets the shell tint that glass instead of painting over it.
-  const material: WindowMaterial =
-    options?.electron === true && options?.isMac === true && !pack.theme.opaqueWindows
-      ? "translucent"
-      : "opaque";
+  // Always opaque. No surface in the app is translucent, so there is no material
+  // to negotiate with the desktop — and a theme could otherwise leave the shell
+  // tinting whatever happened to be behind the window.
+  //
+  // `ChromeTheme.opaqueWindows` and the seed catalog still carry the old flag so
+  // existing share strings and stored themes keep parsing; nothing reads it now.
+  const material: WindowMaterial = "opaque";
   const isDefaultDarkTheme = haveSameChromePalette(pack.theme, DEFAULT_CHROME_THEME);
   const isDefaultLightTheme = haveSameChromePalette(pack.theme, DEFAULT_LIGHT_CHROME_THEME);
   const isDefaultTheme = isDefaultDarkTheme || isDefaultLightTheme;
@@ -719,15 +743,9 @@ export function buildThemeCssVariables(
     "--accent": pack.theme.accent,
     "--accent-foreground": readCodexVariable("--color-text-foreground"),
     "--app-composer-focus-border": composerFocusBorder,
-    // Composer and picker surfaces stay opaque in every runtime.
-    "--app-composer-backdrop-filter": "none",
-    "--app-composer-picker-backdrop-filter": "none",
     "--app-composer-picker-surface": composerPickerMenuSurface,
     "--app-chat-code-surface": chatCodeSurface,
     "--app-user-message-background": chatCodeSurface,
-    "--app-sidebar-backdrop-filter": "none",
-    // Settings shares the flat canvas while its grouping cards use --panel.
-    "--app-settings-backdrop-filter": "none",
     "--app-sidebar-shadow": "none",
     "--app-sidebar-surface": sidebarSurface,
     // Always opaque so the settings page matches the chat canvas exactly.
@@ -1071,9 +1089,12 @@ function buildDerivedTokens(
     buttonTertiaryBackground: formatRgba(quietInk, 0.02 + theme.contrast * 0.015),
     buttonTertiaryBackgroundActive: formatRgba(quietInk, 0.07 + theme.contrast * 0.05),
     buttonTertiaryBackgroundHover: formatRgba(quietInk, 0.05 + theme.contrast * 0.03),
-    controlBackground: formatRgba(controlBase, 0.96),
+    // Surfaces are opaque. These two were 0.96 alpha, which let whatever sat
+    // behind a menu or control tint it by 4% — invisible in review, and the
+    // reason a popover over a code block never quite matched one over the canvas.
+    controlBackground: formatOpaqueRgb(controlBase),
     controlBackgroundOpaque: formatOpaqueRgb(controlBase),
-    elevatedPrimary: formatRgba(elevatedPrimaryBase, 0.96),
+    elevatedPrimary: formatOpaqueRgb(elevatedPrimaryBase),
     elevatedPrimaryOpaque: formatOpaqueRgb(elevatedPrimaryBase),
     elevatedSecondary: formatRgba(quietInk, 0.02 + theme.contrast * 0.02),
     elevatedSecondaryOpaque: mixHex(
@@ -1082,25 +1103,29 @@ function buildDerivedTokens(
       0.04 + theme.contrast * 0.05,
     ),
     iconAccent: theme.theme.accent,
-    iconPrimary: formatRgba(theme.ink, 0.82 + theme.contrast * 0.14),
-    iconSecondary: isDefaultTheme ? MUTED_COLOR : formatRgba(theme.ink, 0.66),
-    iconTertiary: isDefaultTheme ? FAINT_COLOR : formatRgba(theme.ink, 0.44),
+    iconPrimary: isDefaultTheme
+      ? INK_DARK_PRIMARY
+      : formatRgba(theme.ink, 0.82 + theme.contrast * 0.14),
+    iconSecondary: isDefaultTheme ? INK_DARK_SECONDARY : formatRgba(theme.ink, 0.66),
+    iconTertiary: isDefaultTheme ? INK_DARK_TERTIARY : formatRgba(theme.ink, 0.44),
     simpleScrim: formatRgba(theme.ink, 0.08 + theme.contrast * 0.04),
     textAccent: theme.theme.accent,
     textButtonPrimary: theme.theme.surface,
     textButtonSecondary: mixHex(theme.theme.ink, theme.theme.surface, 0.7 + theme.contrast * 0.1),
+    // A ghost button's label is supporting text, not metadata — it sits on the
+    // secondary rung so it stays readable at 13px.
     textButtonTertiary: isDefaultTheme
-      ? FAINT_COLOR
+      ? INK_DARK_SECONDARY
       : formatRgba(theme.ink, 0.45 + theme.contrast * 0.1),
     textForeground: theme.theme.ink,
-    textForegroundSecondary: isDefaultTheme ? MUTED_COLOR : formatRgba(theme.ink, 0.66),
-    textForegroundTertiary: isDefaultTheme ? FAINT_COLOR : formatRgba(theme.ink, 0.44),
+    textForegroundSecondary: isDefaultTheme ? INK_DARK_SECONDARY : formatRgba(theme.ink, 0.66),
+    textForegroundTertiary: isDefaultTheme ? INK_DARK_TERTIARY : formatRgba(theme.ink, 0.44),
   };
 }
 
 function buildLightDerivedTokens(theme: ReturnType<typeof buildComputedTheme>): ThemeDerivedTokens {
   const isDefaultTheme = haveSameChromePalette(theme.theme, DEFAULT_LIGHT_CHROME_THEME);
-  const darkInk = isDefaultTheme ? parseHexColor("#575757") : theme.ink;
+  const darkInk = isDefaultTheme ? parseHexColor(INK_LIGHT_PRIMARY) : theme.ink;
   const surface = theme.surface;
   const BLACK = { blue: 0, green: 0, red: 0 };
   const controlBase = mixRgb(surface, theme.ink, 0.04 + theme.contrast * 0.03);
@@ -1136,19 +1161,21 @@ function buildLightDerivedTokens(theme: ReturnType<typeof buildComputedTheme>): 
       0.05 + theme.contrast * 0.04,
     ),
     iconAccent: theme.theme.accent,
-    iconPrimary: formatRgba(theme.ink, 0.88 + theme.contrast * 0.1),
-    iconSecondary: isDefaultTheme ? "#9B9B96" : formatRgba(theme.ink, 0.6),
-    iconTertiary: isDefaultTheme ? "#ACACA6" : formatRgba(theme.ink, 0.4),
+    iconPrimary: isDefaultTheme
+      ? INK_LIGHT_PRIMARY
+      : formatRgba(theme.ink, 0.88 + theme.contrast * 0.1),
+    iconSecondary: isDefaultTheme ? INK_LIGHT_SECONDARY : formatRgba(theme.ink, 0.6),
+    iconTertiary: isDefaultTheme ? INK_LIGHT_TERTIARY : formatRgba(theme.ink, 0.4),
     simpleScrim: formatRgba(theme.ink, 0.05 + theme.contrast * 0.03),
     textAccent: theme.theme.accent,
     textButtonPrimary: theme.theme.surface,
     textButtonSecondary: mixHex(theme.theme.ink, theme.theme.surface, 0.65 + theme.contrast * 0.1),
     textButtonTertiary: isDefaultTheme
-      ? "#757272"
+      ? INK_LIGHT_SECONDARY
       : formatRgba(theme.ink, 0.5 + theme.contrast * 0.1),
     textForeground: theme.theme.ink,
-    textForegroundSecondary: isDefaultTheme ? "#6B6B69" : formatRgba(theme.ink, 0.6),
-    textForegroundTertiary: isDefaultTheme ? "#757272" : formatRgba(theme.ink, 0.42),
+    textForegroundSecondary: isDefaultTheme ? INK_LIGHT_SECONDARY : formatRgba(theme.ink, 0.6),
+    textForegroundTertiary: isDefaultTheme ? INK_LIGHT_TERTIARY : formatRgba(theme.ink, 0.42),
   };
 }
 

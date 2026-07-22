@@ -403,14 +403,14 @@ export const ComposerLocalDirectoryMenu = memo(function ComposerLocalDirectoryMe
               aria-label="Go up one directory"
               onMouseDown={(event) => event.preventDefault()}
               onClick={handleGoUp}
-              className="inline-flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-[var(--color-background-elevated-secondary)] hover:text-foreground"
+              className="inline-flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-[var(--color-background-elevated-secondary)] hover:text-foreground"
             >
               <ArrowUpIcon className="size-3.5" />
             </button>
           ) : (
-            <FolderClosed className="size-3.5 shrink-0 text-muted-foreground/70" />
+            <FolderClosed className="size-3.5 shrink-0 text-muted-foreground" />
           )}
-          <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-foreground/80">
+          <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
             {headerLabel}
           </span>
           {!isRootDirectory(directory) ? (
@@ -418,7 +418,7 @@ export const ComposerLocalDirectoryMenu = memo(function ComposerLocalDirectoryMe
               type="button"
               onMouseDown={(event) => event.preventDefault()}
               onClick={handleSelectCurrentDirectory}
-              className="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground/70 transition-colors hover:bg-[var(--color-background-elevated-secondary)] hover:text-foreground"
+              className="shrink-0 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-[var(--color-background-elevated-secondary)] hover:text-foreground"
             >
               Use this folder
             </button>
@@ -487,7 +487,7 @@ export const ComposerLocalDirectoryMenu = memo(function ComposerLocalDirectoryMe
                   <CommandSeparator className="my-0.5" />
                 ) : null}
                 <CommandGroup>
-                  <CommandGroupLabel className="px-2 pt-1.5 pb-1 text-[11px] font-semibold text-muted-foreground/55">
+                  <CommandGroupLabel className="px-2 pt-1.5 pb-1 text-xs font-semibold text-faint">
                     Matches deeper
                   </CommandGroupLabel>
                   {searchRows.map((entry, searchIndex) => {
@@ -510,23 +510,19 @@ export const ComposerLocalDirectoryMenu = memo(function ComposerLocalDirectoryMe
           </CommandList>
         </div>
         {isAwaitingHomeDir ? (
-          <p className="px-2 py-1.5 text-muted-foreground/50 text-[11px]">
-            Waiting for home directory from server…
-          </p>
+          <p className="px-2 py-1.5 text-faint text-xs">Waiting for home directory from server…</p>
         ) : isLoading && visibleCount === 0 ? (
-          <p className="px-2 py-1.5 text-muted-foreground/50 text-[11px]">Loading local files…</p>
+          <p className="px-2 py-1.5 text-faint text-xs">Loading local files…</p>
         ) : errorMessage ? (
-          <p className="px-2 py-1.5 text-destructive/80 text-[11px]">{errorMessage}</p>
+          <p className="px-2 py-1.5 text-destructive text-xs">{errorMessage}</p>
         ) : isSearchPending ? (
-          <p className="px-2 py-1.5 text-muted-foreground/50 text-[11px]">
-            Searching nested files…
-          </p>
+          <p className="px-2 py-1.5 text-faint text-xs">Searching nested files…</p>
         ) : visibleCount === 0 ? (
-          <p className="px-2 py-1.5 text-muted-foreground/50 text-[11px]">
+          <p className="px-2 py-1.5 text-faint text-xs">
             {filter.trim().length > 0 ? "No matches." : "No files or folders here."}
           </p>
         ) : searchQuery.data?.truncated ? (
-          <p className="px-2 py-1 text-muted-foreground/40 text-[11px]">
+          <p className="px-2 py-1 text-faint text-xs">
             Showing top matches. Keep typing to narrow.
           </p>
         ) : null}
@@ -560,12 +556,10 @@ const UseCurrentFolderRow = memo(function UseCurrentFolderRow(props: {
       }}
       onClick={onActivate}
     >
-      <FolderClosed className="size-3.5 text-muted-foreground/60" />
+      <FolderClosed className="size-3.5 text-faint" />
       <div className="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
-        <span className="shrink-0 text-[11.5px] font-medium text-foreground/80">
-          Use this folder
-        </span>
-        <span className="truncate text-[11px] text-muted-foreground/55">{directoryLabel}</span>
+        <span className="shrink-0 text-xs font-medium text-foreground">Use this folder</span>
+        <span className="truncate text-xs text-faint">{directoryLabel}</span>
       </div>
     </CommandItem>
   );
@@ -615,16 +609,16 @@ const LocalSearchRow = memo(function LocalSearchRow(props: {
       onClick={() => onActivate(entry)}
     >
       {isDirectory ? (
-        <FolderClosed className="size-3.5 text-muted-foreground/60" />
+        <FolderClosed className="size-3.5 text-faint" />
       ) : (
-        <FileIcon className="size-3.5 text-muted-foreground/60" />
+        <FileIcon className="size-3.5 text-faint" />
       )}
       <div className="min-w-0 flex flex-1 items-center gap-3">
-        <span className="min-w-0 flex-1 truncate text-[11.5px] font-medium text-foreground/80">
+        <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
           {entry.name}
         </span>
         {subtitle ? (
-          <span className="shrink-0 max-w-[60%] truncate pl-2 text-right text-[11px] text-muted-foreground/42">
+          <span className="shrink-0 max-w-[60%] truncate pl-2 text-right text-xs text-faint">
             {subtitle}
           </span>
         ) : null}
@@ -661,12 +655,12 @@ const LocalEntryRow = memo(function LocalEntryRow(props: {
       onClick={() => onActivate(entry)}
     >
       {isDirectory ? (
-        <FolderClosed className="size-3.5 text-muted-foreground/60" />
+        <FolderClosed className="size-3.5 text-faint" />
       ) : (
-        <FileIcon className="size-3.5 text-muted-foreground/60" />
+        <FileIcon className="size-3.5 text-faint" />
       )}
       <div className="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
-        <span className="truncate text-[11.5px] font-medium text-foreground/80">{entry.name}</span>
+        <span className="truncate text-xs font-medium text-foreground">{entry.name}</span>
       </div>
     </CommandItem>
   );

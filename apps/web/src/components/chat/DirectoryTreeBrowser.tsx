@@ -143,7 +143,7 @@ export const DirectoryTreeBrowser = memo(function DirectoryTreeBrowser({
               type="button"
               aria-label={expanded ? `Collapse ${entry.name}` : `Expand ${entry.name}`}
               className={cn(
-                "inline-flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground",
+                "inline-flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground",
                 (!isDirectory || !entry.hasChildren) && "opacity-35",
               )}
               onClick={() => {
@@ -169,14 +169,14 @@ export const DirectoryTreeBrowser = memo(function DirectoryTreeBrowser({
               }}
             >
               {isDirectory ? (
-                <FolderIcon className="size-4 shrink-0 text-muted-foreground/70" />
+                <FolderIcon className="size-3.5 shrink-0 text-muted-foreground" />
               ) : (
-                <FileIcon className="size-4 shrink-0 text-muted-foreground/60" />
+                <FileIcon className="size-3.5 shrink-0 text-faint" />
               )}
-              <span className="truncate text-foreground/95">{entry.name}</span>
+              <span className="truncate text-foreground">{entry.name}</span>
             </button>
             {isDirectory && isLoadingChildren ? (
-              <span className="shrink-0 text-[11px] text-muted-foreground/45">Loading…</span>
+              <span className="shrink-0 text-xs text-faint">Loading…</span>
             ) : null}
           </div>,
           ...renderedChildren,
@@ -198,15 +198,13 @@ export const DirectoryTreeBrowser = memo(function DirectoryTreeBrowser({
   return (
     <div className={className} onMouseEnter={handleEnsureRootLoaded}>
       {!rootPath ? (
-        <div className="px-2 py-8 text-center text-sm text-muted-foreground/60">
-          {unavailableLabel}
-        </div>
+        <div className="px-2 py-8 text-center text-sm text-faint">{unavailableLabel}</div>
       ) : loadingPaths.has("") && rootEntries.length === 0 ? (
-        <div className="px-2 py-8 text-center text-sm text-muted-foreground/60">{loadingLabel}</div>
+        <div className="px-2 py-8 text-center text-sm text-faint">{loadingLabel}</div>
       ) : renderedTree.length > 0 ? (
         renderedTree
       ) : (
-        <div className="px-2 py-8 text-center text-sm text-muted-foreground/60">{emptyLabel}</div>
+        <div className="px-2 py-8 text-center text-sm text-faint">{emptyLabel}</div>
       )}
       {errorMessage ? <div className="px-2 pt-2 text-xs text-red-400">{errorMessage}</div> : null}
     </div>

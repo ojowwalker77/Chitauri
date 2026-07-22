@@ -6,6 +6,7 @@ import { cn } from "~/lib/utils";
 import { Button, dialogActionButtonClassName } from "~/components/ui/button";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { OVERLAY_SURFACE_CLASS_NAME } from "~/components/ui/surface";
+import { SURFACE_DESCRIPTION_CLASS_NAME, SURFACE_TITLE_CLASS_NAME } from "./typography";
 
 const DialogCreateHandle = DialogPrimitive.createHandle;
 
@@ -150,7 +151,7 @@ function DialogFooter({
 function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
-      className={cn("font-heading font-semibold text-lg leading-tight", className)}
+      className={cn(SURFACE_TITLE_CLASS_NAME, className)}
       data-slot="dialog-title"
       {...props}
     />
@@ -160,7 +161,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
 function DialogDescription({ className, ...props }: DialogPrimitive.Description.Props) {
   return (
     <DialogPrimitive.Description
-      className={cn("text-muted-foreground text-sm leading-snug", className)}
+      className={cn(SURFACE_DESCRIPTION_CLASS_NAME, className)}
       data-slot="dialog-description"
       {...props}
     />

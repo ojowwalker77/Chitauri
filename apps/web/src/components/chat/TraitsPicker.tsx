@@ -366,7 +366,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
             label={provider === "kilo" || provider === "opencode" ? "Variant" : "Effort"}
             note={
               ultrathinkPromptControlled ? (
-                <div className="px-2 pb-1.5 text-muted-foreground/80 text-xs">
+                <div className="px-2 pb-1.5 text-muted-foreground text-xs">
                   Remove Ultrathink from the prompt to change effort.
                 </div>
               ) : undefined
@@ -522,13 +522,13 @@ export const TraitsPicker = memo(function TraitsPicker({
 
   const triggerContent = hideLabel ? (
     <span className="flex min-w-0 items-center gap-1">
-      <SettingsIcon aria-hidden="true" className="size-3.5 shrink-0 opacity-75" />
+      <SettingsIcon aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
       {hiddenLabelTitle.length > 0 ? <span className="sr-only">{hiddenLabelTitle}</span> : null}
-      <ChevronDownIcon aria-hidden="true" className="size-3 shrink-0 opacity-60" />
+      <ChevronDownIcon aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
     </span>
   ) : isCodexStyle ? (
     <span className="flex min-w-0 w-full items-center gap-2 overflow-hidden">
-      <SettingsIcon aria-hidden="true" className="size-3.5 shrink-0 opacity-75" />
+      <SettingsIcon aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
       <span className="min-w-0 flex flex-1 items-center gap-1.5 truncate">
         {visiblePrimaryTriggerLabel ? (
           <span className="truncate">{visiblePrimaryTriggerLabel}</span>
@@ -537,9 +537,9 @@ export const TraitsPicker = memo(function TraitsPicker({
         )}
         {showsFastBadge ? (
           <>
-            <span className="shrink-0 text-muted-foreground/45">·</span>
+            <span className="shrink-0 text-faint">·</span>
             <span className="inline-flex shrink-0 items-center gap-1">
-              <FastModeIcon aria-hidden="true" className="size-3 text-[hsl(var(--chart-4))]" />
+              <FastModeIcon aria-hidden="true" className="size-3.5 text-[hsl(var(--chart-4))]" />
               <span>Fast</span>
             </span>
           </>
@@ -547,24 +547,24 @@ export const TraitsPicker = memo(function TraitsPicker({
         {contextWindowLabel ? (
           <>
             {visiblePrimaryTriggerLabel || showsFastBadge ? (
-              <span className="shrink-0 text-muted-foreground/45">·</span>
+              <span className="shrink-0 text-faint">·</span>
             ) : null}
             <span className="shrink-0">{contextWindowLabel}</span>
           </>
         ) : null}
       </span>
-      <ChevronDownIcon aria-hidden="true" className="size-3 shrink-0 opacity-60" />
+      <ChevronDownIcon aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
     </span>
   ) : (
     <>
-      <SettingsIcon aria-hidden="true" className="size-3.5 opacity-75" />
+      <SettingsIcon aria-hidden="true" className="size-3.5 text-muted-foreground" />
       <span className="inline-flex items-center gap-1.5">
         <span>{visiblePrimaryTriggerLabel ?? "Options"}</span>
         {showsFastBadge ? (
           <>
-            <span className="text-muted-foreground/45">·</span>
+            <span className="text-faint">·</span>
             <span className="inline-flex items-center gap-1">
-              <FastModeIcon aria-hidden="true" className="size-3 text-[hsl(var(--chart-4))]" />
+              <FastModeIcon aria-hidden="true" className="size-3.5 text-[hsl(var(--chart-4))]" />
               <span>Fast</span>
             </span>
           </>
@@ -572,13 +572,13 @@ export const TraitsPicker = memo(function TraitsPicker({
         {contextWindowLabel ? (
           <>
             {visiblePrimaryTriggerLabel || showsFastBadge ? (
-              <span className="text-muted-foreground/45">·</span>
+              <span className="text-faint">·</span>
             ) : null}
             <span>{contextWindowLabel}</span>
           </>
         ) : null}
       </span>
-      <ChevronDownIcon aria-hidden="true" className="size-3 opacity-60" />
+      <ChevronDownIcon aria-hidden="true" className="size-3.5 text-muted-foreground" />
     </>
   );
 
@@ -600,7 +600,7 @@ export const TraitsPicker = memo(function TraitsPicker({
                 <span>Change effort, context, and speed</span>
                 <ShortcutKbd
                   shortcutLabel={shortcutLabel}
-                  className="h-4 min-w-4 px-1 text-[length:var(--app-font-size-ui-2xs,11px)] text-muted-foreground"
+                  className="h-4 min-w-4 px-1 text-[length:var(--app-font-size-ui-2xs,12px)] text-muted-foreground"
                 />
               </span>
             </TooltipPopup>

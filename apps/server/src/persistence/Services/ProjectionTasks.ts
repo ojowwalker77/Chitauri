@@ -9,6 +9,7 @@ import {
   TaskId,
   TaskOrigin,
   TaskStatus,
+  ThreadId,
 } from "@t3tools/contracts";
 import { Option, Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
@@ -20,6 +21,7 @@ export const ProjectionTask = Schema.Struct({
   workerId: ProjectId,
   requesterWorkerId: Schema.NullOr(ProjectId),
   requesterTaskId: Schema.NullOr(TaskId),
+  requesterThreadId: Schema.NullOr(ThreadId),
   title: Schema.String,
   brief: Schema.String,
   status: TaskStatus,

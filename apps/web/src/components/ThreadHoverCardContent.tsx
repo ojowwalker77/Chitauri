@@ -31,8 +31,8 @@ export type ThreadHoverCardContentProps = {
   worktreeName: string | null;
 };
 
-const META_ROW_CLASS_NAME = `${SIDEBAR_HOVER_CARD_ROW_CLASS_NAME} text-foreground/80`;
-const META_ICON_CLASS_NAME = "size-3.5 shrink-0 text-muted-foreground/75";
+const META_ROW_CLASS_NAME = `${SIDEBAR_HOVER_CARD_ROW_CLASS_NAME} text-foreground`;
+const META_ICON_CLASS_NAME = "size-3.5 shrink-0 text-muted-foreground";
 
 function MetaRow({ icon, children }: { icon: ReactNode; children: string }) {
   return (
@@ -64,9 +64,7 @@ export function ThreadHoverCardContent({
           {title}
         </span>
         {timeLabel ? (
-          <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground/55">
-            {timeLabel}
-          </span>
+          <span className="shrink-0 text-xs tabular-nums text-faint">{timeLabel}</span>
         ) : null}
       </div>
       {hasMeta ? (
@@ -75,7 +73,7 @@ export function ThreadHoverCardContent({
             <MetaRow
               icon={
                 projectCwd ? (
-                  <span className="relative inline-flex size-3.5 shrink-0 items-center justify-center text-muted-foreground/75">
+                  <span className="relative inline-flex size-3.5 shrink-0 items-center justify-center text-muted-foreground">
                     <ProjectSidebarIcon
                       cwd={projectCwd}
                       expanded={false}

@@ -43,7 +43,7 @@ export const DraftAttachmentWarningIcon = forwardRef<
         className,
       )}
     >
-      <CircleAlertIcon className="size-3" />
+      <CircleAlertIcon className="size-3.5" />
     </span>
   );
 });

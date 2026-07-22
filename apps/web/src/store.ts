@@ -847,6 +847,7 @@ function toTaskShell(task: OrchestrationReadModel["tasks"][number]): Orchestrati
     workerId: task.workerId,
     requesterWorkerId: task.requesterWorkerId,
     requesterTaskId: task.requesterTaskId,
+    requesterThreadId: task.requesterThreadId,
     title: task.title,
     brief: task.brief,
     status: task.status,
@@ -3267,6 +3268,8 @@ function applyOrchestrationEvent(
         workerId: event.payload.workerId,
         requesterWorkerId: event.payload.requesterWorkerId,
         requesterTaskId: event.payload.requesterTaskId,
+        // Absent on task.created events recorded before Worker channels shipped.
+        requesterThreadId: event.payload.requesterThreadId ?? null,
         title: event.payload.title,
         brief: event.payload.brief,
         status: event.payload.status,

@@ -712,6 +712,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             workerId: event.payload.workerId,
             requesterWorkerId: event.payload.requesterWorkerId,
             requesterTaskId: event.payload.requesterTaskId,
+            requesterThreadId: event.payload.requesterThreadId ?? null,
             title: event.payload.title,
             brief: event.payload.brief,
             status: event.payload.status,

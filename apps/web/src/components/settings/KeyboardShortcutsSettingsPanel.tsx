@@ -86,7 +86,7 @@ export function KeyboardShortcutsSettingsPanel() {
         />
         <CentralIcon
           name="cmd-box"
-          className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70"
+          className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
         />
       </div>
 
@@ -94,7 +94,7 @@ export function KeyboardShortcutsSettingsPanel() {
         <div
           className={cn(SETTINGS_CARD_CLASS_NAME, "divide-y divide-[color:var(--color-border)]")}
         >
-          <div className="flex items-center justify-between gap-4 px-3 py-2 text-[11px] font-medium text-muted-foreground">
+          <div className="flex items-center justify-between gap-4 px-3 py-2 text-xs font-medium text-muted-foreground">
             <span>Command</span>
             <span>Keybinding</span>
           </div>

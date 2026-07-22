@@ -65,7 +65,7 @@ export const FileEntryIcon = memo(function FileEntryIcon(props: {
     const FolderIcon = props.expanded ? FolderOpen : FolderClosed;
     return (
       <FolderIcon
-        className={cn("size-4 shrink-0", props.className, FOLDER_ICON_COLOR_CLASS_NAME)}
+        className={cn("size-3.5 shrink-0", props.className, FOLDER_ICON_COLOR_CLASS_NAME)}
       />
     );
   }
@@ -83,7 +83,7 @@ export const FileEntryIcon = memo(function FileEntryIcon(props: {
   return (
     <CentralIcon
       name={iconName}
-      className={cn("size-4 shrink-0", props.className, colorClassName)}
+      className={cn("size-3.5 shrink-0", props.className, colorClassName)}
     />
   );
 });

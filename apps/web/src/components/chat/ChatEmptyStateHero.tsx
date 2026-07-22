@@ -16,8 +16,8 @@ export const ChatEmptyStateHero = memo(function ChatEmptyStateHero({
       <TeaCodeLogo aria-label="TeaCode logo" className="size-10" />
 
       <div className="flex flex-col items-center gap-0.5">
-        <h1 className="text-2xl font-semibold text-foreground/90">Let's build</h1>
-        {projectName && <span className="text-lg text-muted-foreground/40">{projectName}</span>}
+        <h1 className="text-2xl font-semibold text-foreground">Let's build</h1>
+        {projectName && <span className="text-lg text-faint">{projectName}</span>}
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import {
   MAX_SCRIPT_ID_LENGTH,
   SCRIPT_RUN_COMMAND_PATTERN,
   type KeybindingCommand,
+  type ProjectDevServer,
   type ProjectScript,
 } from "@t3tools/contracts";
 import { Schema } from "effect";
@@ -67,13 +68,13 @@ export interface ProjectScriptRunOptions {
   cwd?: string;
   env?: Record<string, string>;
   worktreePath?: string | null;
-  preferNewTerminal?: boolean;
   rememberAsLastInvoked?: boolean;
   throwOnError?: boolean;
 }
 
 export interface ProjectScriptRunResult {
-  terminalId: string;
+  /** The server-owned background process the script was started in. */
+  run: ProjectDevServer;
 }
 
 export function projectScriptCwd(input: {

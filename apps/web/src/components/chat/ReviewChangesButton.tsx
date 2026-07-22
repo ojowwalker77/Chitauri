@@ -27,7 +27,7 @@ export const ReviewChangesButton = memo(function ReviewChangesButton({
     <button
       type="button"
       className={cn(
-        "shrink-0 rounded-md border border-[color:var(--color-border-light)] px-2.5 py-0.5 text-foreground/90 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground",
+        "shrink-0 rounded-md border border-[color:var(--color-border-light)] px-2.5 py-0.5 text-foreground transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground",
         className,
       )}
       style={style}

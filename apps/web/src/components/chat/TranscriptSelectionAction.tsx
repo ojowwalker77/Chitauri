@@ -31,7 +31,7 @@ function TranscriptSelectionToolbarButton({
       type="button"
       aria-label={label}
       title={label}
-      className="pointer-events-auto inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium text-[var(--color-text-foreground)] transition-colors hover:bg-[var(--color-background-elevated-secondary)]"
+      className="pointer-events-auto inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium text-[var(--color-text-foreground)] transition-colors hover:bg-[var(--color-background-elevated-secondary)]"
       onMouseDown={(event) => {
         event.preventDefault();
         event.stopPropagation();

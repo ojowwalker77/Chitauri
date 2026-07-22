@@ -449,6 +449,7 @@ export const OrchestrationTask = Schema.Struct({
   workerId: ProjectId,
   requesterWorkerId: Schema.NullOr(ProjectId),
   requesterTaskId: Schema.NullOr(TaskId),
+  requesterThreadId: Schema.NullOr(ThreadId),
   title: TrimmedNonEmptyString,
   brief: Schema.String,
   status: TaskStatus,
@@ -466,6 +467,7 @@ export const OrchestrationTaskShell = Schema.Struct({
   workerId: ProjectId,
   requesterWorkerId: Schema.NullOr(ProjectId),
   requesterTaskId: Schema.NullOr(TaskId),
+  requesterThreadId: Schema.NullOr(ThreadId),
   title: TrimmedNonEmptyString,
   brief: Schema.String,
   status: TaskStatus,
@@ -915,6 +917,7 @@ export const TaskCreateCommand = Schema.Struct({
   workerId: ProjectId,
   requesterWorkerId: Schema.optional(ProjectId),
   requesterTaskId: Schema.optional(TaskId),
+  requesterThreadId: Schema.optional(ThreadId),
   title: TrimmedNonEmptyString,
   brief: Schema.optional(Schema.String).pipe(Schema.withDecodingDefault(() => "")),
   origin: Schema.optional(TaskOrigin).pipe(Schema.withDecodingDefault(() => "user")),
@@ -1531,6 +1534,12 @@ export const TaskCreatedPayload = Schema.Struct({
   workerId: ProjectId,
   requesterWorkerId: Schema.NullOr(ProjectId),
   requesterTaskId: Schema.NullOr(TaskId),
+  // Optional with a null default: this key was added after Tasks shipped, and the
+  // event log is replayed from disk. A required key here fails to decode every
+  // pre-existing task.created event and takes the server down on startup.
+  requesterThreadId: Schema.optional(Schema.NullOr(ThreadId)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
   title: TrimmedNonEmptyString,
   brief: Schema.String,
   status: TaskStatus,

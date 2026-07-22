@@ -16,16 +16,15 @@ import {
 import { isGenericChatThreadTitle } from "@t3tools/shared/chatThreads";
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { FiGitBranch } from "react-icons/fi";
-import { HiMiniArrowsPointingOut } from "react-icons/hi2";
-import { TbExchange } from "react-icons/tb";
 import type { ThreadPrimarySurface } from "../../types";
 import GitActionsControl from "../GitActionsControl";
 import {
   ArrowRightIcon,
   CheckIcon,
+  GitBranchIcon,
   HandoffIcon,
   HistoryIcon,
+  Maximize2,
   MessageCircleIcon,
   PanelRightCloseIcon,
   PlusIcon,
@@ -199,7 +198,7 @@ function EditorChatHistoryMenu(props: {
               {thread.id === props.activeThreadId ? (
                 <CheckIcon className="size-3.5 shrink-0 text-muted-foreground" />
               ) : (
-                <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                   {formatRelativeTime(thread.updatedAt ?? thread.createdAt)}
                 </span>
               )}
@@ -428,7 +427,7 @@ function EditorRailTabs(props: {
                 <ProviderIcon
                   provider={thread.provider}
                   tone="header"
-                  className="size-3 shrink-0"
+                  className="size-3.5 shrink-0"
                 />
               }
               closeLabel={`Close ${thread.title}`}
@@ -442,7 +441,7 @@ function EditorRailTabs(props: {
               title="Terminal"
               label="Terminal"
               labelClassName="max-w-24"
-              icon={<TerminalIcon className="size-3 shrink-0 text-[var(--color-text-accent)]" />}
+              icon={<TerminalIcon className="size-3.5 shrink-0 text-[var(--color-text-accent)]" />}
               trailing={
                 props.terminalHasRunningActivity ? (
                   <span className="size-1.5 shrink-0 rounded-full bg-success/80" />
@@ -544,7 +543,7 @@ export const ChatHeader = memo(function ChatHeader({
         provider={provider}
         tone="header"
         className={className}
-        fallback={<FiGitBranch className={className} />}
+        fallback={<GitBranchIcon className={className} />}
       />
     );
   };
@@ -605,7 +604,7 @@ export const ChatHeader = memo(function ChatHeader({
                       />
                     }
                   >
-                    <HandoffIcon className="size-[1em] shrink-0 opacity-80" />
+                    <HandoffIcon className="size-[1em] shrink-0" />
                     {!compact ? <span className="truncate font-normal">Hand off</span> : null}
                   </MenuTrigger>
                 }
@@ -674,15 +673,13 @@ export const ChatHeader = memo(function ChatHeader({
             )}
           >
             {threadBreadcrumbs.length > 0 ? (
-              <div className="flex min-w-0 items-center gap-1 overflow-hidden text-[11px] text-muted-foreground/55">
+              <div className="flex min-w-0 items-center gap-1 overflow-hidden text-xs text-faint">
                 {threadBreadcrumbs.map((breadcrumb, index) => (
                   <React.Fragment key={breadcrumb.threadId}>
-                    {index > 0 ? (
-                      <span className="shrink-0 text-muted-foreground/35">/</span>
-                    ) : null}
+                    {index > 0 ? <span className="shrink-0 text-faint">/</span> : null}
                     <button
                       type="button"
-                      className="min-w-0 truncate transition-colors hover:text-foreground/80"
+                      className="min-w-0 truncate transition-colors hover:text-foreground"
                       title={breadcrumb.title}
                       onClick={() => onNavigateToThread(breadcrumb.threadId)}
                     >
@@ -703,7 +700,7 @@ export const ChatHeader = memo(function ChatHeader({
                   </span>
                 )}
                 <h2
-                  className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-[length:var(--app-font-size-ui,14px)] font-[590] tracking-[-0.005em] text-foreground"
+                  className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-[length:var(--app-font-size-ui,14px)] font-medium text-foreground"
                   title={activeThreadTitle}
                   onDoubleClick={() => onRenameThread()}
                 >
@@ -733,12 +730,12 @@ export const ChatHeader = memo(function ChatHeader({
                     render={
                       <Badge
                         variant="outline"
-                        className="hidden !h-6 shrink-0 items-center justify-center gap-1 rounded-md px-1.5 text-[11px] sm:inline-flex"
+                        className="hidden !h-6 shrink-0 items-center justify-center gap-1 rounded-md px-1.5 text-xs sm:inline-flex"
                       >
                         <span className="inline-flex size-4 shrink-0 items-center justify-center">
                           {renderProviderIcon(handoffBadgeSourceProvider, "size-3")}
                         </span>
-                        <ArrowRightIcon className="size-2.5 shrink-0 opacity-45" />
+                        <ArrowRightIcon className="size-2.5 shrink-0 text-faint" />
                         <span className="inline-flex size-4 shrink-0 items-center justify-center">
                           {renderProviderIcon(handoffBadgeTargetProvider, "size-3")}
                         </span>
@@ -762,7 +759,7 @@ export const ChatHeader = memo(function ChatHeader({
                   label={inlineChatLayoutAction.label}
                   onClick={inlineChatLayoutAction.onClick}
                 >
-                  <HiMiniArrowsPointingOut className="size-3.5" />
+                  <Maximize2 className="size-3.5" />
                 </ChatHeaderIconButton>
               }
             />
@@ -780,7 +777,7 @@ export const ChatHeader = memo(function ChatHeader({
                   label={changeThreadAction.label}
                   onClick={changeThreadAction.onClick}
                 >
-                  <TbExchange className="size-3.5" />
+                  <HandoffIcon className="size-3.5" />
                 </ChatHeaderIconButton>
               }
             />

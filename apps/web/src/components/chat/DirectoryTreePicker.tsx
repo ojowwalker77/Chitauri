@@ -30,13 +30,13 @@ export const DirectoryTreePicker = memo(function DirectoryTreePicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger render={<Button type="button" variant="outline" size="sm" />}>
-        <FolderIcon className="size-4" />
+        <FolderIcon className="size-3.5" />
         <span>{triggerLabel}</span>
       </PopoverTrigger>
       <PopoverPopup align="start" className="w-[min(32rem,calc(100vw-2rem))] p-0">
-        <div className="border-b border-border/60 px-4 py-3">
+        <div className="border-b border-border px-4 py-3">
           <p className="text-sm font-medium text-foreground">Start a chat from a folder</p>
-          <p className="mt-1 truncate text-xs text-muted-foreground/60">
+          <p className="mt-1 truncate text-xs text-faint">
             {rootPath ?? "No home directory found"}
           </p>
         </div>

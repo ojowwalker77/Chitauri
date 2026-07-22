@@ -127,23 +127,23 @@ function ShortcutSection({
   if (section.entries.length === 0) return null;
   const muted = section.tone === "muted";
   return (
-    <section className={cn(!isFirst && "border-t border-border/50")}>
+    <section className={cn(!isFirst && "border-t border-border")}>
       <header className="flex items-baseline justify-between gap-3 px-6 pt-4 pb-2">
         <h3
           className={cn(
-            "text-[11px] font-semibold",
-            muted ? "text-muted-foreground/70" : "text-muted-foreground",
+            "text-xs font-semibold",
+            muted ? "text-muted-foreground" : "text-muted-foreground",
           )}
         >
           {section.title}
         </h3>
-        <p className="truncate text-[11px] text-muted-foreground/70">{section.description}</p>
+        <p className="truncate text-xs text-muted-foreground">{section.description}</p>
       </header>
       <ul className={cn("px-3 pb-3", muted && "opacity-75")}>
         {section.entries.map((entry) => (
           <li
             key={entry.id}
-            className="group flex items-center justify-between gap-4 rounded-md px-3 py-1.5 hover:bg-muted/60"
+            className="group flex items-center justify-between gap-4 rounded-md px-3 py-1.5 hover:bg-muted"
           >
             <span className="min-w-0 truncate text-sm text-foreground">{entry.label}</span>
             <ShortcutKbd shortcutLabel={entry.shortcutLabel} groupClassName="shrink-0" />

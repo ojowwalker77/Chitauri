@@ -76,14 +76,15 @@ export type MessagesTimelineRow =
       createdAt: string;
       proposedPlan: ProposedPlan;
     }
-  | { kind: "working"; id: string; createdAt: string | null }
   | {
       // Live-turn header that mirrors the settled "Worked for Xs" disclosure
       // (label + full-width divider), but is non-collapsible and counts up while
-      // the turn is still running. Sits at the top of the active turn.
+      // the turn is still running. Sits at the top of the active turn, and is
+      // the transcript's only in-flight indicator. `createdAt` is null before
+      // the turn's start time is known, which drops the elapsed suffix.
       kind: "working-header";
       id: string;
-      createdAt: string;
+      createdAt: string | null;
     }
   | {
       // Transient "Preparing worktree..." step card shown during the New
@@ -383,17 +384,6 @@ export function deriveMessagesTimelineRows(input: {
     });
   }
 
-  // The generic "Working..." shimmer yields to the setup card only while the
-  // card is open; once the card starts its close animation the turn's own
-  // shimmer is already rendering after it, so the handoff has no gap.
-  if (input.isWorking && !(input.worktreeSetup && input.worktreeSetupOpen)) {
-    nextRows.push({
-      kind: "working",
-      id: "working-indicator-row",
-      createdAt: input.activeTurnStartedAt,
-    });
-  }
-
   collapseSettledTurns(nextRows, {
     terminalAssistantMessageIds,
     activeTurnInProgress: input.activeTurnInProgress ?? false,
@@ -403,17 +393,20 @@ export function deriveMessagesTimelineRows(input: {
   // Once live work or narration exists, let its latest row own the elapsed
   // header so the status and activity trail read as one surface. Before the
   // first activity arrives, keep a standalone header immediately after the user
-  // message so the elapsed state is never lost.
-  if (
-    input.isWorking &&
-    input.activeTurnStartedAt &&
-    !(input.worktreeSetup && input.worktreeSetupOpen)
-  ) {
-    const liveActivityOwnerIndex = findLiveTurnActivityOwnerIndex(nextRows);
+  // message so the elapsed state is never lost. This header is the only
+  // in-flight indicator, so it must also cover the case where the turn's start
+  // time is not known yet — it then reads plain "Working". It yields to the
+  // worktree setup card only while that card is open.
+  if (input.isWorking && !(input.worktreeSetup && input.worktreeSetupOpen)) {
+    const turnStartedAt = input.activeTurnStartedAt;
+    const liveActivityOwnerIndex = turnStartedAt ? findLiveTurnActivityOwnerIndex(nextRows) : -1;
     const liveActivityOwner =
       liveActivityOwnerIndex >= 0 ? nextRows[liveActivityOwnerIndex] : undefined;
-    if (liveActivityOwner?.kind === "message" || liveActivityOwner?.kind === "work") {
-      liveActivityOwner.activeTurnStartedAt = input.activeTurnStartedAt;
+    if (
+      turnStartedAt &&
+      (liveActivityOwner?.kind === "message" || liveActivityOwner?.kind === "work")
+    ) {
+      liveActivityOwner.activeTurnStartedAt = turnStartedAt;
     } else {
       nextRows.splice(findLiveTurnHeaderInsertIndex(nextRows), 0, {
         kind: "working-header",
@@ -426,9 +419,9 @@ export function deriveMessagesTimelineRows(input: {
   return nextRows;
 }
 
-// Finds the latest assistant/work row after the most recent user boundary. The
-// generic trailing "working" row is intentionally ignored: it is a spinner, not
-// durable transcript activity, and must not own the elapsed activity header.
+// Finds the latest assistant/work row after the most recent user boundary, so
+// durable transcript activity owns the elapsed header rather than a detached
+// status line.
 function findLiveTurnActivityOwnerIndex(rows: ReadonlyArray<MessagesTimelineRow>): number {
   for (let index = rows.length - 1; index >= 0; index -= 1) {
     const row = rows[index]!;
@@ -791,9 +784,6 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
   if (a.kind !== b.kind || a.id !== b.id) return false;
 
   switch (a.kind) {
-    case "working":
-      return a.createdAt === (b as typeof a).createdAt;
-
     case "working-header":
       return a.createdAt === (b as typeof a).createdAt;
 

@@ -450,6 +450,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           workerId: command.workerId,
           requesterWorkerId: command.requesterWorkerId ?? null,
           requesterTaskId: command.requesterTaskId ?? null,
+          requesterThreadId: command.requesterThreadId ?? null,
           title: command.title,
           brief: command.brief,
           status: "open",

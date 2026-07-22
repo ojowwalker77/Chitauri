@@ -106,7 +106,7 @@ export default function WhatsNewDialog({
               onClick={() => setView("changelog")}
             >
               View changelog
-              <ArrowRightIcon className="size-3" />
+              <ArrowRightIcon className="size-3.5" />
             </Button>
             <Button size="sm" onClick={() => onOpenChange(false)}>
               Got it
@@ -144,7 +144,7 @@ function ChangelogHeader({ onBack }: { readonly onBack: () => void }) {
   return (
     <div className="flex items-center gap-3">
       <Button size="icon-sm" variant="ghost" aria-label="Back to What's new" onClick={onBack}>
-        <ArrowLeftIcon className="size-4" />
+        <ArrowLeftIcon className="size-3.5" />
       </Button>
       <div className="flex min-w-0 flex-col">
         <DialogTitle className="text-base">Complete changelog</DialogTitle>

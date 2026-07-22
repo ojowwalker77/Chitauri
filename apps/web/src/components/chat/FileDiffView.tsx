@@ -61,7 +61,7 @@ export function FileDiffCard(props: {
           <FileEntryIcon
             pathValue={filePath}
             kind="file"
-            className="size-3.5 text-muted-foreground/70"
+            className="size-3.5 text-muted-foreground"
           />
         </span>
       )}

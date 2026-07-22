@@ -305,7 +305,7 @@ export default function BranchToolbar({
                 <>
                   {envGlyph("size-3.5")}
                   {environmentPresentation.shortLabel}
-                  <ChevronDownIcon className="size-3 opacity-60" />
+                  <ChevronDownIcon className="size-3.5 text-muted-foreground" />
                 </>
               )}
             </MenuTrigger>

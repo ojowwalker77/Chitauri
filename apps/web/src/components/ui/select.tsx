@@ -30,7 +30,7 @@ const SelectPopupSurfaceContext = React.createContext<SelectPopupSurface>("defau
 
 // Keep neutral select chrome on the same token families Codex uses for menus and list hover.
 const selectTriggerVariants = cva(
-  "relative inline-flex cursor-pointer select-none items-center justify-between gap-2 border rounded-md text-left text-[length:var(--app-font-size-ui,14px)] outline-none transition-[color,background-color] data-disabled:pointer-events-none data-disabled:opacity-64 sm:text-[length:var(--app-font-size-ui,14px)] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4",
+  "relative inline-flex cursor-pointer select-none items-center justify-between gap-2 border rounded-md text-left text-[length:var(--app-font-size-ui,14px)] outline-none transition-[color,background-color] data-disabled:pointer-events-none data-disabled:opacity-64 sm:text-[length:var(--app-font-size-ui,14px)] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
   {
     defaultVariants: {
       size: "default",
@@ -39,7 +39,7 @@ const selectTriggerVariants = cva(
     variants: {
       variant: {
         default:
-          "w-full min-w-36 border-[color:var(--color-border)] bg-[var(--color-background-control-opaque)] text-[var(--color-text-foreground)] ring-[color:var(--color-border-focus)]/16 pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 focus-visible:border-[color:var(--color-border-focus)] focus-visible:ring-2 aria-invalid:border-destructive/30 focus-visible:aria-invalid:border-destructive/50 focus-visible:aria-invalid:ring-destructive/12 dark:aria-invalid:ring-destructive/20 [&_svg:not([class*='opacity-'])]:opacity-80",
+          "w-full min-w-36 border-[color:var(--color-border)] bg-[var(--color-background-control-opaque)] text-[var(--color-text-foreground)] ring-[color:var(--color-border-focus)]/16 pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 focus-visible:border-[color:var(--color-border-focus)] focus-visible:ring-2 aria-invalid:border-destructive/30 focus-visible:aria-invalid:border-destructive/50 focus-visible:aria-invalid:ring-destructive/12 dark:aria-invalid:ring-destructive/20",
         ghost:
           "border-transparent text-[var(--color-text-foreground-secondary)] focus-visible:ring-1 focus-visible:ring-[color:var(--color-border-focus)]/60 data-pressed:bg-[var(--color-background-elevated-secondary)] [:hover,[data-pressed]]:bg-[var(--color-background-elevated-secondary)] [:hover,[data-pressed]]:text-[var(--color-text-foreground)]",
       },
@@ -47,13 +47,13 @@ const selectTriggerVariants = cva(
         default: "min-h-9 px-[calc(--spacing(3)-1px)] sm:min-h-8",
         lg: "min-h-10 px-[calc(--spacing(3)-1px)] sm:min-h-9",
         sm: "min-h-8 gap-1.5 px-[calc(--spacing(2.5)-1px)] sm:min-h-7",
-        xs: "h-7 gap-1 rounded-sm px-[calc(--spacing(2)-1px)] text-[length:var(--app-font-size-ui-sm,13px)] sm:h-6 sm:text-[length:var(--app-font-size-ui-xs,12px)] [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5",
+        xs: "h-7 gap-1 rounded-sm px-[calc(--spacing(2)-1px)] text-[length:var(--app-font-size-ui-sm,13px)] sm:h-6 sm:text-[length:var(--app-font-size-ui-xs,12px)] [&_svg:not([class*='size-'])]:size-3.5",
       },
     },
   },
 );
 
-const selectTriggerIconClassName = "-me-1 size-4.5 opacity-80 sm:size-4";
+const selectTriggerIconClassName = "-me-1 size-3.5 text-[var(--color-icon-secondary)]";
 
 interface SelectButtonProps extends useRender.ComponentProps<"button"> {
   size?: VariantProps<typeof selectTriggerVariants>["size"];
@@ -68,11 +68,11 @@ function SelectButton({ className, size, variant, render, children, ...props }: 
   const defaultProps = {
     children: (
       <>
-        <span className="flex-1 truncate in-data-placeholder:text-muted-foreground/72">
+        <span className="flex-1 truncate in-data-placeholder:text-muted-foreground">
           {children}
         </span>
         {variant === "ghost" ? (
-          <ChevronDownIcon className="size-3 opacity-50" />
+          <ChevronDownIcon className="size-3.5 text-muted-foreground" />
         ) : (
           <ChevronsUpDownIcon className={selectTriggerIconClassName} />
         )}
@@ -105,7 +105,7 @@ function SelectTrigger({
     >
       {children}
       <SelectPrimitive.Icon data-slot="select-icon">
-        <ChevronDownIcon className="size-3 opacity-50" />
+        <ChevronDownIcon className="size-3.5 text-muted-foreground" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );
@@ -205,7 +205,7 @@ function SelectPopup({
               )}
               data-slot="select-scroll-up-arrow"
             >
-              <ChevronUpIcon className="relative size-4.5 sm:size-4" />
+              <ChevronUpIcon className="relative size-3.5 sm:size-3.5" />
             </SelectPrimitive.ScrollUpArrow>
             {/* Keep a hard popup viewport cap so long theme lists can always scroll
                 fully to both edges even when the positioner reports a tight height. */}
@@ -224,7 +224,7 @@ function SelectPopup({
               )}
               data-slot="select-scroll-down-arrow"
             >
-              <ChevronDownIcon className="relative size-4.5 sm:size-4" />
+              <ChevronDownIcon className="relative size-3.5 sm:size-3.5" />
             </SelectPrimitive.ScrollDownArrow>
           </SelectPrimitive.Popup>
         </SelectPrimitive.Positioner>
@@ -234,7 +234,7 @@ function SelectPopup({
 }
 
 const selectItemDefaultClassName =
-  "grid min-h-[1.625rem] in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] cursor-default items-center gap-2 rounded-lg py-px text-[length:var(--app-font-size-ui,14px)] text-[var(--color-text-foreground)] outline-none data-disabled:pointer-events-none data-highlighted:bg-[var(--color-background-button-secondary-hover)] data-highlighted:text-[var(--color-text-foreground)] data-disabled:opacity-64 sm:min-h-6 [&_svg:not([class*='size-'])]:size-3 [&_svg]:pointer-events-none [&_svg]:shrink-0";
+  "grid min-h-[1.625rem] in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] cursor-default items-center gap-2 rounded-lg py-px text-[length:var(--app-font-size-ui,14px)] text-[var(--color-text-foreground)] outline-none data-disabled:pointer-events-none data-highlighted:bg-[var(--color-background-button-secondary-hover)] data-highlighted:text-[var(--color-text-foreground)] data-disabled:opacity-64 sm:min-h-6 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0";
 
 function SelectItem({
   className,

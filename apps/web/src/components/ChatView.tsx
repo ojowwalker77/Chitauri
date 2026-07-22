@@ -250,13 +250,14 @@ import { type NewProjectScriptInput } from "./ProjectScriptsControl";
 import {
   commandForProjectScript,
   nextProjectScriptId,
+  projectScriptCwd,
   projectScriptRuntimeEnv,
   projectScriptIdFromCommand,
   setupProjectScript,
   type ProjectScriptRunOptions,
   type ProjectScriptRunResult,
 } from "~/projectScripts";
-// projectTerminalRunner removed
+import { launchProjectRun } from "~/projectRunLauncher";
 import { newCommandId, newMessageId, newProjectId, newThreadId } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
 // terminalCloseConfirmation removed
@@ -663,7 +664,7 @@ function ComposerControlSkeleton(props: { widthClassName: string }) {
     <div
       aria-hidden="true"
       className={cn(
-        "flex h-8 shrink-0 items-center rounded-md border border-border/50 px-2",
+        "flex h-8 shrink-0 items-center rounded-md border border-border px-2",
         props.widthClassName,
       )}
     >
@@ -677,7 +678,7 @@ function ComposerModelLoadingControl(props: { widthClassName: string }) {
     <div
       aria-label="Loading models"
       className={cn(
-        "flex h-8 shrink-0 items-center gap-2 rounded-md border border-border/50 px-2 text-muted-foreground",
+        "flex h-8 shrink-0 items-center gap-2 rounded-md border border-border px-2 text-muted-foreground",
         props.widthClassName,
       )}
     >
@@ -3304,17 +3305,48 @@ export default function ChatView({
         });
       }
 
-      setThreadError(activeThreadId, `Script "${script.name}" cannot run without a terminal.`);
-      if (options?.throwOnError) {
-        throw new Error(`Script "${script.name}" cannot run without a terminal.`);
+      // Scripts run as server-owned background processes keyed by project, not
+      // in a client terminal. `gitCwd` is the thread's own workspace root, so a
+      // worktree thread runs its scripts against the worktree rather than the
+      // project root.
+      const worktreePath = options?.worktreePath ?? activeThreadWorktreePath;
+      const cwd =
+        options?.cwd ?? gitCwd ?? projectScriptCwd({ project: activeProject, worktreePath });
+      const env = projectScriptRuntimeEnv({
+        project: { cwd: activeProject.cwd },
+        worktreePath,
+        ...(options?.env ? { extraEnv: options.env } : {}),
+      });
+
+      try {
+        const run = await launchProjectRun({
+          api,
+          projectId: activeProject.id,
+          command: script.command,
+          cwd,
+          env,
+          // Setup scripts finish and get out of the way; everything else is
+          // assumed long-running and stays stoppable from the sidebar.
+          oneShot: script.runOnWorktreeCreate,
+        });
+        void queryClient.invalidateQueries({ queryKey: serverQueryKeys.localServers() });
+        return { run };
+      } catch (error) {
+        const description = error instanceof Error ? error.message : "Unable to start the script.";
+        setThreadError(activeThreadId, `Script "${script.name}" failed to start. ${description}`);
+        if (options?.throwOnError) {
+          throw error instanceof Error ? error : new Error(description);
+        }
+        return null;
       }
-      return null;
     },
     [
       activeProject,
       activeThread,
       activeThreadId,
+      activeThreadWorktreePath,
       gitCwd,
+      queryClient,
       setThreadError,
       setLastInvokedScriptByProjectId,
     ],
@@ -7456,7 +7488,7 @@ export default function ChatView({
             )}
           >
             <SidebarHeaderNavigationControls />
-            <span className="text-xs text-muted-foreground/50">No active thread</span>
+            <span className="text-xs text-faint">No active thread</span>
           </div>
         )}
         <div className="flex flex-1 items-center justify-center">
@@ -7999,7 +8031,7 @@ export default function ChatView({
                                 />
                               </svg>
                             ) : (
-                              <ComposerSendArrowIcon aria-hidden="true" className="size-4" />
+                              <ComposerSendArrowIcon aria-hidden="true" className="size-3.5" />
                             )}
                           </Button>
                         )
@@ -8046,10 +8078,10 @@ export default function ChatView({
             <PencilIcon className="size-3.5" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[13px] font-medium text-foreground">
+            <span className="block text-sm font-medium text-foreground">
               {composerDisclosure.label}
             </span>
-            <span className="block truncate text-[11px] text-muted-foreground">
+            <span className="block truncate text-xs text-muted-foreground">
               {composerDisclosureForcedOpen
                 ? "Finish the active agent interaction before collapsing"
                 : composerDisclosure.description}
@@ -8398,7 +8430,7 @@ export default function ChatView({
               type="button"
               size="icon"
               variant="ghost"
-              className="absolute left-2 top-1/2 z-20 -translate-y-1/2 text-white/90 hover:bg-white/10 hover:text-white sm:left-6"
+              className="absolute left-2 top-1/2 z-20 -translate-y-1/2 text-white hover:bg-white/10 hover:text-white sm:left-6"
               aria-label="Previous image"
               onClick={() => {
                 navigateExpandedImage(-1);
@@ -8424,7 +8456,7 @@ export default function ChatView({
               className="max-h-[86vh] max-w-[92vw] select-none rounded-xl border border-panel-border bg-panel object-contain shadow-[0_16px_44px_rgba(0,0,0,0.5)]"
               draggable={false}
             />
-            <p className="mt-2 max-w-[92vw] truncate text-center text-xs text-muted-foreground/80">
+            <p className="mt-2 max-w-[92vw] truncate text-center text-xs text-muted-foreground">
               {expandedImageItem.name}
               {expandedImage.images.length > 1
                 ? ` (${expandedImage.index + 1}/${expandedImage.images.length})`
@@ -8436,7 +8468,7 @@ export default function ChatView({
               type="button"
               size="icon"
               variant="ghost"
-              className="absolute right-2 top-1/2 z-20 -translate-y-1/2 text-white/90 hover:bg-white/10 hover:text-white sm:right-6"
+              className="absolute right-2 top-1/2 z-20 -translate-y-1/2 text-white hover:bg-white/10 hover:text-white sm:right-6"
               aria-label="Next image"
               onClick={() => {
                 navigateExpandedImage(1);

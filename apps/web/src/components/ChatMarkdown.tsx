@@ -821,7 +821,7 @@ function MarkdownCodeBlock({
             size="icon-xs"
             variant="ghost"
           >
-            <TextWrapIcon className="size-3" />
+            <TextWrapIcon className="size-3.5" />
           </IconButton>
           <IconButton
             className="chat-markdown-codeblock__action"
@@ -831,7 +831,7 @@ function MarkdownCodeBlock({
             size="icon-xs"
             variant="ghost"
           >
-            {copied ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}
+            {copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
           </IconButton>
         </div>
       </div>

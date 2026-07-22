@@ -28,7 +28,7 @@ export function PanelStateMessage(props: {
         fill === "full" ? "h-full min-h-0" : "flex-1",
         density === "comfortable"
           ? "p-6 text-sm text-muted-foreground"
-          : "px-5 text-xs text-muted-foreground/70",
+          : "px-5 text-xs text-muted-foreground",
         props.className,
       )}
     >

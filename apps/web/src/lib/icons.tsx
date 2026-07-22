@@ -1,95 +1,101 @@
 import { type CSSProperties, type FC, type SVGProps } from "react";
-import { PiSquareSplitHorizontal, PiSquareSplitVertical } from "react-icons/pi";
-import { RiApps2Line } from "react-icons/ri";
+import {
+  AdjustmentsHorizontalIcon as HeroAdjustmentsHorizontalIcon,
+  ArchiveBoxIcon as HeroArchiveBoxIcon,
+  ArrowDownIcon as HeroArrowDownIcon,
+  ArrowDownTrayIcon as HeroArrowDownTrayIcon,
+  ArrowLeftIcon as HeroArrowLeftIcon,
+  ArrowPathIcon as HeroArrowPathIcon,
+  ArrowRightIcon as HeroArrowRightIcon,
+  ArrowTopRightOnSquareIcon as HeroArrowTopRightOnSquareIcon,
+  ArrowUpIcon as HeroArrowUpIcon,
+  ArrowUpRightIcon as HeroArrowUpRightIcon,
+  ArrowUturnDownIcon as HeroArrowUturnDownIcon,
+  ArrowUturnLeftIcon as HeroArrowUturnLeftIcon,
+  ArrowsPointingInIcon as HeroArrowsPointingInIcon,
+  ArrowsPointingOutIcon as HeroArrowsPointingOutIcon,
+  ArrowsUpDownIcon as HeroArrowsUpDownIcon,
+  Bars3Icon as HeroBars3Icon,
+  BeakerIcon as HeroBeakerIcon,
+  BellIcon as HeroBellIcon,
+  BoltIcon as HeroBoltIcon,
+  BookOpenIcon as HeroBookOpenIcon,
+  BugAntIcon as HeroBugAntIcon,
+  CameraIcon as HeroCameraIcon,
+  ChartBarIcon as HeroChartBarIcon,
+  ChatBubbleOvalLeftIcon as HeroChatBubbleOvalLeftIcon,
+  CheckCircleIcon as HeroCheckCircleIcon,
+  CheckIcon as HeroCheckIcon,
+  ChevronDownIcon as HeroChevronDownIcon,
+  ChevronLeftIcon as HeroChevronLeftIcon,
+  ChevronRightIcon as HeroChevronRightIcon,
+  ChevronUpDownIcon as HeroChevronUpDownIcon,
+  ChevronUpIcon as HeroChevronUpIcon,
+  ClipboardDocumentCheckIcon as HeroClipboardDocumentCheckIcon,
+  ClockIcon as HeroClockIcon,
+  Cog6ToothIcon as HeroCog6ToothIcon,
+  ComputerDesktopIcon as HeroComputerDesktopIcon,
+  CpuChipIcon as HeroCpuChipIcon,
+  DocumentIcon as HeroDocumentIcon,
+  EllipsisHorizontalIcon as HeroEllipsisHorizontalIcon,
+  ExclamationCircleIcon as HeroExclamationCircleIcon,
+  ExclamationTriangleIcon as HeroExclamationTriangleIcon,
+  EyeIcon as HeroEyeIcon,
+  FireIcon as HeroFireIcon,
+  FlagIcon as HeroFlagIcon,
+  FolderIcon as HeroFolderIcon,
+  FolderOpenIcon as HeroFolderOpenIcon,
+  GlobeAltIcon as HeroGlobeAltIcon,
+  HashtagIcon as HeroHashtagIcon,
+  InboxIcon as HeroInboxIcon,
+  InformationCircleIcon as HeroInformationCircleIcon,
+  ListBulletIcon as HeroListBulletIcon,
+  LockClosedIcon as HeroLockClosedIcon,
+  LockOpenIcon as HeroLockOpenIcon,
+  MinusIcon as HeroMinusIcon,
+  MoonIcon as HeroMoonIcon,
+  PaperClipIcon as HeroPaperClipIcon,
+  PlayIcon as HeroPlayIcon,
+  PlusIcon as HeroPlusIcon,
+  RocketLaunchIcon as HeroRocketLaunchIcon,
+  ShareIcon as HeroShareIcon,
+  SparklesIcon as HeroSparklesIcon,
+  StarIcon as HeroStarIcon,
+  StopIcon as HeroStopIcon,
+  SunIcon as HeroSunIcon,
+  SwatchIcon as HeroSwatchIcon,
+  TrashIcon as HeroTrashIcon,
+  TrophyIcon as HeroTrophyIcon,
+  ViewColumnsIcon as HeroViewColumnsIcon,
+  XMarkIcon as HeroXMarkIcon,
+  Squares2X2Icon as HeroSquares2X2Icon,
+  Bars2Icon as HeroBars2Icon,
+  ArrowUturnUpIcon as HeroArrowUturnUpIcon,
+  FolderPlusIcon as HeroFolderPlusIcon,
+  FunnelIcon as HeroFunnelIcon,
+} from "@heroicons/react/24/outline";
+import {
+  StarIcon as HeroSolidStarIcon,
+  StopIcon as HeroSolidStopIcon,
+} from "@heroicons/react/24/solid";
+// Brand marks only. Heroicons ships no logos, so product marks (GitHub, MCP)
+// come from the brand sets — every other glyph in the app is a Heroicon or a
+// Central asset. Do not reach for react-icons for a generic UI icon.
 import { SiGithub } from "react-icons/si";
 import { VscMcp } from "react-icons/vsc";
 import { CentralIcon, type CentralIconVariant } from "./central-icons";
-import type { IconType } from "react-icons";
-import {
-  TbAdjustments as IconAdjustments,
-  TbAlertCircle as IconAlertCircle,
-  TbAlertTriangle as IconAlertTriangle,
-  TbArchive as IconArchive,
-  TbArrowBackUp as IconArrowBackUp,
-  TbArrowDown as IconArrowDown,
-  TbArrowLeft as IconArrowLeft,
-  TbArrowRight as IconArrowRight,
-  TbArrowUp as IconArrowUp,
-  TbArrowUpRight as IconArrowUpRight,
-  TbArrowsUpDown as IconArrowsUpDown,
-  TbBell as IconBell,
-  TbBolt as IconBolt,
-  TbBooks as IconBooks,
-  TbBrain as IconBrain,
-  TbBug as IconBug,
-  TbCamera as IconCamera,
-  TbChartBar as IconChartBar,
-  TbCheck as IconCheck,
-  TbChevronDown as IconChevronDown,
-  TbChevronLeft as IconChevronLeft,
-  TbChevronRight as IconChevronRight,
-  TbChevronUp as IconChevronUp,
-  TbCircleCheck as IconCircleCheck,
-  TbColumns2 as IconColumns2,
-  TbDots as IconDots,
-  TbDownload as IconDownload,
-  TbExternalLink as IconExternalLink,
-  TbEye as IconEye,
-  TbFile as IconFile,
-  TbFlag as IconFlag,
-  TbFlame as IconFlame,
-  TbFlask2 as IconFlask2,
-  TbHash as IconHash,
-  TbFolder as IconFolder,
-  TbFolderOpen as IconFolderOpen,
-  TbHistory as IconHistory,
-  TbInfoCircle as IconInfoCircle,
-  TbInbox as IconInbox,
-  TbLayoutDistributeHorizontal as IconLayoutDistributeHorizontal,
-  TbListCheck as IconListCheck,
-  TbListDetails as IconListDetails,
-  TbLoader2 as IconLoader2,
-  TbLock as IconLock,
-  TbLockOpen as IconLockOpen,
-  TbMaximize as IconMaximize,
-  TbMinimize as IconMinimize,
-  TbMinus as IconMinus,
-  TbDeviceLaptop as IconDeviceLaptop,
-  TbMessageCircle as IconMessageCircle,
-  TbMoon as IconMoon,
-  TbPalette as IconPalette,
-  TbPaperclip as IconPaperclip,
-  TbPlayerPlay as IconPlayerPlay,
-  TbPlayerStop as IconPlayerStop,
-  TbPlayerStopFilled as IconPlayerStopFilled,
-  TbPlus as IconPlus,
-  TbRefresh as IconRefresh,
-  TbRocket as IconRocket,
-  TbRotate2 as IconRotate2,
-  TbSelector as IconSelector,
-  TbSettings as IconSettings,
-  TbShare3 as IconShare3,
-  TbSparkles as IconSparkles,
-  TbStar as IconStar,
-  TbStarFilled as IconStarFilled,
-  TbSun as IconSun,
-  TbTextWrap as IconTextWrap,
-  TbTrash as IconTrash,
-  TbTrophy as IconTrophy,
-  TbWorld as IconWorld,
-  TbX as IconX,
-} from "react-icons/tb";
 
-// Keep the existing icon API stable while the app moves from Lucide to Tabler.
+// Keep the existing icon API stable across icon-set migrations.
 export type LucideIcon = FC<SVGProps<SVGSVGElement>>;
 
-function adaptIcon(Component: IconType): LucideIcon {
-  return function AdaptedIcon({ width, height, ...props }) {
-    // react-icons defaults to 1em; the Tabler components these replaced
-    // rendered 24px. Keep 24 so unsized call sites don't shrink (className
-    // sizing still wins — CSS overrides svg attributes).
+function heroIcon(Component: FC<SVGProps<SVGSVGElement>>): LucideIcon {
+  return function HeroIcon({ width, height, ...props }) {
+    // Heroicons declare no intrinsic size, so an unsized call site would fall
+    // back to the browser's 300x150 default for a viewBox-only <svg>. Pin 24
+    // like the icons these replaced; a `size-*` class still wins, because CSS
+    // beats SVG presentation attributes.
     const size = width ?? height ?? 24;
-    return <Component size={size as number} {...(props as any)} />;
+    return <Component width={size} height={size} {...props} />;
   };
 }
 
@@ -112,9 +118,7 @@ function centralIconWrapper(name: string, variant?: CentralIconVariant): LucideI
   };
 }
 
-export const AppsIcon: LucideIcon = (props) => (
-  <RiApps2Line className={props.className} style={props.style} />
-);
+export const AppsIcon = heroIcon(HeroSquares2X2Icon);
 export const QueueArrow: LucideIcon = centralIconWrapper("reading-list");
 export const SteerIcon: LucideIcon = centralIconWrapper("arrow-corner-down-right");
 export const ComposerSendArrowIcon: LucideIcon = centralIconWrapper("arrow-up");
@@ -122,13 +126,13 @@ export const HandoffIcon: LucideIcon = centralIconWrapper("arrow-left-right");
 export const SkillCubeIcon: LucideIcon = centralIconWrapper("building-blocks");
 export const NewThreadIcon: LucideIcon = centralIconWrapper("compose-pencil");
 export const EraserIcon: LucideIcon = centralIconWrapper("eraser");
-export const ArrowLeftIcon = adaptIcon(IconArrowLeft);
-export const BellIcon = adaptIcon(IconBell);
-export const ArrowRightIcon = adaptIcon(IconArrowRight);
-export const ArrowDownIcon = adaptIcon(IconArrowDown);
-export const ArrowUpIcon = adaptIcon(IconArrowUp);
-export const ArrowUpRightIcon = adaptIcon(IconArrowUpRight);
-export const ArrowUpDownIcon = adaptIcon(IconArrowsUpDown);
+export const ArrowLeftIcon = heroIcon(HeroArrowLeftIcon);
+export const BellIcon = heroIcon(HeroBellIcon);
+export const ArrowRightIcon = heroIcon(HeroArrowRightIcon);
+export const ArrowDownIcon = heroIcon(HeroArrowDownIcon);
+export const ArrowUpIcon = heroIcon(HeroArrowUpIcon);
+export const ArrowUpRightIcon = heroIcon(HeroArrowUpRightIcon);
+export const ArrowUpDownIcon = heroIcon(HeroArrowsUpDownIcon);
 // Single source for the robot/agent glyph. Sourced from the Central icon set so
 // every robot affordance (reasoning rows, agent-task rows, agent mention chips,
 // subagent menus, agent-activity headers) renders one identical icon. Use
@@ -136,16 +140,16 @@ export const ArrowUpDownIcon = adaptIcon(IconArrowsUpDown);
 // createCentralIconElement.
 export const AGENT_ROBOT_ICON_NAME = "robot";
 export const BotIcon: LucideIcon = centralIconWrapper(AGENT_ROBOT_ICON_NAME);
-export const BugIcon = adaptIcon(IconBug);
-export const CameraIcon = adaptIcon(IconCamera);
-export const CheckIcon = adaptIcon(IconCheck);
-export const ChevronDownIcon = adaptIcon(IconChevronDown);
-export const ChevronLeftIcon = adaptIcon(IconChevronLeft);
-export const ChevronRightIcon = adaptIcon(IconChevronRight);
-export const ChevronUpIcon = adaptIcon(IconChevronUp);
-export const ChevronsUpDownIcon = adaptIcon(IconSelector);
-export const CircleAlertIcon = adaptIcon(IconAlertCircle);
-export const CircleCheckIcon = adaptIcon(IconCircleCheck);
+export const BugIcon = heroIcon(HeroBugAntIcon);
+export const CameraIcon = heroIcon(HeroCameraIcon);
+export const CheckIcon = heroIcon(HeroCheckIcon);
+export const ChevronDownIcon = heroIcon(HeroChevronDownIcon);
+export const ChevronLeftIcon = heroIcon(HeroChevronLeftIcon);
+export const ChevronRightIcon = heroIcon(HeroChevronRightIcon);
+export const ChevronUpIcon = heroIcon(HeroChevronUpIcon);
+export const ChevronsUpDownIcon = heroIcon(HeroChevronUpDownIcon);
+export const CircleAlertIcon = heroIcon(HeroExclamationCircleIcon);
+export const CircleCheckIcon = heroIcon(HeroCheckCircleIcon);
 // Completed/success status glyph sourced from the Central set so it sits in the
 // same visual language as the other trailing thread-row icons (worktree, fork,
 // pull-request) instead of the react-icons outline check it replaced.
@@ -157,38 +161,41 @@ export const CircleQuestionIcon: LucideIcon = centralIconWrapper("circle-questio
 export const ArrowUpCircleIcon: LucideIcon = centralIconWrapper("arrow-up-circle");
 export const CloudUploadIcon = centralIconWrapper("cloud-upload");
 export const CloudSyncIcon = centralIconWrapper("cloud-sync");
-export const Columns2Icon = adaptIcon(IconColumns2);
+export const Columns2Icon = heroIcon(HeroViewColumnsIcon);
 export const ChangesIcon = centralIconWrapper("changes");
 export const CopyIcon = centralIconWrapper("square-behind-square-6");
 export const LinkIcon = centralIconWrapper("chain-link-3");
 export const DiffIcon = centralIconWrapper("difference-modified");
-export const DownloadIcon = adaptIcon(IconDownload);
-export const FlameIcon = adaptIcon(IconFlame);
-export const TrophyIcon = adaptIcon(IconTrophy);
+export const DownloadIcon = heroIcon(HeroArrowDownTrayIcon);
+export const FlameIcon = heroIcon(HeroFireIcon);
+export const TrophyIcon = heroIcon(HeroTrophyIcon);
 // The clock doubles as the automation glyph everywhere it appears (meta chip,
 // Automations nav, slash command, created card, environment section), so it is
 // sourced from the Central icon set rather than the Tabler stroke icon.
 export const ClockIcon = centralIconWrapper("clock");
-export const ChartBarIcon = adaptIcon(IconChartBar);
-export const ShareIcon = adaptIcon(IconShare3);
-export const SparklesIcon = adaptIcon(IconSparkles);
-export const HashIcon = adaptIcon(IconHash);
-export const InboxIcon = adaptIcon(IconInbox);
-export const EllipsisIcon = adaptIcon(IconDots);
-export const ExternalLinkIcon = adaptIcon(IconExternalLink);
-export const EyeIcon = adaptIcon(IconEye);
-export const PaletteIcon = adaptIcon(IconPalette);
-export const PaperclipIcon = adaptIcon(IconPaperclip);
-export const AdjustmentsIcon = adaptIcon(IconAdjustments);
-export const ArchiveIcon = adaptIcon(IconArchive);
-export const BooksIcon = adaptIcon(IconBooks);
-export const BrainIcon = adaptIcon(IconBrain);
-export const FileIcon = adaptIcon(IconFile);
-export const FlagIcon = adaptIcon(IconFlag);
-export const FlaskConicalIcon = adaptIcon(IconFlask2);
-export const FolderClosedIcon = adaptIcon(IconFolder);
-export const FolderIcon = adaptIcon(IconFolder);
-export const FolderOpenIcon = adaptIcon(IconFolderOpen);
+export const ChartBarIcon = heroIcon(HeroChartBarIcon);
+export const ShareIcon = heroIcon(HeroShareIcon);
+export const SparklesIcon = heroIcon(HeroSparklesIcon);
+export const HashIcon = heroIcon(HeroHashtagIcon);
+export const InboxIcon = heroIcon(HeroInboxIcon);
+export const EllipsisIcon = heroIcon(HeroEllipsisHorizontalIcon);
+export const ExternalLinkIcon = heroIcon(HeroArrowTopRightOnSquareIcon);
+export const EyeIcon = heroIcon(HeroEyeIcon);
+export const PaletteIcon = heroIcon(HeroSwatchIcon);
+export const PaperclipIcon = heroIcon(HeroPaperClipIcon);
+export const AdjustmentsIcon = heroIcon(HeroAdjustmentsHorizontalIcon);
+export const ArchiveIcon = heroIcon(HeroArchiveBoxIcon);
+export const BooksIcon = heroIcon(HeroBookOpenIcon);
+export const BrainIcon = heroIcon(HeroCpuChipIcon);
+export const FileIcon = heroIcon(HeroDocumentIcon);
+export const FlagIcon = heroIcon(HeroFlagIcon);
+export const FlaskConicalIcon = heroIcon(HeroBeakerIcon);
+export const FolderClosedIcon = heroIcon(HeroFolderIcon);
+export const FolderIcon = heroIcon(HeroFolderIcon);
+export const FolderOpenIcon = heroIcon(HeroFolderOpenIcon);
+export const FolderPlusIcon = heroIcon(HeroFolderPlusIcon);
+export const FilterIcon = heroIcon(HeroFunnelIcon);
+export const CornerLeftUpIcon = heroIcon(HeroArrowUturnUpIcon);
 // Stacked "folders" glyph used as the single representation of a file tree /
 // explorer surface (right-dock explorer, editor Files activity, diff file-tree
 // toggle). Central "reversed" outline asset so it matches the rest of the chrome.
@@ -203,7 +210,7 @@ export const GitHubIcon: LucideIcon = (props) => (
   <SiGithub className={props.className} style={props.style} />
 );
 export const GitPullRequestIcon = centralIconWrapper("pull-request");
-export const GlobeIcon = adaptIcon(IconWorld);
+export const GlobeIcon = heroIcon(HeroGlobeAltIcon);
 export const WebSearchIcon: LucideIcon = centralIconWrapper("globe");
 export const McpIcon: LucideIcon = (props) => (
   <VscMcp className={props.className} style={props.style} />
@@ -213,19 +220,19 @@ export const PluginIcon: LucideIcon = centralIconWrapper("puzzle");
 // Sourced from the Central set so it matches the other work-row icons (pencil,
 // terminal, skill cube) it sits beside, instead of the Tabler wrench it used to be.
 export const HammerIcon: LucideIcon = centralIconWrapper("hammer");
-export const HistoryIcon = adaptIcon(IconHistory);
-export const InfoIcon = adaptIcon(IconInfoCircle);
-export const ListChecksIcon = adaptIcon(IconListCheck);
-export const ListTodoIcon = adaptIcon(IconListDetails);
-export const Loader2Icon = adaptIcon(IconLoader2);
-export const LoaderCircleIcon = adaptIcon(IconLoader2);
-export const LoaderIcon = adaptIcon(IconLoader2);
-export const LockIcon = adaptIcon(IconLock);
-export const LockOpenIcon = adaptIcon(IconLockOpen);
-export const Maximize2 = adaptIcon(IconMaximize);
-export const Minimize2 = adaptIcon(IconMinimize);
-export const MessageCircleIcon = adaptIcon(IconMessageCircle);
-export const MinusIcon = adaptIcon(IconMinus);
+export const HistoryIcon = heroIcon(HeroClockIcon);
+export const InfoIcon = heroIcon(HeroInformationCircleIcon);
+export const ListChecksIcon = heroIcon(HeroClipboardDocumentCheckIcon);
+export const ListTodoIcon = heroIcon(HeroListBulletIcon);
+export const Loader2Icon = heroIcon(HeroArrowPathIcon);
+export const LoaderCircleIcon = heroIcon(HeroArrowPathIcon);
+export const LoaderIcon = heroIcon(HeroArrowPathIcon);
+export const LockIcon = heroIcon(HeroLockClosedIcon);
+export const LockOpenIcon = heroIcon(HeroLockOpenIcon);
+export const Maximize2 = heroIcon(HeroArrowsPointingOutIcon);
+export const Minimize2 = heroIcon(HeroArrowsPointingInIcon);
+export const MessageCircleIcon = heroIcon(HeroChatBubbleOvalLeftIcon);
+export const MinusIcon = heroIcon(HeroMinusIcon);
 export const ChatBubbleIcon: LucideIcon = centralIconWrapper("bubble-text");
 export const MicIcon: LucideIcon = centralIconWrapper("microphone");
 export const SidebarHiddenLeftWideIcon = centralIconWrapper("sidebar-hidden-left-wide");
@@ -240,38 +247,34 @@ export const PinIcon: LucideIcon = centralIconWrapper("pin");
 // Solid pin from the fill set — used wherever a pin reflects "pinned" status
 // (project + thread rows and their hover cards) rather than a neutral action.
 export const PinFilledIcon: LucideIcon = centralIconWrapper("pin", "fill");
-export const PlayIcon = adaptIcon(IconPlayerPlay);
-export const Plus = adaptIcon(IconPlus);
-export const PlusIcon = adaptIcon(IconPlus);
-export const RefreshCwIcon = adaptIcon(IconRefresh);
-export const RocketIcon = adaptIcon(IconRocket);
-export const RotateCcwIcon = adaptIcon(IconRotate2);
-export const Rows3Icon = adaptIcon(IconLayoutDistributeHorizontal);
+export const PlayIcon = heroIcon(HeroPlayIcon);
+export const Plus = heroIcon(HeroPlusIcon);
+export const PlusIcon = heroIcon(HeroPlusIcon);
+export const RefreshCwIcon = heroIcon(HeroArrowPathIcon);
+export const RocketIcon = heroIcon(HeroRocketLaunchIcon);
+export const RotateCcwIcon = heroIcon(HeroArrowUturnLeftIcon);
+export const Rows3Icon = heroIcon(HeroBars3Icon);
 export const SearchIcon: LucideIcon = centralIconWrapper("magnifying-glass");
-export const SettingsIcon = adaptIcon(IconSettings);
-export const StarIcon = adaptIcon(IconStar);
-export const StarFilledIcon = adaptIcon(IconStarFilled);
-export const SunIcon = adaptIcon(IconSun);
-export const MoonIcon = adaptIcon(IconMoon);
-export const DeviceLaptopIcon = adaptIcon(IconDeviceLaptop);
-export const StopIcon = adaptIcon(IconPlayerStop);
-export const StopFilledIcon = adaptIcon(IconPlayerStopFilled);
-export const SquareSplitHorizontal: LucideIcon = (props) => (
-  <PiSquareSplitHorizontal className={props.className} style={props.style} />
-);
-export const SquareSplitVertical: LucideIcon = (props) => (
-  <PiSquareSplitVertical className={props.className} style={props.style} />
-);
+export const SettingsIcon = heroIcon(HeroCog6ToothIcon);
+export const StarIcon = heroIcon(HeroStarIcon);
+export const StarFilledIcon = heroIcon(HeroSolidStarIcon);
+export const SunIcon = heroIcon(HeroSunIcon);
+export const MoonIcon = heroIcon(HeroMoonIcon);
+export const DeviceLaptopIcon = heroIcon(HeroComputerDesktopIcon);
+export const StopIcon = heroIcon(HeroStopIcon);
+export const StopFilledIcon = heroIcon(HeroSolidStopIcon);
+export const SquareSplitHorizontal = heroIcon(HeroViewColumnsIcon);
+export const SquareSplitVertical = heroIcon(HeroBars2Icon);
 export const TerminalIcon = centralIconWrapper("console");
 export const TerminalSquare = centralIconWrapper("console");
 export const TerminalSquareIcon = centralIconWrapper("console");
-export const TextWrapIcon = adaptIcon(IconTextWrap);
-export const Trash2 = adaptIcon(IconTrash);
-export const TriangleAlertIcon = adaptIcon(IconAlertTriangle);
-export const Undo2Icon = adaptIcon(IconArrowBackUp);
+export const TextWrapIcon = heroIcon(HeroArrowUturnDownIcon);
+export const Trash2 = heroIcon(HeroTrashIcon);
+export const TriangleAlertIcon = heroIcon(HeroExclamationTriangleIcon);
+export const Undo2Icon = heroIcon(HeroArrowUturnLeftIcon);
 export const WorktreeIcon = centralIconWrapper("arrow-split-right");
-export const XIcon = adaptIcon(IconX);
-export const ZapIcon = adaptIcon(IconBolt);
+export const XIcon = heroIcon(HeroXMarkIcon);
+export const ZapIcon = heroIcon(HeroBoltIcon);
 // Single source for the fast-mode glyph. Every fast-mode affordance (composer
 // trait badges, the Speed submenu, the /fast command) renders this one solid
 // lightning bolt from the Central fill set instead of mixing Tabler/Ionicons bolts.

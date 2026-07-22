@@ -22,7 +22,7 @@ const FILE_ROW_FOCUS_BLOCK_CLASS_NAME =
  * Keyboard focus mirrors the selected block (see the active-block note above).
  */
 export const FILE_ROW_BASE_CLASS_NAME = cn(
-  "flex w-full min-w-0 cursor-pointer items-center gap-1.5 rounded-md text-left text-[12px] transition-colors",
+  "flex w-full min-w-0 cursor-pointer items-center gap-1.5 rounded-md text-left text-xs transition-colors",
   "focus-visible:outline-none",
   FILE_ROW_FOCUS_BLOCK_CLASS_NAME,
 );
@@ -31,7 +31,7 @@ export const FILE_ROW_BASE_CLASS_NAME = cn(
 export function fileRowToneClassName(selected: boolean): string {
   return selected
     ? FILE_ROW_SELECTED_BLOCK_CLASS_NAME
-    : "text-foreground/78 hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground";
+    : "text-muted-foreground hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground";
 }
 
 /** Full file-row button className. Pass per-surface extras (height/padding) via `className`. */

@@ -54,7 +54,7 @@ export const ComposerImageAttachmentChip = memo(function ComposerImageAttachment
                 className="size-5 shrink-0 rounded-md"
               />
             ) : (
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted text-[9px] font-semibold text-muted-foreground">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
                 {(image.source.appName || "A").slice(0, 1).toUpperCase()}
               </span>
             )}
@@ -62,7 +62,7 @@ export const ComposerImageAttachmentChip = memo(function ComposerImageAttachment
               <span className="block truncate text-xs font-medium text-foreground">
                 {sourceTitle}
               </span>
-              <span className="block truncate text-[11px] text-muted-foreground">
+              <span className="block truncate text-xs text-muted-foreground">
                 {image.source.appName || "AppSnap"}
               </span>
             </span>
@@ -101,7 +101,7 @@ export const ComposerImageAttachmentChip = memo(function ComposerImageAttachment
         {image.previewUrl ? (
           <img src={image.previewUrl} alt={image.name} className="size-full object-cover" />
         ) : (
-          <span className="flex size-full items-center justify-center text-[11px] font-medium text-muted-foreground/70">
+          <span className="flex size-full items-center justify-center text-xs font-medium text-muted-foreground">
             IMG
           </span>
         )}

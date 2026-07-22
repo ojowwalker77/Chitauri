@@ -226,7 +226,7 @@ export const ProjectPicker = memo(function ProjectPicker({
         {selectedFolderOption.primaryLabel}
       </span>
       {selectedFolderOption.secondaryLabel ? (
-        <span className="min-w-0 truncate text-muted-foreground/60 text-xs">
+        <span className="min-w-0 truncate text-faint text-xs">
           {selectedFolderOption.secondaryLabel}
         </span>
       ) : null}
@@ -393,14 +393,12 @@ export const ProjectPicker = memo(function ProjectPicker({
         )}
       >
         <div className="flex min-w-0 items-center gap-2">
-          <FolderClosed className="size-3.5 shrink-0 text-muted-foreground/70" />
+          <FolderClosed className="size-3.5 shrink-0 text-muted-foreground" />
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-baseline gap-1.5">
               <span className="min-w-0 truncate">{folder.primaryLabel}</span>
               {folder.secondaryLabel ? (
-                <span className="min-w-0 truncate text-muted-foreground/60 text-xs">
-                  {folder.secondaryLabel}
-                </span>
+                <span className="min-w-0 truncate text-faint text-xs">{folder.secondaryLabel}</span>
               ) : null}
             </div>
           </div>
@@ -443,7 +441,7 @@ export const ProjectPicker = memo(function ProjectPicker({
                 onClick={() => void handleAddNewProject()}
                 disabled={isPicking}
               >
-                <PlusIcon className="size-3.5 shrink-0 text-muted-foreground/70" />
+                <PlusIcon className="size-3.5 shrink-0 text-muted-foreground" />
                 <span className="truncate">
                   {isPicking ? loadingAddProjectLabel : addProjectLabel}
                 </span>
@@ -454,7 +452,7 @@ export const ProjectPicker = memo(function ProjectPicker({
                   className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm transition-colors hover:bg-[var(--color-background-elevated-secondary)] hover:text-[var(--color-text-foreground)]"
                   onClick={handleResetToHome}
                 >
-                  <XIcon className="size-3.5 shrink-0 text-muted-foreground/70" />
+                  <XIcon className="size-3.5 shrink-0 text-muted-foreground" />
                   <span className="truncate">
                     {isProjectSelectionMode ? "Use Home Chat" : "Use home folder"}
                   </span>
@@ -509,7 +507,7 @@ export const ProjectPicker = memo(function ProjectPicker({
                     )}
                   >
                     <div className="flex min-w-0 items-center gap-2">
-                      <FolderClosed className="size-3.5 shrink-0 text-muted-foreground/70" />
+                      <FolderClosed className="size-3.5 shrink-0 text-muted-foreground" />
                       <span className="truncate">{entry.name}</span>
                     </div>
                   </ComboboxItem>

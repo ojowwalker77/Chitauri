@@ -15,6 +15,7 @@ function task(
     workerId,
     requesterWorkerId: null,
     requesterTaskId: null,
+    requesterThreadId: null,
     title,
     brief: `${title} brief`,
     status,

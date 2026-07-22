@@ -30,13 +30,13 @@ export function showConfirmDialogFallback(message: string): Promise<boolean> {
     header.className = "flex flex-col gap-1.5 px-4 py-3.5 text-center sm:text-left";
 
     const titleEl = document.createElement("h2");
-    titleEl.className = "font-heading font-semibold text-base leading-snug";
+    titleEl.className = "font-medium text-base leading-tight";
     titleEl.textContent = title;
     header.appendChild(titleEl);
 
     if (description) {
       const descEl = document.createElement("p");
-      descEl.className = "text-muted-foreground text-[13px] leading-5";
+      descEl.className = "text-muted-foreground text-sm leading-5";
       descEl.textContent = description;
       header.appendChild(descEl);
     }
@@ -72,7 +72,7 @@ export function showConfirmDialogFallback(message: string): Promise<boolean> {
     cancelBtn.type = "button";
     cancelBtn.textContent = "Cancel";
     cancelBtn.className =
-      "inline-flex h-8 min-w-20 cursor-pointer items-center justify-center whitespace-nowrap rounded-md border border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] px-3 text-[13px] font-medium text-[var(--color-text-foreground)] outline-none transition-colors hover:bg-[var(--color-background-elevated-secondary)] focus-visible:ring-1 focus-visible:ring-ring/60";
+      "inline-flex h-8 min-w-20 cursor-pointer items-center justify-center whitespace-nowrap rounded-md border border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] px-3 text-sm font-medium text-[var(--color-text-foreground)] outline-none transition-colors hover:bg-[var(--color-background-elevated-secondary)] focus-visible:ring-1 focus-visible:ring-ring/60";
     cancelBtn.addEventListener("click", () => cleanup(false));
 
     // Confirm button mirrors the chat send action's foreground-on-background treatment.
@@ -80,7 +80,7 @@ export function showConfirmDialogFallback(message: string): Promise<boolean> {
     confirmBtn.type = "button";
     confirmBtn.textContent = "Confirm";
     confirmBtn.className =
-      "inline-flex h-8 min-w-20 cursor-pointer items-center justify-center whitespace-nowrap rounded-md border border-foreground bg-foreground px-3 text-[13px] font-medium text-background outline-none transition-[scale,background-color] duration-press ease-out hover:scale-[1.02] hover:bg-foreground/92 active:scale-[0.96] focus-visible:ring-1 focus-visible:ring-ring/60 motion-reduce:transition-none motion-reduce:active:scale-100";
+      "inline-flex h-8 min-w-20 cursor-pointer items-center justify-center whitespace-nowrap rounded-md border border-foreground bg-foreground px-3 text-sm font-medium text-background outline-none transition-[scale,background-color] duration-press ease-out hover:scale-[1.02] hover:bg-foreground/92 active:scale-[0.96] focus-visible:ring-1 focus-visible:ring-ring/60 motion-reduce:transition-none motion-reduce:active:scale-100";
 
     confirmBtn.addEventListener("click", () => cleanup(true));
 

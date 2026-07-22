@@ -145,7 +145,7 @@ export function SettingsRow({
             </span>
           </div>
           <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>{description}</p>
-          {status ? <div className="pt-1 text-[11px] text-muted-foreground">{status}</div> : null}
+          {status ? <div className="pt-1 text-xs text-muted-foreground">{status}</div> : null}
         </div>
         {control ? (
           <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto sm:justify-end">

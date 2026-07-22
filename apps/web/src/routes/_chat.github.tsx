@@ -163,12 +163,12 @@ function WorkListRow({
       <ItemGlyph item={item} />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
             {item.title}
           </span>
           <StatusDot status={item.checkStatus} />
         </span>
-        <span className="mt-1 flex items-center gap-1.5 text-[11px] tabular-nums text-muted-foreground">
+        <span className="mt-1 flex items-center gap-1.5 text-xs tabular-nums text-muted-foreground">
           <span>#{item.number}</span>
           <span aria-hidden="true">·</span>
           <span className="truncate">{formatRelativeTime(item.updatedAt)}</span>
@@ -218,7 +218,7 @@ function EmptyList({ loading, error }: { loading: boolean; error: unknown }) {
   }
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-10 text-center text-xs text-muted-foreground">
-      <CheckCircle2Icon className="size-5 text-success/80" />
+      <CheckCircle2Icon className="size-5 text-success" />
       <p>No matching GitHub work.</p>
     </div>
   );
@@ -249,10 +249,10 @@ function DetailHeader({
         <ArrowLeftIcon />
       </Button>
       <ItemGlyph item={detail.item} />
-      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
         {detail.item.title}
       </span>
-      <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
         #{detail.item.number}
       </span>
       <Badge variant={workItemStateTone(detail.item)} size="sm" className="shrink-0">
@@ -326,7 +326,7 @@ function MetaRow({
   children: ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3 py-1 text-[13px]">
+    <div className="flex items-center gap-3 py-1 text-sm">
       <span className="flex w-28 shrink-0 items-center gap-2 text-muted-foreground">
         <Icon className="size-3.5" />
         {label}
@@ -341,10 +341,8 @@ function MetaRow({
 function DetailHero({ item }: { item: GitHubWorkItemSummary }) {
   return (
     <header>
-      <h1 className="text-[22px] font-semibold leading-7 tracking-[-0.01em] text-foreground">
-        {item.title}
-      </h1>
-      <p className="mt-1.5 flex items-center gap-1.5 text-[13px] text-muted-foreground">
+      <h1 className="text-2xl font-semibold leading-7 text-foreground">{item.title}</h1>
+      <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
         {item.author?.avatarUrl ? (
           <img src={item.author.avatarUrl} alt="" className="size-4 rounded-full" />
         ) : null}
@@ -379,7 +377,7 @@ function SummaryView({
           <>
             <MetaRow icon={GitBranchIcon} label="Branch">
               <span className="truncate">{detail.headBranch ?? "?"}</span>
-              <ChevronRightIcon className="size-3 shrink-0 text-faint" />
+              <ChevronRightIcon className="size-3.5 shrink-0 text-faint" />
               <span className="shrink-0">{detail.baseBranch ?? "?"}</span>
               {item.additions != null || item.deletions != null ? (
                 <span className="ml-1 shrink-0 tabular-nums">
@@ -429,7 +427,7 @@ function SummaryView({
       {detail.checks.length > 0 ? (
         <section>
           <WorkbenchSectionLabel className="mb-2">Checks</WorkbenchSectionLabel>
-          <div className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70">
+          <div className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border">
             {detail.checks.map((check) => (
               <div
                 key={`${check.name}:${check.url ?? ""}`}
@@ -451,7 +449,7 @@ function SummaryView({
                     {rerunningCheckId === check.runId ? (
                       <Spinner className="size-3" />
                     ) : (
-                      <RefreshCwIcon className="size-3" />
+                      <RefreshCwIcon className="size-3.5" />
                     )}
                     Rerun
                   </Button>
@@ -518,7 +516,7 @@ function TimelineView({ detail, cwd }: { detail: GitHubWorkItemDetail; cwd: stri
   return (
     <div className="mx-auto w-full max-w-4xl space-y-3 px-5 py-5">
       {detail.timeline.map((entry) => (
-        <article key={entry.id} className="rounded-xl border border-border/70 p-4">
+        <article key={entry.id} className="rounded-xl border border-border p-4">
           <header className="mb-2 flex items-center gap-2 text-xs">
             {entry.type === "comment" ? (
               <MessageCircleIcon className="size-3.5" />
@@ -612,7 +610,7 @@ function ActionComposer({
 }) {
   const [body, setBody] = useState("");
   return (
-    <div className="border-t border-border/70 bg-background/95 p-3">
+    <div className="border-t border-border bg-background p-3">
       <Textarea
         autoFocus
         size="sm"
@@ -959,8 +957,8 @@ function GitHubWorkbenchRoute() {
             )}
           >
             <SidebarHeaderNavigationControls />
-            <GitHubIcon className="size-4 text-foreground" />
-            <span className="text-[14px] font-[590] tracking-[-0.005em]">Git Workbench</span>
+            <GitHubIcon className="size-3.5 text-foreground" />
+            <span className="text-base font-medium">Git Workbench</span>
             <RepositoryProjectFilter
               ariaLabel="Git Workbench repository"
               projects={attachedProjects}
@@ -1033,7 +1031,7 @@ function GitHubWorkbenchRoute() {
                     onValueChange={changeView}
                   />
                 </WorkbenchRow>
-                <div className="border-b border-border/70 p-3">
+                <div className="border-b border-border p-3">
                   <SearchInput
                     type="search"
                     value={query}
@@ -1045,7 +1043,7 @@ function GitHubWorkbenchRoute() {
                   {repositoryGroups.length > 0 ? (
                     repositoryGroups.map((group) => (
                       <section key={group.repository.nameWithOwner} className="mb-2 last:mb-0">
-                        <h2 className="sticky top-0 z-10 truncate bg-background px-2.5 pb-1.5 pt-1 text-[11px] font-medium text-muted-foreground">
+                        <h2 className="sticky top-0 z-10 truncate bg-background px-2.5 pb-1.5 pt-1 text-xs font-medium text-muted-foreground">
                           {group.repository.nameWithOwner}
                         </h2>
                         {group.items.map((item) => (
@@ -1067,7 +1065,7 @@ function GitHubWorkbenchRoute() {
                   )}
                 </div>
                 {listSyncedAt ? (
-                  <div className="shrink-0 border-t border-border/70 px-3 py-2 text-[11px] tabular-nums text-muted-foreground">
+                  <div className="shrink-0 border-t border-border px-3 py-2 text-xs tabular-nums text-muted-foreground">
                     {visibleItems.length} items · synced {formatRelativeTime(listSyncedAt)}
                   </div>
                 ) : null}
@@ -1076,7 +1074,7 @@ function GitHubWorkbenchRoute() {
               <WorkbenchDetailPane hidden={selectedItem === null}>
                 {!selectedItem ? (
                   <div className="flex h-full flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
-                    <GitHubIcon className="size-6 opacity-50" />
+                    <GitHubIcon className="size-5 text-muted-foreground" />
                     Select a pull request or issue.
                   </div>
                 ) : detailQuery.isPending && !detail ? (

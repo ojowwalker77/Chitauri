@@ -33,17 +33,17 @@ const IDENTITY_TONE: Record<LocalServerIdentityTone, LocalServerIdentityToneToke
   menu: {
     primary:
       "text-[length:var(--app-font-size-ui,14px)] font-medium text-[var(--color-text-foreground)]",
-    meta: "text-[length:var(--app-font-size-ui-xs,12px)] text-muted-foreground/65",
+    meta: "text-[length:var(--app-font-size-ui-xs,12px)] text-muted-foreground",
     address: "tabular-nums",
-    separator: "text-muted-foreground/30",
-    folder: "text-muted-foreground/45",
+    separator: "text-faint",
+    folder: "text-faint",
   },
   browser: {
-    primary: "text-[14px] font-semibold text-white",
-    meta: "text-[12px] text-white/35",
+    primary: "text-base font-semibold text-white",
+    meta: "text-xs text-white",
     address: "",
-    separator: "text-white/20",
-    folder: "text-white/30",
+    separator: "text-white",
+    folder: "text-white",
   },
 };
 

@@ -71,9 +71,9 @@ function ProviderModelRadioItem(
                 : `Add ${modelOption.name} to favourites`
             }
             className={cn(
-              "inline-flex size-5 shrink-0 items-center justify-center text-muted-foreground/50 transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_5%,transparent)] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/60",
+              "inline-flex size-5 shrink-0 items-center justify-center text-faint transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_5%,transparent)] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/60",
               COMPOSER_PICKER_RADIUS_CLASS_NAME,
-              isFavorite && "text-foreground hover:text-foreground/80",
+              isFavorite && "text-foreground hover:text-foreground",
             )}
             onClick={(event) => {
               event.preventDefault();
@@ -85,9 +85,9 @@ function ProviderModelRadioItem(
             }}
           >
             {isFavorite ? (
-              <StarFilledIcon aria-hidden="true" className="size-3" />
+              <StarFilledIcon aria-hidden="true" className="size-3.5" />
             ) : (
-              <StarIcon aria-hidden="true" className="size-3" />
+              <StarIcon aria-hidden="true" className="size-3.5" />
             )}
           </button>
         ) : null
@@ -124,7 +124,10 @@ function CollapsibleModelGroup(
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="px-0.5">
       <CollapsibleTrigger
-        className={cn(COMPOSER_PICKER_MODEL_GROUP_HEADER_CLASS_NAME, open && "text-foreground/75")}
+        className={cn(
+          COMPOSER_PICKER_MODEL_GROUP_HEADER_CLASS_NAME,
+          open && "text-muted-foreground",
+        )}
         onPointerDown={(event) => {
           event.stopPropagation();
         }}
@@ -133,7 +136,7 @@ function CollapsibleModelGroup(
         <span className="col-start-2 min-w-0 truncate normal-case tracking-normal">
           {props.group.label}
         </span>
-        <span className="col-start-3 shrink-0 justify-self-end rounded-full bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)] px-1.5 py-px text-[11px] font-normal tabular-nums normal-case tracking-normal text-muted-foreground/70">
+        <span className="col-start-3 shrink-0 justify-self-end rounded-full bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)] px-1.5 py-px text-xs font-normal tabular-nums normal-case tracking-normal text-muted-foreground">
           {props.group.options.length}
         </span>
       </CollapsibleTrigger>

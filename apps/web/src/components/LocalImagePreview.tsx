@@ -115,7 +115,7 @@ export function LocalImageErrorCard(props: {
   return (
     <span className={cn("local-image-error", props.className)}>
       <span className="local-image-error__icon" aria-hidden="true">
-        <TriangleAlertIcon className="size-4" />
+        <TriangleAlertIcon className="size-3.5" />
       </span>
       <span className="local-image-error__body">
         <span className="local-image-error__title">Couldn’t open this image</span>
@@ -167,7 +167,7 @@ export function LocalImagePreview(props: {
     <div className={cn("local-image-preview", props.className)} data-status={status}>
       {status === "loading" ? (
         <span className="local-image-preview__skeleton" aria-hidden="true">
-          <Loader2Icon className="size-4 animate-spin opacity-60" />
+          <Loader2Icon className="size-3.5 animate-spin text-muted-foreground" />
         </span>
       ) : null}
       <img

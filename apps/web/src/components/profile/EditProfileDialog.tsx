@@ -121,10 +121,12 @@ export function EditProfileDialog({
                 aria-label="Edit avatar"
                 className={cn(
                   "absolute bottom-0 end-0 flex size-7 items-center justify-center rounded-full",
-                  "bg-black/45 text-white backdrop-blur-sm transition-colors hover:bg-black/60",
+                  // Opaque: this badge overlaps the avatar image, so a translucent
+                  // fill would take its contrast from whatever the user uploaded.
+                  "border border-panel-border bg-panel text-foreground transition-colors hover:bg-[var(--hover)]",
                 )}
               >
-                <CentralIcon name="pencil" className="size-3 opacity-100" />
+                <CentralIcon name="pencil" className="size-3.5" />
               </button>
             </div>
 
@@ -200,7 +202,7 @@ export function EditProfileDialog({
           </div>
 
           {/* Fields */}
-          <div className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60">
+          <div className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border">
             <Field label="Display name">
               <InputGroup className={fieldControlClassName}>
                 <InputGroupInput

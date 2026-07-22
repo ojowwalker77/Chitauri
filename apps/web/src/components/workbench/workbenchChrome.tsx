@@ -38,7 +38,7 @@ export function WorkbenchRow({
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center gap-2 border-b border-border/70",
+        "flex shrink-0 items-center gap-2 border-b border-border",
         WORKBENCH_ROW_HEIGHT_CLASS_NAME,
         WORKBENCH_ROW_PADDING_X_CLASS_NAME,
         className,
@@ -65,7 +65,7 @@ export function WorkbenchListPane({
   return (
     <aside
       className={cn(
-        "w-[340px] min-w-[280px] max-w-[42%] shrink-0 flex-col border-r border-border/70 max-md:w-full max-md:max-w-full",
+        "w-[340px] min-w-[280px] max-w-[42%] shrink-0 flex-col border-r border-border max-md:w-full max-md:max-w-full",
         hidden ? "hidden md:flex" : "flex",
         className,
       )}
@@ -105,7 +105,7 @@ export function WorkbenchDetailPane({
  * a non-heading element (e.g. a card caption inside an existing heading level).
  */
 export const WORKBENCH_SECTION_LABEL_CLASS_NAME =
-  "text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground";
+  "text-xs font-medium uppercase text-muted-foreground";
 
 /** Micro heading above a group of rows. */
 export function WorkbenchSectionLabel({

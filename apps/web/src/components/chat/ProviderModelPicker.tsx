@@ -426,14 +426,12 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
               <OptionIcon
                 aria-hidden="true"
                 className={cn(
-                  "size-3 shrink-0 opacity-80",
-                  providerIconClassName(option.value, "text-muted-foreground/85"),
+                  "size-3.5 shrink-0",
+                  providerIconClassName(option.value, "text-muted-foreground"),
                 )}
               />
               <span>{option.label}</span>
-              <span className="ms-auto text-[11px] text-muted-foreground/80">
-                {availability.label}
-              </span>
+              <span className="ms-auto text-xs text-muted-foreground">{availability.label}</span>
             </MenuItem>
           );
         }
@@ -443,8 +441,8 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
               <OptionIcon
                 aria-hidden="true"
                 className={cn(
-                  "size-3 shrink-0",
-                  providerIconClassName(option.value, "text-muted-foreground/85"),
+                  "size-3.5 shrink-0",
+                  providerIconClassName(option.value, "text-muted-foreground"),
                 )}
               />
               {option.label}
@@ -463,12 +461,9 @@ export const ProviderModelMenuItems = memo(function ProviderModelMenuItems(
         const OptionIcon = PROVIDER_ICON_COMPONENT_BY_PROVIDER[option.value];
         return (
           <MenuItem key={option.value} disabled>
-            <OptionIcon
-              aria-hidden="true"
-              className="size-3 shrink-0 text-muted-foreground/85 opacity-80"
-            />
+            <OptionIcon aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
             <span>{option.label}</span>
-            <span className="ms-auto text-[11px] text-muted-foreground/80">Coming soon</span>
+            <span className="ms-auto text-xs text-muted-foreground">Coming soon</span>
           </MenuItem>
         );
       })}
@@ -493,7 +488,7 @@ export function resolveProviderModelLabel(input: {
 
 export function getProviderIconClassName(
   provider: ProviderKind | ProviderPickerKind,
-  fallbackClassName: string = "text-muted-foreground/70",
+  fallbackClassName: string = "text-muted-foreground",
 ): string {
   return providerIconClassName(provider, fallbackClassName);
 }
@@ -578,7 +573,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(
           aria-hidden="true"
           className={cn(
             "size-3.5 shrink-0",
-            providerIconClassName(activeProvider, "text-muted-foreground/70"),
+            providerIconClassName(activeProvider, "text-muted-foreground"),
             props.activeProviderIconClassName,
           )}
         />
@@ -609,7 +604,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(
                 <span>Change model</span>
                 <ShortcutKbd
                   shortcutLabel={props.shortcutLabel}
-                  className="h-4 min-w-4 px-1 text-[length:var(--app-font-size-ui-2xs,11px)] text-muted-foreground"
+                  className="h-4 min-w-4 px-1 text-[length:var(--app-font-size-ui-2xs,12px)] text-muted-foreground"
                 />
               </span>
             </TooltipPopup>

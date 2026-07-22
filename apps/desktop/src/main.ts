@@ -2553,25 +2553,17 @@ function getIconOption(): { icon: string } | Record<string, never> {
   return iconPath ? { icon: iconPath } : {};
 }
 
-// macOS backs the translucent shell with window vibrancy, so the window is created
-// transparent (`#00000000`) over the vibrancy material. Windows/Linux have no vibrancy:
-// a transparent window there leaves backdrop-filter surfaces bleeding through and, on
-// fractional DPI, rendering blurry. So off macOS we create an opaque window and skip the
-// macOS-only options. The background is a fixed dark tone purely to avoid a flash before
-// the renderer paints — the app is dark-only, and the window is shown only after first
-// paint (`show: false`), so this color need not match the in-app surface exactly.
+// The window is opaque on every platform. macOS used to create it transparent
+// (`#00000000`) over an "under-window" vibrancy material so the renderer's glass
+// surfaces could blur the desktop; that material is gone from the UI, and keeping
+// the vibrancy layer would leave WindowServer compositing a blur under a window
+// that paints over it completely.
+//
+// The background colour only avoids a flash before the renderer paints. The window
+// is shown after first paint (`show: false`), so it need not track the active theme
+// exactly — it is the dark canvas, which is the default.
 function getWindowMaterialOptions(): BrowserWindowConstructorOptions {
-  if (process.platform !== "darwin") {
-    return { backgroundColor: "#181818" };
-  }
-  return {
-    vibrancy: "under-window",
-    // "followWindow" lets macOS drop vibrancy blending to inactive when the
-    // window is backgrounded, so WindowServer stops continuously recompositing
-    // it. "active" forced full-cost blending even when the app was unfocused.
-    visualEffectState: "followWindow",
-    backgroundColor: "#00000000",
-  };
+  return { backgroundColor: "#090909" };
 }
 
 // macOS keeps native traffic lights inset into the renderer's top chrome. Windows

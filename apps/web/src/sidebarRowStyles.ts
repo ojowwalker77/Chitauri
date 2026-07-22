@@ -25,7 +25,7 @@ export const SIDEBAR_ROW_HOVER_CLASS_NAME =
 export const SIDEBAR_ROW_ACTIVE_CLASS_NAME =
   "bg-[var(--sidebar-accent-active)] text-[var(--sidebar-accent-foreground)] hover:bg-[var(--sidebar-accent-active)] hover:text-[var(--sidebar-accent-foreground)]";
 
-export const SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME = "text-foreground/75";
+export const SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME = "text-muted-foreground";
 
 /**
  * Resting foreground for primary sidebar item labels and their accompanying
@@ -33,14 +33,14 @@ export const SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME = "text-foreground/75";
  * glyphs). Sits just below the full-foreground active row so resting items read
  * clearly without competing with the selected thread.
  */
-export const SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME = "text-foreground/75";
+export const SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME = "text-muted-foreground";
 
 /** Dimmer idle label color shared by project header rows, thread rows, and settings nav rows. */
-export const SIDEBAR_ROW_MUTED_TEXT_CLASS_NAME = "text-muted-foreground/60";
+export const SIDEBAR_ROW_MUTED_TEXT_CLASS_NAME = "text-faint";
 
 /** Section label ("Threads"/"Pinned"/"Workspace" and settings "App"/"Chitauri"). */
 export const SIDEBAR_SECTION_LABEL_CLASS_NAME =
-  "sidebar-section-label text-[12.5px] font-normal text-muted-foreground/70";
+  "sidebar-section-label text-xs font-normal text-muted-foreground";
 
 /** Project/chat/settings header rows and settings sidebar nav items. */
 export const SIDEBAR_HEADER_ROW_CLASS_NAME = [
@@ -65,7 +65,7 @@ export const SIDEBAR_THREAD_ROW_BASE_CLASS_NAME = [
   "w-full translate-x-0 cursor-pointer justify-start text-left select-none",
   SIDEBAR_ROW_HEIGHT_CLASS_NAME,
   SIDEBAR_ROW_RADIUS_CLASS_NAME,
-  "pl-3 text-[13.5px]",
+  "pl-3 text-sm",
   SIDEBAR_ROW_FOCUS_CLASS_NAME,
 ].join(" ");
 
@@ -106,6 +106,6 @@ export function sidebarHoverRevealHideClassName(group: SidebarHoverRevealGroup):
   return SIDEBAR_HOVER_REVEAL_HIDE_CLASS_NAME[group];
 }
 
-export const SIDEBAR_HEADER_ICON_CLASS_NAME = "size-4 shrink-0 text-inherit";
+export const SIDEBAR_HEADER_ICON_CLASS_NAME = "size-3.5 shrink-0 text-inherit";
 
 export const SIDEBAR_HEADER_LABEL_CLASS_NAME = "truncate";

@@ -20,7 +20,7 @@ export function SidebarLeadingControls({ className }: { className?: string }) {
   return (
     <div className={cn("flex shrink-0 items-center", className)}>
       <SidebarTrigger
-        className="size-7 shrink-0 text-muted-foreground/75 hover:text-foreground"
+        className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
         aria-label="Toggle thread sidebar"
       />
     </div>

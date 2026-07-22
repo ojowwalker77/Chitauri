@@ -62,9 +62,9 @@ function OrchestrationSummaryHeader(props: {
   return (
     <div className="flex flex-col gap-1.5 pb-0.5">
       <div className="flex min-w-0 items-center gap-2">
-        <BotIcon className="size-3 shrink-0 text-muted-foreground/45" />
+        <BotIcon className="size-3.5 shrink-0 text-faint" />
         <span
-          className="shrink-0 font-semibold text-foreground/82"
+          className="shrink-0 font-semibold text-foreground"
           style={{ fontSize: `${props.rowFontSizePx}px` }}
         >
           {summary.total} agents
@@ -124,7 +124,7 @@ export const SubagentCardList = memo(function SubagentCardList({
         return (
           <div
             key={`${keyPrefix}:${subagent.threadId}`}
-            className="flex items-start gap-2.5 rounded-xl border border-border/28 bg-background/82 px-[11px] py-2"
+            className="flex items-start gap-2.5 rounded-xl border border-border bg-background px-[11px] py-2"
           >
             <span
               className={cn(
@@ -134,7 +134,7 @@ export const SubagentCardList = memo(function SubagentCardList({
             />
             <div className="min-w-0 flex-1">
               <div
-                className="truncate font-semibold leading-[18px] text-foreground/90"
+                className="truncate font-semibold leading-[18px] text-foreground"
                 style={{ fontSize: `${rowFontSizePx}px` }}
                 title={presentation.fullLabel}
               >
@@ -142,14 +142,12 @@ export const SubagentCardList = memo(function SubagentCardList({
                   {presentation.nickname ?? primaryLabel}
                 </span>
                 {presentation.role ? (
-                  <span className="ml-1 text-[11px] font-medium text-muted-foreground/48">
-                    ({presentation.role})
-                  </span>
+                  <span className="ml-1 text-xs font-medium text-faint">({presentation.role})</span>
                 ) : null}
               </div>
               {secondaryLabel ? (
                 <div
-                  className="truncate pt-0.5 leading-4 text-muted-foreground/56"
+                  className="truncate pt-0.5 leading-4 text-faint"
                   style={{ fontSize: `${Math.max(11, rowFontSizePx - 1)}px` }}
                   title={secondaryLabel}
                 >
@@ -158,11 +156,11 @@ export const SubagentCardList = memo(function SubagentCardList({
               ) : null}
               {subagent.latestUpdate ? (
                 <div
-                  className="flex items-baseline gap-1.5 pt-1 text-muted-foreground/42"
+                  className="flex items-baseline gap-1.5 pt-1 text-faint"
                   style={{ fontSize: `${Math.max(11, rowFontSizePx - 2)}px` }}
                   title={subagent.latestUpdate}
                 >
-                  <span className="shrink-0 text-muted-foreground/30">Latest</span>
+                  <span className="shrink-0 text-faint">Latest</span>
                   <span className="truncate">{subagent.latestUpdate}</span>
                 </div>
               ) : null}
@@ -171,7 +169,7 @@ export const SubagentCardList = memo(function SubagentCardList({
               {displayStatusLabel ? (
                 <span
                   className={cn(
-                    "shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium tracking-[0.08em]",
+                    "shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium",
                     subagentStatusClasses(
                       displayStatusLabel,
                       subagent.rawStatus,
@@ -185,9 +183,9 @@ export const SubagentCardList = memo(function SubagentCardList({
               <button
                 type="button"
                 className={cn(
-                  "shrink-0 rounded-full border border-border/45 px-2.5 py-1 text-[11px] font-medium text-muted-foreground/62 transition-colors",
+                  "shrink-0 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-faint transition-colors",
                   canOpenThread
-                    ? "hover:border-foreground/15 hover:text-foreground/84"
+                    ? "hover:border-foreground/15 hover:text-foreground"
                     : "cursor-default opacity-50",
                 )}
                 disabled={!canOpenThread}
@@ -204,7 +202,7 @@ export const SubagentCardList = memo(function SubagentCardList({
         );
       })}
       {hiddenSubagentCount > 0 ? (
-        <div className="pl-4 text-[11px] text-muted-foreground/46">+{hiddenSubagentCount} more</div>
+        <div className="pl-4 text-xs text-faint">+{hiddenSubagentCount} more</div>
       ) : null}
     </div>
   );
