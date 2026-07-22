@@ -17,6 +17,17 @@ const OTHER_WORKER_ID = ProjectId.makeUnsafe("worker-2");
 const CHAT_ID = ProjectId.makeUnsafe("home-chat");
 const TASK_ID = TaskId.makeUnsafe("task-1");
 
+function taskThread(taskId: TaskId) {
+  return {
+    threadId: ThreadId.makeUnsafe(`${taskId}:thread`),
+    modelSelection: { provider: "codex" as const, model: "gpt-5.4" },
+    runtimeMode: "full-access" as const,
+    envMode: "worktree" as const,
+    branch: null,
+    worktreePath: null,
+  };
+}
+
 type DecidedEvent = Omit<OrchestrationEvent, "sequence">;
 
 function firstEvent(result: DecidedEvent | ReadonlyArray<DecidedEvent>): DecidedEvent | undefined {
@@ -78,6 +89,7 @@ describe("Worker Task orchestration", () => {
             commandId: CommandId.makeUnsafe("command-task-create"),
             taskId: TASK_ID,
             workerId: WORKER_ID,
+            ...taskThread(TASK_ID),
             title: "Ship Workers",
             brief: "Make Tasks durable.",
             origin: "research",
@@ -176,6 +188,7 @@ describe("Worker Task orchestration", () => {
             commandId: CommandId.makeUnsafe("command-chat-task"),
             taskId: TASK_ID,
             workerId: CHAT_ID,
+            ...taskThread(TASK_ID),
             title: "Invalid Task",
             brief: "",
             origin: "user",
@@ -199,6 +212,7 @@ describe("Worker Task orchestration", () => {
             commandId: CommandId.makeUnsafe("command-task-create"),
             taskId: TASK_ID,
             workerId: WORKER_ID,
+            ...taskThread(TASK_ID),
             title: "Owner Task",
             brief: "",
             origin: "user",
@@ -256,6 +270,7 @@ describe("Worker Task orchestration", () => {
             commandId: CommandId.makeUnsafe("command-requester-task"),
             taskId: TASK_ID,
             workerId: WORKER_ID,
+            ...taskThread(TASK_ID),
             title: "Ship passkeys",
             brief: "Coordinate the client integration.",
             origin: "user",
@@ -282,6 +297,7 @@ describe("Worker Task orchestration", () => {
             commandId: CommandId.makeUnsafe("command-delegated-task"),
             taskId: recipientTaskId,
             workerId: OTHER_WORKER_ID,
+            ...taskThread(recipientTaskId),
             requesterWorkerId: WORKER_ID,
             requesterTaskId: TASK_ID,
             title: "Add passkey endpoints",
@@ -336,6 +352,7 @@ describe("Worker Task orchestration", () => {
             commandId: CommandId.makeUnsafe("command-requester-task"),
             taskId: TASK_ID,
             workerId: WORKER_ID,
+            ...taskThread(TASK_ID),
             title: "Requester Task",
             brief: "",
             origin: "user",
@@ -362,6 +379,7 @@ describe("Worker Task orchestration", () => {
             commandId: CommandId.makeUnsafe("command-same-worker-delegation"),
             taskId: TaskId.makeUnsafe("task-same-worker"),
             workerId: WORKER_ID,
+            ...taskThread(TaskId.makeUnsafe("task-same-worker")),
             requesterWorkerId: WORKER_ID,
             requesterTaskId: TASK_ID,
             title: "Same Worker",
@@ -382,6 +400,7 @@ describe("Worker Task orchestration", () => {
             commandId: CommandId.makeUnsafe("command-missing-requester-task"),
             taskId: TaskId.makeUnsafe("task-missing-requester"),
             workerId: OTHER_WORKER_ID,
+            ...taskThread(TaskId.makeUnsafe("task-missing-requester")),
             requesterWorkerId: WORKER_ID,
             requesterTaskId: TaskId.makeUnsafe("task-does-not-exist"),
             title: "Missing Requester",
@@ -402,6 +421,7 @@ describe("Worker Task orchestration", () => {
             commandId: CommandId.makeUnsafe("command-mismatched-requester-worker"),
             taskId: TaskId.makeUnsafe("task-mismatched-requester"),
             workerId: WORKER_ID,
+            ...taskThread(TaskId.makeUnsafe("task-mismatched-requester")),
             requesterWorkerId: OTHER_WORKER_ID,
             requesterTaskId: TASK_ID,
             title: "Mismatched Requester",

@@ -2028,7 +2028,7 @@ export default function Sidebar() {
 
   const handlePrimaryNewThread = useCallback(() => {
     if (currentProjectShortcutTargetId) {
-      void handleNewThread(currentProjectShortcutTargetId);
+      void handleNewThread(currentProjectShortcutTargetId, { fresh: true });
       return;
     }
 
@@ -4857,18 +4857,15 @@ export default function Sidebar() {
           </button>
           <SidebarSectionToolbar placement="overlay" revealOnHover>
             <SidebarIconButton
-              icon={ListTodoIcon}
-              label={`Create new Task for ${project.name} Worker`}
-              tooltip="New Task"
+              icon={PlusIcon}
+              label={`Create new Thread for ${project.name} Worker`}
+              tooltip="New Thread"
               tooltipSide="top"
-              data-testid="new-task-button"
+              data-testid="new-thread-button"
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                void navigate({
-                  to: "/tasks",
-                  search: { worker: project.id, task: undefined, create: true },
-                });
+                void handleNewThread(project.id, { fresh: true });
               }}
             />
           </SidebarSectionToolbar>

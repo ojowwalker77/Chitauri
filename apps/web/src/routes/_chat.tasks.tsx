@@ -51,6 +51,7 @@ import {
 import { cn, newCommandId, newTaskId, newThreadId, randomUUID } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
+import { useComposerDraftStore } from "~/composerDraftStore";
 
 export const Route = createFileRoute("/_chat/tasks")({
   validateSearch: (search) => ({
@@ -72,7 +73,7 @@ function TaskCreateDialog({
   workerId: ProjectId | null;
   workerName: string | null;
   onOpenChange: (open: boolean) => void;
-  onCreated: (taskId: TaskId) => void;
+  onCreated: (threadId: ReturnType<typeof newThreadId>) => void;
 }) {
   const [title, setTitle] = useState("");
   const [brief, setBrief] = useState("");
@@ -90,6 +91,10 @@ function TaskCreateDialog({
     const trimmedTitle = title.trim();
     if (!api || !workerId || trimmedTitle.length === 0 || pending) return;
     const taskId = newTaskId();
+    const threadId = newThreadId();
+    const worker = useStore.getState().projects.find((project) => project.id === workerId);
+    const defaultModel = getDefaultModel("codex") ?? "gpt-5-codex";
+    const trimmedBrief = brief.trim();
     setPending(true);
     try {
       await api.orchestration.dispatchCommand({
@@ -97,12 +102,24 @@ function TaskCreateDialog({
         commandId: newCommandId(),
         taskId,
         workerId,
+        threadId,
+        modelSelection: worker?.defaultModelSelection ?? {
+          provider: "codex",
+          model: defaultModel,
+        },
+        runtimeMode: "full-access",
+        envMode: "worktree",
+        branch: null,
+        worktreePath: null,
         title: trimmedTitle,
-        brief: brief.trim(),
+        brief: trimmedBrief,
         origin: "user",
         createdAt: new Date().toISOString(),
       });
-      onCreated(taskId);
+      useComposerDraftStore
+        .getState()
+        .setPrompt(threadId, [trimmedTitle, trimmedBrief].filter(Boolean).join("\n\n"));
+      onCreated(threadId);
       onOpenChange(false);
     } catch (error) {
       toastManager.add({
@@ -198,6 +215,11 @@ function DelegateTaskDialog({
     const trimmedTitle = title.trim();
     if (!api || !recipientWorkerId || !trimmedTitle || pending) return;
     const taskId = newTaskId();
+    const threadId = newThreadId();
+    const recipientWorker = useStore
+      .getState()
+      .projects.find((project) => project.id === recipientWorkerId);
+    const defaultModel = getDefaultModel("codex") ?? "gpt-5-codex";
     const sections = [
       request.trim() ? `Request\n${request.trim()}` : null,
       constraints.trim() ? `Constraints\n${constraints.trim()}` : null,
@@ -210,6 +232,15 @@ function DelegateTaskDialog({
         commandId: newCommandId(),
         taskId,
         workerId: recipientWorkerId,
+        threadId,
+        modelSelection: recipientWorker?.defaultModelSelection ?? {
+          provider: "codex",
+          model: defaultModel,
+        },
+        runtimeMode: "full-access",
+        envMode: "worktree",
+        branch: null,
+        worktreePath: null,
         requesterWorkerId,
         requesterTaskId,
         title: trimmedTitle,
@@ -217,6 +248,9 @@ function DelegateTaskDialog({
         origin: "delegation",
         createdAt: new Date().toISOString(),
       });
+      useComposerDraftStore
+        .getState()
+        .setPrompt(threadId, [trimmedTitle, ...sections].filter(Boolean).join("\n\n"));
       try {
         await api.orchestration.dispatchCommand({
           type: "task.update",
@@ -444,6 +478,7 @@ function TasksRoute() {
     ? tasks.filter((task) => task.requesterTaskId === selectedTask.id)
     : [];
   const taskThreads = threads.filter((thread) => thread.taskId === selectedTask?.id);
+  const canonicalTaskThread = taskThreads.at(0) ?? null;
   const unfiledThreads = threads.filter(
     (thread) => thread.projectId === selectedWorker?.id && thread.taskId == null,
   );
@@ -552,6 +587,10 @@ function TasksRoute() {
   const createTaskThread = async () => {
     const api = readNativeApi();
     if (!api || !selectedWorker || !selectedTask || threadPending) return;
+    if (canonicalTaskThread) {
+      await navigate({ to: "/$threadId", params: { threadId: canonicalTaskThread.id } });
+      return;
+    }
     const threadId = newThreadId();
     const defaultModel = getDefaultModel("codex") ?? "gpt-5-codex";
     setThreadPending(true);
@@ -573,6 +612,9 @@ function TasksRoute() {
         worktreePath: null,
         createdAt: new Date().toISOString(),
       });
+      useComposerDraftStore
+        .getState()
+        .setPrompt(threadId, [selectedTask.title, selectedTask.brief].filter(Boolean).join("\n\n"));
       if (selectedTask.status === "open") {
         try {
           await api.orchestration.dispatchCommand({
@@ -593,7 +635,7 @@ function TasksRoute() {
     } catch (error) {
       toastManager.add({
         type: "error",
-        title: "Could not start Task thread",
+        title: "Could not open Task Thread",
         description: error instanceof Error ? error.message : "The Thread was not created.",
       });
       setThreadPending(false);
@@ -666,7 +708,14 @@ function TasksRoute() {
                         ? "bg-accent text-accent-foreground"
                         : "text-foreground/88 hover:bg-accent/55",
                     )}
-                    onClick={() => updateSearch({ task: task.id, create: undefined })}
+                    onClick={() => {
+                      const taskThread = threads.find((thread) => thread.taskId === task.id);
+                      if (taskThread) {
+                        void navigate({ to: "/$threadId", params: { threadId: taskThread.id } });
+                        return;
+                      }
+                      updateSearch({ task: task.id, create: undefined });
+                    }}
                   >
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-medium">{task.title}</div>
@@ -727,7 +776,11 @@ function TasksRoute() {
                       </select>
                       <Button size="sm" onClick={createTaskThread} disabled={threadPending}>
                         <MessageCircleIcon />
-                        {threadPending ? "Starting…" : "New Thread"}
+                        {threadPending
+                          ? "Opening…"
+                          : canonicalTaskThread
+                            ? "Open Thread"
+                            : "Start Task"}
                       </Button>
                       <Button
                         size="sm"
@@ -816,7 +869,7 @@ function TasksRoute() {
                     <div className="rounded-2xl border border-border/55 bg-card/45 p-4">
                       <div className="mb-3 flex items-center gap-2 text-sm font-medium">
                         <MessageCircleIcon className="size-4" />
-                        Threads
+                        Task Thread
                       </div>
                       <div className="space-y-1.5">
                         {taskThreads.map((thread) => (
@@ -843,8 +896,8 @@ function TasksRoute() {
                         ))}
                         {taskThreads.length === 0 ? (
                           <p className="text-xs leading-5 text-muted-foreground">
-                            No execution Threads yet. Start one when the Task is ready for agent
-                            work.
+                            This older Task has no Thread yet. Starting it creates its canonical
+                            worktree-backed Thread.
                           </p>
                         ) : null}
                       </div>
@@ -980,8 +1033,8 @@ function TasksRoute() {
                     <ListTodoIcon className="mx-auto size-7 text-muted-foreground/55" />
                     <h1 className="mt-3 text-lg font-semibold">Worker Tasks</h1>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      Tasks hold durable responsibility. Threads are created beneath them for
-                      execution.
+                      Tasks are durable, agent-visible Threads. Create one manually or ask a Worker
+                      to capture work from a conversation.
                     </p>
                   </div>
                 </div>
@@ -1010,7 +1063,7 @@ function TasksRoute() {
           setCreateDialogOpen(open);
           if (!open) updateSearch({ create: undefined });
         }}
-        onCreated={(taskId) => updateSearch({ task: taskId, create: undefined })}
+        onCreated={(threadId) => void navigate({ to: "/$threadId", params: { threadId } })}
       />
       {selectedTask && selectedWorker ? (
         <>

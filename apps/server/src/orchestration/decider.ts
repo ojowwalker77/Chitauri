@@ -100,6 +100,24 @@ function countPinnedProjects(
   ).length;
 }
 
+function requireTaskHasNoCanonicalThread(input: {
+  readonly readModel: OrchestrationReadModel;
+  readonly command: OrchestrationCommand;
+  readonly taskId: NonNullable<OrchestrationReadModel["threads"][number]["taskId"]>;
+}): Effect.Effect<void, OrchestrationCommandInvariantError> {
+  const existing = input.readModel.threads.find(
+    (thread) => thread.taskId === input.taskId && thread.deletedAt === null,
+  );
+  return existing
+    ? Effect.fail(
+        new OrchestrationCommandInvariantError({
+          commandType: input.command.type,
+          detail: `Task '${input.taskId}' already owns canonical Thread '${existing.id}'.`,
+        }),
+      )
+    : Effect.void;
+}
+
 function validateProjectPinLimit(input: {
   readonly command: Extract<
     OrchestrationCommand,
@@ -431,7 +449,29 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           workerId: command.requesterWorkerId,
         });
       }
-      return {
+      const existingThread = readModel.threads.find((thread) => thread.id === command.threadId);
+      if (existingThread) {
+        if (existingThread.projectId !== command.workerId) {
+          return yield* new OrchestrationCommandInvariantError({
+            commandType: command.type,
+            detail: `Thread '${command.threadId}' belongs to a different repository Worker.`,
+          });
+        }
+        if (existingThread.taskId !== null) {
+          return yield* new OrchestrationCommandInvariantError({
+            commandType: command.type,
+            detail: `Thread '${command.threadId}' is already tracked as Task '${existingThread.taskId}'.`,
+          });
+        }
+      } else {
+        yield* requireThreadAbsent({
+          readModel,
+          command,
+          threadId: command.threadId,
+        });
+      }
+
+      const taskCreated = {
         ...withEventBase({
           aggregateKind: "task",
           aggregateId: command.taskId,
@@ -454,7 +494,58 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           updatedAt: command.createdAt,
           completedAt: null,
         },
-      };
+      } satisfies Omit<OrchestrationEvent, "sequence">;
+      const threadEvent = existingThread
+        ? ({
+            ...withEventBase({
+              aggregateKind: "thread",
+              aggregateId: command.threadId,
+              occurredAt: command.createdAt,
+              commandId: command.commandId,
+            }),
+            type: "thread.meta-updated",
+            payload: {
+              threadId: command.threadId,
+              taskId: command.taskId,
+              updatedAt: command.createdAt,
+            },
+          } satisfies Omit<OrchestrationEvent, "sequence">)
+        : ({
+            ...withEventBase({
+              aggregateKind: "thread",
+              aggregateId: command.threadId,
+              occurredAt: command.createdAt,
+              commandId: command.commandId,
+            }),
+            type: "thread.created",
+            payload: {
+              threadId: command.threadId,
+              projectId: command.workerId,
+              taskId: command.taskId,
+              title: command.title,
+              modelSelection: command.modelSelection,
+              runtimeMode: command.runtimeMode,
+              envMode: command.envMode,
+              branch: command.branch,
+              worktreePath: command.worktreePath,
+              ...deriveCommandAssociatedWorktreeMetadata({
+                branch: command.branch,
+                worktreePath: command.worktreePath,
+              }),
+              createBranchFlowCompleted: false,
+              isPinned: false,
+              parentThreadId: null,
+              subagentAgentId: null,
+              subagentNickname: null,
+              subagentRole: null,
+              forkSourceThreadId: null,
+              lastKnownPr: null,
+              handoff: null,
+              createdAt: command.createdAt,
+              updatedAt: command.createdAt,
+            },
+          } satisfies Omit<OrchestrationEvent, "sequence">);
+      return [taskCreated, threadEvent];
     }
 
     case "task.update": {
@@ -500,7 +591,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command.parentThreadId !== null && command.parentThreadId !== undefined
           ? yield* requireThread({ readModel, command, threadId: command.parentThreadId })
           : null;
-      const taskId = command.taskId === undefined ? (parentThread?.taskId ?? null) : command.taskId;
+      const taskId = command.taskId ?? null;
       if (taskId !== null) {
         yield* requireTaskBelongsToWorker({
           readModel,
@@ -508,6 +599,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           taskId,
           workerId: command.projectId,
         });
+        yield* requireTaskHasNoCanonicalThread({ readModel, command, taskId });
       }
       return {
         ...withEventBase({
@@ -577,7 +669,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.sourceThreadId,
       });
-      const taskId = command.taskId === undefined ? (sourceThread.taskId ?? null) : command.taskId;
+      const taskId = command.taskId ?? null;
       if (taskId !== null) {
         yield* requireTaskBelongsToWorker({
           readModel,
@@ -585,6 +677,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           taskId,
           workerId: command.projectId,
         });
+        yield* requireTaskHasNoCanonicalThread({ readModel, command, taskId });
       }
       if (sourceThread.projectId !== command.projectId) {
         return yield* new OrchestrationCommandInvariantError({
@@ -696,7 +789,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.sourceThreadId,
       });
-      const taskId = command.taskId === undefined ? (sourceThread.taskId ?? null) : command.taskId;
+      const taskId = command.taskId ?? null;
       if (taskId !== null) {
         yield* requireTaskBelongsToWorker({
           readModel,
@@ -704,6 +797,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           taskId,
           workerId: command.projectId,
         });
+        yield* requireTaskHasNoCanonicalThread({ readModel, command, taskId });
       }
       if (sourceThread.projectId !== command.projectId) {
         return yield* new OrchestrationCommandInvariantError({

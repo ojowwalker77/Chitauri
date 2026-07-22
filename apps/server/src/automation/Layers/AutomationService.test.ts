@@ -577,40 +577,34 @@ layer("AutomationService", (it) => {
       const result = yield* service.runNow({ automationId: created.id });
       const taskCreate = dispatchedCommands.find((command) => command.type === "task.create");
       const taskUpdate = dispatchedCommands.find((command) => command.type === "task.update");
-      const threadCreate = dispatchedCommands.find((command) => command.type === "thread.create");
       const turnStart = dispatchedCommands.find((command) => command.type === "thread.turn.start");
 
       assert.strictEqual(result.run.status, "running");
       assert.deepStrictEqual(
         dispatchedCommands.map((command) => command.type),
-        ["task.create", "task.update", "thread.create", "thread.turn.start"],
+        ["task.create", "task.update", "thread.turn.start"],
       );
       assert.strictEqual(taskCreate?.type, "task.create");
       assert.strictEqual(taskUpdate?.type, "task.update");
-      assert.strictEqual(threadCreate?.type, "thread.create");
       assert.strictEqual(turnStart?.type, "thread.turn.start");
       if (
         taskCreate?.type !== "task.create" ||
         taskUpdate?.type !== "task.update" ||
-        threadCreate?.type !== "thread.create" ||
         turnStart?.type !== "thread.turn.start"
       ) {
-        assert.fail(
-          "Expected Task creation, Task start, thread creation, and turn start commands.",
-        );
+        assert.fail("Expected atomic Task Thread creation, Task start, and turn start commands.");
       }
       assert.strictEqual(taskCreate.workerId, projectId);
       assert.strictEqual(taskCreate.origin, "automation");
       assert.strictEqual(taskUpdate.taskId, taskCreate.taskId);
       assert.strictEqual(taskUpdate.status, "in_progress");
-      assert.strictEqual(threadCreate.taskId, taskCreate.taskId);
-      assert.strictEqual(threadCreate.envMode, "local");
-      assert.strictEqual(threadCreate.runtimeMode, "approval-required");
+      assert.strictEqual(taskCreate.envMode, "local");
+      assert.strictEqual(taskCreate.runtimeMode, "approval-required");
       assert.strictEqual(turnStart.message.text, "Check stale dependencies.");
       assert.strictEqual(turnStart.dispatchMode, "queue");
-      assert.strictEqual(result.run.threadId, threadCreate.threadId);
+      assert.strictEqual(result.run.threadId, taskCreate.threadId);
       assert.strictEqual(result.run.messageId, turnStart.message.messageId);
-      assert.strictEqual(result.run.threadCreateCommandId, threadCreate.commandId);
+      assert.strictEqual(result.run.threadCreateCommandId, taskCreate.commandId);
       assert.strictEqual(result.run.turnStartCommandId, turnStart.commandId);
     }),
   );
@@ -623,7 +617,7 @@ layer("AutomationService", (it) => {
       const created = yield* service.create(createInput("worktree"));
 
       yield* service.runNow({ automationId: created.id });
-      const threadCreate = dispatchedCommands.find((command) => command.type === "thread.create");
+      const taskCreate = dispatchedCommands.find((command) => command.type === "task.create");
 
       assert.strictEqual(createdWorktrees.length, 1);
       const createdWorktree = createdWorktrees[0];
@@ -633,13 +627,13 @@ layer("AutomationService", (it) => {
         assert.fail("Expected automation worktree branch.");
       }
       assert.match(createdWorktreeBranch, /^automation\/nightly-maintenance\//);
-      assert.strictEqual(threadCreate?.type, "thread.create");
-      if (threadCreate?.type !== "thread.create") {
-        assert.fail("Expected thread.create command.");
+      assert.strictEqual(taskCreate?.type, "task.create");
+      if (taskCreate?.type !== "task.create") {
+        assert.fail("Expected atomic Task Thread creation command.");
       }
-      assert.strictEqual(threadCreate.envMode, "worktree");
-      assert.strictEqual(threadCreate.worktreePath, "/tmp/automation-worktree");
-      assert.strictEqual(threadCreate.associatedWorktreeBranch, createdWorktreeBranch);
+      assert.strictEqual(taskCreate.envMode, "worktree");
+      assert.strictEqual(taskCreate.worktreePath, "/tmp/automation-worktree");
+      assert.strictEqual(taskCreate.branch, createdWorktreeBranch);
     }),
   );
 
@@ -647,13 +641,13 @@ layer("AutomationService", (it) => {
     Effect.gen(function* () {
       resetHarness();
       gitMode = "worktree";
-      failDispatchType = "thread.create";
+      failDispatchType = "task.create";
       const service = yield* AutomationService;
       const created = yield* service.create(createInput("worktree"));
 
       const error = yield* service.runNow({ automationId: created.id }).pipe(Effect.flip);
 
-      assert.match(error.message, /Failed to create automation thread/);
+      assert.match(error.message, /Failed to create automation Task Thread/);
       assert.strictEqual(createdWorktrees.length, 1);
       const createdWorktree = createdWorktrees[0];
       assert.ok(createdWorktree);
@@ -748,7 +742,7 @@ layer("AutomationService", (it) => {
         "cancelled",
       );
       assert.strictEqual(
-        dispatchedCommands.some((command) => command.type === "thread.create"),
+        dispatchedCommands.some((command) => command.type === "task.create"),
         false,
       );
     }),
@@ -768,7 +762,7 @@ layer("AutomationService", (it) => {
       assert.strictEqual(createdWorktrees.length, 1);
       assert.strictEqual(removedWorktrees.length, 0);
       assert.strictEqual(deletedBranches.length, 0);
-      assert.isDefined(dispatchedCommands.find((command) => command.type === "thread.create"));
+      assert.isDefined(dispatchedCommands.find((command) => command.type === "task.create"));
     }),
   );
 
@@ -818,7 +812,7 @@ layer("AutomationService", (it) => {
       );
       assert.strictEqual(
         dispatchedCommands.some(
-          (command) => command.type === "thread.create" || command.type === "thread.turn.start",
+          (command) => command.type === "task.create" || command.type === "thread.turn.start",
         ),
         false,
       );
@@ -839,7 +833,7 @@ layer("AutomationService", (it) => {
 
       assert.match(error.message, /local checkout fallback/);
       assert.strictEqual(
-        dispatchedCommands.filter((command) => command.type === "thread.create").length,
+        dispatchedCommands.filter((command) => command.type === "task.create").length,
         0,
       );
     }),
@@ -856,12 +850,12 @@ layer("AutomationService", (it) => {
       });
       yield* service.runNow({ automationId: created.id });
 
-      const threadCreate = dispatchedCommands.find((command) => command.type === "thread.create");
-      assert.strictEqual(threadCreate?.type, "thread.create");
-      if (threadCreate?.type !== "thread.create") {
-        assert.fail("Expected thread.create command.");
+      const taskCreate = dispatchedCommands.find((command) => command.type === "task.create");
+      assert.strictEqual(taskCreate?.type, "task.create");
+      if (taskCreate?.type !== "task.create") {
+        assert.fail("Expected atomic Task Thread creation command.");
       }
-      assert.strictEqual(threadCreate.envMode, "local");
+      assert.strictEqual(taskCreate.envMode, "local");
     }),
   );
 
@@ -882,7 +876,7 @@ layer("AutomationService", (it) => {
 
       assert.match(error.message, /full-access/);
       assert.strictEqual(
-        dispatchedCommands.filter((command) => command.type === "thread.create").length,
+        dispatchedCommands.filter((command) => command.type === "task.create").length,
         0,
       );
       const listed = yield* service.list({ projectId });
@@ -917,7 +911,7 @@ layer("AutomationService", (it) => {
       });
 
       assert.strictEqual(
-        dispatchedCommands.filter((command) => command.type === "thread.create").length,
+        dispatchedCommands.filter((command) => command.type === "task.create").length,
         0,
       );
       const listed = yield* service.list({ projectId });
@@ -940,7 +934,7 @@ layer("AutomationService", (it) => {
 
       yield* service.runNow({ automationId: created.id });
 
-      assert.isTrue(dispatchedCommands.some((command) => command.type === "thread.create"));
+      assert.isTrue(dispatchedCommands.some((command) => command.type === "task.create"));
     }),
   );
 
@@ -960,7 +954,7 @@ layer("AutomationService", (it) => {
 
       assert.match(error.message, /local checkout/);
       assert.strictEqual(
-        dispatchedCommands.filter((command) => command.type === "thread.create").length,
+        dispatchedCommands.filter((command) => command.type === "task.create").length,
         0,
       );
     }),
@@ -1009,7 +1003,7 @@ layer("AutomationService", (it) => {
 
       assert.match(error.message, /at least \d+ seconds apart/);
       assert.strictEqual(
-        dispatchedCommands.filter((command) => command.type === "thread.create").length,
+        dispatchedCommands.filter((command) => command.type === "task.create").length,
         0,
       );
     }),
@@ -1038,7 +1032,7 @@ layer("AutomationService", (it) => {
 
       assert.match(error.message, /max iterations/);
       assert.strictEqual(
-        dispatchedCommands.filter((command) => command.type === "thread.create").length,
+        dispatchedCommands.filter((command) => command.type === "task.create").length,
         0,
       );
     }),
@@ -1072,7 +1066,7 @@ layer("AutomationService", (it) => {
       assert.strictEqual(results[0]?.run.scheduledFor, "2026-06-16T10:00:00.000Z");
       assert.deepStrictEqual(
         dispatchedCommands.map((command) => command.type),
-        ["task.create", "task.update", "thread.create", "thread.turn.start"],
+        ["task.create", "task.update", "thread.turn.start"],
       );
       assert.strictEqual(
         listed.definitions.find((definition) => definition.id === automationId)?.nextRunAt,
@@ -1610,7 +1604,7 @@ layer("AutomationService", (it) => {
       // thread to that Task, and then continues the thread without creating another.
       assert.deepStrictEqual(
         dispatchedCommands.map((command) => command.type),
-        ["task.create", "thread.meta.update", "thread.turn.start"],
+        ["task.create", "thread.turn.start"],
       );
       const command = dispatchedCommands.find((entry) => entry.type === "thread.turn.start");
       assert.strictEqual(command?.type, "thread.turn.start");
@@ -3373,7 +3367,7 @@ layer("AutomationService", (it) => {
         now: "2026-06-16T10:00:00.000Z",
       });
 
-      failDispatchType = "thread.create";
+      failDispatchType = "task.create";
       const results = yield* service.runDueOnce({
         now: "2026-06-16T10:00:00.000Z",
         limit: 10,
@@ -3419,7 +3413,7 @@ layer("AutomationService", (it) => {
       });
 
       assert.strictEqual(results.length, 1);
-      assert.isDefined(dispatchedCommands.find((command) => command.type === "thread.create"));
+      assert.isDefined(dispatchedCommands.find((command) => command.type === "task.create"));
       assert.strictEqual(results[0]?.run.status, "failed");
 
       const reloaded = yield* service.list({ projectId });
@@ -3554,7 +3548,7 @@ layer("AutomationService", (it) => {
         now: "2026-06-16T10:00:00.000Z",
       });
 
-      failDispatchType = "thread.create";
+      failDispatchType = "task.create";
       const results = yield* service.runDueOnce({
         now: "2026-06-16T10:00:00.000Z",
         limit: 10,

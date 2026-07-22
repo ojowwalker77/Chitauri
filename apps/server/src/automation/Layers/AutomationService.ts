@@ -97,7 +97,6 @@ function deriveAutomationRunIds(runId: AutomationRunId) {
     taskId: TaskId.makeUnsafe(`automation:${runId}:task`),
     threadId: ThreadId.makeUnsafe(`automation:${runId}:thread`),
     messageId: MessageId.makeUnsafe(`automation:${runId}:message`),
-    taskCreateCommandId: CommandId.makeUnsafe(`automation:${runId}:task-create`),
     threadCreateCommandId: CommandId.makeUnsafe(`automation:${runId}:thread-create`),
     turnStartCommandId: CommandId.makeUnsafe(`automation:${runId}:turn-start`),
   };
@@ -107,7 +106,6 @@ function heartbeatAutomationTaskIds(definition: AutomationDefinition) {
   return {
     taskId: TaskId.makeUnsafe(`automation:${definition.id}:task`),
     taskCreateCommandId: CommandId.makeUnsafe(`automation:${definition.id}:task-create`),
-    taskLinkCommandId: CommandId.makeUnsafe(`automation:${definition.id}:task-link`),
   };
 }
 
@@ -648,20 +646,18 @@ export const AutomationServiceLive = Layer.effect(
                   commandId: ids.taskCreateCommandId,
                   taskId: ids.taskId,
                   workerId: definition.projectId,
+                  threadId,
+                  modelSelection: thread.modelSelection,
+                  runtimeMode: thread.runtimeMode,
+                  envMode: thread.envMode,
+                  branch: thread.branch,
+                  worktreePath: thread.worktreePath,
                   title: `Automation: ${definition.name}`,
                   brief: definition.prompt,
                   origin: "automation",
                   createdAt: now,
                 })
                 .pipe(
-                  Effect.flatMap(() =>
-                    orchestrationEngine.dispatch({
-                      type: "thread.meta.update",
-                      commandId: ids.taskLinkCommandId,
-                      threadId,
-                      taskId: ids.taskId,
-                    }),
-                  ),
                   Effect.as(ids.taskId),
                   Effect.mapError(toServiceError("Failed to attach heartbeat run to a Task.")),
                 );
@@ -1140,15 +1136,32 @@ export const AutomationServiceLive = Layer.effect(
         yield* orchestrationEngine
           .dispatch({
             type: "task.create",
-            commandId: automationIds.taskCreateCommandId,
+            commandId: threadCreateCommandId,
             taskId: automationIds.taskId,
             workerId: definition.projectId,
+            threadId: plannedThreadId,
+            modelSelection: definition.modelSelection,
+            runtimeMode: definition.runtimeMode,
+            envMode: environment.envMode,
+            branch: environment.branch,
+            worktreePath: environment.worktreePath,
             title: definition.name,
             brief: definition.prompt,
             origin: "automation",
             createdAt: now,
           })
-          .pipe(Effect.mapError(toServiceError("Failed to create automation Task.")));
+          .pipe(
+            Effect.mapError(toServiceError("Failed to create automation Task Thread.")),
+            Effect.catch((error) =>
+              cleanupUnattachedWorktree({
+                definition,
+                run,
+                project,
+                environment,
+                reason: "task-thread-create-failed",
+              }).pipe(Effect.flatMap(() => Effect.fail(error))),
+            ),
+          );
         yield* orchestrationEngine
           .dispatch({
             type: "task.update",
@@ -1157,38 +1170,6 @@ export const AutomationServiceLive = Layer.effect(
             status: "in_progress",
           })
           .pipe(Effect.mapError(toServiceError("Failed to start automation Task.")));
-
-        yield* orchestrationEngine
-          .dispatch({
-            type: "thread.create",
-            commandId: threadCreateCommandId,
-            threadId: plannedThreadId,
-            projectId: definition.projectId,
-            taskId: automationIds.taskId,
-            title: `${definition.name} - ${now}`,
-            modelSelection: definition.modelSelection,
-            runtimeMode: definition.runtimeMode,
-            envMode: environment.envMode,
-            branch: environment.branch,
-            worktreePath: environment.worktreePath,
-            associatedWorktreePath: environment.associatedWorktreePath,
-            associatedWorktreeBranch: environment.associatedWorktreeBranch,
-            associatedWorktreeRef: environment.associatedWorktreeRef,
-            createdAt: now,
-          })
-          .pipe(
-            Effect.mapError(toServiceError("Failed to create automation thread.")),
-            Effect.catch((error) =>
-              cleanupUnattachedWorktree({
-                definition,
-                run,
-                project,
-                environment,
-                reason: "thread-create-failed",
-              }).pipe(Effect.flatMap(() => Effect.fail(error))),
-            ),
-          );
-
         yield* requireRunStillDispatching(
           "Automation run was cancelled before starting the automation turn.",
         );

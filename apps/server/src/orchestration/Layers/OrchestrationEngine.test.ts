@@ -72,6 +72,7 @@ describe("OrchestrationEngine", () => {
     const workerBId = asProjectId("worker-b");
     const parentTaskId = TaskId.makeUnsafe("task-parent");
     const delegatedTaskId = TaskId.makeUnsafe("task-delegated");
+    const parentThreadId = ThreadId.makeUnsafe("thread-parent");
     const delegatedThreadId = ThreadId.makeUnsafe("thread-delegated");
     const artifact = {
       id: "artifact-test-report",
@@ -111,6 +112,12 @@ describe("OrchestrationEngine", () => {
         commandId: CommandId.makeUnsafe("cmd-parent-task-create"),
         taskId: parentTaskId,
         workerId: workerAId,
+        threadId: parentThreadId,
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        runtimeMode: "approval-required",
+        envMode: "worktree",
+        branch: null,
+        worktreePath: null,
         title: "Coordinate API delivery",
         brief: "Request the repository-owned API work.",
         origin: "user",
@@ -123,27 +130,17 @@ describe("OrchestrationEngine", () => {
         commandId: CommandId.makeUnsafe("cmd-delegated-task-create"),
         taskId: delegatedTaskId,
         workerId: workerBId,
+        threadId: delegatedThreadId,
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        runtimeMode: "approval-required",
+        envMode: "worktree",
+        branch: null,
+        worktreePath: null,
         requesterWorkerId: workerAId,
         requesterTaskId: parentTaskId,
         title: "Implement API contract",
         brief: "Implement and validate the API in Worker B.",
         origin: "delegation",
-        createdAt,
-      }),
-    );
-    await system.run(
-      engine.dispatch({
-        type: "thread.create",
-        commandId: CommandId.makeUnsafe("cmd-delegated-thread-create"),
-        threadId: delegatedThreadId,
-        projectId: workerBId,
-        taskId: delegatedTaskId,
-        title: "Implement delegated API work",
-        modelSelection: { provider: "codex", model: "gpt-5-codex" },
-        runtimeMode: "approval-required",
-        envMode: "local",
-        branch: null,
-        worktreePath: null,
         createdAt,
       }),
     );
