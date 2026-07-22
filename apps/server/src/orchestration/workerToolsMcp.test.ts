@@ -33,7 +33,7 @@ async function createSystem() {
 }
 
 describe("Worker MCP tools", () => {
-  it("lets an agent manage Tasks and Inbox requests without implicitly creating Threads", async () => {
+  it("lets an agent manage Tasks, and binds an Inbox request to the Thread that sent it", async () => {
     const system = await createSystem();
     const workerA = ProjectId.makeUnsafe("worker-a");
     const workerB = ProjectId.makeUnsafe("worker-b");
@@ -117,16 +117,33 @@ describe("Worker MCP tools", () => {
       subject: "Provide the API contract",
       body: "Return the current contract for this integration.",
       related_task_id: created.id,
-    })) as { requestId: string; threadCreated: boolean };
-    expect(request.threadCreated).toBe(false);
+    })) as { requestId: string; autoDispatched: boolean };
+    expect(request.autoDispatched).toBe(true);
 
+    // The sending Thread is recorded on the request so the reply has somewhere to
+    // land. The responder Thread is spawned by WorkerInboxReactor, which is not
+    // mounted here, so the channel reads as open with no responder yet.
     const inbox = (await call(threadB, "inbox_list", {})) as Array<{
       id: string;
       requesterWorkerId: string | null;
+      requesterThreadId: string | null;
+      responderThreadId: string | null;
+      channelOpen: boolean;
     }>;
     expect(inbox).toEqual([
-      expect.objectContaining({ id: request.requestId, requesterWorkerId: workerA }),
+      expect.objectContaining({
+        id: request.requestId,
+        requesterWorkerId: workerA,
+        requesterThreadId: threadA,
+        responderThreadId: null,
+        channelOpen: true,
+      }),
     ]);
+
+    // Replying needs both ends bound; without a responder Thread there is no peer.
+    await expect(
+      call(threadA, "inbox_reply", { request_id: request.requestId, body: "ping" }),
+    ).rejects.toThrow(/not part of request channel/);
 
     await call(threadA, "tasks_close", {
       task_id: created.id,

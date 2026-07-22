@@ -27,11 +27,12 @@ const makeProjectionTaskRepository = Effect.gen(function* () {
     Request: ProjectionTask,
     execute: (row) => sql`
       INSERT INTO projection_tasks (
-        task_id, worker_id, requester_worker_id, requester_task_id,
+        task_id, worker_id, requester_worker_id, requester_task_id, requester_thread_id,
         title, brief, status, origin, artifacts_json, completion_summary,
         created_at, updated_at, completed_at
       ) VALUES (
         ${row.taskId}, ${row.workerId}, ${row.requesterWorkerId}, ${row.requesterTaskId},
+        ${row.requesterThreadId},
         ${row.title}, ${row.brief}, ${row.status}, ${row.origin}, ${JSON.stringify(row.artifacts)},
         ${row.completionSummary}, ${row.createdAt}, ${row.updatedAt}, ${row.completedAt}
       )
@@ -39,6 +40,7 @@ const makeProjectionTaskRepository = Effect.gen(function* () {
         worker_id = excluded.worker_id,
         requester_worker_id = excluded.requester_worker_id,
         requester_task_id = excluded.requester_task_id,
+        requester_thread_id = excluded.requester_thread_id,
         title = excluded.title,
         brief = excluded.brief,
         status = excluded.status,
@@ -58,6 +60,7 @@ const makeProjectionTaskRepository = Effect.gen(function* () {
       SELECT
         task_id AS "taskId", worker_id AS "workerId",
         requester_worker_id AS "requesterWorkerId", requester_task_id AS "requesterTaskId",
+        requester_thread_id AS "requesterThreadId",
         title, brief, status, origin, artifacts_json AS "artifacts",
         completion_summary AS "completionSummary", created_at AS "createdAt",
         updated_at AS "updatedAt", completed_at AS "completedAt"
@@ -73,6 +76,7 @@ const makeProjectionTaskRepository = Effect.gen(function* () {
       SELECT
         task_id AS "taskId", worker_id AS "workerId",
         requester_worker_id AS "requesterWorkerId", requester_task_id AS "requesterTaskId",
+        requester_thread_id AS "requesterThreadId",
         title, brief, status, origin, artifacts_json AS "artifacts",
         completion_summary AS "completionSummary", created_at AS "createdAt",
         updated_at AS "updatedAt", completed_at AS "completedAt"
@@ -88,6 +92,7 @@ const makeProjectionTaskRepository = Effect.gen(function* () {
       SELECT
         task_id AS "taskId", worker_id AS "workerId",
         requester_worker_id AS "requesterWorkerId", requester_task_id AS "requesterTaskId",
+        requester_thread_id AS "requesterThreadId",
         title, brief, status, origin, artifacts_json AS "artifacts",
         completion_summary AS "completionSummary", created_at AS "createdAt",
         updated_at AS "updatedAt", completed_at AS "completedAt"

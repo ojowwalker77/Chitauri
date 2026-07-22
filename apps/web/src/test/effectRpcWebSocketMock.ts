@@ -127,6 +127,7 @@ export function createShellSnapshotFromReadModel(
       workerId: task.workerId,
       requesterWorkerId: task.requesterWorkerId,
       requesterTaskId: task.requesterTaskId,
+      requesterThreadId: task.requesterThreadId,
       title: task.title,
       brief: task.brief,
       status: task.status,

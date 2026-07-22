@@ -20,6 +20,7 @@ describe("buildWorkerMentionContext", () => {
           workerId,
           requesterWorkerId: null,
           requesterTaskId: null,
+          requesterThreadId: null,
           title: "Audit urgent fixes",
           brief: "Inspect the five urgent findings.",
           status: "open",

@@ -146,6 +146,7 @@ function makeTaskShell(overrides: {
     workerId: projectId,
     requesterWorkerId: null,
     requesterTaskId: null,
+    requesterThreadId: null,
     title: "Existing user Task",
     brief: "User-owned work must remain under user control.",
     status: "in_progress",

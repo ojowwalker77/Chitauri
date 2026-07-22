@@ -450,6 +450,7 @@ function toProjectedTask(row: ProjectionTaskDbRow): OrchestrationTask {
     workerId: row.workerId,
     requesterWorkerId: row.requesterWorkerId,
     requesterTaskId: row.requesterTaskId,
+    requesterThreadId: row.requesterThreadId,
     title: row.title,
     brief: row.brief,
     status: row.status,
@@ -468,6 +469,7 @@ function toProjectedTaskShell(row: ProjectionTaskDbRow): OrchestrationTaskShell 
     workerId: row.workerId,
     requesterWorkerId: row.requesterWorkerId,
     requesterTaskId: row.requesterTaskId,
+    requesterThreadId: row.requesterThreadId,
     title: row.title,
     brief: row.brief,
     status: row.status,
@@ -813,6 +815,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           worker_id AS "workerId",
           requester_worker_id AS "requesterWorkerId",
           requester_task_id AS "requesterTaskId",
+          requester_thread_id AS "requesterThreadId",
           title,
           brief,
           status,
@@ -1231,6 +1234,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         SELECT
           task_id AS "taskId", worker_id AS "workerId",
           requester_worker_id AS "requesterWorkerId", requester_task_id AS "requesterTaskId",
+          requester_thread_id AS "requesterThreadId",
           title, brief, status, origin, artifacts_json AS "artifacts",
           completion_summary AS "completionSummary", created_at AS "createdAt",
           updated_at AS "updatedAt", completed_at AS "completedAt"

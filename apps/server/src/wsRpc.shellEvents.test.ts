@@ -32,6 +32,9 @@ describe("Worker Task shell events", () => {
         workerId: "worker-1",
         requesterWorkerId: "worker-2",
         requesterTaskId: "task-2",
+        // The source event predates Worker channels and carries no requester
+        // Thread; the shell projection must still emit the key, defaulted to null.
+        requesterThreadId: null,
         title: "Verify inbox delivery",
         brief: "Smoke test only.",
         status: "open",

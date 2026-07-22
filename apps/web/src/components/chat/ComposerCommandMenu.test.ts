@@ -13,6 +13,7 @@ describe("groupCommandItems", () => {
           workerId: ProjectId.makeUnsafe("worker-1"),
           requesterWorkerId: null,
           requesterTaskId: null,
+          requesterThreadId: null,
           title: "Urgent fixes",
           brief: "Audit urgent fixes",
           status: "open",

@@ -2,6 +2,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Layer } from "effect";
 
 import { AutomationRunReactorLive } from "./automation/Layers/AutomationRunReactor";
+import { WorkerInboxReactorLive } from "./orchestration/Layers/WorkerInboxReactor";
 import { AutomationSchedulerLive } from "./automation/Layers/AutomationScheduler";
 import { AutomationServiceLive } from "./automation/Layers/AutomationService";
 import { CheckpointDiffQueryLive } from "./checkpointing/Layers/CheckpointDiffQuery";
@@ -119,11 +120,15 @@ export function makeServerRuntimeServicesLayer() {
   const automationRunReactorLayer = AutomationRunReactorLive.pipe(
     Layer.provideMerge(automationServiceLayer),
   );
+  const workerInboxReactorLayer = WorkerInboxReactorLive.pipe(
+    Layer.provideMerge(OrchestrationLayerLive),
+  );
 
   return Layer.mergeAll(
     automationServiceLayer,
     automationSchedulerLayer,
     automationRunReactorLayer,
+    workerInboxReactorLayer,
     AutomationRepositoryLive,
     orchestrationReactorLayer,
     threadDeletionReactorLayer,

@@ -301,6 +301,7 @@ export function projectEvent(
             workerId: payload.workerId,
             requesterWorkerId: payload.requesterWorkerId,
             requesterTaskId: payload.requesterTaskId,
+            requesterThreadId: payload.requesterThreadId ?? null,
             title: payload.title,
             brief: payload.brief,
             status: payload.status,
