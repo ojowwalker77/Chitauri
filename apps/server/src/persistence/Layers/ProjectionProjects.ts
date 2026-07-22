@@ -56,7 +56,7 @@ const makeProjectionProjectRepository = Effect.gen(function* () {
           ${row.workspaceRoot},
           ${row.defaultModelSelection !== null ? JSON.stringify(row.defaultModelSelection) : null},
           ${JSON.stringify(row.scripts)},
-          ${row.workerInstructions},
+          ${row.workerInstructions ?? ""},
           ${row.isPinned ? 1 : 0},
           ${row.createdAt},
           ${row.updatedAt},
