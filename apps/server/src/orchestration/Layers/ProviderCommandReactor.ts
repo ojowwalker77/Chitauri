@@ -377,6 +377,33 @@ const make = Effect.gen(function* () {
       createdAt: input.createdAt,
     });
 
+  const markOpenTaskInProgress = Effect.fnUntraced(function* (thread: OrchestrationThread) {
+    if (thread.taskId === null) {
+      return;
+    }
+    const readModel = yield* orchestrationEngine.getReadModel();
+    const task = readModel.tasks.find((candidate) => candidate.id === thread.taskId);
+    if (task?.status !== "open") {
+      return;
+    }
+    yield* orchestrationEngine
+      .dispatch({
+        type: "task.update",
+        commandId: serverCommandId("task-started-by-thread"),
+        taskId: task.id,
+        status: "in_progress",
+      })
+      .pipe(
+        Effect.catchCause((cause) =>
+          Effect.logWarning("Task status could not advance when its Thread started", {
+            taskId: task.id,
+            threadId: thread.id,
+            cause: Cause.pretty(cause),
+          }),
+        ),
+      );
+  });
+
   const setThreadSessionError = Effect.fnUntraced(function* (input: {
     readonly threadId: ThreadId;
     readonly runtimeMode?: RuntimeMode;
@@ -1399,6 +1426,8 @@ const make = Effect.gen(function* () {
       });
       return;
     }
+
+    yield* markOpenTaskInProgress(thread);
 
     // The decider routes turn starts from the projected session, which can lag
     // the runtime: a message dispatched right as another turn begins (e.g. the

@@ -980,6 +980,8 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                               </span>
                             </div>
                             <div className="mt-0.5 flex items-center gap-2 text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/58">
+                              <span className="font-mono">{task.reference}</span>
+                              <span aria-hidden>·</span>
                               <span>{TASK_STATUS_LABELS[task.status]}</span>
                               {matchKind === "brief" && task.brief ? (
                                 <>

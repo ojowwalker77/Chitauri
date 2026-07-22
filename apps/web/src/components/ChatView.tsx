@@ -37,6 +37,7 @@ import {
 import { getModelCapabilities, normalizeModelSlug } from "@t3tools/shared/model";
 import { resolveTailUserMessageEditTarget } from "@t3tools/shared/conversationEdit";
 import { threadExportBlockedReason } from "@t3tools/shared/threadExport";
+import { formatTaskReference } from "@t3tools/shared/taskReferences";
 import { buildTemporaryWorktreeBranchName } from "@t3tools/shared/git";
 import {
   buildPromptThreadTitleFallback,
@@ -111,6 +112,7 @@ import { stripDiffSearchParams } from "../diffRouteSearch";
 import { resolveSubagentPresentationForThread } from "../lib/subagentPresentation";
 import { ensureHomeChatProject, isHomeChatContainerProject } from "../lib/chatProjects";
 import { resolveFirstSendTarget } from "../lib/chatFirstSend";
+import { resolveTaskPickupTarget } from "../lib/taskPickup";
 import {
   createOrRecoverProjectFromPath,
   PROJECT_CREATE_EXISTING_SYNC_ERROR,
@@ -762,6 +764,8 @@ export default function ChatView({
   composerDisclosure,
 }: ChatViewProps) {
   const markThreadVisited = useStore((store) => store.markThreadVisited);
+  const workerTasks = useStore((store) => store.tasks);
+  const workerThreads = useStore((store) => store.threads);
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
   const setStoreThreadError = useStore((store) => store.setError);
   const setStoreThreadWorkspace = useStore((store) => store.setThreadWorkspace);
@@ -4905,6 +4909,33 @@ export default function ChatView({
       return false;
     }
     if (!activeProject) return false;
+    if (
+      queuedChatTurn === null &&
+      hasPromptOnlySendableContent &&
+      selectedComposerSkillsForSend.length === 0 &&
+      activeThread.taskId == null
+    ) {
+      const pickupTarget = resolveTaskPickupTarget({
+        prompt: trimmedPromptForSend,
+        workerId: activeThread.projectId,
+        currentTaskId: activeThread.taskId ?? null,
+        tasks: workerTasks,
+        threads: workerThreads,
+      });
+      if (pickupTarget) {
+        setComposerDraftPrompt(pickupTarget.thread.id, promptForSend);
+        await navigate({
+          to: "/$threadId",
+          params: { threadId: pickupTarget.thread.id },
+        });
+        toastManager.add({
+          type: "info",
+          title: `Ready in ${formatTaskReference(pickupTarget.task.id)}`,
+          description: "Your request is preserved in this Task Thread. Send it when ready.",
+        });
+        return true;
+      }
+    }
     sendPreflightInFlightRef.current = true;
     const sendProviderAvailability = await (async () => {
       try {

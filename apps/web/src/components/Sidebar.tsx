@@ -80,6 +80,7 @@ import {
 } from "@t3tools/contracts";
 import { isGenericChatThreadTitle } from "@t3tools/shared/chatThreads";
 import { getDefaultModel } from "@t3tools/shared/model";
+import { formatTaskReference } from "@t3tools/shared/taskReferences";
 import { pluralize } from "@t3tools/shared/text";
 import { localServerAddressLabel, localServerMatchesRun } from "@t3tools/shared/localServers";
 import { resolveThreadWorkspaceCwd } from "@t3tools/shared/threadEnvironment";
@@ -4848,7 +4849,7 @@ export default function Sidebar() {
           </button>
           <SidebarSectionToolbar placement="overlay" revealOnHover>
             <SidebarIconButton
-              icon={PlusIcon}
+              icon={NewThreadIcon}
               label={`Create new Thread for ${project.name} Worker`}
               tooltip="New Thread"
               tooltipSide="top"
@@ -6523,6 +6524,7 @@ function SidebarSearchPaletteController(props: {
     () =>
       props.tasks.map((task) => ({
         id: task.id,
+        reference: formatTaskReference(task.id),
         workerId: task.workerId,
         workerName: props.projectById.get(task.workerId)?.name ?? "Unknown Worker",
         workerRemoteName: props.projectById.get(task.workerId)?.remoteName ?? "Unknown Worker",

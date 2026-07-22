@@ -163,6 +163,10 @@
     "./formatBytes": {
       "types": "./src/formatBytes.ts",
       "import": "./src/formatBytes.ts"
+    },
+    "./taskReferences": {
+      "types": "./src/taskReferences.ts",
+      "import": "./src/taskReferences.ts"
     }
   },
   "scripts": {

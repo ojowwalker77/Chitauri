@@ -108,6 +108,7 @@ const threads: SidebarSearchThread[] = [
 const tasks: SidebarSearchTask[] = [
   {
     id: "task-passkeys",
+    reference: "TASK-PASSKEYS",
     workerId: "project-alpha",
     workerName: "Alpha Repo",
     workerRemoteName: "Alpha Repo",
@@ -119,6 +120,7 @@ const tasks: SidebarSearchTask[] = [
   },
   {
     id: "task-release",
+    reference: "TASK-RELEASE",
     workerId: "project-beta",
     workerName: "Docs",
     workerRemoteName: "Beta Repo",
@@ -169,6 +171,7 @@ describe("SidebarSearchPalette.logic", () => {
     assert.equal(matchSidebarSearchTasks(tasks, "authentication")[0]?.matchKind, "brief");
     assert.equal(matchSidebarSearchTasks(tasks, "waiting on worker")[0]?.task.id, "task-release");
     assert.equal(matchSidebarSearchTasks(tasks, "beta repo")[0]?.task.id, "task-release");
+    assert.equal(matchSidebarSearchTasks(tasks, "task-passkeys")[0]?.matchKind, "reference");
   });
 
   it("does not crowd the default palette with Tasks before a query", () => {

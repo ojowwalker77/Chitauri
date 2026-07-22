@@ -30,6 +30,7 @@ export interface SidebarSearchProjectMatch {
 
 export interface SidebarSearchTask {
   id: string;
+  reference: string;
   workerId: string;
   workerName: string;
   workerRemoteName: string;
@@ -43,7 +44,7 @@ export interface SidebarSearchTask {
 export interface SidebarSearchTaskMatch {
   id: string;
   task: SidebarSearchTask;
-  matchKind: "brief" | "status" | "title" | "worker";
+  matchKind: "brief" | "reference" | "status" | "title" | "worker";
 }
 
 export interface SidebarSearchThread {
@@ -226,11 +227,14 @@ function scoreTask(
   if (!query) return null;
 
   const title = normalizeText(task.title);
+  const reference = normalizeText(task.reference);
   const workerName = normalizeText(task.workerName);
   const workerRemoteName = normalizeText(task.workerRemoteName);
   const status = normalizeText(task.status.replaceAll("_", " "));
   const brief = normalizeText(task.brief);
 
+  if (reference === query) return { kind: "reference", score: 175 };
+  if (reference.startsWith(query)) return { kind: "reference", score: 155 };
   if (title === query) return { kind: "title", score: 165 };
   if (title.startsWith(query)) return { kind: "title", score: 145 };
   if (workerName === query || workerRemoteName === query) {

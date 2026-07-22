@@ -40,8 +40,8 @@ describe("buildWorkerTaskContext", () => {
     });
 
     expect(context).toContain("Current Task Thread:");
-    expect(context).toContain("[task-current] in_progress: Current work");
-    expect(context).toContain("[task-open] open: Next work");
+    expect(context).toContain("[TASK-TASKCURR | id: task-current] in_progress: Current work");
+    expect(context).toContain("[TASK-TASKOPEN | id: task-open] open: Next work");
     expect(context).not.toContain("Finished work");
   });
 

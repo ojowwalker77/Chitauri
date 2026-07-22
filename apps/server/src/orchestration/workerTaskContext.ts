@@ -2,6 +2,7 @@
 // Purpose: Build compact, deterministic Task context for repository Worker agent sessions.
 
 import type { OrchestrationTaskShell, TaskId } from "@t3tools/contracts";
+import { formatTaskReference } from "@t3tools/shared/taskReferences";
 
 const ACTIVE_STATUSES = new Set<OrchestrationTaskShell["status"]>([
   "open",
@@ -23,7 +24,7 @@ const STATUS_ORDER: Readonly<Record<OrchestrationTaskShell["status"], number>> =
 
 function taskLine(task: OrchestrationTaskShell): string {
   const brief = task.brief.trim().replaceAll(/\s+/g, " ");
-  return `- [${task.id}] ${task.status}: ${task.title}${brief ? ` — ${brief.slice(0, 240)}` : ""}`;
+  return `- [${formatTaskReference(task.id)} | id: ${task.id}] ${task.status}: ${task.title}${brief ? ` — ${brief.slice(0, 240)}` : ""}`;
 }
 
 export function buildWorkerTaskContext(input: {

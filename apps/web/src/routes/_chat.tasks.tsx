@@ -9,6 +9,7 @@ import {
   type TaskStatus,
 } from "@t3tools/contracts";
 import { getDefaultModel } from "@t3tools/shared/model";
+import { formatTaskReference } from "@t3tools/shared/taskReferences";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
@@ -734,6 +735,9 @@ function TasksRoute() {
                       <div className="truncate text-[13px] font-medium">{task.title}</div>
                       <div className="mt-1 flex items-center gap-2">
                         <TaskStatusPill status={task.status} />
+                        <span className="font-mono text-[10px] text-muted-foreground/60">
+                          {formatTaskReference(task.id)}
+                        </span>
                         <span className="truncate text-[11px] text-muted-foreground/65">
                           {task.origin}
                         </span>
@@ -759,6 +763,9 @@ function TasksRoute() {
                   <div>
                     <div className="mb-3 flex flex-wrap items-center gap-2">
                       <TaskStatusPill status={selectedTask.status} />
+                      <span className="font-mono text-[11px] text-muted-foreground">
+                        {formatTaskReference(selectedTask.id)}
+                      </span>
                       <span className="text-xs text-muted-foreground">
                         {selectedWorker.name} Worker
                       </span>

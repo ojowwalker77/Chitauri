@@ -10,6 +10,7 @@ import {
   EventId,
   MessageId,
   ProjectId,
+  TaskId,
   ThreadId,
   TurnId,
 } from "@t3tools/contracts";
@@ -48,6 +49,7 @@ const asApprovalRequestId = (value: string): ApprovalRequestId =>
   ApprovalRequestId.makeUnsafe(value);
 const asEventId = (value: string): EventId => EventId.makeUnsafe(value);
 const asMessageId = (value: string): MessageId => MessageId.makeUnsafe(value);
+const asTaskId = (value: string): TaskId => TaskId.makeUnsafe(value);
 const asTurnId = (value: string): TurnId => TurnId.makeUnsafe(value);
 
 const deriveServerPathsSync = (baseDir: string, devUrl: URL | undefined) =>
@@ -516,6 +518,53 @@ describe("ProviderCommandReactor", () => {
     expect(input?.input).toContain("Earlier answer");
     expect(input?.input).toContain("<sidechat_boundary>");
     expect(input?.input).toContain("Fresh side question");
+  });
+
+  it("advances an open Task when work starts in its canonical Thread", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+    const taskId = asTaskId("task-1");
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "task.create",
+        commandId: CommandId.makeUnsafe("cmd-task-create"),
+        taskId,
+        workerId: asProjectId("project-1"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        runtimeMode: "approval-required",
+        envMode: "worktree",
+        branch: null,
+        worktreePath: null,
+        title: "Audit urgent fixes",
+        brief: "Start with the urgent findings.",
+        origin: "agent",
+        createdAt: now,
+      }),
+    );
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-task-turn-start"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("task-user-message"),
+          role: "user",
+          text: "Start the audit.",
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(async () => {
+      const readModel = await Effect.runPromise(harness.engine.getReadModel());
+      return readModel.tasks.find((task) => task.id === taskId)?.status === "in_progress";
+    });
+    const readModel = await Effect.runPromise(harness.engine.getReadModel());
+    expect(readModel.tasks.find((task) => task.id === taskId)?.status).toBe("in_progress");
   });
 
   it("rolls back provider conversation state for message edits", async () => {
