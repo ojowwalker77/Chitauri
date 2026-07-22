@@ -13,6 +13,7 @@ import { EDITOR_ICON_ROUTE_PATH } from "@t3tools/shared/editorIcons";
 import { threadExportBlockedReason } from "@t3tools/shared/threadExport";
 import { DateTime, Effect, Exit, FileSystem, Layer, Option, Path, Schema, Stream } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
+import { workerToolsMcpRouteLayer } from "./orchestration/workerToolsMcp.ts";
 
 import {
   ATTACHMENTS_ROUTE_PREFIX,
@@ -175,6 +176,7 @@ export function makeEffectHttpRouteLayer(readiness: ServerReadiness) {
     editorIconEffectRouteLayer,
     localImageEffectRouteLayer,
     attachmentsEffectRouteLayer,
+    workerToolsMcpRouteLayer,
     staticAndDevEffectRouteLayer,
   );
 }

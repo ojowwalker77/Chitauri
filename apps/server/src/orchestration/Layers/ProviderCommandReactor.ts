@@ -34,6 +34,7 @@ import { isTemporaryWorktreeBranch, WORKTREE_BRANCH_PREFIX } from "@t3tools/shar
 import { buildStalePendingRequestFailureDetail } from "@t3tools/shared/threadSummary";
 import { resolveThreadWorkspaceState } from "@t3tools/shared/threadEnvironment";
 
+import { ServerConfig } from "../../config.ts";
 import {
   checkpointRefForThreadMessageStart,
   checkpointRefForThreadTurn,
@@ -63,6 +64,7 @@ import { ProjectionSnapshotQuery } from "../Services/ProjectionSnapshotQuery.ts"
 import { buildWorkerTaskContext } from "../workerTaskContext.ts";
 import { buildWorkerMentionContext } from "../workerMentionContext.ts";
 import { isTeaCodeMentionReference } from "@t3tools/shared/workerMentions";
+import { workerToolsMcpServer } from "../workerToolsMcp.ts";
 import {
   ProviderCommandReactor,
   type ProviderCommandReactorShape,
@@ -248,6 +250,7 @@ function buildGeneratedWorktreeBranchName(raw: string): string {
 }
 
 const make = Effect.gen(function* () {
+  const serverConfig = yield* ServerConfig;
   const orchestrationEngine = yield* OrchestrationEngineService;
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
   const providerService = yield* ProviderService;
@@ -762,6 +765,7 @@ const make = Effect.gen(function* () {
             ? { providerOptions: options.providerOptions }
             : {}),
           ...(developerInstructions ? { developerInstructions } : {}),
+          mcpServers: [workerToolsMcpServer(serverConfig, threadId)],
           ...(input?.resumeCursor !== undefined ? { resumeCursor: input.resumeCursor } : {}),
           runtimeMode: desiredRuntimeMode,
         });

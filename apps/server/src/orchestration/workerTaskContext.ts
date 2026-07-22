@@ -58,7 +58,8 @@ export function buildWorkerTaskContext(input: {
     pending.length > 0
       ? `Pending Tasks for this Worker:\n${pending.map(taskLine).join("\n")}`
       : "Pending Tasks for this Worker: none.",
-    "Provider plans and todo lists are execution progress, not TeaCode Tasks. Create or edit durable Tasks only through TeaCode Task tools when the user asks.",
+    "Provider plans and todo lists are execution progress, not TeaCode Tasks. Use tasks_list, tasks_create, tasks_update, tasks_close, and tasks_pull for durable Task work when the user asks.",
+    "Use inbox_list and inbox_send for structured cross-repository Worker requests. Never edit another Worker's repository directly.",
     "When the user references or asks to pull a Task, use its exact id and brief in the current Thread unless the user explicitly starts another Thread. Do not invent a duplicate Task or edit another repository directly.",
     "</worker_task_context>",
   ].join("\n");

@@ -317,6 +317,46 @@ describe("Worker Task orchestration", () => {
     });
   });
 
+  it("allows an unfiled Worker request without inventing a requester Task", async () => {
+    const now = "2026-07-21T12:00:00.000Z";
+    const withRequester = await addProject(createEmptyReadModel(now), {
+      id: WORKER_ID,
+      sequence: 1,
+    });
+    const withBothWorkers = await addProject(withRequester, {
+      id: OTHER_WORKER_ID,
+      sequence: 2,
+    });
+
+    const request = firstEvent(
+      await Effect.runPromise(
+        decideOrchestrationCommand({
+          readModel: withBothWorkers,
+          command: {
+            type: "task.create",
+            commandId: CommandId.makeUnsafe("command-unfiled-request"),
+            taskId: TaskId.makeUnsafe("task-unfiled-request"),
+            workerId: OTHER_WORKER_ID,
+            requesterWorkerId: WORKER_ID,
+            title: "Provide the API contract",
+            brief: "Send the current contract without starting a Thread.",
+            origin: "delegation",
+            createdAt: now,
+          },
+        }),
+      ),
+    );
+
+    expect(request?.type).toBe("task.created");
+    if (!request || request.type !== "task.created") return;
+    expect(request.payload).toMatchObject({
+      workerId: OTHER_WORKER_ID,
+      requesterWorkerId: WORKER_ID,
+      requesterTaskId: null,
+      origin: "delegation",
+    });
+  });
+
   it("rejects same-Worker and invalid requester delegation links", async () => {
     const now = "2026-07-21T12:00:00.000Z";
     const withRequester = await addProject(createEmptyReadModel(now), {

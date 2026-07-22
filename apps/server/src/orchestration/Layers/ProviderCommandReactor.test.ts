@@ -1175,6 +1175,15 @@ describe("ProviderCommandReactor", () => {
         model: "gpt-5-codex",
       },
       runtimeMode: "approval-required",
+      mcpServers: [
+        expect.objectContaining({
+          name: "teacode-worker",
+          url: "http://127.0.0.1:0/api/worker-tools/mcp",
+          headers: expect.objectContaining({
+            "X-TeaCode-Thread-Id": "thread-1",
+          }),
+        }),
+      ],
     });
 
     const readModel = await Effect.runPromise(harness.engine.getReadModel());

@@ -410,26 +410,32 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       const hasRequesterWorker = command.requesterWorkerId !== undefined;
       const hasRequesterTask = command.requesterTaskId !== undefined;
       const isDelegated = command.origin === "delegation";
-      if (hasRequesterWorker !== hasRequesterTask || isDelegated !== hasRequesterTask) {
+      if (
+        (isDelegated && !hasRequesterWorker) ||
+        (!isDelegated && (hasRequesterWorker || hasRequesterTask)) ||
+        (hasRequesterTask && !hasRequesterWorker)
+      ) {
         return yield* new OrchestrationCommandInvariantError({
           commandType: command.type,
           detail:
-            "Delegated Tasks require both requesterWorkerId and requesterTaskId; ordinary Tasks cannot carry delegation references.",
+            "Delegated Tasks require requesterWorkerId and may reference a requester Task; ordinary Tasks cannot carry delegation references.",
         });
       }
-      if (command.requesterWorkerId !== undefined && command.requesterTaskId !== undefined) {
+      if (command.requesterWorkerId !== undefined) {
         if (command.requesterWorkerId === command.workerId) {
           return yield* new OrchestrationCommandInvariantError({
             commandType: command.type,
             detail: "Delegation must target a different repository Worker.",
           });
         }
-        yield* requireTaskBelongsToWorker({
-          readModel,
-          command,
-          taskId: command.requesterTaskId,
-          workerId: command.requesterWorkerId,
-        });
+        if (command.requesterTaskId !== undefined) {
+          yield* requireTaskBelongsToWorker({
+            readModel,
+            command,
+            taskId: command.requesterTaskId,
+            workerId: command.requesterWorkerId,
+          });
+        }
       }
       return {
         ...withEventBase({
