@@ -66,6 +66,58 @@ function now() {
 }
 
 describe("OrchestrationEngine", () => {
+  it("hides legacy plan-derived Tasks and Threads from upgraded snapshots", async () => {
+    const system = await createOrchestrationSystem();
+    const workerId = asProjectId("worker-legacy-cleanup");
+    const createdAt = "2026-07-22T12:00:00.000Z";
+
+    await system.run(
+      system.engine.dispatch({
+        type: "project.create",
+        commandId: CommandId.makeUnsafe("cmd-legacy-worker"),
+        projectId: workerId,
+        title: "TeaCode",
+        workspaceRoot: "/tmp/legacy-cleanup",
+        defaultModelSelection: { provider: "codex", model: "gpt-5-codex" },
+        createdAt,
+      }),
+    );
+    await system.run(
+      system.engine.dispatch({
+        type: "task.create",
+        commandId: CommandId.makeUnsafe("cmd-legacy-task"),
+        taskId: TaskId.makeUnsafe("agent-task:deadbeef"),
+        workerId,
+        title: "Old provider plan point",
+        brief: "This should never have been durable.",
+        origin: "agent",
+        createdAt,
+      }),
+    );
+    await system.run(
+      system.engine.dispatch({
+        type: "thread.create",
+        commandId: CommandId.makeUnsafe("cmd-legacy-thread"),
+        threadId: ThreadId.makeUnsafe("agent-task-thread:deadbeef"),
+        projectId: workerId,
+        taskId: TaskId.makeUnsafe("agent-task:deadbeef"),
+        title: "Old provider plan point",
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        runtimeMode: "approval-required",
+        envMode: "worktree",
+        branch: null,
+        worktreePath: null,
+        createdAt,
+      }),
+    );
+
+    const snapshot = await system.run(system.snapshotQuery.getShellSnapshot());
+    expect(snapshot.tasks).toHaveLength(0);
+    expect(snapshot.threads).toHaveLength(0);
+
+    await system.dispose();
+  });
+
   it("preserves repository ownership across a delegated Worker Task lifecycle", async () => {
     const createdAt = "2026-07-21T12:00:00.000Z";
     const workerAId = asProjectId("worker-a");

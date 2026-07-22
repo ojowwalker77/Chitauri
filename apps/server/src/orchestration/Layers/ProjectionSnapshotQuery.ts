@@ -823,6 +823,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           updated_at AS "updatedAt",
           completed_at AS "completedAt"
         FROM projection_tasks
+        WHERE task_id NOT LIKE 'agent-task:%'
         ORDER BY updated_at DESC, task_id ASC
       `,
   });
@@ -869,6 +870,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           archived_at AS "archivedAt",
           deleted_at AS "deletedAt"
         FROM projection_threads
+        WHERE thread_id NOT LIKE 'agent-task-thread:%'
         ORDER BY created_at ASC, thread_id ASC
       `,
   });
@@ -912,6 +914,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           archived_at AS "archivedAt",
           deleted_at AS "deletedAt"
         FROM projection_threads
+        WHERE thread_id NOT LIKE 'agent-task-thread:%'
         ORDER BY created_at ASC, thread_id ASC
       `,
   });
