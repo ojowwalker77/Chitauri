@@ -13,6 +13,7 @@ import {
   type OrchestrationEvent,
   type ProjectDevServerEvent,
   type OrchestrationShellStreamEvent,
+  type OrchestrationTaskShell,
   type OrchestrationThreadStreamItem,
   type ServerConfigStreamEvent,
   type ServerDiagnosticsResult,
@@ -304,6 +305,21 @@ function isShellRelevantEvent(event: OrchestrationEvent): boolean {
     default:
       return event.aggregateKind === "thread";
   }
+}
+
+export function toTaskCreatedShellStreamEvent(
+  event: Extract<OrchestrationEvent, { type: "task.created" }>,
+): OrchestrationShellStreamEvent {
+  const { taskId, artifacts, ...task } = event.payload;
+  return {
+    kind: "task-upserted",
+    sequence: event.sequence,
+    task: {
+      id: taskId,
+      ...task,
+      artifacts: artifacts ?? [],
+    } satisfies OrchestrationTaskShell,
+  };
 }
 
 function isThreadDetailEvent(event: OrchestrationEvent): event is Extract<
@@ -707,20 +723,36 @@ export const makeWsRpcLayer = () =>
 
       const toShellStreamEvent = (
         event: OrchestrationEvent,
-      ): Effect.Effect<Option.Option<OrchestrationShellStreamEvent>, never> => {
+      ): Effect.Effect<Option.Option<OrchestrationShellStreamEvent>, WsRpcError> => {
+        const requireProjectedShell = <A, E, R>(input: {
+          readonly projection: Effect.Effect<Option.Option<A>, E, R>;
+          readonly missingMessage: string;
+          readonly readFailureMessage: string;
+          readonly toEvent: (value: A) => OrchestrationShellStreamEvent;
+        }): Effect.Effect<Option.Option<OrchestrationShellStreamEvent>, WsRpcError, R> =>
+          input.projection.pipe(
+            Effect.mapError((cause) => toWsRpcError(cause, input.readFailureMessage)),
+            Effect.flatMap((value) =>
+              Option.match(value, {
+                onNone: () => Effect.fail(new WsRpcError({ message: input.missingMessage })),
+                onSome: (projected) => Effect.succeed(Option.some(input.toEvent(projected))),
+              }),
+            ),
+          );
+
         switch (event.type) {
           case "project.created":
           case "project.meta-updated":
-            return projectionReadModelQuery.getProjectShellById(event.payload.projectId).pipe(
-              Effect.map((project) =>
-                Option.map(project, (nextProject) => ({
-                  kind: "project-upserted" as const,
-                  sequence: event.sequence,
-                  project: nextProject,
-                })),
-              ),
-              Effect.catch(() => Effect.succeed(Option.none())),
-            );
+            return requireProjectedShell({
+              projection: projectionReadModelQuery.getProjectShellById(event.payload.projectId),
+              missingMessage: `Project '${event.payload.projectId}' was not ready for the shell stream.`,
+              readFailureMessage: "Failed to read project shell update",
+              toEvent: (nextProject) => ({
+                kind: "project-upserted" as const,
+                sequence: event.sequence,
+                project: nextProject,
+              }),
+            });
           case "project.deleted":
             return Effect.succeed(
               Option.some({
@@ -730,17 +762,18 @@ export const makeWsRpcLayer = () =>
               }),
             );
           case "task.created":
+            return Effect.succeed(Option.some(toTaskCreatedShellStreamEvent(event)));
           case "task.updated":
-            return projectionReadModelQuery.getTaskShellById(event.payload.taskId).pipe(
-              Effect.map((task) =>
-                Option.map(task, (nextTask) => ({
-                  kind: "task-upserted" as const,
-                  sequence: event.sequence,
-                  task: nextTask,
-                })),
-              ),
-              Effect.catch(() => Effect.succeed(Option.none())),
-            );
+            return requireProjectedShell({
+              projection: projectionReadModelQuery.getTaskShellById(event.payload.taskId),
+              missingMessage: `Task '${event.payload.taskId}' was not ready for the shell stream.`,
+              readFailureMessage: "Failed to read Task shell update",
+              toEvent: (nextTask) => ({
+                kind: "task-upserted" as const,
+                sequence: event.sequence,
+                task: nextTask,
+              }),
+            });
           case "thread.deleted":
             return Effect.succeed(
               Option.some({
@@ -751,18 +784,18 @@ export const makeWsRpcLayer = () =>
             );
           default:
             if (event.aggregateKind !== "thread") return Effect.succeed(Option.none());
-            return projectionReadModelQuery
-              .getThreadShellById(ThreadId.makeUnsafe(String(event.aggregateId)))
-              .pipe(
-                Effect.map((thread) =>
-                  Option.map(thread, (nextThread) => ({
-                    kind: "thread-upserted" as const,
-                    sequence: event.sequence,
-                    thread: nextThread,
-                  })),
-                ),
-                Effect.catch(() => Effect.succeed(Option.none())),
-              );
+            return requireProjectedShell({
+              projection: projectionReadModelQuery.getThreadShellById(
+                ThreadId.makeUnsafe(String(event.aggregateId)),
+              ),
+              missingMessage: `Thread '${event.aggregateId}' was not ready for the shell stream.`,
+              readFailureMessage: "Failed to read thread shell update",
+              toEvent: (nextThread) => ({
+                kind: "thread-upserted" as const,
+                sequence: event.sequence,
+                thread: nextThread,
+              }),
+            });
         }
       };
 

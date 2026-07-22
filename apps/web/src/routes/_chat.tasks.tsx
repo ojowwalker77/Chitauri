@@ -121,7 +121,6 @@ function TaskCreateDialog({
         .getState()
         .setPrompt(threadId, [trimmedTitle, trimmedBrief].filter(Boolean).join("\n\n"));
       onCreated(threadId);
-      onOpenChange(false);
     } catch (error) {
       toastManager.add({
         type: "error",
