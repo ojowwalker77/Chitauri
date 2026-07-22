@@ -6,10 +6,12 @@ import {
   type ProviderKind,
   type ProviderPluginDescriptor,
   type ProviderSkillDescriptor,
+  type OrchestrationTaskShell,
 } from "@t3tools/contracts";
 import { memo, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { type ComposerTriggerKind } from "../../composer-logic";
 import { type ComposerSlashCommand } from "../../composerSlashCommands";
+import type { Project } from "../../types";
 import {
   BotIcon,
   BrainIcon,
@@ -22,6 +24,7 @@ import {
   GitBranchIcon,
   GitForkIcon,
   InfoIcon,
+  InboxIcon,
   ListTodoIcon,
   type LucideIcon,
   MessageCircleIcon,
@@ -96,6 +99,14 @@ function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
     return "Plugin";
   }
 
+  if (item.type === "task") {
+    return "Task";
+  }
+
+  if (item.type === "worker") {
+    return "Worker";
+  }
+
   if (item.type === "local-root") {
     return "Local";
   }
@@ -130,7 +141,13 @@ function commandMenuSecondaryText(item: ComposerCommandItem): string | null {
     return item.description;
   }
 
-  if (item.type === "plugin" || item.type === "skill" || item.type === "local-root") {
+  if (
+    item.type === "plugin" ||
+    item.type === "skill" ||
+    item.type === "local-root" ||
+    item.type === "task" ||
+    item.type === "worker"
+  ) {
     return item.description;
   }
 
@@ -200,6 +217,22 @@ export type ComposerCommandItem =
     }
   | {
       id: string;
+      type: "task";
+      task: OrchestrationTaskShell;
+      mention: ProviderMentionReference;
+      label: string;
+      description: string;
+    }
+  | {
+      id: string;
+      type: "worker";
+      worker: Project;
+      mention: ProviderMentionReference;
+      label: string;
+      description: string;
+    }
+  | {
+      id: string;
       type: "skill";
       skill: ProviderSkillDescriptor;
       label: string;
@@ -230,18 +263,28 @@ export function groupCommandItems(
   groupSlashCommandSections: boolean,
 ): ComposerCommandGroupModel[] {
   if (triggerKind === "mention") {
+    const taskItems = items.filter((item) => item.type === "task");
+    const workerItems = items.filter((item) => item.type === "worker");
     const pluginItems = items.filter((item) => item.type === "plugin");
     const localItems = items.filter((item) => item.type === "local-root" || item.type === "path");
     const agentItems = items.filter((item) => item.type === "agent");
     const otherItems = items.filter(
       (item) =>
         item.type !== "plugin" &&
+        item.type !== "task" &&
+        item.type !== "worker" &&
         item.type !== "local-root" &&
         item.type !== "path" &&
         item.type !== "agent",
     );
 
     const groups: ComposerCommandGroupModel[] = [];
+    if (taskItems.length > 0) {
+      groups.push({ id: "tasks", label: "Tasks", items: taskItems });
+    }
+    if (workerItems.length > 0) {
+      groups.push({ id: "workers", label: "Workers", items: workerItems });
+    }
     if (pluginItems.length > 0) {
       groups.push({ id: "plugins", label: "Plugins", items: pluginItems });
     }
@@ -419,6 +462,9 @@ const SLASH_COMMAND_ICONS: Record<string, LucideIcon> = {
   fork: GitForkIcon,
   status: InfoIcon,
   subagents: BotIcon,
+  tasks: ListTodoIcon,
+  inbox: InboxIcon,
+  request: MessageCircleIcon,
 };
 
 function commandMenuSlashGlyph(command: string, fallback: LucideIcon): ReactNode {
@@ -464,6 +510,10 @@ function commandMenuItemGlyph(item: ComposerCommandItem): ReactNode {
       return <BrainIcon className={cls} />;
     case "agent":
       return <BotIcon className={cls} />;
+    case "task":
+      return <ListTodoIcon className={cls} />;
+    case "worker":
+      return <WorktreeIcon className={cls} />;
     case "plugin":
       return <PluginIcon className={cls} />;
     case "skill":

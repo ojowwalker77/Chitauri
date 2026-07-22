@@ -154,6 +154,24 @@ const COMPOSER_SLASH_COMMAND_DEFINITIONS: Record<
     description: "Download this thread as a ZIP archive (thread.json + transcript.md)",
     source: "app",
   },
+  tasks: {
+    command: "tasks",
+    label: "/tasks",
+    description: "Open the global Task board",
+    source: "app",
+  },
+  inbox: {
+    command: "inbox",
+    label: "/inbox",
+    description: "Open the global Worker inbox",
+    source: "app",
+  },
+  request: {
+    command: "request",
+    label: "/request",
+    description: "Start a request to another Worker",
+    source: "app",
+  },
 };
 
 export function isBuiltInComposerSlashCommand(value: string): value is ComposerSlashCommand {
@@ -335,9 +353,11 @@ export function getAvailableComposerSlashCommands(input: {
     ),
   );
 
+  const workCommands = ["tasks", "inbox", "request"] as const;
   const availableCommands: ComposerSlashCommand[] =
     input.provider !== "claudeAgent"
       ? [
+          ...workCommands,
           "clear",
           ...(input.canOfferCompactCommand ? (["compact"] as const) : []),
           "model",
@@ -349,6 +369,7 @@ export function getAvailableComposerSlashCommands(input: {
           ...(input.canOfferExportCommand ? (["export"] as const) : []),
         ]
       : [
+          ...workCommands,
           // Claude owns most slash-command UX natively; sidechat remains app-level because it
           // creates a TeaCode split/context clone before the provider sees the first turn.
           // /export is app-level too — TeaCode owns the thread transcript, so the download

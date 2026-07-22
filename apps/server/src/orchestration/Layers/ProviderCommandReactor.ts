@@ -61,6 +61,8 @@ import {
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../Services/ProjectionSnapshotQuery.ts";
 import { buildWorkerTaskContext } from "../workerTaskContext.ts";
+import { buildWorkerMentionContext } from "../workerMentionContext.ts";
+import { isTeaCodeMentionReference } from "@t3tools/shared/workerMentions";
 import {
   ProviderCommandReactor,
   type ProviderCommandReactorShape,
@@ -953,9 +955,25 @@ const make = Effect.gen(function* () {
       shouldBootstrapPriorTranscriptContext && availableBootstrapChars > 0
         ? buildPriorTranscriptBootstrapText(thread, input.messageId, availableBootstrapChars)
         : null;
-    const boundaryMessageText = thread.sidechatSourceThreadId
-      ? wrapSidechatInput(input.messageText)
+    const workerMentionContext =
+      input.mentions?.some(isTeaCodeMentionReference) === true
+        ? yield* projectionSnapshotQuery.getShellSnapshot().pipe(
+            Effect.map((snapshot) =>
+              buildWorkerMentionContext({
+                mentions: input.mentions ?? [],
+                tasks: snapshot.tasks,
+                workers: snapshot.projects,
+              }),
+            ),
+            Effect.catch(() => Effect.succeed("")),
+          )
+        : "";
+    const messageTextWithReferences = workerMentionContext
+      ? `${input.messageText}\n\n${workerMentionContext}`
       : input.messageText;
+    const boundaryMessageText = thread.sidechatSourceThreadId
+      ? wrapSidechatInput(messageTextWithReferences)
+      : messageTextWithReferences;
     const providerInput = handoffBootstrapText
       ? `<handoff_context>\n${handoffBootstrapText}\n</handoff_context>\n\n<latest_user_message>\n${boundaryMessageText}\n</latest_user_message>`
       : sidechatBootstrapText
@@ -996,6 +1014,9 @@ const make = Effect.gen(function* () {
       }),
     );
     const normalizedAttachments = input.attachments ?? [];
+    const providerMentions = input.mentions?.filter(
+      (mention) => !isTeaCodeMentionReference(mention),
+    );
     const activeSession = yield* providerService
       .listSessions()
       .pipe(
@@ -1022,7 +1043,7 @@ const make = Effect.gen(function* () {
         ...(messageText ? { input: messageText } : {}),
         ...(normalizedAttachments.length > 0 ? { attachments: normalizedAttachments } : {}),
         ...(input.skills !== undefined ? { skills: input.skills } : {}),
-        ...(input.mentions !== undefined ? { mentions: input.mentions } : {}),
+        ...(providerMentions && providerMentions.length > 0 ? { mentions: providerMentions } : {}),
         ...(modelForTurn !== undefined ? { modelSelection: modelForTurn } : {}),
       });
 
@@ -1073,7 +1094,7 @@ const make = Effect.gen(function* () {
         ...(normalizedInput ? { input: normalizedInput } : {}),
         ...(normalizedAttachments.length > 0 ? { attachments: normalizedAttachments } : {}),
         ...(input.skills !== undefined ? { skills: input.skills } : {}),
-        ...(input.mentions !== undefined ? { mentions: input.mentions } : {}),
+        ...(providerMentions && providerMentions.length > 0 ? { mentions: providerMentions } : {}),
         ...(modelForTurn !== undefined ? { modelSelection: modelForTurn } : {}),
       });
     } else {

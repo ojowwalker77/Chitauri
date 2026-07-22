@@ -569,6 +569,48 @@ describe("ProviderCommandReactor", () => {
     expect(readModel.tasks.find((task) => task.id === taskId)?.status).toBe("in_progress");
   });
 
+  it("resolves internal Task mentions into exact context without forwarding them as provider mentions", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+    const taskId = asTaskId("task-mention-1");
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "task.create",
+        commandId: CommandId.makeUnsafe("cmd-task-mention-create"),
+        taskId,
+        workerId: asProjectId("project-1"),
+        title: "Audit urgent fixes",
+        brief: "Inspect the five urgent findings.",
+        origin: "agent",
+        createdAt: now,
+      }),
+    );
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-task-mention-turn"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("task-mention-message"),
+          role: "user",
+          text: "Let's tackle @Audit urgent fixes.",
+          attachments: [],
+          mentions: [{ name: "Audit urgent fixes", path: "teacode://task/task-mention-1" }],
+        },
+        runtimeMode: "approval-required",
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    const providerInput = harness.sendTurn.mock.calls[0]?.[0];
+    expect(providerInput?.input).toContain("Task TASK-TASKMENT");
+    expect(providerInput?.input).toContain("id: task-mention-1");
+    expect(providerInput?.input).toContain("does not imply a new Thread");
+    expect(providerInput).not.toHaveProperty("mentions");
+  });
+
   it("rolls back provider conversation state for message edits", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();

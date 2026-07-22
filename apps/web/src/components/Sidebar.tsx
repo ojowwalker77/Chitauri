@@ -1,5 +1,5 @@
 // FILE: Sidebar.tsx
-// Purpose: Renders Worker navigation with durable Tasks, Inbox requests, and Threads.
+// Purpose: Renders global work surfaces plus repository Workers and their Threads.
 // Exports: Sidebar
 
 import {
@@ -4751,11 +4751,6 @@ export default function Sidebar() {
     const projectToolbarReserveClassName =
       "group-hover/project-header:pr-[4.75rem] group-has-[:focus-visible]/project-header:pr-[4.75rem]";
     const showProjectThreadCount = focusedProjectId === project.id && allProjectThreadCount > 0;
-    const workerTaskCount = tasks.filter((task) => task.workerId === project.id).length;
-    const workerRequestCount = tasks.filter(
-      (task) => task.workerId === project.id && task.origin === "delegation",
-    ).length;
-
     return (
       <div className="group/collapsible" data-sidebar-tree-project={project.id}>
         <div className="group/project-header relative" data-project-hover-anchor={project.id}>
@@ -4879,45 +4874,6 @@ export default function Sidebar() {
                 disclosureContentClassName(project.expanded),
               )}
             >
-              <SidebarMenuSubItem className="w-full">
-                <SidebarMenuSubButton
-                  render={<button type="button" />}
-                  data-thread-selection-safe
-                  size="sm"
-                  className="h-7 translate-x-0 rounded-lg pr-2 text-left text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]"
-                  onClick={() => navigateToWorkerTasks(project.id)}
-                >
-                  <SidebarGlyph icon={ListTodoIcon} variant="compact" />
-                  <span className="min-w-0 flex-1 truncate">Tasks</span>
-                  {workerTaskCount > 0 ? (
-                    <span className="text-[11px] tabular-nums text-muted-foreground/55">
-                      {workerTaskCount}
-                    </span>
-                  ) : null}
-                </SidebarMenuSubButton>
-              </SidebarMenuSubItem>
-              <SidebarMenuSubItem className="w-full">
-                <SidebarMenuSubButton
-                  render={<button type="button" />}
-                  data-thread-selection-safe
-                  size="sm"
-                  className="h-7 translate-x-0 rounded-lg pr-2 text-left text-[length:var(--app-font-size-ui,14px)] text-muted-foreground/79 hover:bg-[var(--sidebar-accent)]"
-                  onClick={() => navigateToWorkerInbox(project.id)}
-                >
-                  <SidebarGlyph icon={InboxIcon} variant="compact" />
-                  <span className="min-w-0 flex-1 truncate">Inbox</span>
-                  {workerRequestCount > 0 ? (
-                    <span className="text-[11px] tabular-nums text-muted-foreground/55">
-                      {workerRequestCount}
-                    </span>
-                  ) : null}
-                </SidebarMenuSubButton>
-              </SidebarMenuSubItem>
-              {visibleEntries.length > 0 ? (
-                <div className="px-2 pt-1 pb-0.5 text-[10px] font-medium tracking-wide text-muted-foreground/48 uppercase">
-                  Threads
-                </div>
-              ) : null}
               {visibleEntries.map((entry) =>
                 renderThreadRow(
                   entry.thread,

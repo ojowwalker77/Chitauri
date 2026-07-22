@@ -188,7 +188,7 @@ describe("composerSlashCommands", () => {
     expect(shouldHideProviderNativeCommandFromComposerMenu("grok", "automation")).toBe(false);
   });
 
-  it("only exposes the app-level /export command for claude", () => {
+  it("exposes global work commands and /export for claude", () => {
     expect(
       getAvailableComposerSlashCommands({
         provider: "claudeAgent",
@@ -199,7 +199,7 @@ describe("composerSlashCommands", () => {
         canOfferSideCommand: true,
         canOfferExportCommand: true,
       }),
-    ).toEqual(["export"]);
+    ).toEqual(["tasks", "inbox", "request", "export"]);
   });
 
   it("offers the app-level /export command on every provider", () => {
@@ -299,7 +299,18 @@ describe("composerSlashCommands", () => {
         canOfferSideCommand: true,
         canOfferExportCommand: true,
       }),
-    ).toEqual(["clear", "model", "review", "fork", "status", "subagents", "export"]);
+    ).toEqual([
+      "tasks",
+      "inbox",
+      "request",
+      "clear",
+      "model",
+      "review",
+      "fork",
+      "status",
+      "subagents",
+      "export",
+    ]);
   });
 
   it("treats claude aliases like /fork as provider-native collisions", () => {

@@ -2,8 +2,8 @@ import { isBuiltInComposerSlashCommand, type ComposerSlashCommand } from "./comp
 import {
   createComposerMentionTokenRegex,
   extractComposerMentionPath,
-  isPluginProviderMentionReference,
-  providerMentionMatchesToken,
+  resolveMentionChipKind,
+  type MentionChipKind,
 } from "./lib/composerMentions";
 import {
   LINK_TOKEN_SOURCE,
@@ -21,7 +21,7 @@ export type ComposerPromptSegment =
   | {
       type: "mention";
       path: string;
-      kind?: "path" | "plugin";
+      kind?: MentionChipKind;
     }
   | {
       type: "skill";
@@ -306,15 +306,14 @@ function splitTextIntoPromptSegments(
         color: match.color,
       });
     } else if (match.kind === "mention") {
-      const isPluginMention =
-        options.mentionReferences?.some(
-          (mention) =>
-            isPluginProviderMentionReference(mention) &&
-            providerMentionMatchesToken(mention, match.value),
-        ) ?? false;
+      const mentionKind = resolveMentionChipKind(match.value, {
+        ...(options.mentionReferences !== undefined
+          ? { mentionReferences: options.mentionReferences }
+          : {}),
+      });
       segments.push(
-        isPluginMention
-          ? { type: "mention", path: match.value, kind: "plugin" }
+        mentionKind !== "path"
+          ? { type: "mention", path: match.value, kind: mentionKind }
           : { type: "mention", path: match.value },
       );
     } else if (match.kind === "slash-command") {

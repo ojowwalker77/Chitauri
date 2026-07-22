@@ -1,5 +1,6 @@
 import type {
   ProjectEntry,
+  OrchestrationTaskShell,
   ProviderNativeCommandDescriptor,
   ProviderKind,
   ProviderMentionReference,
@@ -7,6 +8,11 @@ import type {
   ProviderSkillDescriptor,
 } from "@t3tools/contracts";
 import { getAgentMentionAutocompleteAliases } from "@t3tools/contracts";
+import { formatTaskReference } from "@t3tools/shared/taskReferences";
+import {
+  createTaskMentionReference,
+  createWorkerMentionReference,
+} from "@t3tools/shared/workerMentions";
 import { useMemo } from "react";
 import {
   buildCommandSearchFields,
@@ -29,6 +35,7 @@ import {
   shouldHideProviderNativeCommandFromComposerMenu,
 } from "../composerSlashCommands";
 import type { ComposerCommandItem } from "../components/chat/ComposerCommandMenu";
+import type { Project } from "../types";
 
 type ComposerPluginSuggestion = {
   plugin: ProviderPluginDescriptor;
@@ -53,6 +60,9 @@ export function useComposerCommandMenuItems(input: {
   providerNativeCommands: readonly ProviderNativeCommandDescriptor[];
   providerSkills: readonly ProviderSkillDescriptor[];
   workspaceEntries: readonly ProjectEntry[];
+  workers: readonly Project[];
+  tasks: readonly OrchestrationTaskShell[];
+  currentWorkerId: string;
   searchableModelOptions: readonly SearchableModelOption[];
   supportsFastSlashCommand: boolean;
   canOfferCompactCommand: boolean;
@@ -70,6 +80,9 @@ export function useComposerCommandMenuItems(input: {
     providerNativeCommands,
     providerSkills,
     workspaceEntries,
+    workers,
+    tasks,
+    currentWorkerId,
     searchableModelOptions,
     supportsFastSlashCommand,
     canOfferCompactCommand,
@@ -87,6 +100,41 @@ export function useComposerCommandMenuItems(input: {
     // Keep trigger-specific discovery outside ChatView so the view mostly orchestrates state.
     if (composerTrigger.kind === "mention") {
       const query = normalizeProviderDiscoveryText(composerTrigger.query);
+
+      const workerById = new Map(workers.map((worker) => [worker.id, worker]));
+      const taskItems: ComposerCommandItem[] = rankProviderDiscoveryItems(
+        tasks.toSorted((left, right) => {
+          const leftCurrent = left.workerId === currentWorkerId ? 0 : 1;
+          const rightCurrent = right.workerId === currentWorkerId ? 0 : 1;
+          return leftCurrent - rightCurrent || right.updatedAt.localeCompare(left.updatedAt);
+        }),
+        query,
+        (task) => [
+          { value: task.title },
+          { value: formatTaskReference(task.id) },
+          { value: task.brief, weight: 200 },
+          { value: workerById.get(task.workerId)?.name ?? "", weight: 200 },
+        ],
+      ).map((task) => ({
+        id: `task:${task.id}`,
+        type: "task" as const,
+        task,
+        mention: createTaskMentionReference(task),
+        label: task.title,
+        description: `${formatTaskReference(task.id)} · ${workerById.get(task.workerId)?.name ?? "Unknown Worker"}`,
+      }));
+      const workerItems: ComposerCommandItem[] = rankProviderDiscoveryItems(
+        workers,
+        query,
+        (worker) => [{ value: worker.name }, { value: worker.cwd, weight: 200 }],
+      ).map((worker) => ({
+        id: `worker:${worker.id}`,
+        type: "worker" as const,
+        worker,
+        mention: createWorkerMentionReference({ id: worker.id, title: worker.name }),
+        label: worker.name,
+        description: worker.cwd,
+      }));
 
       const agentItems: ComposerCommandItem[] = (() => {
         // Use dynamic agents when available, fallback to static
@@ -153,7 +201,14 @@ export function useComposerCommandMenuItems(input: {
       }));
       // Keep mention suggestions ordered by primary intent: plugins first,
       // then local context, then subagent delegation targets.
-      return [...pluginItems, ...localRootItems, ...pathItems, ...agentItems];
+      return [
+        ...taskItems,
+        ...workerItems,
+        ...pluginItems,
+        ...localRootItems,
+        ...pathItems,
+        ...agentItems,
+      ];
     }
 
     if (composerTrigger.kind === "slash-command") {
@@ -267,9 +322,12 @@ export function useComposerCommandMenuItems(input: {
     providerPlugins,
     providerNativeCommands,
     providerSkills,
+    currentWorkerId,
     searchableModelOptions,
     surfaceAppSlashCommands,
     supportsFastSlashCommand,
+    tasks,
+    workers,
     workspaceEntries,
   ]);
 }

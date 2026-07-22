@@ -28,7 +28,7 @@ function task(
 }
 
 describe("buildWorkerTaskContext", () => {
-  it("shows the current canonical Task and only active sibling Tasks", () => {
+  it("shows the Task linked to this Thread and only active sibling Tasks", () => {
     const context = buildWorkerTaskContext({
       currentTaskId: TaskId.makeUnsafe("task-current"),
       workerId,
@@ -39,7 +39,9 @@ describe("buildWorkerTaskContext", () => {
       ],
     });
 
-    expect(context).toContain("Current Task Thread:");
+    expect(context).toContain("Task linked to this Thread:");
+    expect(context).toContain("Threads are independent coding sessions");
+    expect(context).toContain("Provider plans and todo lists are execution progress");
     expect(context).toContain("[TASK-TASKCURR | id: task-current] in_progress: Current work");
     expect(context).toContain("[TASK-TASKOPEN | id: task-open] open: Next work");
     expect(context).not.toContain("Finished work");

@@ -14,6 +14,9 @@ export const BUILT_IN_COMPOSER_SLASH_COMMANDS = [
   "subagents",
   "fast",
   "export",
+  "tasks",
+  "inbox",
+  "request",
 ] as const;
 
 /**

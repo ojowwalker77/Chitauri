@@ -25,7 +25,7 @@ export const SIDEBAR_ROW_HOVER_CLASS_NAME =
 export const SIDEBAR_ROW_ACTIVE_CLASS_NAME =
   "bg-[var(--sidebar-accent-active)] text-[var(--sidebar-accent-foreground)] hover:bg-[var(--sidebar-accent-active)] hover:text-[var(--sidebar-accent-foreground)]";
 
-export const SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME = "text-[var(--color-text-foreground-secondary)]";
+export const SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME = "text-foreground/75";
 
 /**
  * Resting foreground for primary sidebar item labels and their accompanying
@@ -33,7 +33,7 @@ export const SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME = "text-[var(--color-text-foregrou
  * glyphs). Sits just below the full-foreground active row so resting items read
  * clearly without competing with the selected thread.
  */
-export const SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME = "text-[var(--color-text-foreground-secondary)]";
+export const SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME = "text-foreground/75";
 
 /** Dimmer idle label color shared by project header rows, thread rows, and settings nav rows. */
 export const SIDEBAR_ROW_MUTED_TEXT_CLASS_NAME = "text-muted-foreground/60";

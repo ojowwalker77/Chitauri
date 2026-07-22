@@ -167,6 +167,10 @@
     "./taskReferences": {
       "types": "./src/taskReferences.ts",
       "import": "./src/taskReferences.ts"
+    },
+    "./workerMentions": {
+      "types": "./src/workerMentions.ts",
+      "import": "./src/workerMentions.ts"
     }
   },
   "scripts": {

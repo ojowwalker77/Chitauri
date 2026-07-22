@@ -9,7 +9,7 @@ import { memo } from "react";
 import { getFileIconName, inferEntryKindFromPath } from "~/file-icons";
 import { resolveMentionChipKind, type MentionChipKind } from "~/lib/composerMentions";
 import { CentralIcon, createCentralIconElement } from "~/lib/central-icons";
-import { PluginIcon } from "~/lib/icons";
+import { FolderIcon, ListTodoIcon, PluginIcon } from "~/lib/icons";
 import { COMPOSER_INLINE_MENTION_CHIP_ICON_CLASS_NAME } from "../composerInlineChip";
 import { FolderClosed } from "../FolderClosed";
 import type { ProviderMentionReference } from "@t3tools/contracts";
@@ -20,6 +20,8 @@ function composerMentionChipCentralIconName(path: string, kind: MentionChipKind 
   if (kind === "plugin" || path.startsWith("plugin://")) {
     return "puzzle";
   }
+  if (kind === "task") return "checklist";
+  if (kind === "worker") return "folder-2";
   if (inferEntryKindFromPath(path) === "directory") {
     return "folder-2";
   }
@@ -41,6 +43,12 @@ export const MentionChipIcon = memo(function MentionChipIcon(props: {
   });
   if (resolvedKind === "plugin") {
     return <PluginIcon className={className} />;
+  }
+  if (resolvedKind === "task") {
+    return <ListTodoIcon className={className} />;
+  }
+  if (resolvedKind === "worker") {
+    return <FolderIcon className={className} />;
   }
   const kind = inferEntryKindFromPath(props.path);
   if (kind === "directory") {

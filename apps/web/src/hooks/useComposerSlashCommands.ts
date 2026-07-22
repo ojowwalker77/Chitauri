@@ -63,6 +63,8 @@ export function useComposerSlashCommands(input: {
   threadId: ThreadId;
   syncServerShellSnapshot: (snapshot: OrchestrationShellSnapshot) => void;
   navigateToThread: (threadId: ThreadId) => Promise<void>;
+  navigateToTasks: () => Promise<void>;
+  navigateToInbox: () => Promise<void>;
   handleClearConversation: () => Promise<void> | void;
   openForkTargetPicker: () => void;
   openReviewTargetPicker: () => void;
@@ -109,6 +111,8 @@ export function useComposerSlashCommands(input: {
     threadId,
     syncServerShellSnapshot,
     navigateToThread,
+    navigateToTasks,
+    navigateToInbox,
     handleClearConversation,
     openForkTargetPicker,
     openReviewTargetPicker,
@@ -514,6 +518,21 @@ export function useComposerSlashCommands(input: {
         await handleClearConversation();
         return true;
       }
+      if (slashInvocation.command === "tasks") {
+        editorActions.clearComposerSlashDraft();
+        await navigateToTasks();
+        return true;
+      }
+      if (slashInvocation.command === "inbox") {
+        editorActions.clearComposerSlashDraft();
+        await navigateToInbox();
+        return true;
+      }
+      if (slashInvocation.command === "request") {
+        editorActions.setComposerPromptValue("Request work from @");
+        editorActions.scheduleComposerFocus();
+        return true;
+      }
       if (slashInvocation.command === "compact") {
         editorActions.clearComposerSlashDraft();
         await compactProviderThread();
@@ -612,6 +631,8 @@ export function useComposerSlashCommands(input: {
       createForkThreadFromSlashCommand,
       editorActions,
       handleClearConversation,
+      navigateToInbox,
+      navigateToTasks,
       openForkTargetPicker,
       openReviewTargetPicker,
       selectedProvider,
@@ -659,6 +680,28 @@ export function useComposerSlashCommands(input: {
           editorActions.setComposerHighlightedItemId(null);
         }
         void handleClearConversation();
+        return;
+      }
+
+      if (item.command === "tasks" || item.command === "inbox") {
+        const applied = clearSlashCommandFromComposer();
+        if (!wasPromptReplacementApplied(applied)) return;
+        editorActions.setComposerHighlightedItemId(null);
+        void (item.command === "tasks" ? navigateToTasks() : navigateToInbox());
+        return;
+      }
+
+      if (item.command === "request") {
+        const applied = editorActions.applyPromptReplacement(
+          trigger.rangeStart,
+          trigger.rangeEnd,
+          "Request work from @",
+          { expectedText: snapshot.value.slice(trigger.rangeStart, trigger.rangeEnd) },
+        );
+        if (wasPromptReplacementApplied(applied)) {
+          editorActions.setComposerHighlightedItemId(null);
+          editorActions.scheduleComposerFocus();
+        }
         return;
       }
 
@@ -773,6 +816,8 @@ export function useComposerSlashCommands(input: {
       compactProviderThread,
       editorActions,
       handleClearConversation,
+      navigateToInbox,
+      navigateToTasks,
       openForkTargetPicker,
       openReviewTargetPicker,
       selectedProvider,

@@ -1,9 +1,55 @@
+import { ProjectId, TaskId } from "@t3tools/contracts";
 import { describe, expect, it } from "vitest";
 import { groupCommandItems, type ComposerCommandItem } from "./ComposerCommandMenu";
 
 describe("groupCommandItems", () => {
-  it("groups mention suggestions as plugins, local, then subagents", () => {
+  it("groups mention suggestions as Tasks, Workers, plugins, local, then subagents", () => {
     const items: ComposerCommandItem[] = [
+      {
+        id: "task:task-1",
+        type: "task",
+        task: {
+          id: TaskId.makeUnsafe("task-1"),
+          workerId: ProjectId.makeUnsafe("worker-1"),
+          requesterWorkerId: null,
+          requesterTaskId: null,
+          title: "Urgent fixes",
+          brief: "Audit urgent fixes",
+          status: "open",
+          origin: "user",
+          artifacts: [],
+          completionSummary: null,
+          createdAt: "2026-07-22T00:00:00.000Z",
+          updatedAt: "2026-07-22T00:00:00.000Z",
+          completedAt: null,
+        },
+        mention: { name: "Urgent fixes", path: "teacode://task/task-1" },
+        label: "Urgent fixes",
+        description: "TASK-TASK1 · TeaCode",
+      },
+      {
+        id: "worker:worker-1",
+        type: "worker",
+        worker: {
+          id: ProjectId.makeUnsafe("worker-1"),
+          kind: "project",
+          name: "TeaCode",
+          remoteName: "TeaCode",
+          folderName: "TeaCode",
+          localName: null,
+          cwd: "/workspace/TeaCode",
+          defaultModelSelection: null,
+          scripts: [],
+          workerInstructions: "",
+          expanded: true,
+          isPinned: false,
+          createdAt: "2026-07-22T00:00:00.000Z",
+          updatedAt: "2026-07-22T00:00:00.000Z",
+        },
+        mention: { name: "TeaCode", path: "teacode://worker/worker-1" },
+        label: "TeaCode",
+        description: "/workspace/TeaCode",
+      },
       {
         id: "agent:codex:mini",
         type: "agent",
@@ -57,19 +103,29 @@ describe("groupCommandItems", () => {
 
     expect(groupCommandItems(items, "mention", true)).toEqual([
       {
+        id: "tasks",
+        label: "Tasks",
+        items: [items[0]],
+      },
+      {
+        id: "workers",
+        label: "Workers",
+        items: [items[1]],
+      },
+      {
         id: "plugins",
         label: "Plugins",
-        items: [items[2]],
+        items: [items[4]],
       },
       {
         id: "local",
         label: "Local",
-        items: [items[1], items[3]],
+        items: [items[3], items[5]],
       },
       {
         id: "subagents",
         label: "Subagents",
-        items: [items[0]],
+        items: [items[2]],
       },
     ]);
   });
