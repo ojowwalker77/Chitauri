@@ -174,6 +174,7 @@ describe("threadCreatePromotion", () => {
             updatedAt: "2026-05-06T20:00:00.000Z",
           },
         ],
+        tasks: [],
         threads: [
           {
             id: threadId,
