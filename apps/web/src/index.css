@@ -1,21 +1,12 @@
 @import "tailwindcss";
 
-@font-face {
-  font-family: "Inter";
-  src: url("./assets/fonts/InterVariable.woff2") format("woff2");
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Inter";
-  src: url("./assets/fonts/InterVariable-Italic.woff2") format("woff2");
-  font-style: italic;
-  font-weight: 100 900;
-  font-display: swap;
-}
-
+/* The UI face is SF Pro — the system font, not a bundled webfont. It is requested
+   through `-apple-system`/`BlinkMacSystemFont` (which resolve to SF Pro Text and
+   SF Pro Display at their optical sizes) rather than by family name, because the
+   family name alone misses the optical-size switching and is not licensed for
+   bundling. `system-ui` covers non-Apple platforms, where the native UI face is
+   the right call anyway. This replaced a bundled Inter Variable — ~330KB of
+   webfont for a face the OS already ships a better-hinted version of. */
 @font-face {
   font-family: "0xProto";
   src: url("./assets/fonts/0xProtoNerdFontMono-Regular.woff2") format("woff2");
@@ -89,18 +80,25 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  /* Corner ladder anchored on BONSAI-DESIGN-SYSTEM `WindowChrome.radius = 14`:
-     `--radius` IS the chrome radius, so `rounded-lg` — the default for buttons,
-     rows and chips — lands exactly on it. The rest of the scale steps off that
-     anchor by fixed offsets rather than multipliers, so tuning the one knob
-     shifts the whole family without the ends drifting into slabs or circles. */
-  --radius-sm: calc(var(--radius) - 8px);
-  --radius-md: calc(var(--radius) - 4px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 2px);
-  --radius-2xl: calc(var(--radius) + 6px);
-  --radius-3xl: calc(var(--radius) + 10px);
-  --radius-4xl: calc(var(--radius) + 14px);
+  /* Two corner radii and a pill — that is the whole system.
+
+       8px   navigation: rows, buttons, chips, menu items, inputs, wells
+       16px  cards: panels, dialogs, popovers, sheets, message bubbles
+       pill  CTAs and status badges (`rounded-full`, unchanged)
+
+     The seven-step ladder this replaced ran 4/8/12/14/18/22/26px. Steps that
+     close together are not hierarchy — at a glance 12 and 14 are the same corner,
+     so the ladder only ever produced surfaces that failed to line up. Collapsing
+     to two values means a card and a panel are now provably identical, and the
+     nav radius is small enough that an 8px corner on a 28px row still reads as a
+     rectangle rather than a lozenge. */
+  --radius-sm: var(--radius-nav);
+  --radius-md: var(--radius-nav);
+  --radius-lg: var(--radius-nav);
+  --radius-xl: var(--radius-card);
+  --radius-2xl: var(--radius-card);
+  --radius-3xl: var(--radius-card);
+  --radius-4xl: var(--radius-card);
   @keyframes skeleton {
     to {
       background-position: -200% 0;
@@ -152,6 +150,60 @@
   --transition-duration-sheet: 220ms;
 }
 
+/* ─── Type: four sizes, two weights, one tracking ─────────────────────────────
+   Retuning the theme tokens here re-points every `text-*`, `font-*` and
+   `tracking-*` utility already written across the app, so the scale is enforced
+   without touching ~400 call sites — and a new `text-lg` cannot reintroduce a
+   fifth size.
+
+   SIZES map onto the four steps in lib/appTypography.ts. Anything the old code
+   called "large" (lg/xl) collapses to body: in this system a heading is built
+   from WEIGHT and spacing, not from a size nobody can name. Only a true page or
+   hero title (2xl and up) gets the display step.
+
+   WEIGHTS are regular and medium, full stop. `font-semibold` and `font-bold`
+   resolve to medium so the 37 semibold call sites stop rendering a third weight
+   — SF Pro's semibold against its medium is exactly the kind of near-miss that
+   reads as an accident.
+
+   TRACKING is a single value everywhere. SF Pro is drawn tighter than Inter, and
+   -0.15px is what keeps 13px and 14px UI text optically even against it. */
+@theme {
+  --text-xs: var(--app-font-size-caption, 12px);
+  --text-xs--line-height: 1.4;
+  --text-sm: var(--app-font-size-secondary, 13px);
+  --text-sm--line-height: 1.45;
+  --text-base: var(--app-font-size-body, 14px);
+  --text-base--line-height: 1.5;
+  --text-lg: var(--app-font-size-body, 14px);
+  --text-lg--line-height: 1.5;
+  --text-xl: var(--app-font-size-body, 14px);
+  --text-xl--line-height: 1.5;
+  --text-2xl: var(--app-font-size-title, 24px);
+  --text-2xl--line-height: 1.25;
+  --text-3xl: var(--app-font-size-title, 24px);
+  --text-3xl--line-height: 1.25;
+  --text-4xl: var(--app-font-size-title, 24px);
+  --text-4xl--line-height: 1.25;
+
+  --font-weight-thin: 400;
+  --font-weight-extralight: 400;
+  --font-weight-light: 400;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 500;
+  --font-weight-bold: 500;
+  --font-weight-extrabold: 500;
+  --font-weight-black: 500;
+
+  --tracking-tighter: -0.15px;
+  --tracking-tight: -0.15px;
+  --tracking-normal: -0.15px;
+  --tracking-wide: -0.15px;
+  --tracking-wider: -0.15px;
+  --tracking-widest: -0.15px;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/30;
@@ -179,54 +231,16 @@
     background: var(--background);
   }
 
-  /* ── Liquid glass ────────────────────────────────────────────────────────
-     macOS backs the window with an "under-window" vibrancy material (see
-     getWindowMaterialOptions in the desktop main process). When the active theme
-     is non-opaque, `useTheme` stamps data-window-material="translucent" and every
-     persistent chrome surface switches from a solid fill to a tint + blur so the
-     desktop shows through.
+  /* ── No glass ─────────────────────────────────────────────────────────────
+     Every surface in this app is opaque. The blur/tint material that used to
+     back the shell, sidebar, composer and buttons is gone: each blurred layer
+     cost its own compositor pass on every frame, and a tint over an unknown
+     desktop means no surface had a knowable contrast ratio against the text
+     sitting on it. Colour hierarchy now does that work — see the ink ladder in
+     theme.logic.ts.
 
-     ONE recipe (BONSAI-DESIGN-SYSTEM §5): a single blur/saturate pair, and each
-     surface differs only by how much tint it carries. No per-surface frosts —
-     that is how blur radii drift apart. Each blurred layer is its own compositor
-     pass, so the recipe stays limited to the shell, the sidebar, the composer,
-     and buttons. */
-  :root {
-    --app-glass-filter: blur(20px) saturate(140%);
-  }
-
-  :root[data-window-material="translucent"] body {
-    background: transparent;
-  }
-
-  :root[data-window-material="translucent"] .chitauri-anthropic-shell,
-  :root[data-window-material="translucent"] .app-sidebar-surface,
-  :root[data-window-material="translucent"] .chat-composer-surface,
-  :root[data-window-material="translucent"] .chat-composer-shell,
-  :root[data-window-material="translucent"] .chat-composer-stacked-top,
-  :root[data-window-material="translucent"] .chat-composer-surface-banner,
-  :root[data-window-material="translucent"] [data-slot="button"]:not(.bg-transparent) {
-    backdrop-filter: var(--app-glass-filter);
-    -webkit-backdrop-filter: var(--app-glass-filter);
-  }
-
-  :root[data-window-material="translucent"] .chitauri-anthropic-shell {
-    background: color-mix(
-      in srgb,
-      var(--background) calc(100% - var(--app-window-transparency, 20%)),
-      transparent
-    );
-  }
-
-  /* The sidebar carries no material of its own — it is the composer surface,
-     verbatim, so the two read as the same pane of glass. */
-  :root[data-window-material="translucent"] .app-sidebar-surface,
-  :root[data-window-material="translucent"] .chat-composer-surface,
-  :root[data-window-material="translucent"] .chat-composer-shell,
-  :root[data-window-material="translucent"] .chat-composer-stacked-top,
-  :root[data-window-material="translucent"] .chat-composer-surface-banner {
-    background: color-mix(in srgb, var(--composer-surface) 55%, transparent);
-  }
+     `data-window-material` is still stamped by useTheme and still drives the
+     native window, but no longer has any paint attached to it here. */
 
   .sidebar-icon-button {
     @apply items-center justify-center rounded-lg p-0.5 text-muted-foreground/60 transition-[background-color,color,transform] duration-press ease-out hover:text-foreground/82 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring active:scale-[0.96] motion-reduce:active:scale-100;
@@ -251,8 +265,6 @@
     border: 0;
     border-radius: 0;
     box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
   }
 
   [data-slot="sidebar"][data-side="left"] .app-sidebar-surface {
@@ -292,8 +304,6 @@
   /* Settings shares the flat window canvas with chat. */
   .app-settings-surface {
     background: var(--app-settings-surface, var(--background));
-    backdrop-filter: var(--app-settings-backdrop-filter, none);
-    -webkit-backdrop-filter: var(--app-settings-backdrop-filter, none);
   }
 
   /* Animate terminal run state in CSS so many open terminals don't schedule JS timers. */
@@ -412,8 +422,28 @@
 }
 
 :root {
-  --radius: 0.75rem;
-  --radius-user-message: var(--radius-2xl);
+  /* The two radii the whole app is built from (see the ladder in `@theme inline`). */
+  --radius-nav: 8px;
+  --radius-card: 16px;
+  --radius: var(--radius-nav);
+  --radius-user-message: var(--radius-card);
+
+  /* Type role aliases. Every one resolves to one of the four steps written to the
+     document by useAppTypography — declaring them here, rather than emitting each
+     role from JS, is what makes it impossible for a role to acquire a size of its
+     own. The px fallbacks are the default-base values and only apply for the frame
+     before the hook runs. */
+  --app-font-size-ui: var(--app-font-size-body, 14px);
+  --app-font-size-ui-lg: var(--app-font-size-body, 14px);
+  --app-font-size-ui-sm: var(--app-font-size-secondary, 13px);
+  --app-font-size-ui-xs: var(--app-font-size-caption, 12px);
+  --app-font-size-ui-2xs: var(--app-font-size-caption, 12px);
+  --app-font-size-ui-meta: var(--app-font-size-caption, 12px);
+  --app-font-size-ui-timestamp: var(--app-font-size-caption, 12px);
+  --app-font-size-chat: var(--app-font-size-body, 14px);
+  --app-font-size-chat-code: var(--app-font-size-secondary, 13px);
+  --app-font-size-chat-meta: var(--app-font-size-caption, 12px);
+  --app-font-size-chat-tiny: var(--app-font-size-caption, 12px);
 
   /* Fixed spacing scale for rows, chat gutters and the composer. These were once
      driven by a user-facing "UI density" setting; density is a design decision,
@@ -433,21 +463,21 @@
   --app-density-composer-editor-padding-x-end: 0.875rem;
   --app-density-composer-footer-padding: 0.375rem;
   --app-density-composer-footer-padding-end: 0.5rem;
-  --font-ui-family: "Inter", sans-serif;
+  --font-ui-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
   --font-mono-family: "0xProto", monospace;
   --font-chat-code-family: "0xProto", monospace;
   --terminal-font-family: "0xProto", monospace;
-  --app-sidebar-backdrop-filter: none;
   --app-sidebar-shadow: none;
   --app-sidebar-surface: var(--panel);
   color-scheme: dark;
   --background: #090909;
-  --foreground: #f7f8fa;
+  --foreground: #e8e8e8;
   --panel: #141414;
   --panel-border: rgba(255, 255, 255, 0.08);
   --hover: rgba(255, 255, 255, 0.05);
   --selected: rgba(255, 255, 255, 0.08);
-  --faint: color-mix(in srgb, var(--foreground) 45%, transparent);
+  --faint: #5d5d5d;
   --well: color-mix(in srgb, #141414 55%, #090909);
   --card: var(--panel);
   --card-foreground: var(--foreground);
@@ -458,7 +488,7 @@
   --secondary: var(--hover);
   --secondary-foreground: var(--foreground);
   --muted: var(--hover);
-  --muted-foreground: #9aa1ad;
+  --muted-foreground: #9e9e9e;
   --accent: var(--hover);
   --accent-foreground: var(--foreground);
   --danger: #e94b4b;
@@ -485,7 +515,6 @@
   --sidebar-accent-foreground: var(--color-text-foreground, var(--foreground));
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
-  --app-sidebar-backdrop-filter: none;
   --app-sidebar-shadow: none;
   --app-sidebar-surface: var(--panel);
   --color-background-button-secondary-hover: var(--secondary);
@@ -501,10 +530,9 @@
 
 body {
   font-family: var(--font-ui-family);
-  /* Neutral tracking: let the system UI font (SF Pro on macOS via the
-     -apple-system fallback) use its own optical metrics instead of a squeezed
-     web-style negative tracking, so text reads native rather than "designed". */
-  letter-spacing: normal;
+  /* One tracking for the entire app. Inherited, so every surface gets it without
+     opting in — and `tracking-*` utilities resolve to this same value. */
+  letter-spacing: -0.15px;
   margin: 0;
   padding: 0;
   min-height: 100vh;
@@ -570,10 +598,11 @@ textarea:focus-visible {
   background: none;
 }
 
-/* Reuse the OS UI stack on chat surfaces that should feel native and utilitarian. */
+/* Reuse the OS UI stack on chat surfaces that should feel native and utilitarian.
+   Tracking is inherited from body — there is only one value, so this must not
+   reset it. */
 .font-system-ui {
   font-family: var(--font-ui-family);
-  letter-spacing: normal;
 }
 
 /* Keep transcript-only code surfaces on the chat-specific coding font stack. */
@@ -1359,12 +1388,13 @@ label:has(> select#reasoning-effort) select {
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-lg);
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  background: color-mix(in srgb, var(--background) 88%, transparent);
+  border: 1px solid var(--border);
+  /* Solid, not a blurred tint. This control sits over an arbitrary image, which
+     is the one place a translucent fill is least defensible: its contrast would
+     depend on the user's picture. */
+  background: var(--panel);
   color: var(--foreground);
   text-decoration: none;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   transition:
     background-color 120ms ease,
     color 120ms ease,
@@ -2117,14 +2147,12 @@ label:has(> select#reasoning-effort) select {
   gap: 0.35rem;
   padding: 0.3rem 0.6rem;
   border-radius: 999px;
-  background: color-mix(in srgb, #000 55%, transparent);
+  /* Opaque over an arbitrary image — see the note on the image download control. */
+  background: #1c1c1c;
   color: #fff;
-  font-size: 0.72rem;
+  font-size: var(--app-font-size-caption, 12px);
   font-weight: 500;
-  letter-spacing: 0.01em;
   line-height: 1;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   text-decoration: none;
   user-select: none;
 }
@@ -2275,8 +2303,6 @@ diffs-container {
   background: var(--composer-surface);
   border-color: color-mix(in srgb, var(--foreground) 9%, transparent);
   box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 .chat-composer-surface:focus-within {
@@ -2290,8 +2316,6 @@ diffs-container {
 /* Opaque overlay shell shared by floating menus and composer pickers. */
 .composer-picker-menu-surface {
   background: var(--app-composer-picker-surface, var(--panel));
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 /* Density tokens per size modifier (--normal / --small). Width is opt-in below. */

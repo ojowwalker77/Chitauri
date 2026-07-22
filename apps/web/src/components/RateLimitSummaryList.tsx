@@ -20,7 +20,7 @@ export function RateLimitSummaryList({
 
   if (rows.length === 0) {
     return (
-      <p className="text-[length:var(--app-font-size-chat-meta,11px)] text-muted-foreground">
+      <p className="text-[length:var(--app-font-size-chat-meta,12px)] text-muted-foreground">
         No rate limit data yet.
       </p>
     );
@@ -34,7 +34,7 @@ export function RateLimitSummaryList({
           className="flex items-center justify-between text-[length:var(--app-font-size-chat,14px)]"
         >
           <span className="font-medium text-foreground">{row.label}</span>
-          <span className="flex items-center gap-2 tabular-nums text-[length:var(--app-font-size-chat-meta,11px)] text-muted-foreground">
+          <span className="flex items-center gap-2 tabular-nums text-[length:var(--app-font-size-chat-meta,12px)] text-muted-foreground">
             <span className="text-foreground">
               {formatRateLimitRemainingPercent(row.remainingPercent)}
             </span>

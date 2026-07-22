@@ -50,7 +50,7 @@ export function PickerTriggerButton(
           <span className="min-w-0 flex-1 truncate">{label}</span>
         )}
         {hideChevron ? null : (
-          <ChevronDownIcon aria-hidden="true" className="size-3 shrink-0 opacity-60" />
+          <ChevronDownIcon aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
         )}
       </span>
     </Button>

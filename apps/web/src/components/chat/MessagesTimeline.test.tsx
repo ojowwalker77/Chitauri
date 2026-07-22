@@ -824,7 +824,8 @@ describe("MessagesTimeline", () => {
 
     expect(markup).toContain("@spark");
     expect(markup).toContain("inline-flex max-w-full select-none items-center gap-0.5");
-    expect(markup).toContain("mx-0.5");
+    // Leading gap only — a trailing margin orphaned punctuation after a chip.
+    expect(markup).toContain("ms-0.5");
     expect(markup).toContain("rounded-md px-1.5 py-0.5");
     expect(markup).toContain("(check the UI)");
     expect(markup).not.toContain("@spark(check the UI)</div>");
@@ -1826,7 +1827,7 @@ describe("MessagesTimeline", () => {
     expect(markup).toContain('data-tool-detail-trigger="true"');
     expect(markup).not.toContain('data-tool-details-inline="true"');
     expect(markup).not.toContain("Shell");
-    expect(markup).not.toContain("rounded-lg border border-border/45 bg-background/62");
+    expect(markup).not.toContain("rounded-lg border border-border bg-background");
     expect(markup).not.toContain("chat-markdown-codeblock");
     expect(markup).not.toContain("$ rg -n &quot;toolDetails&quot; apps/web/src");
     expect(markup).not.toContain("apps/web/src/session-logic.ts:55: toolDetails");

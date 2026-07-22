@@ -77,7 +77,7 @@ export function GeneratedMarkdownImage(props: GeneratedMarkdownImageProps) {
       >
         {status === "loading" ? (
           <span className="chat-generated-image__skeleton" aria-hidden="true">
-            <Loader2Icon className="size-4 animate-spin opacity-60" />
+            <Loader2Icon className="size-3.5 animate-spin text-muted-foreground" />
           </span>
         ) : null}
         <img {...imgProps} alt={accessibleName} className="chat-generated-image__img" />

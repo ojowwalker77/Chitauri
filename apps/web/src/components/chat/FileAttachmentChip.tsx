@@ -122,9 +122,9 @@ function FileAttachmentPillTrigger({
       )}
     >
       <span className="inline-flex h-7 min-w-0 max-w-[16rem] items-center gap-1.5 rounded-full pl-2 pr-2">
-        <FileIcon className="size-3.5 shrink-0 text-muted-foreground/90" />
+        <FileIcon className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="min-w-0 truncate">{file.name}</span>
-        <span className="shrink-0 text-muted-foreground/70">{formatBytes(file.sizeBytes)}</span>
+        <span className="shrink-0 text-muted-foreground">{formatBytes(file.sizeBytes)}</span>
         {nonPersisted ? <DraftAttachmentWarningIcon /> : null}
       </span>
       {onRemove ? (
@@ -188,11 +188,9 @@ export function FileAttachmentChip({
       <TooltipPopup side="top" className="max-w-80 whitespace-normal leading-tight">
         <div className="space-y-1">
           <p className="text-xs font-medium text-foreground">{file.name}</p>
-          <p className="text-[0.6875rem] text-muted-foreground">{detail}</p>
+          <p className="text-xs text-muted-foreground">{detail}</p>
           {nonPersisted ? (
-            <p className="text-[0.6875rem] text-muted-foreground">
-              {DRAFT_ATTACHMENT_WARNING_DESCRIPTION}
-            </p>
+            <p className="text-xs text-muted-foreground">{DRAFT_ATTACHMENT_WARNING_DESCRIPTION}</p>
           ) : null}
         </div>
       </TooltipPopup>

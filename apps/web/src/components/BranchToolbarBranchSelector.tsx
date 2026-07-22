@@ -784,12 +784,10 @@ export function BranchToolbarBranchSelector({
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
               <span className="truncate">{itemValue}</span>
-              {badge && (
-                <span className="shrink-0 text-[11px] text-muted-foreground/45">{badge}</span>
-              )}
+              {badge && <span className="shrink-0 text-xs text-faint">{badge}</span>}
             </div>
             {currentBranchChangeSummary ? (
-              <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] leading-4">
+              <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs leading-4">
                 <span className="text-muted-foreground">
                   Uncommitted: {currentBranchChangeSummary.fileCount.toLocaleString()}{" "}
                   {pluralize(currentBranchChangeSummary.fileCount, "file")}
@@ -840,7 +838,7 @@ export function BranchToolbarBranchSelector({
           <>
             <CentralIcon name="branch" className="size-3.5 shrink-0" />
             <span className="max-w-[240px] truncate">{triggerLabel}</span>
-            <ChevronDownIcon className="size-3 opacity-60" />
+            <ChevronDownIcon className="size-3.5 text-muted-foreground" />
           </>
         )}
       </ComboboxTrigger>

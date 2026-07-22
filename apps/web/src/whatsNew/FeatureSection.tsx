@@ -31,15 +31,13 @@ export function FeatureSection({ feature, className }: FeatureSectionProps) {
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       <div className="flex flex-col gap-1">
-        <h3 className="font-heading text-base font-semibold leading-snug text-foreground">
-          {feature.title}
-        </h3>
+        <h3 className="text-base font-medium leading-tight text-foreground">{feature.title}</h3>
         <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
       </div>
       {hasMedia && (
         <div className="flex flex-col gap-1.5">
           {feature.image !== undefined && (
-            <div className="overflow-hidden rounded-lg border border-border/60 bg-muted/40">
+            <div className="overflow-hidden rounded-lg border border-border bg-muted">
               <img
                 src={feature.image}
                 alt={feature.imageAlt ?? ""}
@@ -50,7 +48,7 @@ export function FeatureSection({ feature, className }: FeatureSectionProps) {
             </div>
           )}
           {feature.details !== undefined && (
-            <p className="text-xs leading-relaxed text-muted-foreground/85">{feature.details}</p>
+            <p className="text-xs leading-relaxed text-muted-foreground">{feature.details}</p>
           )}
         </div>
       )}

@@ -166,9 +166,9 @@ const MESSAGE_HOVER_REVEAL_CLASS_NAME =
 // interpolated. Add one entry per group token used by a work row.
 const WORK_ROW_MUTED_HOVER_TONE: Record<"tool-row" | "file-row", string> = {
   "tool-row":
-    "text-muted-foreground/70 transition-colors group-hover/tool-row:text-foreground group-focus-visible/tool-row:text-foreground",
+    "text-muted-foreground transition-colors group-hover/tool-row:text-foreground group-focus-visible/tool-row:text-foreground",
   "file-row":
-    "text-muted-foreground/70 transition-colors group-hover/file-row:text-foreground group-focus-visible/file-row:text-foreground",
+    "text-muted-foreground transition-colors group-hover/file-row:text-foreground group-focus-visible/file-row:text-foreground",
 };
 // How long a jumped-to message keeps its highlight tint before fading back out.
 const JUMP_HIGHLIGHT_DURATION_MS = 1200;
@@ -230,11 +230,11 @@ function UserDispatchModeChip({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1.5 self-end px-0 text-[11px] font-normal tracking-[0.01em] text-muted-foreground/78",
+        "inline-flex items-center gap-1.5 self-end px-0 text-xs font-normal text-muted-foreground",
         hasLeadingMedia ? "mb-3" : "mb-1.5",
       )}
     >
-      <Icon className="size-3 shrink-0 text-muted-foreground/75" />
+      <Icon className="size-3 shrink-0 text-muted-foreground" />
       <span>{label}</span>
     </div>
   );
@@ -249,7 +249,7 @@ function AssistantMessageHeader(props: {
 
   return (
     <div
-      className="mb-2.5 flex items-center gap-2 font-system-ui text-[12px] text-muted-foreground"
+      className="mb-2.5 flex items-center gap-2 font-system-ui text-xs text-muted-foreground"
       data-assistant-provider={props.provider ?? "unknown"}
     >
       <span className="flex size-5 shrink-0 items-center justify-center">
@@ -260,24 +260,24 @@ function AssistantMessageHeader(props: {
           fallback={
             <span
               aria-hidden="true"
-              className="text-[16px] font-semibold leading-none text-muted-foreground"
+              className="text-base font-semibold leading-none text-muted-foreground"
             >
               ✳
             </span>
           }
         />
       </span>
-      <span className="font-medium text-foreground/92">{providerLabel}</span>
-      <span aria-hidden="true" className="text-muted-foreground/45">
+      <span className="font-medium text-foreground">{providerLabel}</span>
+      <span aria-hidden="true" className="text-faint">
         ·
       </span>
       <span>{props.streaming ? "Working" : "Updated"}</span>
       {props.timestamp ? (
         <>
-          <span aria-hidden="true" className="text-muted-foreground/45">
+          <span aria-hidden="true" className="text-faint">
             ·
           </span>
-          <span className="tabular-nums text-muted-foreground/72">{props.timestamp}</span>
+          <span className="tabular-nums text-muted-foreground">{props.timestamp}</span>
         </>
       ) : null}
     </div>
@@ -353,7 +353,7 @@ function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> 
     <div className="w-fit max-w-full rounded-xl border border-panel-border bg-panel px-3.5 py-3 font-system-ui">
       <div className="flex items-center gap-2">
         <WorktreeIcon className="size-3.5 shrink-0 text-[var(--color-text-foreground-tertiary)]" />
-        <span className="shimmer text-[13px] font-medium text-[var(--color-text-foreground-secondary)]">
+        <span className="shimmer text-sm font-medium text-[var(--color-text-foreground-secondary)]">
           Preparing worktree...
         </span>
       </div>
@@ -376,7 +376,7 @@ function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> 
               </span>
               <span
                 className={cn(
-                  "text-[13px] leading-5",
+                  "text-sm leading-5",
                   step.status === "active"
                     ? "text-info"
                     : step.status === "done"
@@ -789,7 +789,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   const tailContentRowId = useMemo(() => {
     for (let index = rows.length - 1; index >= 0; index -= 1) {
       const row = rows[index]!;
-      if (row.kind !== "working" && row.kind !== "worktree-setup") return row.id;
+      if (row.kind !== "worktree-setup") return row.id;
     }
     return null;
   }, [rows]);
@@ -1149,7 +1149,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       <button
                         type="button"
                         data-scroll-anchor-ignore
-                        className="mt-1 block text-muted-foreground/55 transition-colors duration-150 hover:text-foreground/72"
+                        className="mt-1 block text-faint transition-colors duration-150 hover:text-muted-foreground"
                         style={{ fontSize: `${normalizedChatFontSizePx}px` }}
                         onClick={() => {
                           setExpandedUserMessagesById((previous) => ({
@@ -1165,7 +1165,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 ) : null}
                 {!isEditingThisMessage && (
                   <div
-                    className="flex items-center justify-end gap-2 pr-0.5 font-system-ui font-normal text-muted-foreground/45"
+                    className="flex items-center justify-end gap-2 pr-0.5 font-system-ui font-normal text-faint"
                     style={chatMessageFooterStyle}
                   >
                     <p className={cn("tabular-nums", MESSAGE_HOVER_REVEAL_CLASS_NAME)}>
@@ -1183,10 +1183,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                           label="Edit message"
                           tooltip="Edit and resend"
                           disabled={isRevertingCheckpoint}
-                          className={cn(
-                            MESSAGE_HOVER_REVEAL_CLASS_NAME,
-                            "disabled:text-muted-foreground/35",
-                          )}
+                          className={cn(MESSAGE_HOVER_REVEAL_CLASS_NAME, "disabled:text-faint")}
                           onClick={() => startUserMessageEdit(row.message.id)}
                         >
                           <NewThreadIcon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
@@ -1197,10 +1194,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                           label="Revert to this message"
                           tooltip="Revert to this message"
                           disabled={isRevertingCheckpoint || isWorking}
-                          className={cn(
-                            MESSAGE_HOVER_REVEAL_CLASS_NAME,
-                            "disabled:text-muted-foreground/35",
-                          )}
+                          className={cn(MESSAGE_HOVER_REVEAL_CLASS_NAME, "disabled:text-faint")}
                           onClick={() => onRevertUserMessage(row.message.id)}
                         >
                           <Undo2Icon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
@@ -1345,10 +1339,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 ) : null}
                 {narrationItems.length > 0 ? (
                   <section className="pt-1.5" data-work-trail-notes="true">
-                    <div className="mb-1.5 font-system-ui text-[11px] font-medium text-muted-foreground/65">
+                    <div className="mb-1.5 font-system-ui text-xs font-medium text-muted-foreground">
                       Agent notes · {narrationItems.length}
                     </div>
-                    <div className="space-y-2 text-muted-foreground/72">
+                    <div className="space-y-2 text-muted-foreground">
                       {narrationItems.map((item) => (
                         <ChatMarkdown
                           key={`${keyPrefix}:narration:${row.message.id}:${item.id}`}
@@ -1507,7 +1501,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 ) : null}
                 {(showPinToggle || assistantCopyState.visible) && (
                   <div
-                    className="mt-0.5 flex items-center gap-2 font-system-ui font-normal text-muted-foreground/45"
+                    className="mt-0.5 flex items-center gap-2 font-system-ui font-normal text-faint"
                     style={chatMessageFooterStyle}
                   >
                     {showPinToggle ? (
@@ -1520,9 +1514,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                         tooltip={messagePinned ? "Unpin from panel" : "Pin to panel"}
                         aria-pressed={messagePinned}
                         className={
-                          messagePinned
-                            ? "text-muted-foreground/80"
-                            : MESSAGE_HOVER_REVEAL_CLASS_NAME
+                          messagePinned ? "text-muted-foreground" : MESSAGE_HOVER_REVEAL_CLASS_NAME
                         }
                         onClick={() => onTogglePinMessage?.(row.message.id)}
                       >
@@ -1585,7 +1577,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                         pathValue={file.path}
                         kind="file"
                         colorMode="inherit"
-                        className="size-4 shrink-0 text-[var(--color-text-foreground)] opacity-70 dark:opacity-80"
+                        className="size-3.5 shrink-0 text-[var(--color-text-foreground)] dark:"
                       />
                       <span
                         className="font-system-ui truncate font-normal text-[var(--color-text-foreground)] underline-offset-2 group-hover/file-row:underline group-focus-visible/file-row:underline"
@@ -1616,10 +1608,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                         )}
                       >
                         <div className="flex min-w-0 items-center gap-2.5">
-                          <ChangesIcon className="size-3.5 shrink-0 text-muted-foreground/70" />
+                          <ChangesIcon className="size-3.5 shrink-0 text-muted-foreground" />
                           <div className="min-w-0">
                             <div
-                              className="truncate font-normal text-foreground/92"
+                              className="truncate font-normal text-foreground"
                               style={{ fontSize: chatTypographyStyle.fontSize }}
                             >
                               {editedFilesLabel}
@@ -1646,7 +1638,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                               onClick={() => onRevertUserMessage(correspondingUserMessageId)}
                             >
                               Undo
-                              <Undo2Icon className="size-3" />
+                              <Undo2Icon className="size-3.5" />
                             </button>
                           )}
                           <ReviewChangesButton
@@ -1655,7 +1647,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                           />
                           <button
                             type="button"
-                            className="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/70 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground/80"
+                            className="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground"
                             aria-expanded={fileChangesExpanded}
                             aria-label={
                               fileChangesExpanded
@@ -1674,7 +1666,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                           >
                             <DisclosureChevron
                               open={fileChangesExpanded}
-                              className="dark:text-muted-foreground/50"
+                              className="dark:text-faint"
                             />
                           </button>
                         </div>
@@ -1732,32 +1724,24 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           <WorkTrailHeaderContent
             status="active"
             label={
-              <>
-                Working ·{" "}
-                {nowIso ? (
-                  (formatWorkingTimer(row.createdAt, nowIso) ?? "0s")
-                ) : (
-                  <WorkingTimer createdAt={row.createdAt} />
-                )}
-              </>
+              row.createdAt ? (
+                <>
+                  Working ·{" "}
+                  {nowIso ? (
+                    (formatWorkingTimer(row.createdAt, nowIso) ?? "0s")
+                  ) : (
+                    <WorkingTimer createdAt={row.createdAt} />
+                  )}
+                </>
+              ) : (
+                "Working"
+              )
             }
             operationCount={0}
             changedFileCount={0}
             chatMetaFontSizePx={appTypographyScale.uiSmPx}
           />
         </WorkTrailFrame>
-      )}
-
-      {row.kind === "working" && (
-        <div
-          className="flex items-center gap-2 pt-0.5 font-system-ui text-muted-foreground/70"
-          style={{ fontSize: `${appTypographyScale.chatPx}px` }}
-        >
-          <span aria-hidden="true" className="text-muted-foreground">
-            ✳
-          </span>
-          <span className="shimmer">Thinking</span>
-        </div>
       )}
 
       {row.kind === "worktree-setup" && (
@@ -1779,9 +1763,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     }
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-sm text-muted-foreground/30">
-          Send a message to start the conversation.
-        </p>
+        <p className="text-sm text-faint">Send a message to start the conversation.</p>
       </div>
     );
   }
@@ -2201,7 +2183,7 @@ const UserImageAttachmentThumbnail = memo(function UserImageAttachmentThumbnail(
   return (
     <button
       type="button"
-      className="flex size-15 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-panel-border bg-background/82 text-left transition-colors hover:bg-background/94"
+      className="flex size-15 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-panel-border bg-background text-left transition-colors hover:bg-background"
       aria-label={`Preview ${props.image.name}`}
       title={props.image.name}
       onClick={() => {
@@ -2220,7 +2202,11 @@ const UserImageAttachmentThumbnail = memo(function UserImageAttachmentThumbnail(
         />
       ) : (
         <div className="flex size-full items-center justify-center">
-          <FileEntryIcon pathValue={props.image.name} kind="file" className="size-4 opacity-70" />
+          <FileEntryIcon
+            pathValue={props.image.name}
+            kind="file"
+            className="size-3.5 text-muted-foreground"
+          />
         </div>
       )}
     </button>
@@ -2346,7 +2332,7 @@ const UserMessageEditForm = memo(function UserMessageEditForm(props: {
         disabled={props.disabled}
         rows={1}
         aria-label="Edit message"
-        className="max-h-60 min-h-0 w-full resize-none overflow-y-auto border-0 bg-transparent p-0 font-system-ui text-foreground outline-none placeholder:text-muted-foreground/45 disabled:opacity-70"
+        className="max-h-60 min-h-0 w-full resize-none overflow-y-auto border-0 bg-transparent p-0 font-system-ui text-foreground outline-none placeholder:text-faint disabled:opacity-70"
         style={props.chatTypographyStyle}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={handleKeyDown}
@@ -2430,12 +2416,12 @@ function workToneIcon(tone: TimelineWorkEntry["tone"]): {
   if (tone === "info") {
     return {
       icon: CheckIcon,
-      className: "text-muted-foreground/70",
+      className: "text-muted-foreground",
     };
   }
   return {
     icon: ZapIcon,
-    className: "text-muted-foreground/45",
+    className: "text-faint",
   };
 }
 
@@ -2656,12 +2642,12 @@ function commandTooltipContent(command: string, displayText: string) {
     <div className="max-w-96 whitespace-pre-wrap leading-tight">
       <div className="space-y-2">
         <div className="space-y-0.5">
-          <div className="text-muted-foreground/70">Summary</div>
+          <div className="text-muted-foreground">Summary</div>
           <div>{displayText}</div>
         </div>
         <div className="space-y-0.5">
-          <div className="text-muted-foreground/70">Raw call</div>
-          <code className="block whitespace-pre-wrap break-words font-chat-code text-[11px] text-foreground/92">
+          <div className="text-muted-foreground">Raw call</div>
+          <code className="block whitespace-pre-wrap break-words font-chat-code text-xs text-foreground">
             {command}
           </code>
         </div>
@@ -2741,30 +2727,30 @@ function WorkTrailHeaderContent(props: {
             ? "text-muted-foreground"
             : props.status === "settled"
               ? "text-success"
-              : "text-muted-foreground/55",
+              : "text-faint",
         )}
       >
         <StatusIcon
           className={cn(
-            "size-3",
+            "size-3.5",
             props.status === "active" && "animate-spin motion-reduce:animate-none",
           )}
         />
       </span>
       <span
-        className="min-w-0 truncate font-system-ui font-normal text-foreground/78"
+        className="min-w-0 truncate font-system-ui font-normal text-muted-foreground"
         style={{ fontSize: `${props.chatMetaFontSizePx}px` }}
       >
         {props.label}
       </span>
       <span className="flex min-w-0 items-center gap-1.5">
         {summaryParts.length > 0 ? (
-          <span className="font-system-ui truncate text-[11px] tabular-nums text-muted-foreground/55">
+          <span className="font-system-ui truncate text-xs tabular-nums text-faint">
             {summaryParts.join(" · ")}
           </span>
         ) : null}
         {typeof props.expanded === "boolean" ? (
-          <DisclosureChevron open={props.expanded} className="text-muted-foreground/45" />
+          <DisclosureChevron open={props.expanded} className="text-faint" />
         ) : null}
       </span>
     </span>
@@ -2843,7 +2829,7 @@ function WorkTrailOverflowToggle(props: {
     <div>
       <button
         type="button"
-        className="min-h-8 font-system-ui text-muted-foreground/52 transition-[color,scale] duration-150 ease-out hover:text-foreground/75 active:scale-[0.97] motion-reduce:active:scale-100"
+        className="min-h-8 font-system-ui text-faint transition-[color,scale] duration-150 ease-out hover:text-muted-foreground active:scale-[0.97] motion-reduce:active:scale-100"
         style={{ fontSize: `${props.chatMetaFontSizePx}px` }}
         onClick={props.onToggle}
       >
@@ -3037,13 +3023,13 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
                 compact ? "size-4" : "size-5",
               )}
             >
-              <EntryIcon className={compact ? "size-2.5" : "size-3"} />
+              <EntryIcon className={compact ? "size-2.5" : "size-3.5"} />
             </span>
             <div className="min-w-0 flex-1 overflow-hidden">
               <p
                 className={cn(
                   compact ? "truncate leading-5" : "truncate leading-6",
-                  "font-medium text-foreground/72",
+                  "font-medium text-muted-foreground",
                 )}
                 style={{ fontSize: `${rowFontSizePx}px` }}
                 title={hoverText}
@@ -3052,7 +3038,7 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
               </p>
               {subagentMeta ? (
                 <p
-                  className="truncate leading-4 text-muted-foreground/32"
+                  className="truncate leading-4 text-faint"
                   style={{ fontSize: `${Math.max(11, rowFontSizePx - 1)}px` }}
                   title={subagentMeta}
                 >
@@ -3083,9 +3069,9 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
                 data-tool-icon={leftIconKind}
               >
                 {webFetchUrl ? (
-                  <LinkChipIcon url={webFetchUrl} className={compact ? "size-3.5" : "size-4"} />
+                  <LinkChipIcon url={webFetchUrl} className={compact ? "size-3.5" : "size-3.5"} />
                 ) : (
-                  <LeftIcon className={compact ? "size-3.5" : "size-4"} />
+                  <LeftIcon className={compact ? "size-3.5" : "size-3.5"} />
                 )}
               </span>
               <div
@@ -3100,7 +3086,7 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
                 {showInlineAgentTaskPreview ? (
                   <div className={cn(compact ? "space-y-[1px]" : "space-y-0.5")}>
                     <p
-                      className="truncate font-medium leading-5 text-muted-foreground/72"
+                      className="truncate font-medium leading-5 text-muted-foreground"
                       style={{ fontSize: `${rowFontSizePx}px` }}
                     >
                       {heading}
@@ -3192,7 +3178,7 @@ function EditedFileRowContent(props: {
         )}
         data-tool-icon="edit"
       >
-        <PencilIcon className={compact ? "size-3.5" : "size-4"} />
+        <PencilIcon className={compact ? "size-3.5" : "size-3.5"} />
       </span>
       <span
         className={cn("font-system-ui shrink-0", WORK_ROW_MUTED_HOVER_TONE["file-row"])}
@@ -3335,7 +3321,7 @@ function ToolDetailsDisclosure(props: {
       {props.children}
       <DisclosureChevron
         open={open}
-        className="text-muted-foreground/38 group-hover/tool-row:text-foreground group-hover/file-row:text-foreground group-focus-visible/tool-row:text-foreground group-focus-visible/file-row:text-foreground"
+        className="text-faint group-hover/tool-row:text-foreground group-hover/file-row:text-foreground group-focus-visible/tool-row:text-foreground group-focus-visible/file-row:text-foreground"
       />
     </button>
   );

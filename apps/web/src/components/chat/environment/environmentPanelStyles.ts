@@ -29,7 +29,7 @@ export const ENVIRONMENT_PANEL_TITLE_CLASS_NAME = cn(
  */
 export const ENVIRONMENT_PANEL_SECTION_LABEL_INLINE_CLASS_NAME = cn(
   ENVIRONMENT_PANEL_LABEL_CLASS_NAME,
-  "text-[length:var(--app-font-size-ui-sm,13px)] font-[550] uppercase tracking-[0.07em] text-muted-foreground",
+  "text-[length:var(--app-font-size-ui-sm,13px)] font-medium uppercase text-muted-foreground",
 );
 
 /**

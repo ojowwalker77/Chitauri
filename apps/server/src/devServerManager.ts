@@ -140,10 +140,13 @@ export const DevServerManagerLive = Layer.effect(
           ...(input.env ? { env: input.env } : {}),
         });
 
+        // A one-shot command exits its shell the moment it returns, so the PTY
+        // emits `exited` and the reaper drops the registry entry. Without this a
+        // finished setup script would be reported as running until the app quits.
         yield* terminalManager.write({
           threadId,
           terminalId: DEFAULT_TERMINAL_ID,
-          data: `${input.command}\r`,
+          data: input.oneShot ? `${input.command}; exit\r` : `${input.command}\r`,
         });
 
         const server: ProjectDevServer = {

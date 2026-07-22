@@ -54,7 +54,7 @@ const OpenCodeProviderIcon = ({
         name="opencode"
         label={centralIconLabel}
         title={title}
-        className={cn(className, "hidden dark:inline-block dark:text-foreground/90")}
+        className={cn(className, "hidden dark:inline-block dark:text-foreground")}
         style={style}
       />
     </>
@@ -76,10 +76,10 @@ export function providerIconToneClassName(
   tone: ProviderIconTone = "default",
 ): string {
   if (provider === "kilo" || provider === "opencode") {
-    return "text-muted-foreground/70";
+    return "text-muted-foreground";
   }
   if (provider === "codex") {
-    return tone === "header" ? "text-muted-foreground/85" : "text-foreground";
+    return tone === "header" ? "text-muted-foreground" : "text-foreground";
   }
   return "text-foreground";
 }

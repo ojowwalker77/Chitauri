@@ -235,7 +235,7 @@ function ToastActions({
           title={isCopied ? "Copied error message" : "Copy error message"}
           variant="outline"
         >
-          {isCopied ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}
+          {isCopied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
           <span>{isCopied ? "Copied" : "Copy"}</span>
         </Button>
       )}
@@ -293,7 +293,7 @@ function ToastCloseButton({
       }}
       title="Dismiss toast"
     >
-      <XIcon className={compact ? "size-3" : "size-3.5"} />
+      <XIcon className={compact ? "size-3.5" : "size-3.5"} />
     </button>
   );
 }
@@ -402,8 +402,8 @@ function ToastSurface({
       className={cn(
         "pointer-events-auto relative flex overflow-hidden transition-opacity duration-250 data-expanded:opacity-100 motion-reduce:transition-none",
         compact
-          ? "items-center gap-2 px-3 py-2 pr-1.5 text-[12.5px] font-medium leading-normal"
-          : "items-start gap-2 px-3.5 py-3 pr-10 text-[12.5px] font-medium",
+          ? "items-center gap-2 px-3 py-2 pr-1.5 text-xs font-medium leading-normal"
+          : "items-start gap-2 px-3.5 py-3 pr-10 text-xs font-medium",
         hideCollapsedContent && "not-data-expanded:pointer-events-none not-data-expanded:opacity-0",
       )}
     >

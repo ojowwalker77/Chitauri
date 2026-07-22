@@ -4,7 +4,20 @@
  * Keeps the sidebar search UX aligned with the shared command primitives so
  * keyboard navigation and shortcut labels behave like the rest of the app.
  */
-import { CheckIcon, ListTodoIcon, NewThreadIcon, SearchIcon, SettingsIcon } from "~/lib/icons";
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  CornerLeftUpIcon,
+  DownloadIcon,
+  FolderOpenIcon,
+  FolderPlusIcon,
+  ListTodoIcon,
+  MessageCircleIcon,
+  NewThreadIcon,
+  RefreshCwIcon,
+  SearchIcon,
+  SettingsIcon,
+} from "~/lib/icons";
 import { TASK_STATUS_LABELS } from "~/components/tasks/TaskStatusPill";
 import {
   type FilesystemBrowseResult,
@@ -13,15 +26,6 @@ import {
   type ProviderKind,
 } from "@t3tools/contracts";
 import { isGenericChatThreadTitle } from "@t3tools/shared/chatThreads";
-import { BsChat } from "react-icons/bs";
-import { HiOutlineFolderOpen } from "react-icons/hi2";
-import {
-  LuArrowDownToLine,
-  LuArrowLeft,
-  LuCornerLeftUp,
-  LuFolderPlus,
-  LuRefreshCw,
-} from "react-icons/lu";
 import { type ComponentType, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FolderClosed } from "./FolderClosed";
@@ -137,10 +141,10 @@ function actionHandler(
 type IconComponent = ComponentType<{ className?: string }>;
 
 const ACTION_ICONS: Record<string, IconComponent> = {
-  "new-chat": BsChat,
+  "new-chat": MessageCircleIcon,
   "new-thread": NewThreadIcon,
   "add-project": FolderClosed,
-  "import-thread": LuArrowDownToLine,
+  "import-thread": DownloadIcon,
   settings: SettingsIcon,
   "usage-settings": SettingsIcon,
 };
@@ -526,7 +530,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
       <CommandDialogPopup className="max-w-2xl">
         {props.mode === "import" ? (
           <div className="flex flex-col overflow-hidden">
-            <div className="border-b border-border/70 px-4 py-3">
+            <div className="border-b border-border px-4 py-3">
               <div className="flex items-start gap-3">
                 <Button
                   size="icon"
@@ -541,7 +545,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                     props.onModeChange("search");
                   }}
                 >
-                  <LuArrowLeft className="size-4" />
+                  <ArrowLeftIcon className="size-4" />
                 </Button>
                 <div>
                   <p className="text-sm font-medium text-foreground">
@@ -565,7 +569,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                         key={provider}
                         className={
                           importProvider === provider
-                            ? "flex-1 justify-start border-border bg-muted text-foreground hover:bg-muted/80"
+                            ? "flex-1 justify-start border-border bg-muted text-foreground hover:bg-muted"
                             : "flex-1 justify-start"
                         }
                         variant="outline"
@@ -632,7 +636,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                         key={provider}
                         className={
                           desktopImportProvider === provider
-                            ? "flex-1 justify-start border-border bg-muted text-foreground hover:bg-muted/80"
+                            ? "flex-1 justify-start border-border bg-muted text-foreground hover:bg-muted"
                             : "flex-1 justify-start"
                         }
                         variant="outline"
@@ -660,7 +664,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                       disabled={desktopThreadsQuery.isFetching}
                       onClick={() => void desktopThreadsQuery.refetch()}
                     >
-                      <LuRefreshCw
+                      <RefreshCwIcon
                         className={cn("size-4", desktopThreadsQuery.isFetching && "animate-spin")}
                       />
                     </Button>
@@ -697,7 +701,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                           <button
                             key={key}
                             type="button"
-                            className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-muted/70 disabled:opacity-55"
+                            className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-muted disabled:opacity-55"
                             disabled={importingDesktopThreadKey !== null}
                             onClick={() => void submitDesktopImport(thread)}
                           >
@@ -715,13 +719,13 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                                 {formatRelativeTime(thread.updatedAt)}
                               </span>
                               {thread.chitauriThreadId ? (
-                                <span className="inline-flex items-center gap-1 text-foreground/80">
+                                <span className="inline-flex items-center gap-1 text-foreground">
                                   <CheckIcon className="size-3.5" /> Open
                                 </span>
                               ) : isImportingThread ? (
                                 "Importing…"
                               ) : (
-                                <LuArrowDownToLine className="size-4" />
+                                <DownloadIcon className="size-4" />
                               )}
                             </span>
                           </button>
@@ -746,7 +750,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                     {importError}
                   </p>
                 ) : null}
-                <div className="flex items-center justify-between border-t border-border/70 px-4 py-3">
+                <div className="flex items-center justify-between border-t border-border px-4 py-3">
                   <Button
                     variant="ghost"
                     onClick={() => {
@@ -785,7 +789,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                     onKeyDown={handleBrowseInputKeyDown}
                     startAddon={
                       isBrowsing ? (
-                        <LuFolderPlus className="text-muted-foreground" />
+                        <FolderPlusIcon className="text-muted-foreground" />
                       ) : (
                         <SearchIcon className="text-muted-foreground" />
                       )
@@ -829,7 +833,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                   {isBrowsing ? (
                     unsupportedWindowsPath ? (
                       <CommandEmpty className="py-10">
-                        <div className="text-center text-sm text-muted-foreground/79">
+                        <div className="text-center text-sm text-muted-foreground">
                           Windows paths are not supported on this platform.
                         </div>
                       </CommandEmpty>
@@ -849,7 +853,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                                   if (browseParentPath) setQuery(browseParentPath);
                                 }}
                               >
-                                <LuCornerLeftUp className="size-3.5 text-muted-foreground/60" />
+                                <CornerLeftUpIcon className="size-3.5 text-faint" />
                                 <span className="min-w-0 flex-1 truncate text-sm text-foreground">
                                   ..
                                 </span>
@@ -865,7 +869,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                                 }}
                                 onClick={() => setQuery(appendBrowsePathSegment(query, entry.name))}
                               >
-                                <FolderClosed className="size-3.5 text-muted-foreground/60" />
+                                <FolderClosed className="size-3.5 text-faint" />
                                 <span className="min-w-0 flex-1 truncate text-sm text-foreground">
                                   {entry.name}
                                 </span>
@@ -972,14 +976,14 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                               <div className="min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,14px)] text-foreground">
                                 <HighlightedText text={task.title} query={query} />
                               </div>
-                              <span className="w-24 shrink-0 truncate text-right text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/79">
+                              <span className="w-24 shrink-0 truncate text-right text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground">
                                 {task.workerName}
                               </span>
-                              <span className="w-10 shrink-0 text-right text-[length:var(--app-font-size-ui-timestamp,11px)] text-muted-foreground/79">
+                              <span className="w-10 shrink-0 text-right text-[length:var(--app-font-size-ui-timestamp,12px)] text-muted-foreground">
                                 {formatRelativeTime(task.updatedAt || task.createdAt)}
                               </span>
                             </div>
-                            <div className="mt-0.5 flex items-center gap-2 text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/58">
+                            <div className="mt-0.5 flex items-center gap-2 text-[length:var(--app-font-size-ui-meta,12px)] text-faint">
                               <span className="font-mono">{task.reference}</span>
                               <span aria-hidden>·</span>
                               <span>{TASK_STATUS_LABELS[task.status]}</span>
@@ -1036,11 +1040,11 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                                     query={query}
                                   />
                                 </div>
-                                <span className="w-24 shrink-0 truncate text-right text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/79">
+                                <span className="w-24 shrink-0 truncate text-right text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground">
                                   {thread.projectName}
                                 </span>
                                 {thread.updatedAt || thread.createdAt ? (
-                                  <span className="w-10 shrink-0 text-right text-[length:var(--app-font-size-ui-timestamp,11px)] text-muted-foreground/79">
+                                  <span className="w-10 shrink-0 text-right text-[length:var(--app-font-size-ui-timestamp,12px)] text-muted-foreground">
                                     {formatRelativeTime(thread.updatedAt ?? thread.createdAt)}
                                   </span>
                                 ) : (
@@ -1049,19 +1053,19 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                               </div>
                               {snippet ? (
                                 <div className="mt-0.5 flex items-start gap-3">
-                                  <div className="min-w-0 flex-1 line-clamp-1 text-[length:var(--app-font-size-ui-meta,12px)] leading-5 text-muted-foreground/78">
+                                  <div className="min-w-0 flex-1 line-clamp-1 text-[length:var(--app-font-size-ui-meta,12px)] leading-5 text-muted-foreground">
                                     <HighlightedText text={snippet} query={query} />
                                   </div>
                                   <div className="flex w-[8.5rem] shrink-0 justify-end">
                                     {threadMatchLabel({ matchKind, messageMatchCount }) ? (
-                                      <span className="truncate text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/58">
+                                      <span className="truncate text-[length:var(--app-font-size-ui-meta,12px)] text-faint">
                                         {threadMatchLabel({ matchKind, messageMatchCount })}
                                       </span>
                                     ) : null}
                                   </div>
                                 </div>
                               ) : threadMatchLabel({ matchKind, messageMatchCount }) ? (
-                                <div className="mt-0.5 text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/58">
+                                <div className="mt-0.5 text-[length:var(--app-font-size-ui-meta,12px)] text-faint">
                                   {threadMatchLabel({ matchKind, messageMatchCount })}
                                 </div>
                               ) : null}
@@ -1092,12 +1096,12 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                             props.onOpenProject(project.id);
                           }}
                         >
-                          <PaletteIcon icon={HiOutlineFolderOpen} />
+                          <PaletteIcon icon={FolderOpenIcon} />
                           <div className="min-w-0 flex-1">
                             <div className="truncate text-[length:var(--app-font-size-ui,14px)] text-foreground">
                               {project.name || "Untitled Worker"}
                             </div>
-                            <div className="truncate text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground/79">
+                            <div className="truncate text-[length:var(--app-font-size-ui-meta,12px)] text-muted-foreground">
                               {project.localName
                                 ? `${project.folderName} · ${project.cwd}`
                                 : project.cwd}
@@ -1110,8 +1114,8 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
 
                   {!isBrowsing && !hasSearchResults ? (
                     <CommandEmpty className="py-10">
-                      <div className="flex flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground/79">
-                        <SearchIcon className="size-4 opacity-70" />
+                      <div className="flex flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
+                        <SearchIcon className="size-3.5 text-muted-foreground" />
                         <div>No matches.</div>
                       </div>
                     </CommandEmpty>

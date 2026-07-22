@@ -81,7 +81,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
         <span className="flex items-center gap-2">
           <ProviderIcon
             provider={topProvider.provider}
-            className="size-6 shrink-0 text-[#4d4944]"
+            className="size-5 shrink-0 text-[#4d4944]"
           />
           {topProvider.percent !== null ? (
             <span className={VALUE_CLASS}>{`${Math.round(topProvider.percent)}%`}</span>

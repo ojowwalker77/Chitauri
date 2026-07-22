@@ -190,6 +190,11 @@ export const ProjectRunDevServerInput = Schema.Struct({
   command: TrimmedNonEmptyString,
   cwd: TrimmedNonEmptyString,
   env: Schema.optional(ProcessEnvRecord),
+  // One-shot commands (worktree setup scripts such as `bun install`) close their
+  // shell as soon as the command returns, so the registry reaps them on exit
+  // instead of reporting a finished install as a live process forever. Long-
+  // running commands omit this and keep their shell open.
+  oneShot: Schema.optional(Schema.Boolean),
 });
 export type ProjectRunDevServerInput = typeof ProjectRunDevServerInput.Type;
 

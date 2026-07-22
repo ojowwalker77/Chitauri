@@ -27,7 +27,7 @@ export function SettingResetButton({ label, onClick }: { label: string; onClick:
               onClick();
             }}
           >
-            <Undo2Icon className="size-3" />
+            <Undo2Icon className="size-3.5" />
           </Button>
         }
       />

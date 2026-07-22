@@ -46,17 +46,17 @@ export default function RateLimitsPanel({
             />
           </CollapsibleTrigger>
           <CollapsiblePanel>
-            <div className="space-y-3 border-t border-border/40 px-3 pb-3 pt-2">
+            <div className="space-y-3 border-t border-border px-3 pb-3 pt-2">
               <RateLimitSummaryList rateLimits={rateLimits} />
               {learnMoreHref ? (
                 <a
                   href={learnMoreHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[11px] text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline focus-visible:underline"
+                  className="flex items-center gap-1 text-xs text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline focus-visible:underline"
                 >
                   Learn more
-                  <ExternalLinkIcon className="size-3" />
+                  <ExternalLinkIcon className="size-3.5" />
                 </a>
               ) : null}
             </div>

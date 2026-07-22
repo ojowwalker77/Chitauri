@@ -24,6 +24,13 @@ const headerButtonDarkBorderClassName =
 // baseline in a toolbar row. `chip`/`icon-chip` are for inline action pills
 // inside queued-message rows, badges, etc.
 //
+// ICON SIZE IS NOT A SIZE-VARIANT KNOB. Every button renders its icon at 14px —
+// the navigation size — except the `xl` pair, which is the card-scale CTA and
+// uses 20px. Height and padding carry the size difference; the glyph does not.
+// This used to fan out across six per-size overrides AND a `sm:` breakpoint step
+// (18px→16px, 16px→14px, …), which meant the same icon changed size depending on
+// which button it landed in and how wide the window was.
+//
 // Visual style is intentionally flat — no drop shadows, no inset highlights, no
 // pseudo-element edge glints. Buttons are solid color + border + hover-bg only.
 // If you need depth, add a single new variant rather than reintroducing shadows
@@ -50,7 +57,7 @@ const headerButtonDarkBorderClassName =
 // silently drops the press tween. Prefer a variant over a call-site transition override.
 const buttonVariants = cva(
   extendButtonIconChildSelectors(
-    "[&_svg]:-mx-0.5 relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-medium text-[length:var(--app-font-size-ui,14px)] outline-none transition-[color,background-color,border-color,scale] duration-press ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-64 sm:text-[length:var(--app-font-size-ui,14px)] [&_svg:not([class*='opacity-'])]:opacity-80 [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+    "[&_svg]:-mx-0.5 relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border font-medium text-[length:var(--app-font-size-ui,14px)] outline-none transition-[color,background-color,border-color,scale] duration-press ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-64 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   ),
   {
     defaultVariants: {
@@ -59,30 +66,22 @@ const buttonVariants = cva(
     },
     variants: {
       size: {
-        chip: extendButtonIconChildSelectors(
-          "h-auto gap-1 px-2 py-0.5 text-[length:var(--app-font-size-ui-sm,13px)] sm:h-auto sm:text-[length:var(--app-font-size-ui-sm,13px)] [&_svg:not([class*='size-'])]:size-3 sm:[&_svg:not([class*='size-'])]:size-3",
-        ),
+        chip: "h-auto gap-1 px-2 py-0.5 text-[length:var(--app-font-size-ui-sm,13px)] sm:h-auto",
         default: "h-9 px-[calc(--spacing(3)-1px)] sm:h-8",
         icon: "size-9 sm:size-8",
-        "icon-chip": extendButtonIconChildSelectors(
-          "size-6 sm:size-6 [&_svg:not([class*='size-'])]:size-3 sm:[&_svg:not([class*='size-'])]:size-3",
-        ),
+        "icon-chip": "size-6 sm:size-6",
         "icon-lg": "size-10 sm:size-9",
         "icon-sm": "size-8 sm:size-7",
         "icon-xl": extendButtonIconChildSelectors(
-          "size-11 sm:size-10 [&_svg:not([class*='size-'])]:size-5 sm:[&_svg:not([class*='size-'])]:size-4.5",
+          "size-11 sm:size-10 [&_svg:not([class*='size-'])]:size-5",
         ),
-        "icon-xs": extendButtonIconChildSelectors(
-          "size-7 rounded-sm sm:size-6 not-in-data-[slot=input-group]:[&_svg:not([class*='size-'])]:size-4 sm:not-in-data-[slot=input-group]:[&_svg:not([class*='size-'])]:size-3.5",
-        ),
+        "icon-xs": "size-7 sm:size-6",
         lg: "h-10 px-[calc(--spacing(3.5)-1px)] sm:h-9",
         sm: "h-8 gap-1.5 px-[calc(--spacing(2.5)-1px)] sm:h-7",
         xl: extendButtonIconChildSelectors(
-          "h-11 px-[calc(--spacing(4)-1px)] text-[length:var(--app-font-size-ui-lg,15px)] sm:h-10 sm:text-[length:var(--app-font-size-ui-lg,15px)] [&_svg:not([class*='size-'])]:size-5 sm:[&_svg:not([class*='size-'])]:size-4.5",
+          "h-11 px-[calc(--spacing(4)-1px)] sm:h-10 [&_svg:not([class*='size-'])]:size-5",
         ),
-        xs: extendButtonIconChildSelectors(
-          "h-7 gap-1 rounded-sm px-[calc(--spacing(2)-1px)] text-[length:var(--app-font-size-ui-sm,13px)] sm:h-6 sm:text-[length:var(--app-font-size-ui-xs,12px)] [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5",
-        ),
+        xs: "h-7 gap-1 px-[calc(--spacing(2)-1px)] text-[length:var(--app-font-size-ui-sm,13px)] sm:h-6",
       },
       variant: {
         chrome:
@@ -109,7 +108,7 @@ const buttonVariants = cva(
         // landing under rest is what still registers as "pushed" on a touchscreen, where
         // the hover lift never happens.
         prominent:
-          "border-transparent bg-foreground text-[#141414] transition-[background-color,scale,opacity] duration-press ease-out hover:bg-white active:scale-[0.97] disabled:opacity-20 disabled:active:scale-100",
+          "border-transparent bg-foreground text-background transition-[background-color,scale,opacity] duration-press ease-out hover:bg-[var(--color-text-foreground-secondary)] active:scale-[0.97] disabled:opacity-20 disabled:active:scale-100",
         secondary:
           "border-transparent bg-hover text-secondary-foreground hover:bg-selected data-pressed:bg-selected",
         "secondary-outline":
@@ -124,12 +123,12 @@ const buttonVariants = cva(
     compoundVariants: [
       {
         class:
-          "!box-border !h-auto !min-h-7 gap-1.5 rounded-lg px-[calc(--spacing(2.5)-1px)] !py-0.5 text-[length:var(--app-font-size-ui,14px)] sm:!h-auto sm:px-[calc(--spacing(2.5)-1px)] sm:text-[length:var(--app-font-size-ui-sm,13px)]",
+          "!box-border !h-auto !min-h-7 gap-1.5 px-[calc(--spacing(2.5)-1px)] !py-0.5 text-[length:var(--app-font-size-ui,14px)] sm:!h-auto sm:px-[calc(--spacing(2.5)-1px)] sm:text-[length:var(--app-font-size-ui-sm,13px)]",
         size: "xs",
         variant: "chrome-outline",
       },
       {
-        class: "!size-8 rounded-lg sm:!size-7",
+        class: "!size-8 sm:!size-7",
         size: "icon-xs",
         variant: "chrome-outline",
       },
@@ -165,7 +164,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
 });
 
 /** Dialog footers and inline error actions share this sizing override. */
-const dialogActionButtonClassName =
-  "!h-auto !min-h-8 !rounded-md !px-3 !py-1 !font-normal sm:!min-h-7";
+const dialogActionButtonClassName = "!h-auto !min-h-8 !px-3 !py-1 !font-normal sm:!min-h-7";
 
 export { Button, buttonVariants, dialogActionButtonClassName, headerButtonDarkBorderClassName };

@@ -22,15 +22,15 @@ const SURFACE_CLASSES: Record<
     row: "flex items-center justify-between gap-2 text-xs",
     label: "font-medium text-foreground",
     value: "text-right tabular-nums text-muted-foreground",
-    subtitle: "text-[11px] text-muted-foreground/80",
+    subtitle: "text-xs text-muted-foreground",
   },
   popover: {
     item: "space-y-0.5",
     row: "flex items-center justify-between gap-2 leading-tight",
-    label: "text-[11px] font-medium text-foreground",
-    value: "text-right text-[length:var(--app-font-size-chat-meta,11px)] text-muted-foreground",
+    label: "text-xs font-medium text-foreground",
+    value: "text-right text-[length:var(--app-font-size-chat-meta,12px)] text-muted-foreground",
     subtitle:
-      "text-[length:var(--app-font-size-chat-meta,11px)] leading-tight text-muted-foreground/80",
+      "text-[length:var(--app-font-size-chat-meta,12px)] leading-tight text-muted-foreground",
   },
 };
 

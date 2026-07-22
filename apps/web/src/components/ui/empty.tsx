@@ -1,6 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "~/lib/utils";
+import { SURFACE_TITLE_CLASS_NAME } from "./typography";
 
 function Empty({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -34,7 +35,7 @@ const emptyMediaVariants = cva(
     variants: {
       variant: {
         default: "bg-transparent",
-        icon: "relative flex size-9 shrink-0 items-center justify-center rounded-md border border-panel-border bg-panel text-foreground [&_svg:not([class*='size-'])]:size-4.5",
+        icon: "relative flex size-9 shrink-0 items-center justify-center rounded-md border border-panel-border bg-panel text-foreground [&_svg:not([class*='size-'])]:size-5",
       },
     },
   },
@@ -77,11 +78,7 @@ function EmptyMedia({
 
 function EmptyTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div
-      className={cn("font-heading font-semibold text-xl", className)}
-      data-slot="empty-title"
-      {...props}
-    />
+    <div className={cn(SURFACE_TITLE_CLASS_NAME, className)} data-slot="empty-title" {...props} />
   );
 }
 

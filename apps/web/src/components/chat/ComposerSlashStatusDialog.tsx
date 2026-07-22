@@ -82,7 +82,7 @@ export function ComposerSlashStatusDialog(props: {
           </DialogDescription>
         </DialogHeader>
         <DialogPanel className="space-y-4">
-          <div className="grid gap-3 rounded-lg border border-border/60 bg-muted/20 p-4 text-sm sm:grid-cols-2">
+          <div className="grid gap-3 rounded-lg border border-border bg-muted p-4 text-sm sm:grid-cols-2">
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">Model</p>
               <p className="font-medium text-foreground">{selectedModel}</p>
@@ -107,7 +107,7 @@ export function ComposerSlashStatusDialog(props: {
             </div>
           </div>
 
-          <div className="space-y-3 rounded-lg border border-border/60 bg-card p-4">
+          <div className="space-y-3 rounded-lg border border-border bg-card p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs text-muted-foreground">Context Window</p>
@@ -158,7 +158,7 @@ export function ComposerSlashStatusDialog(props: {
             )}
           </div>
 
-          <div className="space-y-2 rounded-lg border border-border/60 bg-card p-4">
+          <div className="space-y-2 rounded-lg border border-border bg-card p-4">
             <p className="text-xs text-muted-foreground">Rate Limits</p>
             {rateLimitStatus ? (
               <p className="text-sm text-foreground">{formatRateLimitMessage(rateLimitStatus)}</p>

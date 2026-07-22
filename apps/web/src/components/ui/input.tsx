@@ -28,7 +28,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   ref,
 ) {
   const inputClassName = cn(
-    "font-system-ui h-full w-full min-w-0 rounded-[inherit] border-0 bg-transparent px-3 py-1.5 text-[length:var(--app-font-size-ui,14px)] leading-normal outline-none placeholder:text-muted-foreground/72 [transition:background-color_5000000s_ease-in-out_0s] sm:text-[length:var(--app-font-size-ui,14px)]",
+    "font-system-ui h-full w-full min-w-0 rounded-[inherit] border-0 bg-transparent px-3 py-1.5 text-[length:var(--app-font-size-ui,14px)] leading-normal outline-none placeholder:text-muted-foreground [transition:background-color_5000000s_ease-in-out_0s] sm:text-[length:var(--app-font-size-ui,14px)]",
     size === "sm" &&
       "px-2.5 py-1 text-[length:var(--app-font-size-ui-sm,13px)] sm:text-[length:var(--app-font-size-ui-sm,13px)]",
     size === "lg" && "px-3.5 py-2",
@@ -43,7 +43,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       className={
         cn(
           !unstyled &&
-            "relative inline-flex w-full min-h-9 items-center rounded-lg border border-border bg-background text-[length:var(--app-font-size-ui,14px)] text-foreground has-aria-invalid:border-destructive/30 has-focus-visible:has-aria-invalid:border-destructive/50 has-focus-visible:border-foreground/30 has-autofill:bg-foreground/4 has-disabled:opacity-64 sm:min-h-8 sm:text-[length:var(--app-font-size-ui,14px)] dark:bg-input/32 dark:has-autofill:bg-foreground/8",
+            "relative inline-flex w-full min-h-9 items-center rounded-lg border border-border bg-background text-[length:var(--app-font-size-ui,14px)] text-foreground has-aria-invalid:border-destructive/30 has-focus-visible:has-aria-invalid:border-destructive/50 has-focus-visible:border-foreground/30 has-autofill:bg-foreground/4 has-disabled:opacity-64 sm:min-h-8 sm:text-[length:var(--app-font-size-ui,14px)] dark:bg-input dark:has-autofill:bg-foreground/8",
           size === "sm" && "min-h-8 sm:min-h-7",
           size === "lg" && "min-h-10 sm:min-h-9",
           variant === "soft" && "bg-foreground/2 dark:bg-foreground/2",

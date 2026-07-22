@@ -11,12 +11,12 @@ import { ProviderIcon } from "./ProviderIcon";
 describe("ProviderIcon", () => {
   it("uses the reversed Central icon for opencode in dark mode", () => {
     const markup = renderToStaticMarkup(
-      <ProviderIcon provider="opencode" className="size-4 text-muted-foreground" />,
+      <ProviderIcon provider="opencode" className="size-3.5 text-muted-foreground" />,
     );
 
     expect(markup).toContain("dark:hidden");
     expect(markup).toContain("hidden dark:inline-block");
-    expect(markup).toContain("dark:text-foreground/90");
+    expect(markup).toContain("dark:text-foreground");
     expect(markup).toContain("/central-icons-reversed/opencode.svg");
   });
 });

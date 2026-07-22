@@ -5,6 +5,7 @@ import { useRender } from "@base-ui/react/use-render";
 
 import { cn } from "~/lib/utils";
 import { PANEL_SURFACE_CLASS_NAME } from "~/components/ui/surface";
+import { SURFACE_DESCRIPTION_CLASS_NAME, SURFACE_TITLE_CLASS_NAME } from "./typography";
 
 function Card({ className, render, ...props }: useRender.ComponentProps<"div">) {
   const defaultProps = {
@@ -68,7 +69,7 @@ function CardFrameTitle({ className, render, ...props }: useRender.ComponentProp
 
 function CardFrameDescription({ className, render, ...props }: useRender.ComponentProps<"div">) {
   const defaultProps = {
-    className: cn("text-muted-foreground text-sm", className),
+    className: cn(SURFACE_DESCRIPTION_CLASS_NAME, className),
     "data-slot": "card-frame-description",
   };
 
@@ -110,7 +111,7 @@ function CardHeader({ className, render, ...props }: useRender.ComponentProps<"d
 
 function CardTitle({ className, render, ...props }: useRender.ComponentProps<"div">) {
   const defaultProps = {
-    className: cn("font-semibold text-lg leading-none", className),
+    className: cn(SURFACE_TITLE_CLASS_NAME, className),
     "data-slot": "card-title",
   };
 
@@ -123,7 +124,7 @@ function CardTitle({ className, render, ...props }: useRender.ComponentProps<"di
 
 function CardDescription({ className, render, ...props }: useRender.ComponentProps<"div">) {
   const defaultProps = {
-    className: cn("text-muted-foreground text-sm", className),
+    className: cn(SURFACE_DESCRIPTION_CLASS_NAME, className),
     "data-slot": "card-description",
   };
 

@@ -4,11 +4,8 @@
 // Exports: transcript measurement helpers and inline styles for chat text
 
 import type { CSSProperties } from "react";
-import {
-  DEFAULT_CHAT_FONT_SIZE_PX,
-  MAX_CHAT_FONT_SIZE_PX,
-  normalizeChatFontSizePx,
-} from "../../appSettings";
+import { DEFAULT_CHAT_FONT_SIZE_PX } from "../../appSettings";
+import { getAppTypographyScale } from "../../lib/appTypography";
 
 export const USER_MESSAGE_BUBBLE_RADIUS_CLASS_NAME = "rounded-[var(--radius-user-message)]";
 export const USER_MESSAGE_BUBBLE_SHELL_PADDING_CLASS_NAME = "py-2.5";
@@ -18,81 +15,85 @@ export const USER_MESSAGE_BUBBLE_SHELL_CHROME_CLASS_NAME = [
   USER_MESSAGE_BUBBLE_SHELL_PADDING_CLASS_NAME,
 ].join(" ");
 
-const CHAT_TRANSCRIPT_USER_CHAR_WIDTH_RATIO = 0.48;
-const CHAT_TRANSCRIPT_ASSISTANT_CHAR_WIDTH_RATIO = 0.52;
-const CHAT_TRANSCRIPT_ASSISTANT_FONT_OFFSET_PX = 0.5;
-const CHAT_TRANSCRIPT_ASSISTANT_LINE_HEIGHT_RATIO = 1.65;
-const CHAT_TRANSCRIPT_USER_LINE_HEIGHT_RATIO = 1.625;
+/* ─── Transcript type ─────────────────────────────────────────────────────────
+   The transcript is the most-read surface in the app, so it gets the plainest
+   treatment: assistant and user messages are BOTH the body step, on ONE line
+   height. Two things were quietly costing legibility here.
 
-function getChatTranscriptAssistantFontSizePx(chatFontSizePx: number): number {
-  return Math.min(
-    MAX_CHAT_FONT_SIZE_PX,
-    normalizeChatFontSizePx(chatFontSizePx) + CHAT_TRANSCRIPT_ASSISTANT_FONT_OFFSET_PX,
-  );
+   1. Assistant text rendered at `base + 0.5px` — 14.5px at the default. A
+      fractional font-size makes the rasterizer land glyph stems between device
+      pixels, and on a non-Retina display that is the difference between crisp
+      text and text that looks slightly smeared. Half a pixel also is not a size
+      difference anyone can perceive as hierarchy, so it bought nothing.
+   2. Assistant line-height was 1.65 and user 1.625 — a 0.4px difference that
+      made the two bubbles fail to share a rhythm without ever looking
+      deliberately different.
+
+   Both are now one value. Line height stays generous (1.6) because transcript
+   text is long-form and read top-to-bottom, unlike the dense UI chrome around
+   it. Everything is rounded to whole pixels — see `buildChatTextStyle`. */
+const CHAT_TRANSCRIPT_LINE_HEIGHT_RATIO = 1.6;
+
+// Average glyph advance as a fraction of font size, used only to estimate how
+// many characters fit on a line when the virtualizer pre-measures a row. SF Pro
+// runs slightly narrower than the Inter this was tuned against.
+const CHAT_TRANSCRIPT_CHAR_WIDTH_RATIO = 0.5;
+
+function getTranscriptFontSizePx(chatFontSizePx: number): number {
+  return getAppTypographyScale(chatFontSizePx).bodyPx;
 }
 
 export function getChatTranscriptLineHeightPx(chatFontSizePx = DEFAULT_CHAT_FONT_SIZE_PX): number {
-  return (
-    getChatTranscriptAssistantFontSizePx(chatFontSizePx) *
-    CHAT_TRANSCRIPT_ASSISTANT_LINE_HEIGHT_RATIO
-  );
+  return Math.round(getTranscriptFontSizePx(chatFontSizePx) * CHAT_TRANSCRIPT_LINE_HEIGHT_RATIO);
 }
 
 export function getChatTranscriptUserMessageLineHeightPx(
   chatFontSizePx = DEFAULT_CHAT_FONT_SIZE_PX,
 ): number {
-  return normalizeChatFontSizePx(chatFontSizePx) * CHAT_TRANSCRIPT_USER_LINE_HEIGHT_RATIO;
+  return getChatTranscriptLineHeightPx(chatFontSizePx);
 }
 
 export function getChatTranscriptUserCharWidthPx(
   chatFontSizePx = DEFAULT_CHAT_FONT_SIZE_PX,
 ): number {
-  return normalizeChatFontSizePx(chatFontSizePx) * CHAT_TRANSCRIPT_USER_CHAR_WIDTH_RATIO;
+  return getTranscriptFontSizePx(chatFontSizePx) * CHAT_TRANSCRIPT_CHAR_WIDTH_RATIO;
 }
 
 export function getChatTranscriptAssistantCharWidthPx(
   chatFontSizePx = DEFAULT_CHAT_FONT_SIZE_PX,
 ): number {
-  return (
-    getChatTranscriptAssistantFontSizePx(chatFontSizePx) *
-    CHAT_TRANSCRIPT_ASSISTANT_CHAR_WIDTH_RATIO
-  );
+  return getChatTranscriptUserCharWidthPx(chatFontSizePx);
 }
 
+// Whole pixels only: a fractional size or leading is what puts glyph stems and
+// baselines between device pixels, which reads as soft text rather than as a
+// smaller size.
 function buildChatTextStyle(fontSizePx: number, lineHeightPx: number): CSSProperties {
   return {
-    fontSize: `${fontSizePx}px`,
-    lineHeight: `${lineHeightPx}px`,
+    fontSize: `${Math.round(fontSizePx)}px`,
+    lineHeight: `${Math.round(lineHeightPx)}px`,
   };
 }
 
 export function getChatTranscriptTextStyle(
   chatFontSizePx = DEFAULT_CHAT_FONT_SIZE_PX,
 ): CSSProperties {
-  const assistantFontSizePx = getChatTranscriptAssistantFontSizePx(chatFontSizePx);
   return buildChatTextStyle(
-    assistantFontSizePx,
-    assistantFontSizePx * CHAT_TRANSCRIPT_ASSISTANT_LINE_HEIGHT_RATIO,
+    getTranscriptFontSizePx(chatFontSizePx),
+    getChatTranscriptLineHeightPx(chatFontSizePx),
   );
 }
 
 export function getChatTranscriptUserMessageTextStyle(
   chatFontSizePx = DEFAULT_CHAT_FONT_SIZE_PX,
 ): CSSProperties {
-  const normalizedChatFontSizePx = normalizeChatFontSizePx(chatFontSizePx);
-  return buildChatTextStyle(
-    normalizedChatFontSizePx,
-    getChatTranscriptUserMessageLineHeightPx(normalizedChatFontSizePx),
-  );
+  return getChatTranscriptTextStyle(chatFontSizePx);
 }
 
+/** Timestamps and token counts under a message — the caption step. */
 export function getChatMessageFooterTextStyle(
   chatFontSizePx = DEFAULT_CHAT_FONT_SIZE_PX,
 ): CSSProperties {
-  const normalizedChatFontSizePx = normalizeChatFontSizePx(chatFontSizePx);
-  const footerFontSizePx = Math.max(11, normalizedChatFontSizePx - 2);
-  return buildChatTextStyle(
-    footerFontSizePx,
-    footerFontSizePx * CHAT_TRANSCRIPT_USER_LINE_HEIGHT_RATIO,
-  );
+  const captionPx = getAppTypographyScale(chatFontSizePx).captionPx;
+  return buildChatTextStyle(captionPx, captionPx * CHAT_TRANSCRIPT_LINE_HEIGHT_RATIO);
 }

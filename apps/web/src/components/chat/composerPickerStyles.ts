@@ -33,7 +33,7 @@ export const COMPOSER_PICKER_SEARCH_HEADER_CLASS_NAME =
 
 /** Search field styling inside composer picker submenus. */
 export const COMPOSER_PICKER_SEARCH_INPUT_CLASS_NAME =
-  "rounded-lg border-[color:color-mix(in_srgb,var(--foreground)_8%,transparent)] bg-[color-mix(in_srgb,white_92%,transparent)] shadow-none before:hidden has-focus-visible:border-[color:color-mix(in_srgb,var(--foreground)_14%,transparent)] has-focus-visible:ring-0 [&_input]:font-sans [&_input]:placeholder:text-muted-foreground/55";
+  "rounded-lg border-[color:color-mix(in_srgb,var(--foreground)_8%,transparent)] bg-[color-mix(in_srgb,white_92%,transparent)] shadow-none before:hidden has-focus-visible:border-[color:color-mix(in_srgb,var(--foreground)_14%,transparent)] has-focus-visible:ring-0 [&_input]:font-sans [&_input]:placeholder:text-faint";
 
 /** Scrollable model list body inside searchable provider submenus. */
 export const COMPOSER_PICKER_MODEL_LIST_MAX_HEIGHT_CLASS_NAME =
@@ -49,13 +49,13 @@ export const COMPOSER_PICKER_RADIUS_CLASS_NAME = "rounded-xl";
 export const COMPOSER_PICKER_OPTION_RADIUS_CLASS_NAME = "rounded-lg";
 
 /** Collapsible section headers inside model provider lists. */
-export const COMPOSER_PICKER_MODEL_GROUP_HEADER_CLASS_NAME = `grid w-full grid-cols-[0.75rem_minmax(0,1fr)_2.5rem] items-center gap-x-1.5 ${COMPOSER_PICKER_RADIUS_CLASS_NAME} px-2 py-1 text-left text-[11px] font-medium text-muted-foreground/80 outline-none transition-colors hover:bg-hover focus-visible:ring-0`;
+export const COMPOSER_PICKER_MODEL_GROUP_HEADER_CLASS_NAME = `grid w-full grid-cols-[0.75rem_minmax(0,1fr)_2.5rem] items-center gap-x-1.5 ${COMPOSER_PICKER_RADIUS_CLASS_NAME} px-2 py-1 text-left text-xs font-medium text-muted-foreground outline-none transition-colors hover:bg-hover focus-visible:ring-0`;
 
 /** Indents model row labels under collapsible group headers. */
 export const COMPOSER_PICKER_MODEL_ROW_LABEL_INDENT_CLASS_NAME = "pl-[1.125rem]";
 
 /** Muted accent text for effort labels and empty-landing folder names. */
-export const COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME = "text-muted-foreground/45";
+export const COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME = "text-faint";
 
 // NOTE: Composer picker section headers (Effort, Thinking, Mode, …) now render
 // through the shared `MenuGroupLabel` primitive (../ui/menu) so they stay in

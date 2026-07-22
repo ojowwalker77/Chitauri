@@ -258,7 +258,7 @@ function DelegateTaskDialog({
         <DialogPanel className="space-y-3">
           <select
             aria-label="Receiving Worker"
-            className="h-9 w-full rounded-lg border border-border/60 bg-background px-2 text-sm text-foreground outline-hidden focus:border-ring"
+            className="h-9 w-full rounded-lg border border-border bg-background px-2 text-sm text-foreground outline-hidden focus:border-ring"
             value={recipientWorkerId}
             onChange={(event) => setRecipientWorkerId(ProjectId.makeUnsafe(event.target.value))}
           >
@@ -375,7 +375,7 @@ function AddArtifactDialog({
         <DialogPanel className="space-y-3">
           <select
             aria-label="Artifact kind"
-            className="h-9 w-full rounded-lg border border-border/60 bg-background px-2 text-sm text-foreground outline-hidden focus:border-ring"
+            className="h-9 w-full rounded-lg border border-border bg-background px-2 text-sm text-foreground outline-hidden focus:border-ring"
             value={kind}
             onChange={(event) => setKind(event.target.value as TaskArtifactKind)}
           >
@@ -656,13 +656,13 @@ function TasksRoute() {
           >
             <div className={cn("flex items-center gap-3", CHAT_SURFACE_HEADER_HEIGHT_CLASS)}>
               <SidebarHeaderNavigationControls />
-              <ListTodoIcon className="size-4 text-foreground" />
-              <span className="min-w-0 flex-1 truncate text-[14px] font-[590] tracking-[-0.005em] text-foreground">
+              <ListTodoIcon className="size-3.5 text-foreground" />
+              <span className="min-w-0 flex-1 truncate text-base font-medium text-foreground">
                 Tasks
               </span>
               <select
                 aria-label="Worker"
-                className="h-8 max-w-52 rounded-lg border border-border/60 bg-background px-2 text-xs text-foreground outline-hidden focus:border-ring"
+                className="h-8 max-w-52 rounded-lg border border-border bg-background px-2 text-xs text-foreground outline-hidden focus:border-ring"
                 value={selectedWorker?.id ?? ""}
                 onChange={(event) =>
                   updateSearch({
@@ -693,18 +693,18 @@ function TasksRoute() {
           </header>
 
           <div className="grid min-h-0 flex-1 grid-cols-[minmax(17rem,0.78fr)_minmax(28rem,1.45fr)] overflow-hidden">
-            <section className="min-h-0 overflow-y-auto border-r border-border/50 p-3">
+            <section className="min-h-0 overflow-y-auto border-r border-border p-3">
               <div className="mb-2 flex items-center justify-between px-1">
-                <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                   {selectedWorker ? `${selectedWorker.name} Worker` : "Workers"}
                 </span>
-                <div className="flex items-center gap-1 rounded-lg bg-muted/45 p-0.5">
+                <div className="flex items-center gap-1 rounded-lg bg-muted p-0.5">
                   {(["active", "closed"] as const).map((visibility) => (
                     <button
                       key={visibility}
                       type="button"
                       className={cn(
-                        "rounded-md px-2 py-1 text-[11px] transition-colors",
+                        "rounded-md px-2 py-1 text-xs transition-colors",
                         taskVisibility === visibility
                           ? "bg-background text-foreground shadow-xs"
                           : "text-muted-foreground hover:text-foreground",
@@ -715,7 +715,7 @@ function TasksRoute() {
                       }}
                     >
                       {visibility === "active" ? "Active" : "Closed"}{" "}
-                      <span className="tabular-nums opacity-65">
+                      <span className="tabular-nums text-faint">
                         {visibility === "active" ? activeTaskCount : closedTaskCount}
                       </span>
                     </button>
@@ -731,29 +731,29 @@ function TasksRoute() {
                       "flex w-full items-start gap-2 rounded-xl px-3 py-2.5 text-left transition-colors",
                       selectedTask?.id === task.id
                         ? "bg-accent text-accent-foreground"
-                        : "text-foreground/88 hover:bg-accent/55",
+                        : "text-foreground hover:bg-accent",
                     )}
                     onClick={() => {
                       updateSearch({ task: task.id, create: undefined });
                     }}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-[13px] font-medium">{task.title}</div>
+                      <div className="truncate text-sm font-medium">{task.title}</div>
                       <div className="mt-1 flex items-center gap-2">
                         <TaskStatusPill status={task.status} />
-                        <span className="font-mono text-[10px] text-muted-foreground/60">
+                        <span className="font-mono text-xs text-faint">
                           {formatTaskReference(task.id)}
                         </span>
-                        <span className="truncate text-[11px] text-muted-foreground/65">
+                        <span className="truncate text-xs text-muted-foreground">
                           {task.origin}
                         </span>
                       </div>
                     </div>
-                    <ChevronRightIcon className="mt-1 size-3.5 shrink-0 text-muted-foreground/50" />
+                    <ChevronRightIcon className="mt-1 size-3.5 shrink-0 text-faint" />
                   </button>
                 ))}
                 {workerTasks.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-border/60 px-4 py-8 text-center">
+                  <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center">
                     <p className="text-sm font-medium">
                       {taskVisibility === "active" ? "No active Tasks" : "No closed Tasks"}
                     </p>
@@ -773,16 +773,14 @@ function TasksRoute() {
                   <div>
                     <div className="mb-3 flex flex-wrap items-center gap-2">
                       <TaskStatusPill status={selectedTask.status} />
-                      <span className="font-mono text-[11px] text-muted-foreground">
+                      <span className="font-mono text-xs text-muted-foreground">
                         {formatTaskReference(selectedTask.id)}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {selectedWorker.name} Worker
                       </span>
                     </div>
-                    <h1 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">
-                      {selectedTask.title}
-                    </h1>
+                    <h1 className="text-2xl font-semibold text-foreground">{selectedTask.title}</h1>
                     {selectedTask.brief ? (
                       <p className="mt-3 max-w-2xl whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
                         {selectedTask.brief}
@@ -792,7 +790,7 @@ function TasksRoute() {
                       <select
                         aria-label="Task status"
                         disabled={statusPending}
-                        className="h-8 rounded-lg border border-border/60 bg-background px-2 text-xs text-foreground outline-hidden focus:border-ring disabled:opacity-60"
+                        className="h-8 rounded-lg border border-border bg-background px-2 text-xs text-foreground outline-hidden focus:border-ring disabled:opacity-60"
                         value={selectedTask.status}
                         onChange={(event) =>
                           void updateTaskStatus(event.target.value as TaskStatus)
@@ -836,27 +834,27 @@ function TasksRoute() {
                         })
                       }
                     >
-                      <ArrowRightIcon className="size-4 rotate-180 text-cyan-400" />
+                      <ArrowRightIcon className="size-3.5 rotate-180 text-cyan-400" />
                       <div className="min-w-0 flex-1">
-                        <div className="text-[11px] font-medium tracking-wide text-cyan-400 uppercase">
+                        <div className="text-xs font-medium tracking-wide text-cyan-400 uppercase">
                           Requested by {requesterWorker.name} Worker
                         </div>
                         <div className="mt-1 truncate text-sm text-foreground">
                           {requesterTask.title}
                         </div>
                       </div>
-                      <ChevronRightIcon className="size-4 text-muted-foreground" />
+                      <ChevronRightIcon className="size-3.5 text-muted-foreground" />
                     </button>
                   ) : null}
 
                   {dependencies.length > 0 ? (
-                    <div className="rounded-2xl border border-border/55 bg-card/45 p-4">
+                    <div className="rounded-2xl border border-border bg-card p-4">
                       <div className="mb-3 flex items-center justify-between">
                         <div className="flex items-center gap-2 text-sm font-medium">
-                          <ArrowRightIcon className="size-4" />
+                          <ArrowRightIcon className="size-3.5" />
                           Worker dependencies
                         </div>
-                        <span className="text-[11px] tabular-nums text-muted-foreground">
+                        <span className="text-xs tabular-nums text-muted-foreground">
                           {dependencies.length}
                         </span>
                       </div>
@@ -882,12 +880,12 @@ function TasksRoute() {
                                 <div className="truncate text-xs font-medium">
                                   {dependency.title}
                                 </div>
-                                <div className="mt-1 text-[11px] text-muted-foreground">
+                                <div className="mt-1 text-xs text-muted-foreground">
                                   {dependencyWorker?.name ?? "Unknown"} Worker
                                 </div>
                               </div>
                               <TaskStatusPill status={dependency.status} />
-                              <ChevronRightIcon className="size-3 text-muted-foreground" />
+                              <ChevronRightIcon className="size-3.5 text-muted-foreground" />
                             </button>
                           );
                         })}
@@ -896,9 +894,9 @@ function TasksRoute() {
                   ) : null}
 
                   <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-2xl border border-border/55 bg-card/45 p-4">
+                    <div className="rounded-2xl border border-border bg-card p-4">
                       <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-                        <MessageCircleIcon className="size-4" />
+                        <MessageCircleIcon className="size-3.5" />
                         Threads
                       </div>
                       <div className="space-y-1.5">
@@ -916,7 +914,7 @@ function TasksRoute() {
                           >
                             <span className="min-w-0 flex-1">
                               <span className="block truncate">{thread.title}</span>
-                              <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+                              <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                                 {thread.envMode === "worktree"
                                   ? thread.worktreePath || "Worktree"
                                   : thread.branch
@@ -924,7 +922,7 @@ function TasksRoute() {
                                     : "Local workspace"}
                               </span>
                             </span>
-                            <ChevronRightIcon className="size-3 text-muted-foreground" />
+                            <ChevronRightIcon className="size-3.5 text-muted-foreground" />
                           </button>
                         ))}
                         {taskThreads.length === 0 ? (
@@ -936,10 +934,10 @@ function TasksRoute() {
                       </div>
                     </div>
 
-                    <div className="rounded-2xl border border-border/55 bg-card/45 p-4">
+                    <div className="rounded-2xl border border-border bg-card p-4">
                       <div className="mb-3 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 text-sm font-medium">
-                          <GitBranchIcon className="size-4" />
+                          <GitBranchIcon className="size-3.5" />
                           Artifacts
                         </div>
                         <Button
@@ -954,12 +952,12 @@ function TasksRoute() {
                       <div className="space-y-2 text-xs text-muted-foreground">
                         {selectedTask.artifacts.map((artifact) => (
                           <div key={artifact.id} className="rounded-lg bg-foreground/4 px-2 py-1.5">
-                            <div className="text-[10px] font-medium tracking-wide text-muted-foreground/65 uppercase">
+                            <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                               {TASK_ARTIFACT_KIND_LABELS[artifact.kind]}
                             </div>
-                            <div className="mt-0.5 text-foreground/88">{artifact.title}</div>
+                            <div className="mt-0.5 text-foreground">{artifact.title}</div>
                             {artifact.reference ? (
-                              <div className="mt-0.5 truncate font-mono text-[10px]">
+                              <div className="mt-0.5 truncate font-mono text-xs">
                                 {artifact.reference}
                               </div>
                             ) : null}
@@ -998,7 +996,7 @@ function TasksRoute() {
                       "rounded-2xl border p-4",
                       selectedTask.status === "completed"
                         ? "border-emerald-500/20 bg-emerald-500/6"
-                        : "border-border/55 bg-card/45",
+                        : "border-border bg-card",
                     )}
                   >
                     <div
@@ -1009,7 +1007,7 @@ function TasksRoute() {
                           : "text-foreground",
                       )}
                     >
-                      <CheckCircle2Icon className="size-4" />
+                      <CheckCircle2Icon className="size-3.5" />
                       Durable result
                     </div>
                     <Textarea
@@ -1033,7 +1031,7 @@ function TasksRoute() {
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-border/55 bg-card/45 p-4">
+                  <div className="rounded-2xl border border-border bg-card p-4">
                     <div className="text-sm font-medium">Worker instructions</div>
                     <p className="mt-1 text-xs leading-5 text-muted-foreground">
                       Persistent operating guidance applied to work owned by {selectedWorker.name}.
@@ -1063,7 +1061,7 @@ function TasksRoute() {
               ) : (
                 <div className="flex min-h-full items-center justify-center">
                   <div className="max-w-sm text-center">
-                    <ListTodoIcon className="mx-auto size-7 text-muted-foreground/55" />
+                    <ListTodoIcon className="mx-auto size-5 text-faint" />
                     <h1 className="mt-3 text-lg font-semibold">Worker Tasks</h1>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
                       Tasks are durable, agent-visible Threads. Create one manually or ask a Worker
@@ -1074,11 +1072,11 @@ function TasksRoute() {
               )}
 
               {selectedWorker && unfiledThreads.length > 0 ? (
-                <div className="mx-auto mt-8 max-w-3xl border-t border-border/50 pt-5">
+                <div className="mx-auto mt-8 max-w-3xl border-t border-border pt-5">
                   <div className="text-xs font-medium text-muted-foreground">
                     Unfiled Threads · {unfiledThreads.length}
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground/65">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     Legacy and standalone Threads remain visible without creating fake Tasks.
                   </p>
                 </div>

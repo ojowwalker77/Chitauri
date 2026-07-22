@@ -65,7 +65,6 @@ import {
 } from "../threadDetailSubscriptionRetention";
 import { getThreadFromState } from "../threadDerivation";
 import { useAppTypography } from "../hooks/useAppTypography";
-import { useWindowTransparency } from "../hooks/useWindowTransparency";
 import { usePreloadSettingsRoute } from "../hooks/usePreloadSettingsRoute";
 import { useSyncDesktopTopBarTrafficLightGutterZoom } from "../hooks/useDesktopTopBarGutter";
 import { useTheme } from "../hooks/useTheme";
@@ -140,7 +139,6 @@ export const Route = createRootRouteWithContext<{
 
 function RootRouteView() {
   useAppTypography();
-  useWindowTransparency();
   usePreloadSettingsRoute();
   useNativeFontSmoothing();
   useSyncDesktopTopBarTrafficLightGutterZoom();
@@ -569,7 +567,7 @@ function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10 text-foreground sm:px-6">
       <section className={`${OVERLAY_SURFACE_CLASS_NAME} relative w-full max-w-xl p-6 sm:p-8`}>
-        <p className="text-[11px] font-semibold text-muted-foreground">{APP_DISPLAY_NAME}</p>
+        <p className="text-xs font-semibold text-muted-foreground">{APP_DISPLAY_NAME}</p>
         <h1 className="mt-3 text-2xl font-semibold sm:text-3xl">Something went wrong.</h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{message}</p>
 
@@ -587,12 +585,12 @@ function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
           </Button>
         </div>
 
-        <details className="group mt-5 overflow-hidden rounded-lg border border-border/70 bg-background/55">
+        <details className="group mt-5 overflow-hidden rounded-lg border border-border bg-background">
           <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-muted-foreground">
             <span className="group-open:hidden">Show error details</span>
             <span className="hidden group-open:inline">Hide error details</span>
           </summary>
-          <pre className="max-h-56 overflow-auto border-t border-border/70 bg-background/80 px-3 py-2 text-xs text-foreground/85">
+          <pre className="max-h-56 overflow-auto border-t border-border bg-background px-3 py-2 text-xs text-foreground">
             {details}
           </pre>
         </details>

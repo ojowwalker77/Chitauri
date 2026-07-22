@@ -18,19 +18,19 @@ function stepStatusIcon(status: string): React.ReactNode {
   if (status === "completed") {
     return (
       <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--success)_15%,transparent)] text-[var(--success)]">
-        <CheckIcon className="size-3" />
+        <CheckIcon className="size-3.5" />
       </span>
     );
   }
   if (status === "inProgress") {
     return (
       <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--info)_15%,transparent)] text-[var(--info)]">
-        <LoaderIcon className="size-3 animate-spin motion-reduce:animate-none" />
+        <LoaderIcon className="size-3.5 animate-spin motion-reduce:animate-none" />
       </span>
     );
   }
   return (
-    <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted/30">
+    <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-border bg-muted">
       <span className="size-1.5 rounded-full bg-muted-foreground/30" />
     </span>
   );
@@ -66,13 +66,13 @@ const PlanSidebar = memo(function PlanSidebar({
       )}
     >
       {/* Header */}
-      <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/60 px-3">
+      <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3">
         <div className="flex items-center gap-2">
           <span className="text-[length:var(--app-font-size-ui-sm,13px)] font-medium text-foreground">
             Plan
           </span>
           {activeTaskList ? (
-            <span className="text-[11px] text-muted-foreground/60">
+            <span className="text-xs text-faint">
               {formatTimestamp(activeTaskList.createdAt, timestampFormat)}
             </span>
           ) : null}
@@ -83,7 +83,7 @@ const PlanSidebar = memo(function PlanSidebar({
               planMarkdown={planMarkdown}
               workspaceRoot={workspaceRoot}
               variant="ghost"
-              buttonClassName="text-muted-foreground/50 hover:text-foreground/70"
+              buttonClassName="text-faint hover:text-muted-foreground"
             />
           ) : null}
           <Button
@@ -91,7 +91,7 @@ const PlanSidebar = memo(function PlanSidebar({
             variant="ghost"
             onClick={onClose}
             aria-label="Close plan sidebar"
-            className="text-muted-foreground/50 hover:text-foreground/70"
+            className="text-faint hover:text-muted-foreground"
           >
             <PanelRightCloseIcon className="size-3.5" />
           </Button>
@@ -103,7 +103,7 @@ const PlanSidebar = memo(function PlanSidebar({
         <div className="p-3 space-y-4">
           {/* Explanation */}
           {activeTaskList?.explanation ? (
-            <p className="text-[13px] leading-relaxed text-muted-foreground/80">
+            <p className="text-sm leading-relaxed text-muted-foreground">
               {activeTaskList.explanation}
             </p>
           ) : null}
@@ -111,7 +111,7 @@ const PlanSidebar = memo(function PlanSidebar({
           {/* Tasks */}
           {activeTaskList && activeTaskList.tasks.length > 0 ? (
             <div className="space-y-1">
-              <p className="mb-2 text-[11px] font-semibold text-muted-foreground/40">Steps</p>
+              <p className="mb-2 text-xs font-semibold text-faint">Steps</p>
               {activeTaskList.tasks.map((task) => (
                 <div
                   key={`${task.status}:${task.task}`}
@@ -126,12 +126,12 @@ const PlanSidebar = memo(function PlanSidebar({
                   <div className="mt-0.5">{stepStatusIcon(task.status)}</div>
                   <p
                     className={cn(
-                      "text-[13px] leading-snug",
+                      "text-sm leading-snug",
                       task.status === "completed"
-                        ? "text-muted-foreground/50 line-through decoration-muted-foreground/20"
+                        ? "text-faint line-through decoration-muted-foreground/20"
                         : task.status === "inProgress"
-                          ? "text-foreground/90"
-                          : "text-muted-foreground/70",
+                          ? "text-foreground"
+                          : "text-muted-foreground",
                     )}
                   >
                     {task.task}
@@ -148,10 +148,10 @@ const PlanSidebar = memo(function PlanSidebar({
                 <ChevronRightIcon
                   className={disclosureChevronClassName(
                     proposedPlanExpanded,
-                    "size-3 text-muted-foreground/50",
+                    "size-3.5 text-faint",
                   )}
                 />
-                <span className="text-[11px] font-semibold text-muted-foreground/40 group-hover:text-muted-foreground/60">
+                <span className="text-xs font-semibold text-faint group-hover:text-faint">
                   {planTitle ?? "Full Plan"}
                 </span>
               </CollapsibleTrigger>
@@ -170,10 +170,8 @@ const PlanSidebar = memo(function PlanSidebar({
           {/* Empty state */}
           {!activeTaskList && !planMarkdown ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-[13px] text-muted-foreground/40">No active plan yet.</p>
-              <p className="mt-1 text-[11px] text-muted-foreground/30">
-                Plans will appear here when generated.
-              </p>
+              <p className="text-sm text-faint">No active plan yet.</p>
+              <p className="mt-1 text-xs text-faint">Plans will appear here when generated.</p>
             </div>
           ) : null}
         </div>

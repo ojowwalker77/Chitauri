@@ -45,9 +45,6 @@ const APP_SETTINGS_STORAGE_KEY = "teacode:app-settings:v1";
 const SERVER_SETTINGS_MIGRATION_STORAGE_KEY = "t3code:server-settings-migrated:v1";
 const MAX_CUSTOM_MODEL_COUNT = 32;
 export const MAX_CUSTOM_MODEL_LENGTH = 256;
-export const MIN_WINDOW_TRANSPARENCY = 0;
-export const MAX_WINDOW_TRANSPARENCY = 30;
-export const DEFAULT_WINDOW_TRANSPARENCY = 20;
 export const MIN_CHAT_FONT_SIZE_PX = 11;
 export const MAX_CHAT_FONT_SIZE_PX = 18;
 export const DEFAULT_CHAT_FONT_SIZE_PX = 14;
@@ -125,8 +122,6 @@ export const AppSettingsSchema = Schema.Struct({
   // Default color applied when highlighting selected transcript text.
   highlightColor: ThreadMarkerColor.pipe(withDefaults(() => "yellow" as const)),
   chatFontSizePx: Schema.Number.pipe(withDefaults(() => DEFAULT_CHAT_FONT_SIZE_PX)),
-  /** How much of the desktop shows through the window canvas, as a percentage. */
-  windowTransparency: Schema.Number.pipe(withDefaults(() => DEFAULT_WINDOW_TRANSPARENCY)),
   terminalFontSizePx: Schema.Number.pipe(withDefaults(() => DEFAULT_TERMINAL_FONT_SIZE_PX)),
   codexBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   codexHomePath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
@@ -313,14 +308,6 @@ export function normalizeCustomModelSlugs(
   return normalizedModels;
 }
 
-export function normalizeWindowTransparency(value: number | null | undefined): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return DEFAULT_WINDOW_TRANSPARENCY;
-  }
-
-  return Math.min(MAX_WINDOW_TRANSPARENCY, Math.max(MIN_WINDOW_TRANSPARENCY, Math.round(value)));
-}
-
 export function normalizeChatFontSizePx(value: number | null | undefined): number {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return DEFAULT_CHAT_FONT_SIZE_PX;
@@ -365,7 +352,6 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     ),
     piBinaryPath: normalizeProviderBinaryPathOverride("pi", settings.piBinaryPath),
     chatFontSizePx: normalizeChatFontSizePx(settings.chatFontSizePx),
-    windowTransparency: normalizeWindowTransparency(settings.windowTransparency),
     terminalFontSizePx: normalizeTerminalFontSizePx(settings.terminalFontSizePx),
     customCodexModels: normalizeCustomModelSlugs(settings.customCodexModels, "codex"),
     customClaudeModels: normalizeCustomModelSlugs(settings.customClaudeModels, "claudeAgent"),

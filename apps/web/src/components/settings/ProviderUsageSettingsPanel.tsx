@@ -35,7 +35,7 @@ import {
 import { useStore } from "~/store";
 import { createAllThreadsSelector } from "~/storeSelectors";
 
-const PILL_CLASS_NAME = "shrink-0 rounded-full px-2 py-1 text-[11px] font-medium leading-none";
+const PILL_CLASS_NAME = "shrink-0 rounded-full px-2 py-1 text-xs font-medium leading-none";
 
 interface StatusPill {
   label: string;
@@ -89,8 +89,8 @@ function ProviderUsageCard({
       <div className="space-y-3.5 p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2.5">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-[color:var(--color-border)] bg-muted/60">
-              <ProviderIcon provider={provider} className="size-4" />
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-[color:var(--color-border)] bg-muted">
+              <ProviderIcon provider={provider} className="size-3.5" />
             </span>
             <span className="truncate text-sm font-semibold text-foreground">
               {providerUsageDisplayName(provider)}
@@ -231,7 +231,7 @@ export function ProviderUsageSettingsPanel() {
         </div>
       )}
 
-      <p className="px-2 text-[11px] leading-relaxed text-muted-foreground">
+      <p className="px-2 text-xs leading-relaxed text-muted-foreground">
         Usage is read locally from each provider CLI&apos;s stored credentials and fetched directly
         from the provider. OAuth providers may refresh short-lived tokens through their official
         token endpoint; if a provider shows “Not signed in”, re-authenticate with its CLI.

@@ -24,7 +24,7 @@ export const SearchInput = forwardRef<HTMLInputElement, InputProps>(function Sea
         {...props}
       />
       <SearchIcon
-        className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/70"
+        className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
         aria-hidden="true"
       />
     </div>

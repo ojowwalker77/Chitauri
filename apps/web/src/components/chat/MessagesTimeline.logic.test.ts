@@ -1020,7 +1020,7 @@ describe("deriveMessagesTimelineRows", () => {
       open: true,
       steps: setup.steps,
     });
-    expect(rows.some((row) => row.kind === "working")).toBe(false);
+    expect(rows.some((row) => row.kind === "working-header")).toBe(false);
   });
 
   it("restores the working shimmer while the worktree-setup row animates closed", () => {
@@ -1032,7 +1032,7 @@ describe("deriveMessagesTimelineRows", () => {
       timelineEntries: [userEntry("u1", "2026-01-01T00:00:00Z")],
     });
 
-    expect(rows.map((row) => row.kind)).toEqual(["message", "worktree-setup", "working"]);
+    expect(rows.map((row) => row.kind)).toEqual(["message", "working-header", "worktree-setup"]);
     expect(rows.find((row) => row.kind === "worktree-setup")).toMatchObject({ open: false });
   });
 
@@ -1043,6 +1043,6 @@ describe("deriveMessagesTimelineRows", () => {
       timelineEntries: [userEntry("u1", "2026-01-01T00:00:00Z")],
     });
 
-    expect(rows.map((row) => row.kind)).toEqual(["message", "working"]);
+    expect(rows.map((row) => row.kind)).toEqual(["message", "working-header"]);
   });
 });

@@ -101,7 +101,7 @@ describe("parseStoredThemeState", () => {
     });
   });
 
-  it("migrates the persisted v0.9 production default to the current translucent default", () => {
+  it("migrates the persisted v0.9 production default to the current default", () => {
     const parsed = parseStoredThemeState(
       JSON.stringify({
         mode: "system",
@@ -125,7 +125,7 @@ describe("parseStoredThemeState", () => {
     );
 
     expect(parsed).toEqual(DEFAULT_THEME_STATE);
-    expect(parsed.chromeTheme.opaqueWindows).toBe(false);
+    expect(parsed.chromeTheme.opaqueWindows).toBe(true);
   });
 
   it("migrates retired accents even when the rest of the palette was customized", () => {
@@ -447,7 +447,7 @@ describe("buildThemeCssVariables", () => {
       tokens.derived.controlBackgroundOpaque,
     );
     expect(tokens.aliases["--color-token-main-surface-primary"]).toBe("#0f0f11");
-    expect(tokens.aliases["--color-token-input-background"]).toBe("rgba(27, 27, 29, 0.96)");
+    expect(tokens.aliases["--color-token-input-background"]).toBe("rgb(27, 27, 29)");
     expect(tokens.aliases["--color-token-terminal-background"]).toBe("#0f0f11");
     expect(tokens.aliases["--color-token-terminal-foreground"]).toBe("#e3e4e6");
     expect(tokens.aliases["--color-token-terminal-ansi-black"]).toBe(
@@ -469,14 +469,16 @@ describe("buildThemeCssVariables", () => {
       theme: DEFAULT_CHROME_THEME,
     });
 
-    expect(tokens.derived.controlBackgroundOpaque).toBe("rgb(39, 39, 38)");
-    expect(tokens.aliases["--color-token-dropdown-background"]).toBe("rgb(39, 39, 38)");
+    expect(tokens.derived.controlBackgroundOpaque).toBe("rgb(39, 39, 39)");
+    expect(tokens.aliases["--color-token-dropdown-background"]).toBe("rgb(39, 39, 39)");
     expect(tokens.computed.surfaceUnder).toBe("#090909");
-    expect(tokens.derived.textForegroundSecondary).toBe("#807f7c");
-    expect(tokens.derived.textForegroundTertiary).toBe("#585856");
+    // The dark ink ladder: primary / secondary / tertiary.
+    expect(tokens.derived.textForeground).toBe("#e8e8e8");
+    expect(tokens.derived.textForegroundSecondary).toBe("#9e9e9e");
+    expect(tokens.derived.textForegroundTertiary).toBe("#5d5d5d");
     expect(variables["--background"]).toBe("#090909");
     expect(variables["--panel"]).toBe("#141414");
-    expect(variables["--foreground"]).toBe("#e3e2dd");
+    expect(variables["--foreground"]).toBe("#e8e8e8");
     expect(variables["--accent"]).toBe("#3b82f6");
     // The retired brand tokens are no longer emitted at all.
     expect(variables["--claude"]).toBeUndefined();

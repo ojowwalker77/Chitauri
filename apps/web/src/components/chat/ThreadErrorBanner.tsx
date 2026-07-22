@@ -28,7 +28,7 @@ export const ThreadErrorBanner = memo(function ThreadErrorBanner({
           <AlertAction>
             <IconButton
               label="Dismiss error"
-              className="size-6 text-destructive/60 hover:text-destructive sm:size-6"
+              className="size-6 text-destructive hover:text-destructive sm:size-6"
               onClick={onDismiss}
             >
               <XIcon className="size-3.5" />

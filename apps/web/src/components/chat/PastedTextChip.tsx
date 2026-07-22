@@ -21,7 +21,7 @@ function PastedTextCardAction({ children, ...props }: ButtonHTMLAttributes<HTMLB
   return (
     <button
       type="button"
-      className="-ml-px inline-flex w-fit items-center gap-0.5 text-[11px] text-muted-foreground underline decoration-muted-foreground/40 underline-offset-2 transition-colors hover:text-foreground hover:decoration-foreground/60 focus-visible:outline-none"
+      className="-ml-px inline-flex w-fit items-center gap-0.5 text-xs text-muted-foreground underline decoration-muted-foreground/40 underline-offset-2 transition-colors hover:text-foreground hover:decoration-foreground/60 focus-visible:outline-none"
       {...props}
     >
       {children}
@@ -46,7 +46,7 @@ function PastedTextCardShell({
     <AttachmentCard
       size="sm"
       className={className}
-      icon={<FileIcon className="size-3" />}
+      icon={<FileIcon className="size-3.5" />}
       title={pastedTextTitle(text)}
       subtitle={action}
       onRemove={onRemove}
@@ -114,7 +114,7 @@ export function UserMessagePastedTextCard({ text, metrics }: UserMessagePastedTe
         }
       />
       {expanded ? (
-        <pre className="max-h-80 w-full max-w-full overflow-auto rounded-md border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-secondary)] p-2 font-mono text-[11px] leading-snug whitespace-pre-wrap break-words text-foreground">
+        <pre className="max-h-80 w-full max-w-full overflow-auto rounded-md border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-secondary)] p-2 font-mono text-xs leading-snug whitespace-pre-wrap break-words text-foreground">
           {text}
         </pre>
       ) : null}

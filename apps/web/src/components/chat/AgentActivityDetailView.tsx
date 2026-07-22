@@ -90,7 +90,7 @@ export const AgentActivityDetailView = memo(function AgentActivityDetailView({
         <button
           type="button"
           data-scroll-anchor-ignore
-          className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-muted-foreground/70 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground"
+          className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-muted-foreground transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground"
           style={footerTextStyle}
           onClick={onBack}
         >
@@ -98,22 +98,22 @@ export const AgentActivityDetailView = memo(function AgentActivityDetailView({
           <span>Back</span>
         </button>
 
-        <div className="mt-3 border-b border-border/55 pb-4">
+        <div className="mt-3 border-b border-border pb-4">
           <div className="flex min-w-0 items-start gap-3">
-            <span className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-md border border-border/45 bg-background/65 text-muted-foreground/58">
+            <span className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-background text-faint">
               <BotIcon className="size-3.5" />
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <h2 className="truncate text-[18px] font-medium leading-6 text-foreground/92">
+                <h2 className="truncate text-base font-medium leading-6 text-foreground">
                   {detail.title}
                 </h2>
-                <span className="rounded-full border border-border/45 px-2 py-0.5 text-[11px] font-medium text-muted-foreground/56">
+                <span className="rounded-full border border-border px-2 py-0.5 text-xs font-medium text-faint">
                   {`${detail.entries.length} ${pluralize(detail.entries.length, "update")}`}
                 </span>
               </div>
               {detail.summary ? (
-                <p className="mt-1 max-w-4xl text-muted-foreground/58" style={chatTypographyStyle}>
+                <p className="mt-1 max-w-4xl text-faint" style={chatTypographyStyle}>
                   {detail.summary}
                 </p>
               ) : null}
@@ -182,8 +182,8 @@ export const AgentActivityDetailView = memo(function AgentActivityDetailView({
 
 function AgentActivitySection(props: { title: string; children: ReactNode }) {
   return (
-    <section className="border-b border-border/45 py-4 last:border-b-0">
-      <h3 className="mb-2 text-[11px] font-medium text-muted-foreground/48">{props.title}</h3>
+    <section className="border-b border-border py-4 last:border-b-0">
+      <h3 className="mb-2 text-xs font-medium text-faint">{props.title}</h3>
       {props.children}
     </section>
   );
@@ -204,15 +204,15 @@ function AgentActivityEventRow(props: {
   return (
     <div className="py-3 first:pt-0 last:pb-0">
       <div className="flex min-w-0 items-baseline justify-between gap-3">
-        <p className="truncate font-medium text-foreground/78" style={props.chatTypographyStyle}>
+        <p className="truncate font-medium text-muted-foreground" style={props.chatTypographyStyle}>
           {title}
         </p>
-        <p className="shrink-0 tabular-nums text-muted-foreground/38" style={props.footerTextStyle}>
+        <p className="shrink-0 tabular-nums text-faint" style={props.footerTextStyle}>
           {formatShortTimestamp(props.entry.createdAt, props.timestampFormat)}
         </p>
       </div>
       {body ? (
-        <div className="mt-1 text-muted-foreground/70">
+        <div className="mt-1 text-muted-foreground">
           <ChatMarkdown
             text={body}
             cwd={props.markdownCwd}
@@ -242,7 +242,7 @@ function SubagentDetailRow(props: {
   const canOpenThread = Boolean(props.onOpenThread);
 
   return (
-    <div className="flex items-start gap-2.5 rounded-md border border-border/40 bg-background/45 px-3 py-2">
+    <div className="flex items-start gap-2.5 rounded-md border border-border bg-background px-3 py-2">
       <span
         className={cn(
           "mt-2 size-1.5 shrink-0 rounded-full",
@@ -250,19 +250,19 @@ function SubagentDetailRow(props: {
         )}
       />
       <div className="min-w-0 flex-1">
-        <div className="truncate font-medium text-foreground/86" style={props.textStyle}>
+        <div className="truncate font-medium text-foreground" style={props.textStyle}>
           <span style={{ color: presentation.accentColor }}>
             {presentation.nickname ?? presentation.primaryLabel}
           </span>
           {presentation.role ? (
-            <span className="ml-1 text-muted-foreground/50">({presentation.role})</span>
+            <span className="ml-1 text-faint">({presentation.role})</span>
           ) : null}
         </div>
-        <div className="truncate text-muted-foreground/52" style={props.textStyle}>
+        <div className="truncate text-faint" style={props.textStyle}>
           {[modelLabel, statusLabel].filter(Boolean).join(" - ")}
         </div>
         {props.subagent.latestUpdate ? (
-          <div className="mt-1 text-muted-foreground/52" style={props.textStyle}>
+          <div className="mt-1 text-faint" style={props.textStyle}>
             {props.subagent.latestUpdate}
           </div>
         ) : null}
@@ -270,9 +270,9 @@ function SubagentDetailRow(props: {
       <button
         type="button"
         className={cn(
-          "shrink-0 rounded-full border border-border/45 px-2.5 py-1 text-[11px] font-medium text-muted-foreground/62 transition-colors",
+          "shrink-0 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-faint transition-colors",
           canOpenThread
-            ? "hover:border-foreground/15 hover:text-foreground/84"
+            ? "hover:border-foreground/15 hover:text-foreground"
             : "cursor-default opacity-50",
         )}
         disabled={!canOpenThread}

@@ -70,9 +70,7 @@ function ReferenceRail({ references }: { references: readonly ResearchReference[
     <aside className="min-w-0 xl:sticky xl:top-0 xl:h-fit" aria-label="Research references">
       <div className="rounded-xl border border-panel-border bg-panel p-2">
         <div className="px-2 pb-2 pt-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            References
-          </p>
+          <p className="text-xs font-semibold uppercase text-muted-foreground">References</p>
           <p className="mt-1 text-xs text-muted-foreground">
             {references.length === 0
               ? "No sources recorded yet"
@@ -95,14 +93,14 @@ function ReferenceRail({ references }: { references: readonly ResearchReference[
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1 text-xs font-medium text-foreground">
                     <span className="min-w-0 truncate">{reference.label}</span>
-                    <ExternalLinkIcon className="size-3 shrink-0 opacity-0 transition-opacity duration-150 group-hover:opacity-60" />
+                    <ExternalLinkIcon className="size-3.5 shrink-0 opacity-0 transition-opacity duration-150 group-hover:opacity-60" />
                   </span>
                   {reference.description ? (
-                    <span className="mt-0.5 line-clamp-2 block text-[11px] leading-4 text-muted-foreground text-pretty">
+                    <span className="mt-0.5 line-clamp-2 block text-xs leading-4 text-muted-foreground text-pretty">
                       {reference.description}
                     </span>
                   ) : null}
-                  <span className="mt-1 block truncate font-mono text-[11px] text-muted-foreground/70">
+                  <span className="mt-1 block truncate font-mono text-xs text-muted-foreground">
                     {reference.line ? `${reference.target}:${reference.line}` : reference.target}
                   </span>
                 </span>
@@ -148,19 +146,19 @@ export function ResearchDocumentView({
           <header className="flex flex-col gap-5 px-6 pb-6 pt-7 sm:px-9 sm:pt-9 lg:px-12">
             <div className="flex flex-wrap items-start justify-between gap-5">
               <div className="min-w-0 flex-1">
-                <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span className="rounded-full bg-selected px-2.5 py-1 font-medium">
                     {document.archivedAt ? "Archived Markdown" : "Markdown research"}
                   </span>
                   <span>{document.repositoryName}</span>
                   {document.branch ? (
                     <span className="inline-flex items-center gap-1">
-                      <GitBranchIcon className="size-3" />
+                      <GitBranchIcon className="size-3.5" />
                       {document.branch}
                     </span>
                   ) : null}
                 </div>
-                <h1 className="max-w-4xl text-balance font-heading text-3xl font-semibold leading-[1.08] tracking-[-0.03em] text-foreground sm:text-4xl">
+                <h1 className="max-w-4xl text-balance text-2xl font-medium leading-tight text-foreground">
                   {document.title}
                 </h1>
                 {document.summary ? (
@@ -175,7 +173,7 @@ export function ResearchDocumentView({
                   onClick={() => void editMarkdown()}
                   className="min-h-10 gap-2 px-3.5"
                 >
-                  <PencilIcon className="size-4" />
+                  <PencilIcon className="size-3.5" />
                   Edit Markdown
                 </Button>
                 <Button
@@ -185,7 +183,7 @@ export function ResearchDocumentView({
                   disabled={applying}
                   className="min-h-10 gap-2 pl-3.5 pr-3"
                 >
-                  <HammerIcon className="size-4" />
+                  <HammerIcon className="size-3.5" />
                   {applying ? "Starting…" : "Apply in new thread"}
                   <ArrowUpRightIcon className="size-3.5" />
                 </Button>
@@ -197,31 +195,31 @@ export function ResearchDocumentView({
                   className="min-h-10 gap-2 px-3"
                 >
                   {document.archivedAt ? (
-                    <RotateCcwIcon className={archiving ? "size-4 animate-spin" : "size-4"} />
+                    <RotateCcwIcon className={archiving ? "size-3.5 animate-spin" : "size-3.5"} />
                   ) : (
-                    <ArchiveIcon className={archiving ? "size-4 animate-pulse" : "size-4"} />
+                    <ArchiveIcon className={archiving ? "size-3.5 animate-pulse" : "size-3.5"} />
                   )}
                   {document.archivedAt ? "Restore" : "Archive"}
                 </Button>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/60 pt-4 text-[11px] text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-4 text-xs text-muted-foreground">
               <span className="tabular-nums">Updated {formattedDate(document.updatedAt)}</span>
               <span className="truncate font-mono">{document.storagePath}</span>
               {document.tags.map((tag) => (
-                <span key={tag} className="rounded-full bg-muted/60 px-2 py-0.5">
+                <span key={tag} className="rounded-full bg-muted px-2 py-0.5">
                   {tag}
                 </span>
               ))}
             </div>
           </header>
 
-          <div className="border-t border-border/60">
+          <div className="border-t border-border">
             <div className="mx-auto max-w-4xl px-6 py-8 sm:px-9 sm:py-10 lg:px-12">
               <ChatMarkdown
                 text={document.content}
                 cwd={markdownCwd}
-                className="research-markdown text-[15px] leading-7 sm:text-base"
+                className="research-markdown text-base leading-7 sm:text-base"
               />
             </div>
           </div>

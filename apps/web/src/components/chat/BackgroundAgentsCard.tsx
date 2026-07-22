@@ -9,10 +9,9 @@ import type { ProviderKind } from "@t3tools/contracts";
 import type { UnifiedSubagentState } from "@t3tools/shared/subagentActivity";
 import { pluralize } from "@t3tools/shared/text";
 import { memo } from "react";
-import { PiArrowsInSimple, PiArrowsOutSimple } from "react-icons/pi";
 
 import { formatContextWindowTokens } from "../../lib/contextWindow";
-import { LoaderIcon } from "~/lib/icons";
+import { LoaderIcon, Maximize2, Minimize2 } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
 import { AgentElapsedTimer } from "./AgentElapsedTimer";
@@ -64,11 +63,7 @@ export const BackgroundAgentsCard = memo(function BackgroundAgentsCard({
           aria-label={compact ? "Expand agents" : "Collapse agents"}
           title={compact ? "Expand agents" : "Collapse agents"}
         >
-          {compact ? (
-            <PiArrowsOutSimple className="size-3" />
-          ) : (
-            <PiArrowsInSimple className="size-3" />
-          )}
+          {compact ? <Maximize2 className="size-3" /> : <Minimize2 className="size-3" />}
         </Button>
       </ComposerStackedPanelHeaderRow>
 
@@ -82,17 +77,15 @@ export const BackgroundAgentsCard = memo(function BackgroundAgentsCard({
                 className="size-3.5 shrink-0"
                 fallback={<span className="size-1.5 shrink-0 animate-pulse rounded-full bg-info" />}
               />
-              <span className="min-w-0 flex-1 truncate text-[13px] leading-5 text-foreground/85">
+              <span className="min-w-0 flex-1 truncate text-sm leading-5 text-foreground">
                 {agent.title ?? "Agent"}
               </span>
               <AgentElapsedTimer startedAt={agent.startedAt} />
               {agent.currentTool ? (
-                <span className="shrink-0 font-mono text-[11px] text-muted-foreground/50">
-                  {agent.currentTool}
-                </span>
+                <span className="shrink-0 font-mono text-xs text-faint">{agent.currentTool}</span>
               ) : null}
               {agent.totalTokens != null ? (
-                <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground/45">
+                <span className="shrink-0 text-xs tabular-nums text-faint">
                   {formatContextWindowTokens(agent.totalTokens)}
                 </span>
               ) : null}

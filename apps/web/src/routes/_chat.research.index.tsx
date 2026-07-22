@@ -168,8 +168,8 @@ function ResearchIndexRoute() {
           >
             <div className={cn("flex items-center gap-3", CHAT_SURFACE_HEADER_HEIGHT_CLASS)}>
               <SidebarHeaderNavigationControls />
-              <BooksIcon className="size-4 text-foreground" />
-              <span className="min-w-0 flex-1 truncate text-[14px] font-[590] tracking-[-0.005em] text-foreground">
+              <BooksIcon className="size-3.5 text-foreground" />
+              <span className="min-w-0 flex-1 truncate text-base font-medium text-foreground">
                 Research Library
               </span>
               <RepositoryProjectFilter
@@ -188,7 +188,7 @@ function ResearchIndexRoute() {
                 onClick={() => void query.refetch()}
                 className="[-webkit-app-region:no-drag]"
               >
-                <RefreshCwIcon className={cn("size-4", query.isFetching && "animate-spin")} />
+                <RefreshCwIcon className={cn("size-3.5", query.isFetching && "animate-spin")} />
               </Button>
             </div>
           </header>
@@ -199,7 +199,7 @@ function ResearchIndexRoute() {
                 <div
                   role="radiogroup"
                   aria-label="Research Library view"
-                  className="inline-flex items-center gap-0.5 rounded-lg bg-muted/70 p-0.5"
+                  className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
                 >
                   {(
                     [
@@ -223,7 +223,7 @@ function ResearchIndexRoute() {
                         )}
                       >
                         {option.label}
-                        <span className="text-[10px] tabular-nums text-faint">{option.count}</span>
+                        <span className="text-xs tabular-nums text-faint">{option.count}</span>
                       </Button>
                     );
                   })}
@@ -241,7 +241,7 @@ function ResearchIndexRoute() {
                   </Button>
                 ) : null}
               </div>
-              <p className="mb-5 max-w-xl text-[13px] leading-5 text-muted-foreground">
+              <p className="mb-5 max-w-xl text-sm leading-5 text-muted-foreground">
                 {libraryView === "archived"
                   ? "Archived research stays available here until you restore it."
                   : project
@@ -274,9 +274,9 @@ function ResearchIndexRoute() {
               ) : documents.length === 0 ? (
                 <div className="flex flex-col items-center rounded-xl border border-panel-border bg-panel px-8 py-16 text-center">
                   {libraryView === "archived" ? (
-                    <ArchiveIcon className="mb-3 size-6 text-muted-foreground" />
+                    <ArchiveIcon className="mb-3 size-5 text-muted-foreground" />
                   ) : (
-                    <BooksIcon className="mb-3 size-6 text-muted-foreground" />
+                    <BooksIcon className="mb-3 size-5 text-muted-foreground" />
                   )}
                   <p className="text-sm font-medium text-foreground">
                     {libraryView === "archived"
@@ -316,18 +316,18 @@ function ResearchIndexRoute() {
                           </span>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-3">
-                              <h2 className="line-clamp-1 text-[14px] font-medium leading-5 text-foreground">
+                              <h2 className="line-clamp-1 text-base font-medium leading-5 text-foreground">
                                 {document.title}
                               </h2>
-                              <span className="shrink-0 text-[11px] tabular-nums text-faint">
+                              <span className="shrink-0 text-xs tabular-nums text-faint">
                                 {shortDate(document.updatedAt)}
                               </span>
                             </div>
-                            <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-muted-foreground">
+                            <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
                               {document.summary ??
                                 "Open the Markdown document to review its findings and implementation plan."}
                             </p>
-                            <div className="mt-1.5 flex min-w-0 items-center gap-2 text-[11px] text-faint">
+                            <div className="mt-1.5 flex min-w-0 items-center gap-2 text-xs text-faint">
                               <span className="truncate text-muted-foreground">
                                 {document.repositoryName}
                               </span>
@@ -335,7 +335,7 @@ function ResearchIndexRoute() {
                               <span>Markdown</span>
                               {document.branch ? (
                                 <span className="flex min-w-0 items-center gap-1 truncate">
-                                  <GitBranchIcon className="size-3 shrink-0" />
+                                  <GitBranchIcon className="size-3.5 shrink-0" />
                                   <span className="truncate">{document.branch}</span>
                                 </span>
                               ) : null}

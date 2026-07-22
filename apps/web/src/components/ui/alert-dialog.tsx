@@ -4,6 +4,7 @@ import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog
 
 import { cn } from "~/lib/utils";
 import { OVERLAY_SURFACE_CLASS_NAME } from "~/components/ui/surface";
+import { SURFACE_DESCRIPTION_CLASS_NAME, SURFACE_TITLE_CLASS_NAME } from "./typography";
 
 const AlertDialogCreateHandle = AlertDialogPrimitive.createHandle;
 
@@ -112,7 +113,7 @@ function AlertDialogFooter({
 function AlertDialogTitle({ className, ...props }: AlertDialogPrimitive.Title.Props) {
   return (
     <AlertDialogPrimitive.Title
-      className={cn("font-heading font-semibold text-lg leading-tight", className)}
+      className={cn(SURFACE_TITLE_CLASS_NAME, className)}
       data-slot="alert-dialog-title"
       {...props}
     />
@@ -122,7 +123,7 @@ function AlertDialogTitle({ className, ...props }: AlertDialogPrimitive.Title.Pr
 function AlertDialogDescription({ className, ...props }: AlertDialogPrimitive.Description.Props) {
   return (
     <AlertDialogPrimitive.Description
-      className={cn("text-muted-foreground text-sm leading-snug", className)}
+      className={cn(SURFACE_DESCRIPTION_CLASS_NAME, className)}
       data-slot="alert-dialog-description"
       {...props}
     />

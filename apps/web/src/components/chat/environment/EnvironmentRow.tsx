@@ -38,7 +38,12 @@ export const ENVIRONMENT_ROW_ICON_CLASS_NAME =
 
 /** Right-aligned caret for rows that open a picker or menu. */
 export function EnvironmentRowChevron({ className }: { className?: string }) {
-  return <ChevronDownIcon aria-hidden className={cn("size-3 shrink-0 opacity-60", className)} />;
+  return (
+    <ChevronDownIcon
+      aria-hidden
+      className={cn("size-3.5 shrink-0 text-muted-foreground", className)}
+    />
+  );
 }
 
 /** Top-of-card title (e.g. "Environment"). */
@@ -112,7 +117,7 @@ export function EnvironmentCollapsibleSection({
         <ChevronDownIcon
           aria-hidden
           className={cn(
-            "size-3 shrink-0 text-[var(--color-text-foreground-secondary)] opacity-60 transition-transform duration-disclosure ease-out motion-reduce:transition-none",
+            "size-3.5 shrink-0 text-[var(--color-text-foreground-secondary)] transition-transform duration-disclosure ease-out motion-reduce:transition-none",
             open ? "rotate-0" : "-rotate-90",
           )}
         />

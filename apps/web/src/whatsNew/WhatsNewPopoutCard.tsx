@@ -80,7 +80,7 @@ export function WhatsNewPopoutCard({
           }}
           className={cn(
             "absolute end-1.5 top-1.5 z-10 inline-flex size-6 items-center justify-center rounded-full",
-            "text-muted-foreground/80 transition-colors",
+            "text-muted-foreground transition-colors",
             "hover:bg-[var(--sidebar-accent)] hover:text-foreground",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
           )}
@@ -116,7 +116,7 @@ export function WhatsNewPopoutCard({
         </div>
 
         <div className="flex flex-col gap-0.5 px-3 pb-3 pt-2">
-          <p className="text-[11px] font-medium text-primary">New · v{currentVersion}</p>
+          <p className="text-xs font-medium text-primary">New · v{currentVersion}</p>
           <p className="truncate text-sm font-semibold text-foreground">
             {primaryFeatureTitle ?? `What's new in v${currentVersion}`}
           </p>

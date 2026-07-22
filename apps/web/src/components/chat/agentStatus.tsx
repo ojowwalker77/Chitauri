@@ -21,7 +21,7 @@ export const STATUS_KIND_CLASSES: Record<SubagentStatusKind, string> = {
   failed: "border-destructive/30 bg-destructive/10 text-destructive",
   stopped: "border-border bg-hover text-muted-foreground",
   queued: "border-border bg-hover text-muted-foreground",
-  idle: "border-border/45 bg-background/85 text-muted-foreground/68",
+  idle: "border-border bg-background text-muted-foreground",
 };
 
 export const STATUS_KIND_LABEL: Record<SubagentStatusKind, string> = {
@@ -72,7 +72,7 @@ export function OrchestrationCensusChips({
         <span
           key={chip.kind}
           className={cn(
-            "rounded-full border px-1.5 py-0.5 text-[11px] font-medium tabular-nums tracking-[0.04em]",
+            "rounded-full border px-1.5 py-0.5 text-xs font-medium tabular-nums",
             STATUS_KIND_CLASSES[chip.kind],
           )}
         >

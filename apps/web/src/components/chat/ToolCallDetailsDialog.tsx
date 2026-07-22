@@ -20,9 +20,9 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 
-const DETAIL_HEADER_CLASS_NAME = "border-b border-border/45 px-3 py-2 text-[11px] font-medium";
+const DETAIL_HEADER_CLASS_NAME = "border-b border-border px-3 py-2 text-xs font-medium";
 const DETAIL_CODE_BLOCK_CLASS_NAME =
-  "max-h-[min(46vh,30rem)] overflow-auto whitespace-pre-wrap break-words font-chat-code text-[11px] leading-relaxed text-foreground/88";
+  "max-h-[min(46vh,30rem)] overflow-auto whitespace-pre-wrap break-words font-chat-code text-xs leading-relaxed text-foreground";
 const TOOL_DETAILS_MARKDOWN_CLASS_NAME =
   "text-[length:var(--app-font-size-ui,14px)] leading-relaxed";
 
@@ -41,9 +41,9 @@ export function ToolCallDetailsDialog({ entry, open, onOpenChange }: ToolCallDet
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPopup surface="solid" className="max-h-[min(86vh,760px)] max-w-4xl gap-0 p-0">
-        <DialogHeader className="border-b border-border/55 pr-10">
+        <DialogHeader className="border-b border-border pr-10">
           <div className="flex min-w-0 items-start gap-3">
-            <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border border-border/45 bg-background/65 text-muted-foreground/62">
+            <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-background text-faint">
               <Icon className="size-3.5" />
             </span>
             <div className="min-w-0 flex-1">
@@ -72,7 +72,7 @@ export function ToolCallDetailsDialog({ entry, open, onOpenChange }: ToolCallDet
 export function ToolCallDetailsContent({ details }: { details: WorkLogToolDetails | undefined }) {
   if (!details) {
     return (
-      <div className="rounded-lg border border-border/45 bg-background/60 px-3 py-2 text-sm text-muted-foreground">
+      <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
         No detailed payload was available for this tool call.
       </div>
     );
@@ -95,7 +95,7 @@ export function ToolCallDetailsContent({ details }: { details: WorkLogToolDetail
             {details.files.map((file) => (
               <span
                 key={file}
-                className="max-w-full rounded-md border border-border/45 bg-background/70 px-2 py-1 font-chat-code text-[11px] text-foreground/82"
+                className="max-w-full rounded-md border border-border bg-background px-2 py-1 font-chat-code text-xs text-foreground"
                 title={file}
               >
                 {file}
@@ -117,10 +117,10 @@ export function ToolCallDetailsContent({ details }: { details: WorkLogToolDetail
             {details.edits.map((edit, index) => (
               <div
                 key={`${edit.path ?? "edit"}:${index}`}
-                className="overflow-hidden rounded-lg border border-border/45 bg-background/58"
+                className="overflow-hidden rounded-lg border border-border bg-background"
               >
                 {edit.path ? (
-                  <div className="border-b border-border/45 px-3 py-2 font-chat-code text-[11px] text-muted-foreground/72">
+                  <div className="border-b border-border px-3 py-2 font-chat-code text-xs text-muted-foreground">
                     {edit.path}
                   </div>
                 ) : null}
@@ -166,7 +166,7 @@ function MarkdownToolCodeBlock(props: { language: string; children: string }) {
 function ToolDetailSection(props: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="text-[11px] font-medium text-muted-foreground/56">{props.title}</h3>
+      <h3 className="text-xs font-medium text-faint">{props.title}</h3>
       {props.children}
     </section>
   );
@@ -177,9 +177,9 @@ function ToolOutputMetadata({ output }: { output: WorkLogToolOutputDetails }) {
     return null;
   }
   return (
-    <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground/68">
+    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
       {output.exitCode !== undefined ? (
-        <span className="rounded-full border border-border/45 px-2 py-0.5">
+        <span className="rounded-full border border-border px-2 py-0.5">
           Exit code {output.exitCode}
         </span>
       ) : null}
@@ -217,11 +217,11 @@ function ToolOutputSection({ output }: { output: WorkLogToolOutputDetails }) {
 
 function LabeledCodeBlock(props: { title: string; tone: "output" | "error"; children: string }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border/45 bg-background/58">
+    <div className="overflow-hidden rounded-lg border border-border bg-background">
       <div
         className={cn(
           DETAIL_HEADER_CLASS_NAME,
-          props.tone === "error" ? "text-destructive" : "text-muted-foreground/60",
+          props.tone === "error" ? "text-destructive" : "text-faint",
         )}
       >
         {props.title}
@@ -235,7 +235,7 @@ function TextChangeBlock(props: { title: string; tone: "add" | "remove"; childre
   return (
     <div
       className={cn(
-        "min-w-0 border-border/45 md:[&:not(:first-child)]:border-l",
+        "min-w-0 border-border md:[&:not(:first-child)]:border-l",
         props.tone === "add"
           ? "bg-[color-mix(in_srgb,var(--success)_6%,transparent)]"
           : "bg-[color-mix(in_srgb,var(--destructive)_6%,transparent)]",
@@ -259,10 +259,8 @@ function ToolCodeBlock(props: { children: string; tone?: "default" | "command"; 
     <pre
       className={cn(
         DETAIL_CODE_BLOCK_CLASS_NAME,
-        props.tone === "command" && "text-foreground/92",
-        props.bare
-          ? "px-3 py-2.5"
-          : "rounded-lg border border-border/45 bg-background/70 px-3 py-2.5",
+        props.tone === "command" && "text-foreground",
+        props.bare ? "px-3 py-2.5" : "rounded-lg border border-border bg-background px-3 py-2.5",
       )}
     >
       {props.children}
@@ -273,7 +271,7 @@ function ToolCodeBlock(props: { children: string; tone?: "default" | "command"; 
 function DiffCodeBlock({ children }: { children: string }) {
   const lines = children.split(/\r?\n/);
   return (
-    <pre className="max-h-[min(52vh,34rem)] overflow-auto rounded-lg border border-border/45 bg-background/70 px-0 py-2 font-chat-code text-[11px] leading-relaxed">
+    <pre className="max-h-[min(52vh,34rem)] overflow-auto rounded-lg border border-border bg-background px-0 py-2 font-chat-code text-xs leading-relaxed">
       {lines.map((line, index) => (
         <span
           key={`${index}:${line.slice(0, 24)}`}
@@ -285,8 +283,8 @@ function DiffCodeBlock({ children }: { children: string }) {
             line.startsWith("-") && !line.startsWith("---")
               ? "bg-[color-mix(in_srgb,var(--destructive)_8%,transparent)] text-destructive"
               : null,
-            line.startsWith("@@") ? "text-muted-foreground/70" : null,
-            /^(diff --git|index |--- |\+\+\+ )/.test(line) ? "text-muted-foreground/62" : null,
+            line.startsWith("@@") ? "text-muted-foreground" : null,
+            /^(diff --git|index |--- |\+\+\+ )/.test(line) ? "text-faint" : null,
           )}
         >
           {line.length > 0 ? line : " "}

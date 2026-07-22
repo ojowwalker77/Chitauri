@@ -161,15 +161,15 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2">
-          <span aria-hidden="true" className="mt-1 text-[13px] leading-none text-info">
+          <span aria-hidden="true" className="mt-1 text-sm leading-none text-info">
             ✳
           </span>
-          <p className="min-w-0 text-[13px] font-medium leading-snug text-foreground/90">
+          <p className="min-w-0 text-sm font-medium leading-snug text-foreground">
             {activeQuestion.question}
           </p>
         </div>
         {showNavigation ? (
-          <div className="flex shrink-0 items-center gap-0.5 pt-px text-muted-foreground/70">
+          <div className="flex shrink-0 items-center gap-0.5 pt-px text-muted-foreground">
             <button
               type="button"
               disabled={!canGoBack || isResponding}
@@ -179,7 +179,7 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
             >
               <ChevronLeftIcon className="size-3.5" />
             </button>
-            <span className="px-0.5 text-[11px] tabular-nums">
+            <span className="px-0.5 text-xs tabular-nums">
               {progress.questionIndex + 1} of {questionCount}
             </span>
             <button
@@ -195,7 +195,7 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
         ) : null}
       </div>
       {activeQuestion.multiSelect ? (
-        <p className="mt-1 text-[11px] text-muted-foreground/55">Select one or more.</p>
+        <p className="mt-1 text-xs text-faint">Select one or more.</p>
       ) : null}
       {activeQuestion.options.length > 0 ? (
         <div className="mt-3 space-y-1">
@@ -227,7 +227,7 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
             disabled={isResponding}
             onClick={onCancel}
             className={cn(
-              "rounded-md px-2 py-1 text-[12px] text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)]",
+              "rounded-md px-2 py-1 text-xs text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)]",
               isResponding && "cursor-not-allowed opacity-50",
             )}
           >

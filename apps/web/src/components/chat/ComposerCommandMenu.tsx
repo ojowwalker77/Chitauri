@@ -254,8 +254,7 @@ type ComposerCommandGroupModel = {
   items: ComposerCommandItem[];
 };
 
-const COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME =
-  "px-2 pt-1.5 pb-1 text-[11px] font-normal text-muted-foreground/60";
+const COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME = "px-2 pt-1.5 pb-1 text-xs font-normal text-faint";
 
 export function groupCommandItems(
   items: ComposerCommandItem[],
@@ -406,15 +405,13 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
                 >
                   Files
                 </p>
-                <p className="px-2 pt-0.5 text-[11px] text-muted-foreground/55">
-                  Type to search for files
-                </p>
+                <p className="px-2 pt-0.5 text-xs text-faint">Type to search for files</p>
               </div>
             </>
           ) : null}
         </CommandList>
         {props.items.length === 0 && (
-          <p className="px-2 py-1.5 text-muted-foreground/50 text-[11px]">
+          <p className="px-2 py-1.5 text-faint text-xs">
             {props.isLoading
               ? props.triggerKind === "mention"
                 ? "Searching mentions..."
@@ -438,7 +435,7 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
 // its color, and the name — slot geometry stays constant so files, folders,
 // skills, plugins, commands, and agents line up identically.
 const COMPOSER_COMMAND_ITEM_ICON_SLOT_CLASSNAME =
-  "flex size-4 shrink-0 items-center justify-center text-muted-foreground/60";
+  "flex size-4 shrink-0 items-center justify-center text-faint";
 
 // Files mirror the recap / diff changed-files treatment (FileEntryIcon at
 // size-3.5 with the same dimmed foreground) so a file reads identically whether
@@ -531,7 +528,7 @@ const ComposerCommandItemIcon = memo(function ComposerCommandItemIcon(props: {
     <span
       className={cn(
         COMPOSER_COMMAND_ITEM_ICON_SLOT_CLASSNAME,
-        props.isActive && "text-foreground/70",
+        props.isActive && "text-muted-foreground",
       )}
     >
       {commandMenuItemGlyph(props.item)}
@@ -570,19 +567,17 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
       <ComposerCommandItemIcon item={props.item} isActive={props.isActive} />
       <div className="min-w-0 flex flex-1 items-center gap-3">
         <div className="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
-          <span className="shrink-0 text-[11.5px] font-medium text-foreground/80">
+          <span className="shrink-0 text-xs font-medium text-foreground">
             {props.item.type === "slash-command" || props.item.type === "provider-native-command"
               ? commandMenuTitle(props.item)
               : props.item.label}
           </span>
           {secondaryText ? (
-            <span className="truncate text-[11px] text-muted-foreground/55">{secondaryText}</span>
+            <span className="truncate text-xs text-faint">{secondaryText}</span>
           ) : null}
         </div>
         {trailingMeta ? (
-          <span className="shrink-0 pl-2 text-right text-[11px] text-muted-foreground/42">
-            {trailingMeta}
-          </span>
+          <span className="shrink-0 pl-2 text-right text-xs text-faint">{trailingMeta}</span>
         ) : null}
       </div>
     </CommandItem>

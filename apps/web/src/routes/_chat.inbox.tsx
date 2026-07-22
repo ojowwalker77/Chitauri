@@ -97,13 +97,13 @@ function InboxRoute() {
           >
             <div className={cn("flex items-center gap-3", CHAT_SURFACE_HEADER_HEIGHT_CLASS)}>
               <SidebarHeaderNavigationControls />
-              <InboxIcon className="size-4 text-foreground" />
-              <span className="min-w-0 flex-1 truncate text-[14px] font-[590] tracking-[-0.005em] text-foreground">
+              <InboxIcon className="size-3.5 text-foreground" />
+              <span className="min-w-0 flex-1 truncate text-base font-medium text-foreground">
                 Inbox
               </span>
               <select
                 aria-label="Worker"
-                className="h-8 max-w-52 rounded-lg border border-border/60 bg-background px-2 text-xs text-foreground outline-hidden focus:border-ring"
+                className="h-8 max-w-52 rounded-lg border border-border bg-background px-2 text-xs text-foreground outline-hidden focus:border-ring"
                 value={selectedWorker?.id ?? ""}
                 onChange={(event) =>
                   updateSearch({ worker: event.target.value, request: undefined })
@@ -119,14 +119,12 @@ function InboxRoute() {
           </header>
 
           <div className="grid min-h-0 flex-1 grid-cols-[minmax(17rem,0.78fr)_minmax(28rem,1.45fr)] overflow-hidden">
-            <section className="min-h-0 overflow-y-auto border-r border-border/50 p-3">
+            <section className="min-h-0 overflow-y-auto border-r border-border p-3">
               <div className="mb-2 flex items-center justify-between px-1">
-                <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                   Requests
                 </span>
-                <span className="text-[11px] tabular-nums text-muted-foreground/60">
-                  {requests.length}
-                </span>
+                <span className="text-xs tabular-nums text-faint">{requests.length}</span>
               </div>
               <div className="space-y-1">
                 {requests.map((request) => {
@@ -139,13 +137,13 @@ function InboxRoute() {
                         "flex w-full items-start gap-2 rounded-xl px-3 py-2.5 text-left transition-colors",
                         selectedRequest?.id === request.id
                           ? "bg-accent text-accent-foreground"
-                          : "text-foreground/88 hover:bg-accent/55",
+                          : "text-foreground hover:bg-accent",
                       )}
                       onClick={() => updateSearch({ request: request.id })}
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[13px] font-medium">{request.title}</div>
-                        <div className="mt-1 truncate text-[11px] text-muted-foreground">
+                        <div className="truncate text-sm font-medium">{request.title}</div>
+                        <div className="mt-1 truncate text-xs text-muted-foreground">
                           {source?.name ?? "Unknown"} Worker
                         </div>
                       </div>
@@ -154,7 +152,7 @@ function InboxRoute() {
                   );
                 })}
                 {requests.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-border/60 px-4 py-8 text-center">
+                  <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center">
                     <p className="text-sm font-medium">Inbox clear</p>
                     <p className="mt-1 text-xs leading-5 text-muted-foreground">
                       Structured requests from other repository Workers appear here.
@@ -174,9 +172,7 @@ function InboxRoute() {
                         From {requesterWorker?.name ?? "Unknown"} Worker
                       </span>
                     </div>
-                    <h1 className="text-2xl font-semibold tracking-[-0.02em]">
-                      {selectedRequest.title}
-                    </h1>
+                    <h1 className="text-2xl font-semibold">{selectedRequest.title}</h1>
                     <div className="mt-5 flex flex-wrap gap-2">
                       {selectedRequest.status === "open" ? (
                         <Button
@@ -207,11 +203,11 @@ function InboxRoute() {
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-border/55 bg-card/45 p-5">
-                    <div className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                  <div className="rounded-2xl border border-border bg-card p-5">
+                    <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                       Work request
                     </div>
-                    <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-foreground/88">
+                    <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-foreground">
                       {selectedRequest.brief || "No additional request details were provided."}
                     </p>
                   </div>
@@ -219,7 +215,7 @@ function InboxRoute() {
                   {requesterTask && requesterWorker ? (
                     <button
                       type="button"
-                      className="flex w-full items-center gap-3 rounded-2xl border border-border/55 bg-card/45 p-4 text-left hover:bg-accent/55"
+                      className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left hover:bg-accent"
                       onClick={() =>
                         void navigate({
                           to: "/tasks",
@@ -231,20 +227,20 @@ function InboxRoute() {
                         })
                       }
                     >
-                      <ArrowRightIcon className="size-4 rotate-180 text-muted-foreground" />
+                      <ArrowRightIcon className="size-3.5 rotate-180 text-muted-foreground" />
                       <div className="min-w-0 flex-1">
-                        <div className="text-[11px] text-muted-foreground">Requesting Task</div>
+                        <div className="text-xs text-muted-foreground">Requesting Task</div>
                         <div className="mt-1 truncate text-sm font-medium">
                           {requesterTask.title}
                         </div>
                       </div>
-                      <ChevronRightIcon className="size-4 text-muted-foreground" />
+                      <ChevronRightIcon className="size-3.5 text-muted-foreground" />
                     </button>
                   ) : null}
 
                   {selectedRequest.completionSummary ? (
                     <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/6 p-5">
-                      <div className="text-[11px] font-medium tracking-wide text-emerald-400 uppercase">
+                      <div className="text-xs font-medium tracking-wide text-emerald-400 uppercase">
                         Durable result
                       </div>
                       <p className="mt-3 whitespace-pre-wrap text-sm leading-6">
@@ -254,19 +250,19 @@ function InboxRoute() {
                   ) : null}
 
                   {selectedRequest.artifacts.length > 0 ? (
-                    <div className="rounded-2xl border border-border/55 bg-card/45 p-5">
-                      <div className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                    <div className="rounded-2xl border border-border bg-card p-5">
+                      <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                         Attached artifacts
                       </div>
                       <div className="mt-3 grid gap-2 sm:grid-cols-2">
                         {selectedRequest.artifacts.map((artifact) => (
                           <div key={artifact.id} className="rounded-xl bg-foreground/4 p-3">
-                            <div className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+                            <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                               {TASK_ARTIFACT_KIND_LABELS[artifact.kind]}
                             </div>
                             <div className="mt-1 text-sm font-medium">{artifact.title}</div>
                             {artifact.reference ? (
-                              <div className="mt-1 truncate font-mono text-[10px] text-muted-foreground">
+                              <div className="mt-1 truncate font-mono text-xs text-muted-foreground">
                                 {artifact.reference}
                               </div>
                             ) : null}
@@ -279,7 +275,7 @@ function InboxRoute() {
               ) : (
                 <div className="flex min-h-full items-center justify-center">
                   <div className="max-w-sm text-center">
-                    <InboxIcon className="mx-auto size-7 text-muted-foreground/55" />
+                    <InboxIcon className="mx-auto size-5 text-faint" />
                     <h1 className="mt-3 text-lg font-semibold">Worker Inbox</h1>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
                       Requests stay separate from execution Threads and remain inspectable as Tasks.

@@ -32,14 +32,14 @@ const TASK_STATUS_TONES: Record<TaskStatus, string> = {
   waiting_on_worker: "bg-cyan-500/12 text-cyan-400",
   in_review: "bg-violet-500/12 text-violet-400",
   completed: "bg-emerald-500/12 text-emerald-400",
-  cancelled: "bg-foreground/6 text-muted-foreground/70",
+  cancelled: "bg-foreground/6 text-muted-foreground",
 };
 
 export function TaskStatusPill({ status }: { status: TaskStatus }) {
   return (
     <span
       className={cn(
-        "inline-flex h-5 items-center rounded-full px-2 text-[11px] font-medium",
+        "inline-flex h-5 items-center rounded-full px-2 text-xs font-medium",
         TASK_STATUS_TONES[status],
       )}
     >

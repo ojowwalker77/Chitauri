@@ -5,15 +5,16 @@
 
 import { pluralize } from "@t3tools/shared/text";
 import { memo } from "react";
-import {
-  PiArrowsInSimple,
-  PiArrowsOutSimple,
-  PiSidebarSimple,
-  PiSlidersHorizontal,
-} from "react-icons/pi";
-
 import type { ActiveTaskListState } from "../../session-logic";
-import { BotIcon, CheckIcon, LoaderIcon } from "~/lib/icons";
+import {
+  AdjustmentsIcon,
+  BotIcon,
+  CheckIcon,
+  LoaderIcon,
+  Maximize2,
+  Minimize2,
+  PanelLeftIcon,
+} from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
 import {
@@ -40,10 +41,10 @@ interface ActiveTaskListCardProps {
 // Maps task state to the compact status glyph shown in the activity list.
 function taskStatusIcon(status: ActiveTaskListState["tasks"][number]["status"]) {
   if (status === "completed") {
-    return <CheckIcon className="size-3" />;
+    return <CheckIcon className="size-3.5" />;
   }
   if (status === "inProgress") {
-    return <LoaderIcon className="size-3 animate-spin" />;
+    return <LoaderIcon className="size-3.5 animate-spin" />;
   }
   return <span className="block size-[7px] rounded-full border border-current" />;
 }
@@ -67,7 +68,7 @@ export const ActiveTaskListCard = memo(function ActiveTaskListCard({
           {compact && hasInProgressTask ? (
             <LoaderIcon className={cn(COMPOSER_STACKED_PANEL_ICON_CLASS_NAME, "animate-spin")} />
           ) : (
-            <PiSlidersHorizontal className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
+            <AdjustmentsIcon className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
           )}
           <ComposerStackedPanelRowLabel tone="meta">
             Run checklist · {completedCount} of {totalCount} completed
@@ -83,7 +84,7 @@ export const ActiveTaskListCard = memo(function ActiveTaskListCard({
             aria-label="Open run checklist sidebar"
             title="Open run checklist sidebar"
           >
-            <PiSidebarSimple className="size-3" />
+            <PanelLeftIcon className="size-3" />
           </Button>
           <Button
             type="button"
@@ -94,11 +95,7 @@ export const ActiveTaskListCard = memo(function ActiveTaskListCard({
             aria-label={compact ? "Expand run checklist" : "Collapse run checklist"}
             title={compact ? "Expand run checklist" : "Collapse run checklist"}
           >
-            {compact ? (
-              <PiArrowsOutSimple className="size-3" />
-            ) : (
-              <PiArrowsInSimple className="size-3" />
-            )}
+            {compact ? <Maximize2 className="size-3" /> : <Minimize2 className="size-3" />}
           </Button>
         </div>
       </ComposerStackedPanelHeaderRow>
@@ -114,12 +111,12 @@ export const ActiveTaskListCard = memo(function ActiveTaskListCard({
                 <li key={`${task.task}:${occurrence}`} className="flex items-start gap-2 py-1">
                   <div
                     className={cn(
-                      "mt-[3px] flex min-w-0 shrink-0 items-center gap-1.5 text-[12px]",
+                      "mt-[3px] flex min-w-0 shrink-0 items-center gap-1.5 text-xs",
                       task.status === "completed"
-                        ? "text-muted-foreground/45"
+                        ? "text-faint"
                         : task.status === "inProgress"
-                          ? "text-foreground/80"
-                          : "text-muted-foreground/60",
+                          ? "text-foreground"
+                          : "text-faint",
                     )}
                   >
                     <span className="flex size-3.5 items-center justify-center">
@@ -129,8 +126,8 @@ export const ActiveTaskListCard = memo(function ActiveTaskListCard({
                   </div>
                   <p
                     className={cn(
-                      "min-w-0 flex-1 text-[13px] leading-5 text-foreground/85",
-                      task.status === "completed" && "text-muted-foreground/50 line-through",
+                      "min-w-0 flex-1 text-sm leading-5 text-foreground",
+                      task.status === "completed" && "text-faint line-through",
                     )}
                   >
                     {task.task}
@@ -148,7 +145,7 @@ export const ActiveTaskListCard = memo(function ActiveTaskListCard({
               )}
             >
               <div className="flex min-w-0 items-center gap-1.5">
-                <BotIcon className="size-3 shrink-0" />
+                <BotIcon className="size-3.5 shrink-0" />
                 <span className="truncate">
                   {backgroundTaskCount} background {pluralize(backgroundTaskCount, "agent")}
                 </span>

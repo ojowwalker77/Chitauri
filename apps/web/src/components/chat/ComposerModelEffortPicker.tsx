@@ -229,7 +229,10 @@ export const ComposerModelEffortPicker = memo(function ComposerModelEffortPicker
           </span>
         )
       ) : null}
-      <ChevronDownIcon aria-hidden="true" className="ms-0.5 size-3 shrink-0 opacity-60" />
+      <ChevronDownIcon
+        aria-hidden="true"
+        className="ms-0.5 size-3.5 shrink-0 text-muted-foreground"
+      />
     </span>
   );
 
@@ -255,7 +258,7 @@ export const ComposerModelEffortPicker = memo(function ComposerModelEffortPicker
                 <span>Change model</span>
                 <ShortcutKbd
                   shortcutLabel={props.shortcutLabel}
-                  className="h-4 min-w-4 px-1 text-[length:var(--app-font-size-ui-2xs,11px)] text-muted-foreground"
+                  className="h-4 min-w-4 px-1 text-[length:var(--app-font-size-ui-2xs,12px)] text-muted-foreground"
                 />
               </span>
             </TooltipPopup>
@@ -287,7 +290,7 @@ export const ComposerModelEffortPicker = memo(function ComposerModelEffortPicker
           <MenuSubTrigger>
             <ProviderIcon
               aria-hidden="true"
-              className={cn("size-3 shrink-0", getProviderIconClassName(activeProvider))}
+              className={cn("size-3.5 shrink-0", getProviderIconClassName(activeProvider))}
             />
             <span className="truncate">{modelLabel}</span>
           </MenuSubTrigger>
@@ -319,14 +322,14 @@ export const ComposerModelEffortPicker = memo(function ComposerModelEffortPicker
               <FastModeIcon
                 aria-hidden="true"
                 className={cn(
-                  "size-3 shrink-0",
-                  fastModeEnabled ? "text-[hsl(var(--chart-4))]" : "text-muted-foreground/85",
+                  "size-3.5 shrink-0",
+                  fastModeEnabled ? "text-[hsl(var(--chart-4))]" : "text-muted-foreground",
                 )}
               />
               <span className="truncate">
                 Speed
                 {fastModeEnabled ? (
-                  <span className="ms-1.5 text-muted-foreground/65">Fast</span>
+                  <span className="ms-1.5 text-muted-foreground">Fast</span>
                 ) : null}
               </span>
             </MenuSubTrigger>
