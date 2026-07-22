@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.7 - 2026-07-22
+
+### Fixed
+
+- Creating a Task now opens its canonical Thread reliably instead of racing back to the Tasks screen; the Task title and brief remain pre-seeded in the composer.
+- New Tasks and delegated Worker requests now reach the live UI immediately. Transient shell-projection failures trigger an authoritative snapshot refresh instead of silently dropping Task, Thread, Inbox, or dependency updates.
+
 ## 0.9.5 - 2026-07-21
 
 ### Fixed
