@@ -100,24 +100,6 @@ function countPinnedProjects(
   ).length;
 }
 
-function requireTaskHasNoCanonicalThread(input: {
-  readonly readModel: OrchestrationReadModel;
-  readonly command: OrchestrationCommand;
-  readonly taskId: NonNullable<OrchestrationReadModel["threads"][number]["taskId"]>;
-}): Effect.Effect<void, OrchestrationCommandInvariantError> {
-  const existing = input.readModel.threads.find(
-    (thread) => thread.taskId === input.taskId && thread.deletedAt === null,
-  );
-  return existing
-    ? Effect.fail(
-        new OrchestrationCommandInvariantError({
-          commandType: input.command.type,
-          detail: `Task '${input.taskId}' already owns canonical Thread '${existing.id}'.`,
-        }),
-      )
-    : Effect.void;
-}
-
 function validateProjectPinLimit(input: {
   readonly command: Extract<
     OrchestrationCommand,
@@ -449,29 +431,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           workerId: command.requesterWorkerId,
         });
       }
-      const existingThread = readModel.threads.find((thread) => thread.id === command.threadId);
-      if (existingThread) {
-        if (existingThread.projectId !== command.workerId) {
-          return yield* new OrchestrationCommandInvariantError({
-            commandType: command.type,
-            detail: `Thread '${command.threadId}' belongs to a different repository Worker.`,
-          });
-        }
-        if (existingThread.taskId !== null) {
-          return yield* new OrchestrationCommandInvariantError({
-            commandType: command.type,
-            detail: `Thread '${command.threadId}' is already tracked as Task '${existingThread.taskId}'.`,
-          });
-        }
-      } else {
-        yield* requireThreadAbsent({
-          readModel,
-          command,
-          threadId: command.threadId,
-        });
-      }
-
-      const taskCreated = {
+      return {
         ...withEventBase({
           aggregateKind: "task",
           aggregateId: command.taskId,
@@ -495,57 +455,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           completedAt: null,
         },
       } satisfies Omit<OrchestrationEvent, "sequence">;
-      const threadEvent = existingThread
-        ? ({
-            ...withEventBase({
-              aggregateKind: "thread",
-              aggregateId: command.threadId,
-              occurredAt: command.createdAt,
-              commandId: command.commandId,
-            }),
-            type: "thread.meta-updated",
-            payload: {
-              threadId: command.threadId,
-              taskId: command.taskId,
-              updatedAt: command.createdAt,
-            },
-          } satisfies Omit<OrchestrationEvent, "sequence">)
-        : ({
-            ...withEventBase({
-              aggregateKind: "thread",
-              aggregateId: command.threadId,
-              occurredAt: command.createdAt,
-              commandId: command.commandId,
-            }),
-            type: "thread.created",
-            payload: {
-              threadId: command.threadId,
-              projectId: command.workerId,
-              taskId: command.taskId,
-              title: command.title,
-              modelSelection: command.modelSelection,
-              runtimeMode: command.runtimeMode,
-              envMode: command.envMode,
-              branch: command.branch,
-              worktreePath: command.worktreePath,
-              ...deriveCommandAssociatedWorktreeMetadata({
-                branch: command.branch,
-                worktreePath: command.worktreePath,
-              }),
-              createBranchFlowCompleted: false,
-              isPinned: false,
-              parentThreadId: null,
-              subagentAgentId: null,
-              subagentNickname: null,
-              subagentRole: null,
-              forkSourceThreadId: null,
-              lastKnownPr: null,
-              handoff: null,
-              createdAt: command.createdAt,
-              updatedAt: command.createdAt,
-            },
-          } satisfies Omit<OrchestrationEvent, "sequence">);
-      return [taskCreated, threadEvent];
     }
 
     case "task.update": {
@@ -599,7 +508,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           taskId,
           workerId: command.projectId,
         });
-        yield* requireTaskHasNoCanonicalThread({ readModel, command, taskId });
       }
       return {
         ...withEventBase({
@@ -677,7 +585,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           taskId,
           workerId: command.projectId,
         });
-        yield* requireTaskHasNoCanonicalThread({ readModel, command, taskId });
       }
       if (sourceThread.projectId !== command.projectId) {
         return yield* new OrchestrationCommandInvariantError({
@@ -797,7 +704,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           taskId,
           workerId: command.projectId,
         });
-        yield* requireTaskHasNoCanonicalThread({ readModel, command, taskId });
       }
       if (sourceThread.projectId !== command.projectId) {
         return yield* new OrchestrationCommandInvariantError({

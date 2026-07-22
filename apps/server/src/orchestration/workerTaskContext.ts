@@ -51,13 +51,15 @@ export function buildWorkerTaskContext(input: {
 
   return [
     "<worker_task_context>",
-    "TeaCode Tasks are durable, agent-visible Threads. Every Task has one canonical Thread.",
-    currentTask ? `Current Task Thread:\n${taskLine(currentTask)}` : "Current Thread is unfiled.",
+    "TeaCode Tasks are durable, agent-visible work records. Threads are independent coding sessions and may be linked to a Task only when work starts.",
+    currentTask
+      ? `Task linked to this Thread:\n${taskLine(currentTask)}`
+      : "Current Thread is unfiled.",
     pending.length > 0
-      ? `Pending Task Threads for this Worker:\n${pending.map(taskLine).join("\n")}`
-      : "Pending Task Threads for this Worker: none.",
-    "When the user asks to create Tasks, publish a provider task list; TeaCode turns unfinished items into canonical Task Threads.",
-    "When the user references a Task, use its exact id and brief. Do not invent a duplicate Task or edit another repository directly.",
+      ? `Pending Tasks for this Worker:\n${pending.map(taskLine).join("\n")}`
+      : "Pending Tasks for this Worker: none.",
+    "Provider plans and todo lists are execution progress, not TeaCode Tasks. Create or edit durable Tasks only through TeaCode Task tools when the user asks.",
+    "When the user references or asks to pull a Task, use its exact id and brief in the current Thread unless the user explicitly starts another Thread. Do not invent a duplicate Task or edit another repository directly.",
     "</worker_task_context>",
   ].join("\n");
 }

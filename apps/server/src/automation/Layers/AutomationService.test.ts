@@ -576,35 +576,41 @@ layer("AutomationService", (it) => {
 
       const result = yield* service.runNow({ automationId: created.id });
       const taskCreate = dispatchedCommands.find((command) => command.type === "task.create");
+      const threadCreate = dispatchedCommands.find((command) => command.type === "thread.create");
       const taskUpdate = dispatchedCommands.find((command) => command.type === "task.update");
       const turnStart = dispatchedCommands.find((command) => command.type === "thread.turn.start");
 
       assert.strictEqual(result.run.status, "running");
       assert.deepStrictEqual(
         dispatchedCommands.map((command) => command.type),
-        ["task.create", "task.update", "thread.turn.start"],
+        ["task.create", "thread.create", "task.update", "thread.turn.start"],
       );
       assert.strictEqual(taskCreate?.type, "task.create");
+      assert.strictEqual(threadCreate?.type, "thread.create");
       assert.strictEqual(taskUpdate?.type, "task.update");
       assert.strictEqual(turnStart?.type, "thread.turn.start");
       if (
         taskCreate?.type !== "task.create" ||
+        threadCreate?.type !== "thread.create" ||
         taskUpdate?.type !== "task.update" ||
         turnStart?.type !== "thread.turn.start"
       ) {
-        assert.fail("Expected atomic Task Thread creation, Task start, and turn start commands.");
+        assert.fail(
+          "Expected separate Task creation, Thread creation, Task start, and turn start commands.",
+        );
       }
       assert.strictEqual(taskCreate.workerId, projectId);
       assert.strictEqual(taskCreate.origin, "automation");
+      assert.strictEqual(threadCreate.taskId, taskCreate.taskId);
       assert.strictEqual(taskUpdate.taskId, taskCreate.taskId);
       assert.strictEqual(taskUpdate.status, "in_progress");
-      assert.strictEqual(taskCreate.envMode, "local");
-      assert.strictEqual(taskCreate.runtimeMode, "approval-required");
+      assert.strictEqual(threadCreate.envMode, "local");
+      assert.strictEqual(threadCreate.runtimeMode, "approval-required");
       assert.strictEqual(turnStart.message.text, "Check stale dependencies.");
       assert.strictEqual(turnStart.dispatchMode, "queue");
-      assert.strictEqual(result.run.threadId, taskCreate.threadId);
+      assert.strictEqual(result.run.threadId, threadCreate.threadId);
       assert.strictEqual(result.run.messageId, turnStart.message.messageId);
-      assert.strictEqual(result.run.threadCreateCommandId, taskCreate.commandId);
+      assert.strictEqual(result.run.threadCreateCommandId, threadCreate.commandId);
       assert.strictEqual(result.run.turnStartCommandId, turnStart.commandId);
     }),
   );
@@ -617,7 +623,7 @@ layer("AutomationService", (it) => {
       const created = yield* service.create(createInput("worktree"));
 
       yield* service.runNow({ automationId: created.id });
-      const taskCreate = dispatchedCommands.find((command) => command.type === "task.create");
+      const threadCreate = dispatchedCommands.find((command) => command.type === "thread.create");
 
       assert.strictEqual(createdWorktrees.length, 1);
       const createdWorktree = createdWorktrees[0];
@@ -627,13 +633,13 @@ layer("AutomationService", (it) => {
         assert.fail("Expected automation worktree branch.");
       }
       assert.match(createdWorktreeBranch, /^automation\/nightly-maintenance\//);
-      assert.strictEqual(taskCreate?.type, "task.create");
-      if (taskCreate?.type !== "task.create") {
-        assert.fail("Expected atomic Task Thread creation command.");
+      assert.strictEqual(threadCreate?.type, "thread.create");
+      if (threadCreate?.type !== "thread.create") {
+        assert.fail("Expected a separate Thread creation command.");
       }
-      assert.strictEqual(taskCreate.envMode, "worktree");
-      assert.strictEqual(taskCreate.worktreePath, "/tmp/automation-worktree");
-      assert.strictEqual(taskCreate.branch, createdWorktreeBranch);
+      assert.strictEqual(threadCreate.envMode, "worktree");
+      assert.strictEqual(threadCreate.worktreePath, "/tmp/automation-worktree");
+      assert.strictEqual(threadCreate.branch, createdWorktreeBranch);
     }),
   );
 
@@ -641,13 +647,13 @@ layer("AutomationService", (it) => {
     Effect.gen(function* () {
       resetHarness();
       gitMode = "worktree";
-      failDispatchType = "task.create";
+      failDispatchType = "thread.create";
       const service = yield* AutomationService;
       const created = yield* service.create(createInput("worktree"));
 
       const error = yield* service.runNow({ automationId: created.id }).pipe(Effect.flip);
 
-      assert.match(error.message, /Failed to create automation Task Thread/);
+      assert.match(error.message, /Failed to create automation Thread/);
       assert.strictEqual(createdWorktrees.length, 1);
       const createdWorktree = createdWorktrees[0];
       assert.ok(createdWorktree);
@@ -850,12 +856,12 @@ layer("AutomationService", (it) => {
       });
       yield* service.runNow({ automationId: created.id });
 
-      const taskCreate = dispatchedCommands.find((command) => command.type === "task.create");
-      assert.strictEqual(taskCreate?.type, "task.create");
-      if (taskCreate?.type !== "task.create") {
-        assert.fail("Expected atomic Task Thread creation command.");
+      const threadCreate = dispatchedCommands.find((command) => command.type === "thread.create");
+      assert.strictEqual(threadCreate?.type, "thread.create");
+      if (threadCreate?.type !== "thread.create") {
+        assert.fail("Expected a separate Thread creation command.");
       }
-      assert.strictEqual(taskCreate.envMode, "local");
+      assert.strictEqual(threadCreate.envMode, "local");
     }),
   );
 
@@ -1066,7 +1072,7 @@ layer("AutomationService", (it) => {
       assert.strictEqual(results[0]?.run.scheduledFor, "2026-06-16T10:00:00.000Z");
       assert.deepStrictEqual(
         dispatchedCommands.map((command) => command.type),
-        ["task.create", "task.update", "thread.turn.start"],
+        ["task.create", "thread.create", "task.update", "thread.turn.start"],
       );
       assert.strictEqual(
         listed.definitions.find((definition) => definition.id === automationId)?.nextRunAt,
@@ -1604,7 +1610,7 @@ layer("AutomationService", (it) => {
       // thread to that Task, and then continues the thread without creating another.
       assert.deepStrictEqual(
         dispatchedCommands.map((command) => command.type),
-        ["task.create", "thread.turn.start"],
+        ["task.create", "thread.meta.update", "thread.turn.start"],
       );
       const command = dispatchedCommands.find((entry) => entry.type === "thread.turn.start");
       assert.strictEqual(command?.type, "thread.turn.start");

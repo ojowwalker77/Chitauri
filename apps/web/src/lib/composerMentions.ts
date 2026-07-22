@@ -4,6 +4,7 @@
 // Exports: mention token formatters plus regex helpers used by composer parsing and prompt sync.
 
 import type { ProviderMentionReference, ProviderSkillReference } from "@t3tools/contracts";
+import { parseTeaCodeMentionReference } from "@t3tools/shared/workerMentions";
 
 export function skillMentionPrefix(provider: string): string {
   return provider === "pi" ? "/skill:" : "/";
@@ -107,7 +108,7 @@ export function providerMentionMatchesToken(
   );
 }
 
-export type MentionChipKind = "path" | "plugin";
+export type MentionChipKind = "path" | "plugin" | "task" | "worker";
 
 export function isPluginProviderMentionReference(mention: ProviderMentionReference): boolean {
   return mention.path.startsWith("plugin://");
@@ -123,13 +124,16 @@ export function resolveMentionChipKind(
   if (options?.kind === "plugin" || path.startsWith("plugin://")) {
     return "plugin";
   }
-  if (
-    options?.mentionReferences?.some(
-      (mention) =>
-        isPluginProviderMentionReference(mention) && providerMentionMatchesToken(mention, path),
-    )
-  ) {
-    return "plugin";
+  if (options?.kind === "task" || options?.kind === "worker") {
+    return options.kind;
+  }
+  const reference = options?.mentionReferences?.find((mention) =>
+    providerMentionMatchesToken(mention, path),
+  );
+  if (reference) {
+    if (isPluginProviderMentionReference(reference)) return "plugin";
+    const target = parseTeaCodeMentionReference(reference);
+    if (target) return target.kind;
   }
   return "path";
 }

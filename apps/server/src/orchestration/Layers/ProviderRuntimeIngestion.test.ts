@@ -3412,16 +3412,8 @@ describe("ProviderRuntimeIngestion", () => {
     expect(Array.isArray(taskPayload?.tasks)).toBe(true);
 
     const taskReadModel = await Effect.runPromise(harness.engine.getReadModel());
-    const agentTask = taskReadModel.tasks.find((task) => task.origin === "agent");
-    expect(agentTask).toMatchObject({
-      title: "Apply patch",
-      status: "in_progress",
-      workerId: "project-1",
-    });
-    expect(
-      taskReadModel.threads.filter((candidate) => candidate.taskId === agentTask?.id),
-    ).toHaveLength(1);
-    expect(taskReadModel.tasks.some((task) => task.title === "Inspect files")).toBe(false);
+    expect(taskReadModel.tasks).toHaveLength(0);
+    expect(taskReadModel.threads).toHaveLength(1);
 
     const toolUpdate = thread.activities.find(
       (activity: ProviderRuntimeTestActivity) => activity.id === "evt-item-updated",

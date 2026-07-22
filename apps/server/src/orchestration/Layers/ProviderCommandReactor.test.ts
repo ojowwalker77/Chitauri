@@ -520,7 +520,7 @@ describe("ProviderCommandReactor", () => {
     expect(input?.input).toContain("Fresh side question");
   });
 
-  it("advances an open Task when work starts in its canonical Thread", async () => {
+  it("advances an open Task when work starts in a linked Thread", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
     const taskId = asTaskId("task-1");
@@ -531,16 +531,18 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-task-create"),
         taskId,
         workerId: asProjectId("project-1"),
-        threadId: ThreadId.makeUnsafe("thread-1"),
-        modelSelection: { provider: "codex", model: "gpt-5-codex" },
-        runtimeMode: "approval-required",
-        envMode: "worktree",
-        branch: null,
-        worktreePath: null,
         title: "Audit urgent fixes",
         brief: "Start with the urgent findings.",
         origin: "agent",
         createdAt: now,
+      }),
+    );
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.meta.update",
+        commandId: CommandId.makeUnsafe("cmd-task-link"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        taskId,
       }),
     );
     await Effect.runPromise(
