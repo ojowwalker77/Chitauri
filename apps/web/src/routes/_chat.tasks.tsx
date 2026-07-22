@@ -53,6 +53,7 @@ import { cn, newCommandId, newTaskId, newThreadId, randomUUID } from "~/lib/util
 import { readNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
 import { useComposerDraftStore } from "~/composerDraftStore";
+import { tasksForWorker, type TaskVisibility } from "~/taskVisibility";
 
 export const Route = createFileRoute("/_chat/tasks")({
   validateSearch: (search) => ({
@@ -427,11 +428,17 @@ function TasksRoute() {
   );
   const selectedWorker =
     workers.find((worker) => worker.id === search.worker) ?? workers.at(0) ?? null;
+  const [taskVisibility, setTaskVisibility] = useState<TaskVisibility>("active");
   const workerTasks = useMemo(
-    () =>
-      tasks
-        .filter((task) => task.workerId === selectedWorker?.id)
-        .toSorted((left, right) => right.updatedAt.localeCompare(left.updatedAt)),
+    () => tasksForWorker(tasks, selectedWorker?.id, taskVisibility),
+    [selectedWorker?.id, taskVisibility, tasks],
+  );
+  const activeTaskCount = useMemo(
+    () => tasksForWorker(tasks, selectedWorker?.id, "active").length,
+    [selectedWorker?.id, tasks],
+  );
+  const closedTaskCount = useMemo(
+    () => tasksForWorker(tasks, selectedWorker?.id, "closed").length,
     [selectedWorker?.id, tasks],
   );
   const selectedTask =
@@ -472,6 +479,26 @@ function TasksRoute() {
   useEffect(() => {
     setInstructionsDraft(selectedWorker?.workerInstructions ?? "");
   }, [selectedWorker?.id, selectedWorker?.workerInstructions]);
+
+  useEffect(() => {
+    let disposed = false;
+    const refreshTasks = async () => {
+      const api = readNativeApi();
+      if (!api) return;
+      const snapshot = await api.orchestration.getShellSnapshot();
+      if (!disposed) {
+        useStore.getState().syncServerShellSnapshot(snapshot);
+      }
+    };
+    const refreshOnFocus = () => void refreshTasks().catch(() => undefined);
+
+    refreshOnFocus();
+    window.addEventListener("focus", refreshOnFocus);
+    return () => {
+      disposed = true;
+      window.removeEventListener("focus", refreshOnFocus);
+    };
+  }, []);
 
   const updateSearch = (next: {
     worker?: string | undefined;
@@ -638,7 +665,11 @@ function TasksRoute() {
                 className="h-8 max-w-52 rounded-lg border border-border/60 bg-background px-2 text-xs text-foreground outline-hidden focus:border-ring"
                 value={selectedWorker?.id ?? ""}
                 onChange={(event) =>
-                  updateSearch({ worker: event.target.value, task: undefined, create: undefined })
+                  updateSearch({
+                    worker: event.target.value,
+                    task: undefined,
+                    create: undefined,
+                  })
                 }
               >
                 {workers.map((worker) => (
@@ -667,9 +698,29 @@ function TasksRoute() {
                 <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                   {selectedWorker ? `${selectedWorker.name} Worker` : "Workers"}
                 </span>
-                <span className="text-[11px] tabular-nums text-muted-foreground/60">
-                  {workerTasks.length}
-                </span>
+                <div className="flex items-center gap-1 rounded-lg bg-muted/45 p-0.5">
+                  {(["active", "closed"] as const).map((visibility) => (
+                    <button
+                      key={visibility}
+                      type="button"
+                      className={cn(
+                        "rounded-md px-2 py-1 text-[11px] transition-colors",
+                        taskVisibility === visibility
+                          ? "bg-background text-foreground shadow-xs"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                      onClick={() => {
+                        setTaskVisibility(visibility);
+                        updateSearch({ task: undefined, create: undefined });
+                      }}
+                    >
+                      {visibility === "active" ? "Active" : "Closed"}{" "}
+                      <span className="tabular-nums opacity-65">
+                        {visibility === "active" ? activeTaskCount : closedTaskCount}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="space-y-1">
                 {workerTasks.map((task) => (
@@ -703,9 +754,13 @@ function TasksRoute() {
                 ))}
                 {workerTasks.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-border/60 px-4 py-8 text-center">
-                    <p className="text-sm font-medium">No Tasks yet</p>
+                    <p className="text-sm font-medium">
+                      {taskVisibility === "active" ? "No active Tasks" : "No closed Tasks"}
+                    </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Create the first durable unit of work for this Worker.
+                      {taskVisibility === "active"
+                        ? "New work created by you or an agent will appear here."
+                        : "Completed and cancelled work will remain available here."}
                     </p>
                   </div>
                 ) : null}
@@ -853,7 +908,10 @@ function TasksRoute() {
                             type="button"
                             className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs hover:bg-accent"
                             onClick={() =>
-                              void navigate({ to: "/$threadId", params: { threadId: thread.id } })
+                              void navigate({
+                                to: "/$threadId",
+                                params: { threadId: thread.id },
+                              })
                             }
                           >
                             <span className="min-w-0 flex-1">
