@@ -410,6 +410,7 @@ export type TaskStatus = typeof TaskStatus.Type;
 
 export const TaskOrigin = Schema.Literals([
   "user",
+  "agent",
   "github",
   "research",
   "automation",

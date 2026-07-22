@@ -538,6 +538,17 @@ function TasksRoute() {
     }
   };
 
+  const seedTaskPrompt = (
+    task: OrchestrationTaskShell,
+    threadId: ReturnType<typeof newThreadId>,
+  ) => {
+    const composerStore = useComposerDraftStore.getState();
+    if (composerStore.draftsByThreadId[threadId]?.prompt.trim()) {
+      return;
+    }
+    composerStore.setPrompt(threadId, [task.title, task.brief].filter(Boolean).join("\n\n"));
+  };
+
   const saveCompletionSummary = async () => {
     const api = readNativeApi();
     if (!api || !selectedTask || completionPending) return;
@@ -588,6 +599,7 @@ function TasksRoute() {
     const api = readNativeApi();
     if (!api || !selectedWorker || !selectedTask || threadPending) return;
     if (canonicalTaskThread) {
+      seedTaskPrompt(selectedTask, canonicalTaskThread.id);
       await navigate({ to: "/$threadId", params: { threadId: canonicalTaskThread.id } });
       return;
     }
@@ -711,6 +723,7 @@ function TasksRoute() {
                     onClick={() => {
                       const taskThread = threads.find((thread) => thread.taskId === task.id);
                       if (taskThread) {
+                        seedTaskPrompt(task, taskThread.id);
                         void navigate({ to: "/$threadId", params: { threadId: taskThread.id } });
                         return;
                       }

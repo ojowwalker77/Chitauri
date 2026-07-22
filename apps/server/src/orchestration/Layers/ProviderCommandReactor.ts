@@ -60,6 +60,7 @@ import {
 } from "../handoff.ts";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../Services/ProjectionSnapshotQuery.ts";
+import { buildWorkerTaskContext } from "../workerTaskContext.ts";
 import {
   ProviderCommandReactor,
   type ProviderCommandReactorShape,
@@ -686,6 +687,21 @@ const make = Effect.gen(function* () {
     const effectiveCwd = yield* resolveProjectedThreadWorkspaceCwd(thread);
     const workspaceProject = yield* resolveThreadWorkspaceProject(thread);
     const workerInstructions = workspaceProject?.workerInstructions?.trim();
+    const workerTaskContext = workspaceProject
+      ? yield* projectionSnapshotQuery.getShellSnapshot().pipe(
+          Effect.map((snapshot) =>
+            buildWorkerTaskContext({
+              currentTaskId: thread.taskId ?? null,
+              tasks: snapshot.tasks,
+              workerId: workspaceProject.id,
+            }),
+          ),
+          Effect.catch(() => Effect.succeed("")),
+        )
+      : "";
+    const developerInstructions = [workerInstructions, workerTaskContext]
+      .filter((value): value is string => Boolean(value))
+      .join("\n\n");
     const workspaceState = resolveThreadWorkspaceState({
       envMode: thread.envMode,
       worktreePath: thread.worktreePath,
@@ -716,7 +732,7 @@ const make = Effect.gen(function* () {
           ...(options?.providerOptions !== undefined
             ? { providerOptions: options.providerOptions }
             : {}),
-          ...(workerInstructions ? { developerInstructions: workerInstructions } : {}),
+          ...(developerInstructions ? { developerInstructions } : {}),
           ...(input?.resumeCursor !== undefined ? { resumeCursor: input.resumeCursor } : {}),
           runtimeMode: desiredRuntimeMode,
         });

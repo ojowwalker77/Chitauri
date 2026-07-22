@@ -9,6 +9,7 @@ import {
   CheckpointRef,
   isToolLifecycleItemType,
   ThreadId,
+  TaskId,
   TurnId,
   type OrchestrationThreadActivity,
   type OrchestrationThread,
@@ -52,6 +53,29 @@ import {
 const providerTurnKey = (threadId: ThreadId, turnId: TurnId) => `${threadId}:${turnId}`;
 const providerCommandId = (event: ProviderRuntimeEvent, tag: string): CommandId =>
   CommandId.makeUnsafe(`provider:${event.eventId}:${tag}:${crypto.randomUUID()}`);
+
+function stableAgentTaskKey(value: string): string {
+  let hash = 2_166_136_261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+function agentTaskIds(input: {
+  readonly sourceThreadId: ThreadId;
+  readonly turnId: string | undefined;
+  readonly title: string;
+}) {
+  const key = stableAgentTaskKey(
+    `${input.sourceThreadId}\u0000${input.turnId ?? "turn"}\u0000${input.title.trim()}`,
+  );
+  return {
+    taskId: TaskId.makeUnsafe(`agent-task:${key}`),
+    threadId: ThreadId.makeUnsafe(`agent-task-thread:${key}`),
+  };
+}
 
 const DEFAULT_ASSISTANT_DELIVERY_MODE: AssistantDeliveryMode = "buffered";
 const TURN_MESSAGE_IDS_BY_TURN_CACHE_CAPACITY = 2_048;
@@ -1420,6 +1444,91 @@ const make = Effect.gen(function* () {
     );
   });
 
+  const syncAgentTaskThreads = Effect.fnUntraced(function* (
+    event: Extract<ProviderRuntimeEvent, { type: "turn.tasks.updated" }>,
+    sourceThread: OrchestrationThread,
+  ) {
+    const worker = yield* getProjectShell(sourceThread);
+    if (!worker || worker.kind !== "project") {
+      return;
+    }
+
+    yield* Effect.forEach(
+      event.payload.tasks,
+      (runtimeTask) =>
+        Effect.gen(function* () {
+          const ids = agentTaskIds({
+            sourceThreadId: sourceThread.id,
+            turnId: event.turnId,
+            title: runtimeTask.task,
+          });
+          const existing = yield* projectionSnapshotQuery
+            .getTaskShellById(ids.taskId)
+            .pipe(Effect.catch(() => Effect.succeed(Option.none())));
+
+          if (Option.isNone(existing) && runtimeTask.status !== "completed") {
+            const sourceNote = `Created by ${worker.title} Worker from Thread "${sourceThread.title}" (${sourceThread.id}).`;
+            const brief = [event.payload.explanation?.trim(), sourceNote]
+              .filter(Boolean)
+              .join("\n\n");
+            yield* orchestrationEngine
+              .dispatch({
+                type: "task.create",
+                commandId: providerCommandId(event, `agent-task-create:${ids.taskId}`),
+                taskId: ids.taskId,
+                workerId: sourceThread.projectId,
+                threadId: ids.threadId,
+                modelSelection: sourceThread.modelSelection,
+                runtimeMode: sourceThread.runtimeMode,
+                envMode: "worktree",
+                branch: null,
+                worktreePath: null,
+                title: runtimeTask.task,
+                brief,
+                origin: "agent",
+                createdAt: event.createdAt,
+              })
+              .pipe(
+                Effect.catchCause((cause) =>
+                  Effect.logWarning("provider task could not create a durable Task Thread", {
+                    taskId: ids.taskId,
+                    sourceThreadId: sourceThread.id,
+                    cause: Cause.pretty(cause),
+                  }),
+                ),
+              );
+          }
+
+          const status =
+            runtimeTask.status === "inProgress"
+              ? "in_progress"
+              : runtimeTask.status === "completed"
+                ? "completed"
+                : "open";
+          if (status === "open" && Option.isNone(existing)) {
+            return;
+          }
+          yield* orchestrationEngine
+            .dispatch({
+              type: "task.update",
+              commandId: providerCommandId(event, `agent-task-status:${ids.taskId}`),
+              taskId: ids.taskId,
+              status,
+            })
+            .pipe(
+              Effect.catchCause((cause) =>
+                Effect.logWarning("provider task could not update its durable Task Thread", {
+                  taskId: ids.taskId,
+                  sourceThreadId: sourceThread.id,
+                  cause: Cause.pretty(cause),
+                }),
+              ),
+            );
+        }),
+      { concurrency: 1 },
+    );
+  });
+
   const isGitRepoForThread = Effect.fnUntraced(function* (threadId: ThreadId) {
     const thread = yield* getThreadDetail(threadId);
     if (!thread) {
@@ -2402,6 +2511,10 @@ const make = Effect.gen(function* () {
       if (proposedPlanDelta && proposedPlanDelta.length > 0) {
         const planId = proposedPlanIdFromEvent(event, thread.id);
         yield* appendBufferedProposedPlan(planId, proposedPlanDelta, now);
+      }
+
+      if (event.type === "turn.tasks.updated") {
+        yield* syncAgentTaskThreads(event, thread);
       }
 
       const assistantCompletion =

@@ -1938,12 +1938,12 @@ function SettingsRouteView() {
         />
 
         <SettingsRow
-          title="Unfiled Thread order"
-          description="Controls how Unfiled Threads are arranged inside each Worker in the main sidebar."
+          title="Worker Thread order"
+          description="Controls how Threads are arranged inside each Worker in the main sidebar."
           resetAction={
             settings.sidebarThreadSortOrder !== defaults.sidebarThreadSortOrder ? (
               <SettingResetButton
-                label="Unfiled Thread order"
+                label="Worker Thread order"
                 onClick={() =>
                   updateSettings({
                     sidebarThreadSortOrder: defaults.sidebarThreadSortOrder,

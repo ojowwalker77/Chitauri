@@ -1,5 +1,5 @@
 // FILE: Sidebar.tsx
-// Purpose: Renders Worker navigation with durable Tasks, Inbox requests, and unfiled Threads.
+// Purpose: Renders Worker navigation with durable Tasks, Inbox requests, and Threads.
 // Exports: Sidebar
 
 import {
@@ -3392,16 +3392,7 @@ export default function Sidebar() {
     }
     return byProjectId;
   }, [appSettings.sidebarThreadSortOrder, sidebarThreadsByProjectId]);
-  const sortedUnfiledThreadsByProjectId = useMemo(() => {
-    const byProjectId = new Map<ProjectId, SidebarThreadSummary[]>();
-    for (const [projectId, projectThreads] of sortedSidebarThreadsByProjectId) {
-      byProjectId.set(
-        projectId,
-        projectThreads.filter((thread) => thread.taskId == null),
-      );
-    }
-    return byProjectId;
-  }, [sortedSidebarThreadsByProjectId]);
+  const sortedWorkerThreadsByProjectId = sortedSidebarThreadsByProjectId;
   const handleProjectTitlePointerDownCapture = useCallback(() => {
     suppressProjectClickAfterDragRef.current = false;
   }, []);
@@ -3660,7 +3651,7 @@ export default function Sidebar() {
     () =>
       deriveSidebarProjectData({
         projects: standardProjects,
-        sortedSidebarThreadsByProjectId: sortedUnfiledThreadsByProjectId,
+        sortedSidebarThreadsByProjectId: sortedWorkerThreadsByProjectId,
         pinnedThreadIds,
         expandedParentThreadIds: expandedSubagentParentIds,
         threadListExtraPagesByProjectCwd,
@@ -3675,7 +3666,7 @@ export default function Sidebar() {
       expandedSubagentParentIds,
       threadListExtraPagesByProjectCwd,
       pinnedThreadIds,
-      sortedUnfiledThreadsByProjectId,
+      sortedWorkerThreadsByProjectId,
       standardProjects,
       resolveThreadStatusForSidebar,
     ],
@@ -4923,7 +4914,7 @@ export default function Sidebar() {
               </SidebarMenuSubItem>
               {visibleEntries.length > 0 ? (
                 <div className="px-2 pt-1 pb-0.5 text-[10px] font-medium tracking-wide text-muted-foreground/48 uppercase">
-                  Unfiled
+                  Threads
                 </div>
               ) : null}
               {visibleEntries.map((entry) =>
@@ -5362,9 +5353,9 @@ export default function Sidebar() {
       },
       {
         id: "new-thread",
-        label: "New unfiled Thread",
-        description: "Start a fresh execution outside a Task in the current Worker.",
-        keywords: ["thread", "new", "unfiled", "worker", "project"],
+        label: "New Thread",
+        description: "Start a fresh worktree-backed Thread in the current Worker.",
+        keywords: ["thread", "new", "worker", "project", "worktree"],
         shortcutLabel: newThreadShortcutLabel,
       },
       {
@@ -6441,6 +6432,19 @@ export default function Sidebar() {
           }}
           onOpenProject={handleOpenProjectFromSearch}
           onOpenTask={(taskId, workerId) => {
+            const task = tasks.find((candidate) => candidate.id === taskId);
+            const taskThread = sidebarThreads.find((thread) => thread.taskId === taskId);
+            if (task && taskThread) {
+              const composerStore = useComposerDraftStore.getState();
+              if (!composerStore.draftsByThreadId[taskThread.id]?.prompt.trim()) {
+                composerStore.setPrompt(
+                  taskThread.id,
+                  [task.title, task.brief].filter(Boolean).join("\n\n"),
+                );
+              }
+              activateThreadFromSidebarIntent(taskThread.id);
+              return;
+            }
             void navigate({
               to: "/tasks",
               search: { worker: workerId, task: taskId, create: undefined },
