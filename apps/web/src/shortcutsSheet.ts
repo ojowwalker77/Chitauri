@@ -108,6 +108,11 @@ const AVAILABLE_NOW_DEFINITIONS: readonly ShortcutDefinition[] = [
     description: "Focus or blur the chat prompt composer.",
   },
   {
+    command: "composer.collapse.toggle",
+    label: "Collapse composer",
+    description: "Hide the composer to give the transcript the full pane.",
+  },
+  {
     command: "diff.toggle",
     label: "Toggle diff",
     description: "Open or close the working tree diff panel.",

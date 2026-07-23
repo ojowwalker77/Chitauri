@@ -106,6 +106,8 @@ interface ChatHeaderProps {
   showGitActions?: boolean;
   diffDisabledReason?: string | null;
   surfaceMode?: "single" | "split";
+  /** Shown only for a pane in a split, which is the only thing that can be closed. */
+  closePaneAction?: { label: string; onClick: () => void } | undefined;
   chatLayoutAction?: {
     kind: "split" | "maximize";
     label: string;
@@ -491,6 +493,7 @@ export const ChatHeader = memo(function ChatHeader({
   showGitActions = true,
   diffDisabledReason = null,
   surfaceMode = "single",
+  closePaneAction,
   chatLayoutAction = null,
   changeThreadAction = null,
   editorChatControls = null,
@@ -764,6 +767,27 @@ export const ChatHeader = memo(function ChatHeader({
               }
             />
             <TooltipPopup side="bottom">{inlineChatLayoutAction.label}</TooltipPopup>
+          </Tooltip>
+        ) : null}
+
+        {/* Closing a split pane lives in the header, not as a floating overlay:
+            the header is inside `.drag-region`, whose `no-drag` opt-out only
+            reaches its descendants. An overlay on top of it is not one, so the
+            OS swallowed the click before React ever saw it. */}
+        {closePaneAction ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <ChatHeaderIconButton
+                  type="button"
+                  label={closePaneAction.label}
+                  onClick={closePaneAction.onClick}
+                >
+                  <XIcon className="size-3.5" />
+                </ChatHeaderIconButton>
+              }
+            />
+            <TooltipPopup side="bottom">{closePaneAction.label}</TooltipPopup>
           </Tooltip>
         ) : null}
 

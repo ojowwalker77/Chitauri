@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { groupCommandItems, type ComposerCommandItem } from "./ComposerCommandMenu";
 
 describe("groupCommandItems", () => {
-  it("groups mention suggestions as Tasks, Workers, plugins, local, then subagents", () => {
+  it("groups mention suggestions as Tasks, Workers, plugins, then subagents", () => {
     const items: ComposerCommandItem[] = [
       {
         id: "task:task-1",
@@ -61,14 +61,6 @@ describe("groupCommandItems", () => {
         description: "GPT-5.4 Mini",
       },
       {
-        id: "path:file:/workspace/AGENTS.md",
-        type: "path",
-        path: "/workspace/AGENTS.md",
-        pathKind: "file",
-        label: "AGENTS.md",
-        description: "/workspace",
-      },
-      {
         id: "plugin:github",
         type: "plugin",
         plugin: {
@@ -94,12 +86,6 @@ describe("groupCommandItems", () => {
         label: "GitHub",
         description: "Triage PRs and CI",
       },
-      {
-        id: "local-root",
-        type: "local-root",
-        label: "@local",
-        description: "Browse folders on this computer",
-      },
     ];
 
     expect(groupCommandItems(items, "mention", true)).toEqual([
@@ -116,12 +102,7 @@ describe("groupCommandItems", () => {
       {
         id: "plugins",
         label: "Plugins",
-        items: [items[4]],
-      },
-      {
-        id: "local",
-        label: "Local",
-        items: [items[3], items[5]],
+        items: [items[3]],
       },
       {
         id: "subagents",

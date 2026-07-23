@@ -18,6 +18,7 @@ import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstab
 import type { ServerConfigShape } from "../config.ts";
 import { OrchestrationEngineService } from "./Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "./Services/ProjectionSnapshotQuery.ts";
+import { workerChannelReplyMessageId } from "@t3tools/shared/workerChannelMessages";
 import {
   buildDelegationReplyPrompt,
   peerThreadFor,
@@ -416,7 +417,11 @@ export function runWorkerTool(input: {
         commandId: commandId(),
         threadId: peer.peerThreadId,
         message: {
-          messageId: MessageId.makeUnsafe(crypto.randomUUID()),
+          // Minted through the shared scheme so the transcript folds this into the
+          // channel card instead of rendering it as a typed user message.
+          messageId: MessageId.makeUnsafe(
+            workerChannelReplyMessageId(task.id, crypto.randomUUID()),
+          ),
           role: "user",
           text: buildDelegationReplyPrompt({
             task,

@@ -1,5 +1,4 @@
 import type {
-  ProjectEntry,
   OrchestrationTaskShell,
   ProviderNativeCommandDescriptor,
   ProviderKind,
@@ -22,11 +21,6 @@ import {
   normalizeProviderDiscoveryText,
   rankProviderDiscoveryItems,
 } from "~/lib/providerDiscovery";
-import {
-  LOCAL_FOLDER_MENTION_NAME,
-  matchesLocalFolderMentionShortcut,
-} from "~/lib/localFolderMentions";
-import { basenameOfPath } from "../file-icons";
 import type { ComposerTrigger } from "../composer-logic";
 import {
   filterComposerSlashCommands,
@@ -59,7 +53,6 @@ export function useComposerCommandMenuItems(input: {
   providerPlugins: readonly ComposerPluginSuggestion[];
   providerNativeCommands: readonly ProviderNativeCommandDescriptor[];
   providerSkills: readonly ProviderSkillDescriptor[];
-  workspaceEntries: readonly ProjectEntry[];
   workers: readonly Project[];
   tasks: readonly OrchestrationTaskShell[];
   currentWorkerId: string;
@@ -79,7 +72,6 @@ export function useComposerCommandMenuItems(input: {
     providerPlugins,
     providerNativeCommands,
     providerSkills,
-    workspaceEntries,
     workers,
     tasks,
     currentWorkerId,
@@ -180,35 +172,10 @@ export function useComposerCommandMenuItems(input: {
         label: plugin.interface?.displayName ?? plugin.name,
         description: plugin.interface?.shortDescription ?? plugin.source.path,
       }));
-      const localRootItems =
-        matchesLocalFolderMentionShortcut(composerTrigger.query) && composerTrigger.query !== "/"
-          ? [
-              {
-                id: "local-root",
-                type: "local-root" as const,
-                label: `@${LOCAL_FOLDER_MENTION_NAME}`,
-                description: "Browse folders on this computer",
-              },
-            ]
-          : [];
-      const pathItems = workspaceEntries.map((entry) => ({
-        id: `path:${entry.kind}:${entry.path}`,
-        type: "path" as const,
-        path: entry.path,
-        pathKind: entry.kind,
-        label: basenameOfPath(entry.path),
-        description: entry.parentPath ?? "",
-      }));
-      // Keep mention suggestions ordered by primary intent: plugins first,
-      // then local context, then subagent delegation targets.
-      return [
-        ...taskItems,
-        ...workerItems,
-        ...pluginItems,
-        ...localRootItems,
-        ...pathItems,
-        ...agentItems,
-      ];
+      // `@` no longer offers files or folders. Agents read the repository
+      // themselves, so hand-tagging paths was work the user did on their behalf.
+      // Existing `@path` chips in old prompts still render — only authoring is gone.
+      return [...taskItems, ...workerItems, ...pluginItems, ...agentItems];
     }
 
     if (composerTrigger.kind === "slash-command") {
@@ -328,6 +295,5 @@ export function useComposerCommandMenuItems(input: {
     supportsFastSlashCommand,
     tasks,
     workers,
-    workspaceEntries,
   ]);
 }

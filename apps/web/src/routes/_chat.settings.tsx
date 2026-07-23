@@ -1806,6 +1806,9 @@ function SettingsRouteView() {
     );
   };
 
+  // One function per settings section rather than per nav item: the regrouping
+  // moved rows across panel boundaries, and keeping each section self-contained
+  // is what lets a nav item compose the ones it needs.
   const renderGeneralPanel = () => (
     <div className="space-y-6">
       <SettingsSection title="Core defaults">
@@ -1846,29 +1849,82 @@ function SettingsRouteView() {
             </SettingsSelectControl>
           }
         />
+      </SettingsSection>
 
+      <SettingsSection title="Time and reading">
         <SettingsRow
-          title="Permissions Mode"
-          description="Choose the default access level for new chats. Full access lets agents work without permission prompts."
+          title="Time format"
+          description="System default follows your browser or OS clock preference."
           resetAction={
-            settings.defaultRuntimeMode !== defaults.defaultRuntimeMode ? (
+            settings.timestampFormat !== defaults.timestampFormat ? (
               <SettingResetButton
-                label="permissions mode"
-                onClick={() => updateSettings({ defaultRuntimeMode: defaults.defaultRuntimeMode })}
+                label="time format"
+                onClick={() =>
+                  updateSettings({
+                    timestampFormat: defaults.timestampFormat,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <SettingsSelectControl
+              value={settings.timestampFormat}
+              onValueChange={(value) => {
+                if (value !== "locale" && value !== "12-hour" && value !== "24-hour") {
+                  return;
+                }
+                updateSettings({
+                  timestampFormat: value,
+                });
+              }}
+              ariaLabel="Timestamp format"
+              triggerClassName="w-full sm:w-40"
+              valueContent={TIMESTAMP_FORMAT_LABELS[settings.timestampFormat]}
+            >
+              <SelectItem hideIndicator value="locale">
+                {TIMESTAMP_FORMAT_LABELS.locale}
+              </SelectItem>
+              <SelectItem hideIndicator value="12-hour">
+                {TIMESTAMP_FORMAT_LABELS["12-hour"]}
+              </SelectItem>
+              <SelectItem hideIndicator value="24-hour">
+                {TIMESTAMP_FORMAT_LABELS["24-hour"]}
+              </SelectItem>
+            </SettingsSelectControl>
+          }
+        />
+      </SettingsSection>
+
+      <SettingsSection title="Run checklists">
+        <SettingsRow
+          title="Run checklist location"
+          description="Choose where the provider's active run checklist opens by default. You can still switch views from its controls."
+          resetAction={
+            settings.taskListDisplayMode !== defaults.taskListDisplayMode ? (
+              <SettingResetButton
+                label="run checklist location"
+                onClick={() =>
+                  updateSettings({ taskListDisplayMode: defaults.taskListDisplayMode })
+                }
               />
             ) : null
           }
           control={
             <SettingsSegmentedControl
-              value={settings.defaultRuntimeMode}
-              onValueChange={(value) => updateSettings({ defaultRuntimeMode: value })}
-              options={PERMISSIONS_MODE_OPTIONS}
-              ariaLabel="Permissions Mode"
+              value={settings.taskListDisplayMode}
+              onValueChange={(value) => updateSettings({ taskListDisplayMode: value })}
+              ariaLabel="Default run checklist location"
+              options={TASK_LIST_DISPLAY_OPTIONS}
             />
           }
         />
       </SettingsSection>
+    </div>
+  );
 
+  const renderSidebarPanel = () => (
+    <div className="space-y-6">
       <SettingsSection title="Sidebar organization">
         <SettingsRow
           title="Worker order"
@@ -1980,6 +2036,151 @@ function SettingsRouteView() {
             "Show the standalone Chats list in the sidebar footer (chats not tied to a Worker).",
           resetLabel: "chats section",
           ariaLabel: "Show the Chats section in the sidebar",
+        })}
+      </SettingsSection>
+    </div>
+  );
+
+  const renderNotificationsPanel = () => (
+    <div className="space-y-6">
+      <SettingsSection title="Activity alerts">
+        {renderBooleanSettingRow({
+          settingKey: "enableTaskCompletionToasts",
+          title: "Activity toasts",
+          description:
+            "Show an in-app toast when a chat or managed terminal agent finishes or needs input.",
+          resetLabel: "activity toasts",
+          ariaLabel: "Activity toast notifications",
+        })}
+
+        <SettingsRow
+          title="Desktop notifications"
+          description="Show an OS notification when a chat or managed terminal agent finishes or needs input while the app is in the background."
+          status={buildNotificationSettingsSupportText(browserNotificationPermission)}
+          resetAction={
+            settings.enableSystemTaskCompletionNotifications !==
+            defaults.enableSystemTaskCompletionNotifications ? (
+              <SettingResetButton
+                label="desktop notifications"
+                onClick={() =>
+                  updateSettings({
+                    enableSystemTaskCompletionNotifications:
+                      defaults.enableSystemTaskCompletionNotifications,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <div className="flex w-full items-center gap-2 sm:w-auto sm:justify-end">
+              <Button size="xs" variant="outline" onClick={() => void sendTestNotification()}>
+                Test
+              </Button>
+              <Switch
+                checked={settings.enableSystemTaskCompletionNotifications}
+                onCheckedChange={(checked) => {
+                  void setSystemNotificationsEnabled(Boolean(checked));
+                }}
+                aria-label="Desktop activity notifications"
+              />
+            </div>
+          }
+        />
+      </SettingsSection>
+    </div>
+  );
+
+  const renderPermissionsPanel = () => (
+    <div className="space-y-6">
+      <SettingsSection title="Default access">
+        <SettingsRow
+          title="Permissions Mode"
+          description="Choose the default access level for new chats. Full access lets agents work without permission prompts."
+          resetAction={
+            settings.defaultRuntimeMode !== defaults.defaultRuntimeMode ? (
+              <SettingResetButton
+                label="permissions mode"
+                onClick={() => updateSettings({ defaultRuntimeMode: defaults.defaultRuntimeMode })}
+              />
+            ) : null
+          }
+          control={
+            <SettingsSegmentedControl
+              value={settings.defaultRuntimeMode}
+              onValueChange={(value) => updateSettings({ defaultRuntimeMode: value })}
+              options={PERMISSIONS_MODE_OPTIONS}
+              ariaLabel="Permissions Mode"
+            />
+          }
+        />
+      </SettingsSection>
+
+      <SettingsSection title="Runtime behavior">
+        {renderBooleanSettingRow({
+          settingKey: "enableAssistantStreaming",
+          title: "Assistant output",
+          description: "Show token-by-token output while a response is in progress.",
+          resetLabel: "assistant output",
+          ariaLabel: "Stream assistant messages",
+        })}
+
+        {renderBooleanSettingRow({
+          settingKey: "diffWordWrap",
+          title: "Diff line wrapping",
+          description:
+            "Set the default wrap state when the diff panel opens. The in-panel wrap toggle only affects the current diff session.",
+          resetLabel: "diff line wrapping",
+          ariaLabel: "Wrap diff lines by default",
+        })}
+      </SettingsSection>
+
+      <SettingsSection title="Safety confirmations">
+        {renderBooleanSettingRow({
+          settingKey: "confirmThreadDelete",
+          title: "Delete confirmation",
+          description: "Ask before deleting a thread and its chat history.",
+          resetLabel: "delete confirmation",
+          ariaLabel: "Confirm thread deletion",
+        })}
+
+        {renderBooleanSettingRow({
+          settingKey: "confirmThreadArchive",
+          title: "Archive confirmation",
+          description: "Ask before archiving a thread.",
+          resetLabel: "archive confirmation",
+          ariaLabel: "Confirm thread archive",
+        })}
+
+        {renderBooleanSettingRow({
+          settingKey: "confirmTerminalTabClose",
+          title: "Terminal close confirmation",
+          description: "Ask before closing a terminal tab and clearing its history.",
+          resetLabel: "terminal close confirmation",
+          ariaLabel: "Confirm terminal tab close",
+        })}
+      </SettingsSection>
+    </div>
+  );
+
+  const renderWorkspacePolicyPanel = () => (
+    <div className="space-y-6">
+      <SettingsSection title="Pull request completion">
+        {renderBooleanSettingRow({
+          settingKey: "autoArchiveMergedPrThreads",
+          title: "Auto-archive merged PRs",
+          description:
+            "Archive an idle thread when its pull request is detected as merged. The archive notification still lets you undo it.",
+          resetLabel: "auto-archive merged PRs",
+          ariaLabel: "Automatically archive merged pull request threads",
+        })}
+
+        {renderBooleanSettingRow({
+          settingKey: "autoDeleteMergedLocalBranches",
+          title: "Delete merged local branches",
+          description:
+            "For local-mode threads, switch a clean repository to its default branch and delete the merged feature branch. Worktree-mode branches are left intact.",
+          resetLabel: "merged branch cleanup",
+          ariaLabel: "Automatically delete merged local branches",
         })}
       </SettingsSection>
     </div>
@@ -2118,51 +2319,6 @@ function SettingsRouteView() {
         </SettingsCard>
       </section>
 
-      <SettingsSection title="Time and reading">
-        <SettingsRow
-          title="Time format"
-          description="System default follows your browser or OS clock preference."
-          resetAction={
-            settings.timestampFormat !== defaults.timestampFormat ? (
-              <SettingResetButton
-                label="time format"
-                onClick={() =>
-                  updateSettings({
-                    timestampFormat: defaults.timestampFormat,
-                  })
-                }
-              />
-            ) : null
-          }
-          control={
-            <SettingsSelectControl
-              value={settings.timestampFormat}
-              onValueChange={(value) => {
-                if (value !== "locale" && value !== "12-hour" && value !== "24-hour") {
-                  return;
-                }
-                updateSettings({
-                  timestampFormat: value,
-                });
-              }}
-              ariaLabel="Timestamp format"
-              triggerClassName="w-full sm:w-40"
-              valueContent={TIMESTAMP_FORMAT_LABELS[settings.timestampFormat]}
-            >
-              <SelectItem hideIndicator value="locale">
-                {TIMESTAMP_FORMAT_LABELS.locale}
-              </SelectItem>
-              <SelectItem hideIndicator value="12-hour">
-                {TIMESTAMP_FORMAT_LABELS["12-hour"]}
-              </SelectItem>
-              <SelectItem hideIndicator value="24-hour">
-                {TIMESTAMP_FORMAT_LABELS["24-hour"]}
-              </SelectItem>
-            </SettingsSelectControl>
-          }
-        />
-      </SettingsSection>
-
       <div ref={chatHeaderControlsRef} id={SETTINGS_TARGETS.chatHeaderControls}>
         <SettingsSection title="Chat header">
           <SettingsRow
@@ -2224,150 +2380,6 @@ function SettingsRouteView() {
       </div>
     </div>
   );
-
-  const renderNotificationsPanel = () => (
-    <div className="space-y-6">
-      <SettingsSection title="Activity alerts">
-        {renderBooleanSettingRow({
-          settingKey: "enableTaskCompletionToasts",
-          title: "Activity toasts",
-          description:
-            "Show an in-app toast when a chat or managed terminal agent finishes or needs input.",
-          resetLabel: "activity toasts",
-          ariaLabel: "Activity toast notifications",
-        })}
-
-        <SettingsRow
-          title="Desktop notifications"
-          description="Show an OS notification when a chat or managed terminal agent finishes or needs input while the app is in the background."
-          status={buildNotificationSettingsSupportText(browserNotificationPermission)}
-          resetAction={
-            settings.enableSystemTaskCompletionNotifications !==
-            defaults.enableSystemTaskCompletionNotifications ? (
-              <SettingResetButton
-                label="desktop notifications"
-                onClick={() =>
-                  updateSettings({
-                    enableSystemTaskCompletionNotifications:
-                      defaults.enableSystemTaskCompletionNotifications,
-                  })
-                }
-              />
-            ) : null
-          }
-          control={
-            <div className="flex w-full items-center gap-2 sm:w-auto sm:justify-end">
-              <Button size="xs" variant="outline" onClick={() => void sendTestNotification()}>
-                Test
-              </Button>
-              <Switch
-                checked={settings.enableSystemTaskCompletionNotifications}
-                onCheckedChange={(checked) => {
-                  void setSystemNotificationsEnabled(Boolean(checked));
-                }}
-                aria-label="Desktop activity notifications"
-              />
-            </div>
-          }
-        />
-      </SettingsSection>
-    </div>
-  );
-
-  const renderBehaviorPanel = () => (
-    <div className="space-y-6">
-      <SettingsSection title="Run checklists">
-        <SettingsRow
-          title="Run checklist location"
-          description="Choose where the provider's active run checklist opens by default. You can still switch views from its controls."
-          resetAction={
-            settings.taskListDisplayMode !== defaults.taskListDisplayMode ? (
-              <SettingResetButton
-                label="run checklist location"
-                onClick={() =>
-                  updateSettings({ taskListDisplayMode: defaults.taskListDisplayMode })
-                }
-              />
-            ) : null
-          }
-          control={
-            <SettingsSegmentedControl
-              value={settings.taskListDisplayMode}
-              onValueChange={(value) => updateSettings({ taskListDisplayMode: value })}
-              ariaLabel="Default run checklist location"
-              options={TASK_LIST_DISPLAY_OPTIONS}
-            />
-          }
-        />
-      </SettingsSection>
-
-      <SettingsSection title="Runtime behavior">
-        {renderBooleanSettingRow({
-          settingKey: "enableAssistantStreaming",
-          title: "Assistant output",
-          description: "Show token-by-token output while a response is in progress.",
-          resetLabel: "assistant output",
-          ariaLabel: "Stream assistant messages",
-        })}
-
-        {renderBooleanSettingRow({
-          settingKey: "diffWordWrap",
-          title: "Diff line wrapping",
-          description:
-            "Set the default wrap state when the diff panel opens. The in-panel wrap toggle only affects the current diff session.",
-          resetLabel: "diff line wrapping",
-          ariaLabel: "Wrap diff lines by default",
-        })}
-      </SettingsSection>
-
-      <SettingsSection title="Pull request completion">
-        {renderBooleanSettingRow({
-          settingKey: "autoArchiveMergedPrThreads",
-          title: "Auto-archive merged PRs",
-          description:
-            "Archive an idle thread when its pull request is detected as merged. The archive notification still lets you undo it.",
-          resetLabel: "auto-archive merged PRs",
-          ariaLabel: "Automatically archive merged pull request threads",
-        })}
-
-        {renderBooleanSettingRow({
-          settingKey: "autoDeleteMergedLocalBranches",
-          title: "Delete merged local branches",
-          description:
-            "For local-mode threads, switch a clean repository to its default branch and delete the merged feature branch. Worktree-mode branches are left intact.",
-          resetLabel: "merged branch cleanup",
-          ariaLabel: "Automatically delete merged local branches",
-        })}
-      </SettingsSection>
-
-      <SettingsSection title="Safety confirmations">
-        {renderBooleanSettingRow({
-          settingKey: "confirmThreadDelete",
-          title: "Delete confirmation",
-          description: "Ask before deleting a thread and its chat history.",
-          resetLabel: "delete confirmation",
-          ariaLabel: "Confirm thread deletion",
-        })}
-
-        {renderBooleanSettingRow({
-          settingKey: "confirmThreadArchive",
-          title: "Archive confirmation",
-          description: "Ask before archiving a thread.",
-          resetLabel: "archive confirmation",
-          ariaLabel: "Confirm thread archive",
-        })}
-
-        {renderBooleanSettingRow({
-          settingKey: "confirmTerminalTabClose",
-          title: "Terminal close confirmation",
-          description: "Ask before closing a terminal tab and clearing its history.",
-          resetLabel: "terminal close confirmation",
-          ariaLabel: "Confirm terminal tab close",
-        })}
-      </SettingsSection>
-    </div>
-  );
-
   const renderWorktreesPanel = () => {
     if (serverWorktreesQuery.isLoading) {
       return (
@@ -3491,19 +3503,15 @@ function SettingsRouteView() {
   const renderActivePanel = () => {
     switch (activeSection) {
       case "general":
-        return (
-          <>
-            {renderGeneralPanel()}
-            {renderNotificationsPanel()}
-            {renderBehaviorPanel()}
-          </>
-        );
+        return renderGeneralPanel();
       case "appearance":
         return renderAppearancePanel();
-      case "profile":
-        return <ProfileSettingsPanel />;
-      case "appsnap":
-        return renderAppSnapPanel();
+      case "sidebar":
+        return renderSidebarPanel();
+      case "notifications":
+        return renderNotificationsPanel();
+      case "shortcuts":
+        return <KeyboardShortcutsSettingsPanel />;
       case "agents":
         return (
           <>
@@ -3512,20 +3520,22 @@ function SettingsRouteView() {
             <ProviderUsageSettingsPanel />
           </>
         );
-      case "advanced":
+      case "permissions":
+        return renderPermissionsPanel();
+      case "workspaces":
         return (
           <>
-            <KeyboardShortcutsSettingsPanel />
-            <section className="space-y-6" aria-labelledby="operational-managers-title">
-              <h2 id="operational-managers-title" className={SETTINGS_SECTION_LABEL_CLASS_NAME}>
-                Operational managers
-              </h2>
-              {renderWorktreesPanel()}
-              {renderArchivedPanel()}
-            </section>
-            {renderAdvancedPanel()}
+            {renderWorkspacePolicyPanel()}
+            {renderWorktreesPanel()}
+            {renderArchivedPanel()}
           </>
         );
+      case "appsnap":
+        return renderAppSnapPanel();
+      case "profile":
+        return <ProfileSettingsPanel />;
+      case "advanced":
+        return renderAdvancedPanel();
     }
   };
 

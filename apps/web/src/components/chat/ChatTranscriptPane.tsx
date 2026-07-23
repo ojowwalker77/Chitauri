@@ -34,6 +34,7 @@ import { DISCLOSURE_CONTENT_MOTION_CLASS } from "~/lib/disclosureMotion";
 import { type ExpandedImagePreview } from "./ExpandedImagePreview";
 import { ChatEmptyStateHero } from "./ChatEmptyStateHero";
 import { MessagesTimeline, type MessagesTimelineController } from "./MessagesTimeline";
+import type { WorkerChannelView } from "./workerChannel";
 import { AgentActivityDetailView } from "./AgentActivityDetailView";
 import type { AgentActivityDetail } from "./agentActivity.logic";
 
@@ -51,6 +52,9 @@ interface ChatTranscriptPaneProps {
   emptyStateProjectName: string | undefined;
   expandedWorkGroups?: Record<string, boolean>;
   hasMessages: boolean;
+  workerChannels?: ReadonlyArray<WorkerChannelView> | undefined;
+  onOpenPeerThread?: ((channel: WorkerChannelView) => void) | undefined;
+  onCloseWorkerChannel?: ((channel: WorkerChannelView) => void) | undefined;
   isRevertingCheckpoint: boolean;
   isWorking: boolean;
   followLiveOutput: boolean;
@@ -105,6 +109,9 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
   emptyStateProjectName,
   expandedWorkGroups,
   hasMessages,
+  workerChannels,
+  onOpenPeerThread,
+  onCloseWorkerChannel,
   isRevertingCheckpoint,
   isWorking,
   followLiveOutput,
@@ -170,6 +177,9 @@ export const ChatTranscriptPane = memo(function ChatTranscriptPane({
           <MessagesTimeline
             key={activeThreadId}
             assistantProvider={assistantProvider}
+            workerChannels={workerChannels}
+            onOpenPeerThread={onOpenPeerThread}
+            onCloseWorkerChannel={onCloseWorkerChannel}
             hasMessages={hasMessages}
             isWorking={isWorking}
             worktreeSetup={worktreeSetup}

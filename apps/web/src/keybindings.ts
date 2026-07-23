@@ -118,6 +118,10 @@ export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
     shortcut: commandShortcut("l", { metaKey: true, modKey: false }),
   },
   {
+    command: "composer.collapse.toggle",
+    shortcut: commandShortcut("j"),
+  },
+  {
     command: "settings.usage",
     shortcut: commandShortcut("u", { shiftKey: true }),
   },

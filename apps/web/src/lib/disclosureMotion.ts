@@ -44,6 +44,50 @@ export const DISCLOSURE_COLLAPSIBLE_PANEL_CLASS =
 export const DISCLOSURE_WIDTH_MOTION_CLASS =
   "overflow-hidden transition-[width] duration-disclosure ease-out motion-reduce:transition-none";
 
+/**
+ * Inline-axis slide for a panel that peeks in over content rather than pushing
+ * it — the collapsed-sidebar edge peek. Same timing curve as every other
+ * open/close in the app, so a peek feels like the rest of the chrome.
+ *
+ * Translation, not `left`/`width`: the panel keeps its laid-out geometry, so
+ * nothing reflows behind it and the slide stays on the compositor.
+ */
+export const DISCLOSURE_PEEK_MOTION_CLASS =
+  "transition-[translate] duration-disclosure ease-out motion-reduce:transition-none";
+
+/**
+ * At rest the panel sits wherever layout put it — for the collapsed sidebar,
+ * off-canvas. Peeking translates it back into view, so `peekedTranslateClassName`
+ * is the visible state and the resting state is no translation at all.
+ */
+/**
+ * Fade + scale for something that appears or disappears in place rather than
+ * pushing layout — the icon a collapsed composer leaves behind. Same timing
+ * curve as every other toggle, so it reads as part of the same motion system.
+ */
+export const DISCLOSURE_POP_MOTION_CLASS =
+  "transition-[opacity,scale] duration-disclosure ease-out motion-reduce:transition-none";
+
+export function disclosurePopClassName(shown: boolean, className?: string) {
+  return cn(
+    DISCLOSURE_POP_MOTION_CLASS,
+    shown ? "scale-100 opacity-100" : "pointer-events-none scale-90 opacity-0",
+    className,
+  );
+}
+
+export function disclosurePeekClassName(
+  peeking: boolean,
+  peekedTranslateClassName: string,
+  className?: string,
+) {
+  return cn(
+    DISCLOSURE_PEEK_MOTION_CLASS,
+    peeking ? peekedTranslateClassName : "translate-x-0",
+    className,
+  );
+}
+
 export function disclosureWidthClassName(
   open: boolean,
   openWidthClassName: string,

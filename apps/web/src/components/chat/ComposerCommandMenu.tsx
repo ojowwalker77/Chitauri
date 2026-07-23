@@ -1,5 +1,4 @@
 import {
-  type ProjectEntry,
   type ModelSlug,
   type ProviderNativeCommandDescriptor,
   type ProviderMentionReference,
@@ -44,7 +43,6 @@ import {
   CommandList,
   CommandSeparator,
 } from "../ui/command";
-import { FileEntryIcon } from "./FileEntryIcon";
 import {
   COMPOSER_COMMAND_MENU_ITEM_ACTIVE_CLASS_NAME,
   COMPOSER_COMMAND_MENU_ITEM_CLASS_NAME,
@@ -107,10 +105,6 @@ function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
     return "Worker";
   }
 
-  if (item.type === "local-root") {
-    return "Local";
-  }
-
   if (item.type === "skill") {
     return formatSkillScope(item.skill.scope);
   }
@@ -121,12 +115,6 @@ function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
 
   if (item.type === "slash-command" || item.type === "provider-native-command") {
     return `/${item.command}`;
-  }
-
-  // Right-align the parent path so many same-named entries (e.g. worktrees) stay
-  // distinguishable without crowding the name column.
-  if (item.type === "path") {
-    return item.description.length > 0 ? item.description : null;
   }
 
   return null;
@@ -144,7 +132,6 @@ function commandMenuSecondaryText(item: ComposerCommandItem): string | null {
   if (
     item.type === "plugin" ||
     item.type === "skill" ||
-    item.type === "local-root" ||
     item.type === "task" ||
     item.type === "worker"
   ) {
@@ -155,20 +142,6 @@ function commandMenuSecondaryText(item: ComposerCommandItem): string | null {
 }
 
 export type ComposerCommandItem =
-  | {
-      id: string;
-      type: "path";
-      path: string;
-      pathKind: ProjectEntry["kind"];
-      label: string;
-      description: string;
-    }
-  | {
-      id: string;
-      type: "local-root";
-      label: string;
-      description: string;
-    }
   | {
       id: string;
       type: "slash-command";
@@ -265,15 +238,12 @@ export function groupCommandItems(
     const taskItems = items.filter((item) => item.type === "task");
     const workerItems = items.filter((item) => item.type === "worker");
     const pluginItems = items.filter((item) => item.type === "plugin");
-    const localItems = items.filter((item) => item.type === "local-root" || item.type === "path");
     const agentItems = items.filter((item) => item.type === "agent");
     const otherItems = items.filter(
       (item) =>
         item.type !== "plugin" &&
         item.type !== "task" &&
         item.type !== "worker" &&
-        item.type !== "local-root" &&
-        item.type !== "path" &&
         item.type !== "agent",
     );
 
@@ -286,9 +256,6 @@ export function groupCommandItems(
     }
     if (pluginItems.length > 0) {
       groups.push({ id: "plugins", label: "Plugins", items: pluginItems });
-    }
-    if (localItems.length > 0) {
-      groups.push({ id: "local", label: "Local", items: localItems });
     }
     if (agentItems.length > 0) {
       groups.push({ id: "subagents", label: "Subagents", items: agentItems });
@@ -392,23 +359,6 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
               </CommandGroup>
             </div>
           ))}
-          {props.triggerKind === "mention" ? (
-            <>
-              {groups.length > 0 ? <CommandSeparator className="my-0.5" /> : null}
-              {/* This footer is informational copy, not a selectable result group. */}
-              <div className="pt-0.5 pb-2">
-                <p
-                  className={cn(
-                    COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME,
-                    "px-2 py-0 font-medium text-muted-foreground text-xs",
-                  )}
-                >
-                  Files
-                </p>
-                <p className="px-2 pt-0.5 text-xs text-faint">Type to search for files</p>
-              </div>
-            </>
-          ) : null}
         </CommandList>
         {props.items.length === 0 && (
           <p className="px-2 py-1.5 text-faint text-xs">
@@ -420,7 +370,7 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
                   : "Loading commands..."
               : (props.emptyStateText ??
                 (props.triggerKind === "mention"
-                  ? "No matching plugin or file."
+                  ? "No matching Worker, Task, or plugin."
                   : props.triggerKind === "skill"
                     ? "No matching skill."
                     : "No matching command."))}
@@ -436,12 +386,6 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
 // skills, plugins, commands, and agents line up identically.
 const COMPOSER_COMMAND_ITEM_ICON_SLOT_CLASSNAME =
   "flex size-4 shrink-0 items-center justify-center text-faint";
-
-// Files mirror the recap / diff changed-files treatment (FileEntryIcon at
-// size-3.5 with the same dimmed foreground) so a file reads identically whether
-// it appears in a turn summary or in the composer.
-const COMPOSER_COMMAND_ITEM_FILE_ICON_CLASSNAME =
-  "size-3.5 text-[var(--color-text-foreground)] opacity-70 dark:opacity-80";
 
 const COMPOSER_COMMAND_ITEM_GLYPH_CLASSNAME = "size-3.5";
 
@@ -472,18 +416,6 @@ function commandMenuSlashGlyph(command: string, fallback: LucideIcon): ReactNode
 function commandMenuItemGlyph(item: ComposerCommandItem): ReactNode {
   const cls = COMPOSER_COMMAND_ITEM_GLYPH_CLASSNAME;
   switch (item.type) {
-    case "path":
-      return (
-        <FileEntryIcon
-          pathValue={item.path}
-          kind={item.pathKind}
-          className={
-            item.pathKind === "directory" ? cls : COMPOSER_COMMAND_ITEM_FILE_ICON_CLASSNAME
-          }
-        />
-      );
-    case "local-root":
-      return <DeviceLaptopIcon className={cls} />;
     case "fork-target":
       return item.target === "local" ? (
         <DeviceLaptopIcon className={cls} />

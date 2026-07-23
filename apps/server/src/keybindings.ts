@@ -74,6 +74,7 @@ export const DEFAULT_KEYBINDINGS: ReadonlyArray<KeybindingRule> = [
   { key: "mod+d", command: "diff.toggle" },
   // Cmd-only instead of mod so Ctrl+L remains available to shells on non-macOS.
   { key: "cmd+l", command: "composer.focus.toggle" },
+  { key: "mod+j", command: "composer.collapse.toggle" },
   { key: "mod+shift+m", command: "modelPicker.toggle" },
   { key: "mod+shift+e", command: "traitsPicker.toggle" },
   { key: "mod+shift+u", command: "settings.usage" },

@@ -11,6 +11,7 @@ import {
   type OrchestrationTaskShell,
 } from "@t3tools/contracts";
 import { makeDrainableWorker } from "@t3tools/shared/DrainableWorker";
+import { workerChannelRequestMessageId } from "@t3tools/shared/workerChannelMessages";
 import { Cause, Effect, Layer, Stream } from "effect";
 
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
@@ -29,7 +30,7 @@ import {
 // partial failure replays the same commands instead of spawning a second Thread.
 const spawnCommandIds = (taskId: TaskId) => ({
   threadId: ThreadId.makeUnsafe(`worker-inbox:${taskId}`),
-  messageId: MessageId.makeUnsafe(`worker-inbox:${taskId}:request`),
+  messageId: MessageId.makeUnsafe(workerChannelRequestMessageId(taskId)),
   threadCreate: CommandId.makeUnsafe(`worker-inbox:${taskId}:thread-create`),
   taskInProgress: CommandId.makeUnsafe(`worker-inbox:${taskId}:in-progress`),
   turnStart: CommandId.makeUnsafe(`worker-inbox:${taskId}:turn-start`),

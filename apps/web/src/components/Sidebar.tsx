@@ -181,6 +181,8 @@ import {
   upsertProjectRunCommandScripts,
 } from "../projectRunTargets";
 import { launchProjectRun } from "../projectRunLauncher";
+import { threadDragSourceProps } from "./threadDragSource";
+import { useSplitPaneStore } from "../splitPaneStore";
 import { projectScriptRuntimeEnv } from "../projectScripts";
 import { toastManager } from "./ui/toast";
 import {
@@ -1002,6 +1004,7 @@ export default function Sidebar() {
   const pinThreadLocally = usePinnedThreadsStore((store) => store.pinThread);
   const unpinThread = usePinnedThreadsStore((store) => store.unpinThread);
   const prunePinnedThreads = usePinnedThreadsStore((store) => store.prunePinnedThreads);
+  const pruneSplits = useSplitPaneStore((store) => store.pruneSplits);
   const homeDir = useWorkspaceStore((store) => store.homeDir);
   const chatWorkspaceRoot = useWorkspaceStore((store) => store.chatWorkspaceRoot);
   const navigate = useNavigate();
@@ -3673,6 +3676,16 @@ export default function Sidebar() {
     prunePinnedThreads(sidebarThreads.map((thread) => thread.id));
   }, [prunePinnedThreads, sidebarThreads, threadsHydrated]);
 
+  // Persisted splits outlive the Threads in them; without this a deleted Thread
+  // comes back as an empty pane on the next load. Gated on the same hydration
+  // check, so an unhydrated (empty) Thread list cannot wipe every split.
+  useEffect(() => {
+    if (!shouldPrunePinnedThreads({ threadsHydrated })) {
+      return;
+    }
+    pruneSplits(sidebarThreads.map((thread) => thread.id));
+  }, [pruneSplits, sidebarThreads, threadsHydrated]);
+
   useEffect(() => {
     if (!shouldPrunePinnedThreads({ threadsHydrated })) {
       return;
@@ -4350,6 +4363,7 @@ export default function Sidebar() {
           role="button"
           tabIndex={0}
           data-thread-item
+          {...threadDragSourceProps(thread.id)}
           className={cn(
             SIDEBAR_HEADER_ROW_CLASS_NAME,
             // Match the normal thread row: a flex row whose title claims all free
@@ -4512,6 +4526,7 @@ export default function Sidebar() {
             "before:absolute before:top-4 before:-left-2 before:h-px before:w-2 before:bg-foreground/[0.05]",
         )}
         data-thread-item
+        {...threadDragSourceProps(thread.id)}
       >
         <SidebarMenuSubButton
           render={<div role="button" tabIndex={0} />}

@@ -16,6 +16,7 @@ const STATIC_KEYBINDING_COMMANDS = [
   "browser.toggle",
   "diff.toggle",
   "composer.focus.toggle",
+  "composer.collapse.toggle",
   "modelPicker.toggle",
   "traitsPicker.toggle",
   "settings.usage",

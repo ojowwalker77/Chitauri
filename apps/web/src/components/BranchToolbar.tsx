@@ -247,7 +247,12 @@ export default function BranchToolbar({
     !envLocked && !activeWorktreePath && effectiveEnvMode === "local",
   );
   const canSwitchToLocal = Boolean(!envLocked && effectiveEnvMode === "worktree");
-  const showEnvPicker = effectiveEnvMode === "local" || canSwitchToLocal;
+  // Once a Thread has its first message the environment is fixed, so naming it
+  // every time is noise — the branch alone identifies where the work is going.
+  // The panel variant still shows it, because that surface is the place you go to
+  // read the environment rather than to compose.
+  const showEnvPicker =
+    (isPanel || !envLocked) && (effectiveEnvMode === "local" || canSwitchToLocal);
 
   const usageSummary = useProviderUsageSummary({
     provider: activeProvider,
@@ -398,12 +403,7 @@ export default function BranchToolbar({
               label={environmentPresentation.shortLabel}
             />
           </div>
-        ) : (
-          <span className="inline-flex items-center gap-2 px-1.5 text-[length:var(--app-font-size-ui-sm,13px)] font-normal text-[var(--color-text-foreground-secondary)]">
-            <WorktreeGlyph className="size-3.5" />
-            {environmentPresentation.shortLabel}
-          </span>
-        )}
+        ) : null}
 
         {showBranchSelector ? (
           <BranchToolbarBranchSelector
