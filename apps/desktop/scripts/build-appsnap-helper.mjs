@@ -30,7 +30,7 @@ const defaultOutput = join(
 const sources = [
   "AppSnapProtocol.swift",
   "Permissions.swift",
-  "OptionChordMonitor.swift",
+  "ModifierChordMonitor.swift",
   "WindowCapture.swift",
   "CaptureFeedback.swift",
   "ParentProcessMonitor.swift",

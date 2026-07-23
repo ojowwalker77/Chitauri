@@ -127,8 +127,19 @@ export function ChatSplitSurface({ routeThreadId }: { routeThreadId: ThreadId })
           onDragOver={(event) => handleDragOver(threadId, event)}
           onDragLeave={() => setHover(null)}
           onDrop={(event) => handleDrop(threadId, event)}
-          onPointerDownCapture={() => {
-            if (split) focusPane(threadId);
+          // Focusing here (not on click) lets a drag-select or keystroke that follows
+          // immediately target the right pane. But doing it in the capture phase, before
+          // the click that triggered it finishes, races header buttons that are gated on
+          // `isFocusedPane` (e.g. the maximize action next to "Close this pane"): focusing
+          // makes one newly appear, shifting the header's later buttons sideways between
+          // pointerdown and the matching click, so the click lands on whatever slid into
+          // their place instead. Header buttons don't need this pre-focus anyway — they
+          // already capture their own thread id in a closure — so pointerdowns starting
+          // there are excluded.
+          onPointerDownCapture={(event) => {
+            if (!split) return;
+            if (event.target instanceof Element && event.target.closest("header")) return;
+            focusPane(threadId);
           }}
         >
           <ChatView

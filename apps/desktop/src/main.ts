@@ -195,6 +195,12 @@ const DESKTOP_MENU_MAX_ZOOM_FACTOR = 5;
 type DesktopUpdateErrorContext = DesktopUpdateState["errorContext"];
 
 let mainWindow: BrowserWindow | null = null;
+// Startup opens and destroys hidden storage-bridge windows (migrateLegacyRendererStorage)
+// before the real window exists. Destroying them drops the window count to zero, which
+// would fire window-all-closed and quit the app on non-macOS platforms before it ever
+// showed a window. This latches once the real window has existed so that premature
+// all-closed events are ignored, while closing the real window still quits normally.
+let mainWindowEverCreated = false;
 let backendProcess: ChildProcess.ChildProcess | null = null;
 let backendPort = 0;
 let backendAuthToken = "";
@@ -2610,6 +2616,7 @@ function createWindow(): BrowserWindow {
       backgroundThrottling: true,
     },
   });
+  mainWindowEverCreated = true;
   attachDesktopZoomFactorSync(window);
 
   window.webContents.on("context-menu", (event, params) => {
@@ -2872,7 +2879,9 @@ if (hasSingleInstanceLock) {
 }
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
+  // Ignore all-closed events fired by the transient storage-bridge windows that
+  // migrateLegacyRendererStorage opens and destroys before the real window exists.
+  if (process.platform !== "darwin" && mainWindowEverCreated) {
     app.quit();
   }
 });

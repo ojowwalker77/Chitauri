@@ -1,25 +1,89 @@
 import CoreGraphics
 import Foundation
 
-private let leftOptionKey = CGKeyCode(0x3A)
-private let rightOptionKey = CGKeyCode(0x3D)
-private let leftOptionDeviceFlag = CGEventFlags(rawValue: 0x20)
-private let rightOptionDeviceFlag = CGEventFlags(rawValue: 0x40)
+/// Which pair of physical modifier keys must be held together to trigger AppSnap.
+/// Must stay in sync with `DesktopAppSnapChord` in packages/contracts/src/ipc.ts.
+enum ModifierChord: String {
+    case option
+    case shift
+    case control
+    case command
 
-private func optionChordEventCallback(
+    static let `default`: ModifierChord = .option
+
+    var label: String {
+        switch self {
+        case .option: return "Option"
+        case .shift: return "Shift"
+        case .control: return "Control"
+        case .command: return "Command"
+        }
+    }
+
+    var leftKeyCode: CGKeyCode {
+        switch self {
+        case .option: return CGKeyCode(0x3A)
+        case .shift: return CGKeyCode(0x38)
+        case .control: return CGKeyCode(0x3B)
+        case .command: return CGKeyCode(0x37)
+        }
+    }
+
+    var rightKeyCode: CGKeyCode {
+        switch self {
+        case .option: return CGKeyCode(0x3D)
+        case .shift: return CGKeyCode(0x3C)
+        case .control: return CGKeyCode(0x3E)
+        case .command: return CGKeyCode(0x36)
+        }
+    }
+
+    // Device-dependent modifier bits (IOLLEvent.h NX_DEVICE*KEYMASK). Unlike the higher-level
+    // `CGEventFlags.mask*` constants below, these distinguish which physical side (left/right)
+    // of the same logical modifier is down, which is what the chord detection needs.
+    var leftDeviceFlag: CGEventFlags {
+        switch self {
+        case .option: return CGEventFlags(rawValue: 0x20)
+        case .shift: return CGEventFlags(rawValue: 0x02)
+        case .control: return CGEventFlags(rawValue: 0x01)
+        case .command: return CGEventFlags(rawValue: 0x08)
+        }
+    }
+
+    var rightDeviceFlag: CGEventFlags {
+        switch self {
+        case .option: return CGEventFlags(rawValue: 0x40)
+        case .shift: return CGEventFlags(rawValue: 0x04)
+        case .control: return CGEventFlags(rawValue: 0x2000)
+        case .command: return CGEventFlags(rawValue: 0x10)
+        }
+    }
+
+    var overallMask: CGEventFlags {
+        switch self {
+        case .option: return .maskAlternate
+        case .shift: return .maskShift
+        case .control: return .maskControl
+        case .command: return .maskCommand
+        }
+    }
+}
+
+private func modifierChordEventCallback(
     proxy: CGEventTapProxy,
     type: CGEventType,
     event: CGEvent,
     userInfo: UnsafeMutableRawPointer?
 ) -> Unmanaged<CGEvent>? {
     if let userInfo {
-        let monitor = Unmanaged<OptionChordMonitor>.fromOpaque(userInfo).takeUnretainedValue()
+        let monitor = Unmanaged<ModifierChordMonitor>.fromOpaque(userInfo).takeUnretainedValue()
         monitor.receive(type: type, event: event)
     }
     return Unmanaged.passUnretained(event)
 }
 
-final class OptionChordMonitor {
+final class ModifierChordMonitor {
+    private let chord: ModifierChord
     private let emitter: NDJSONEmitter
     private let onChord: () -> Void
     private var tap: CFMachPort?
@@ -30,7 +94,8 @@ final class OptionChordMonitor {
     private var latched = false
     private var lastErrorCode: String?
 
-    init(emitter: NDJSONEmitter, onChord: @escaping () -> Void) {
+    init(chord: ModifierChord, emitter: NDJSONEmitter, onChord: @escaping () -> Void) {
+        self.chord = chord
         self.emitter = emitter
         self.onChord = onChord
     }
@@ -50,7 +115,7 @@ final class OptionChordMonitor {
             emitter.emitError(
                 AppSnapFailure(
                     code: "event_tap_disabled",
-                    message: "macOS disabled the passive Option-key listener; TeaCode re-enabled it."
+                    message: "macOS disabled the passive \(chord.label)-key listener; TeaCode re-enabled it."
                 ),
                 capturedAt: appSnapTimestamp()
             )
@@ -58,11 +123,11 @@ final class OptionChordMonitor {
         }
         guard type == .flagsChanged else { return }
         let keyCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
-        guard keyCode == leftOptionKey || keyCode == rightOptionKey else { return }
+        guard keyCode == chord.leftKeyCode || keyCode == chord.rightKeyCode else { return }
 
-        leftDown = event.flags.contains(leftOptionDeviceFlag)
-        rightDown = event.flags.contains(rightOptionDeviceFlag)
-        if !event.flags.contains(.maskAlternate) {
+        leftDown = event.flags.contains(chord.leftDeviceFlag)
+        rightDown = event.flags.contains(chord.rightDeviceFlag)
+        if !event.flags.contains(chord.overallMask) {
             reset()
             return
         }
@@ -91,7 +156,7 @@ final class OptionChordMonitor {
         guard CGPreflightListenEventAccess() else {
             reportOnce(AppSnapFailure(
                 code: "input-monitoring-required",
-                message: "Input Monitoring permission is required for the two-Option-key shortcut."
+                message: "Input Monitoring permission is required for the two-\(chord.label)-key shortcut."
             ))
             return false
         }
@@ -101,13 +166,13 @@ final class OptionChordMonitor {
             place: .headInsertEventTap,
             options: .listenOnly,
             eventsOfInterest: flagsChangedMask,
-            callback: optionChordEventCallback,
+            callback: modifierChordEventCallback,
             userInfo: Unmanaged.passUnretained(self).toOpaque()
         ), let newSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, newTap, 0)
         else {
             reportOnce(AppSnapFailure(
                 code: "event_tap_unavailable",
-                message: "macOS could not create the passive Option-key listener."
+                message: "macOS could not create the passive \(chord.label)-key listener."
             ))
             return false
         }

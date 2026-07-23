@@ -40,18 +40,6 @@ private func number(_ dictionary: [String: Any], _ key: CFString) -> NSNumber? {
 }
 
 func selectFrontmostWindow(excluding bundleIdentifier: String) -> Result<SelectedWindow, AppSnapFailure> {
-    guard let app = NSWorkspace.shared.frontmostApplication, !app.isTerminated else {
-        return .failure(AppSnapFailure(
-            code: "no_frontmost_application",
-            message: "There is no frontmost application to capture."
-        ))
-    }
-    guard app.bundleIdentifier != bundleIdentifier else {
-        return .failure(AppSnapFailure(
-            code: "excluded_frontmost_application",
-            message: "TeaCode does not capture its own window."
-        ))
-    }
     guard let windows = CGWindowListCopyWindowInfo(
         [.optionOnScreenOnly, .excludeDesktopElements],
         kCGNullWindowID
@@ -64,8 +52,9 @@ func selectFrontmostWindow(excluding bundleIdentifier: String) -> Result<Selecte
 
     var untitledFallback: (CGWindowID, CGRect, String?)?
     var selected: (CGWindowID, CGRect, String?)?
+    var selectedApplication: NSRunningApplication?
     for candidate in windows {
-        guard number(candidate, kCGWindowOwnerPID)?.int32Value == app.processIdentifier,
+        guard let ownerPID = number(candidate, kCGWindowOwnerPID)?.int32Value,
               number(candidate, kCGWindowLayer)?.intValue == 0,
               (number(candidate, kCGWindowAlpha)?.doubleValue ?? 1) > 0,
               (number(candidate, kCGWindowIsOnscreen)?.boolValue ?? true),
@@ -77,6 +66,15 @@ func selectFrontmostWindow(excluding bundleIdentifier: String) -> Result<Selecte
               bounds.height >= 2
         else { continue }
 
+        if let selectedApplication, ownerPID != selectedApplication.processIdentifier {
+            break
+        }
+        guard let application = NSRunningApplication(processIdentifier: ownerPID),
+              !application.isTerminated,
+              application.bundleIdentifier != bundleIdentifier
+        else { continue }
+        selectedApplication = application
+
         let title = (candidate[kCGWindowName as String] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let title, !title.isEmpty {
             selected = (rawWindowID, bounds, title)
@@ -87,7 +85,13 @@ func selectFrontmostWindow(excluding bundleIdentifier: String) -> Result<Selecte
     guard let chosen = selected ?? untitledFallback else {
         return .failure(AppSnapFailure(
             code: "no_eligible_window",
-            message: "The frontmost application has no visible shareable window."
+            message: "No visible shareable window is available outside TeaCode."
+        ))
+    }
+    guard let app = selectedApplication else {
+        return .failure(AppSnapFailure(
+            code: "no_frontmost_application",
+            message: "There is no frontmost application to capture."
         ))
     }
     return .success(SelectedWindow(

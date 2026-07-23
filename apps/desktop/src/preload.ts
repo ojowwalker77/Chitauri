@@ -124,6 +124,7 @@ contextBridge.exposeInMainWorld("desktopBridge", {
   appSnap: {
     getState: () => ipcRenderer.invoke(APP_SNAP_CHANNELS.getState),
     setEnabled: (enabled) => ipcRenderer.invoke(APP_SNAP_CHANNELS.setEnabled, enabled),
+    setChord: (chord) => ipcRenderer.invoke(APP_SNAP_CHANNELS.setChord, chord),
     requestPermissions: () => ipcRenderer.invoke(APP_SNAP_CHANNELS.requestPermissions),
     listPendingCaptures: () => ipcRenderer.invoke(APP_SNAP_CHANNELS.listPendingCaptures),
     acknowledgeCapture: (captureId) =>

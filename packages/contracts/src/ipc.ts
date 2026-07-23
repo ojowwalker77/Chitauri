@@ -257,13 +257,15 @@ export type DesktopAppSnapStatus =
   | "starting"
   | "ready"
   | "error";
+/** Which pair of physical modifier keys must be held together to trigger AppSnap. */
+export type DesktopAppSnapChord = "option" | "shift" | "control" | "command";
 
 export interface DesktopAppSnapState {
   platform: DesktopAppSnapPlatform;
   supported: boolean;
   enabled: boolean;
   status: DesktopAppSnapStatus;
-  shortcut: "both-option-keys" | null;
+  shortcut: DesktopAppSnapChord | null;
   inputMonitoringPermission: DesktopAppSnapPermission;
   screenRecordingPermission: DesktopAppSnapPermission;
   message: string | null;
@@ -345,6 +347,7 @@ export interface DesktopBridge {
   appSnap: {
     getState: () => Promise<DesktopAppSnapState>;
     setEnabled: (enabled: boolean) => Promise<DesktopAppSnapState>;
+    setChord: (chord: DesktopAppSnapChord) => Promise<DesktopAppSnapState>;
     requestPermissions: () => Promise<DesktopAppSnapState>;
     listPendingCaptures: () => Promise<DesktopAppSnapCapture[]>;
     acknowledgeCapture: (captureId: string) => Promise<void>;

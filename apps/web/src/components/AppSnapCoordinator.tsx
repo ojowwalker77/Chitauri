@@ -1,7 +1,7 @@
 // FILE: AppSnapCoordinator.tsx
 // Purpose: Delivers desktop AppSnaps into TeaCode composers with durable acknowledgement.
 
-import type { DesktopAppSnapCapture, ThreadId } from "@t3tools/contracts";
+import type { DesktopAppSnapCapture, DesktopAppSnapState, ThreadId } from "@t3tools/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef } from "react";
 
@@ -96,6 +96,7 @@ export function AppSnapCoordinator() {
   const focusedThreadRef = useRef<ThreadId | null>(focusedThreadId);
   const lastInteractionRef = useRef<AppSnapThreadAffinity | null>(null);
   const lastAppSnapRef = useRef<AppSnapThreadAffinity | null>(null);
+  const lastAppSnapStatusRef = useRef<DesktopAppSnapState["status"] | null>(null);
   const captureQueueRef = useRef<Promise<void>>(Promise.resolve());
   const seenCaptureIdsRef = useRef(new Set<string>());
   const blobHydrationInFlightRef = useRef(new Set<string>());
@@ -261,6 +262,17 @@ export function AppSnapCoordinator() {
       console.warn("[appsnap] Could not update the native listener", error);
     });
   }, [settings.enableAppSnap]);
+
+  useEffect(() => {
+    const bridge = window.desktopBridge?.appSnap;
+    if (!bridge) return;
+    // The manager only picks up the configured chord at watcher-spawn time, and doesn't persist
+    // it itself, so it has to be re-pushed here (like `enableAppSnap` above) every time the app
+    // starts, not just when the Settings picker changes it.
+    void bridge.setChord(settings.appSnapChord).catch((error) => {
+      console.warn("[appsnap] Could not update the native chord", error);
+    });
+  }, [settings.appSnapChord]);
 
   const routeToThread = useCallback(
     async (threadId: ThreadId) => {
@@ -442,6 +454,35 @@ export function AppSnapCoordinator() {
         .catch((error) => console.warn("[appsnap] Capture queue failed", error));
     };
 
+    // The manager privately checks/requests OS permission only when the user flips the
+    // Settings toggle. If that permission later goes missing (a dialog dismissed, one of
+    // the two prompts missed, access revoked), the watcher never starts and the shortcut
+    // silently does nothing — this is the only place that tells the user outside Settings.
+    const handleAppSnapState = (state: DesktopAppSnapState) => {
+      const previousStatus = lastAppSnapStatusRef.current;
+      lastAppSnapStatusRef.current = state.status;
+      if (!enableAppSnapRef.current) return;
+      if (state.status !== "permission-required" && state.status !== "error") return;
+      if (previousStatus === state.status) return;
+      toastManager.add({
+        type: "error",
+        title: "AppSnap needs attention",
+        description: state.message ?? "AppSnap can't listen for the shortcut right now.",
+        data: { allowCrossThreadVisibility: true },
+        actionProps: {
+          children: "Open settings",
+          onClick: () => {
+            void navigate({ to: "/settings", search: { section: "appsnap" } });
+          },
+        },
+      });
+    };
+    const unsubscribeState = bridge.onState(handleAppSnapState);
+    void bridge
+      .getState()
+      .then(handleAppSnapState)
+      .catch((error) => console.warn("[appsnap] Could not read the initial AppSnap state", error));
+
     const unsubscribeCapture = bridge.onCaptured((capture) => enqueueCapture(capture, true));
     const unsubscribeError = bridge.onError((error) => {
       toastManager.add({
@@ -471,10 +512,11 @@ export function AppSnapCoordinator() {
       .catch((error) => console.warn("[appsnap] Could not restore pending captures", error));
     return () => {
       disposed = true;
+      unsubscribeState();
       unsubscribeCapture();
       unsubscribeError();
     };
-  }, []);
+  }, [navigate]);
 
   return null;
 }

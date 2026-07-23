@@ -317,6 +317,84 @@ describe("AppSnap helper protocol and paths", () => {
   });
 });
 
+describe("AppSnap chord configuration", () => {
+  it("defaults to the option chord and reports it as the shortcut", () => {
+    const manager = createManager("/tmp/teacode-appsnap-chord-default");
+    expect(manager.getState().shortcut).toBe("option");
+  });
+
+  it("restarts a running watcher with the new chord", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "teacode-appsnap-chord-"));
+    const checkChild = createFakeChildProcess();
+    const watchChild = createFakeChildProcess();
+    const restartedWatchChild = createFakeChildProcess();
+    const spawn = vi
+      .fn()
+      .mockReturnValueOnce(checkChild)
+      .mockReturnValueOnce(watchChild)
+      .mockReturnValueOnce(restartedWatchChild) as unknown as typeof ChildProcess.spawn;
+    const manager = new DesktopAppSnapManager({
+      platform: "darwin",
+      helperPath: process.execPath,
+      captureDirectory: directory,
+      excludedBundleId: "dev.jow.TeaCode.dev",
+      spawn,
+      onState: vi.fn(),
+      onCaptured: vi.fn(),
+      onError: vi.fn(),
+    });
+    try {
+      const enable = manager.setEnabled(true);
+      await flushPromises();
+      checkChild.stdout.end(
+        `${JSON.stringify({
+          type: "permissions",
+          inputMonitoring: "granted",
+          screenRecording: "granted",
+        })}\n`,
+      );
+      checkChild.stderr.end();
+      checkChild.emit("close", 0, null);
+      await enable;
+      expect(spawn).toHaveBeenNthCalledWith(
+        2,
+        process.execPath,
+        expect.arrayContaining(["--chord", "option"]),
+        expect.anything(),
+      );
+
+      await manager.setChord("shift");
+      expect(watchChild.kill).toHaveBeenCalledWith("SIGTERM");
+      expect(manager.getState().shortcut).toBe("shift");
+      expect(spawn).toHaveBeenNthCalledWith(
+        3,
+        process.execPath,
+        expect.arrayContaining(["--chord", "shift"]),
+        expect.anything(),
+      );
+    } finally {
+      manager.dispose();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("does not restart or respawn when the chord is unchanged", async () => {
+    const spawn = vi.fn() as unknown as typeof ChildProcess.spawn;
+    const manager = new DesktopAppSnapManager({
+      platform: "darwin",
+      helperPath: process.execPath,
+      captureDirectory: "/tmp/teacode-appsnap-chord-noop",
+      excludedBundleId: "dev.jow.TeaCode.dev",
+      spawn,
+      onState: vi.fn(),
+      onCaptured: vi.fn(),
+      onError: vi.fn(),
+    });
+    await manager.setChord("option");
+    expect(spawn).not.toHaveBeenCalled();
+  });
+});
+
 describe("durable AppSnap pending captures", () => {
   it("restores, caps, and acknowledges private pending pairs", async () => {
     const directory = mkdtempSync(join(tmpdir(), "teacode-appsnap-pending-"));

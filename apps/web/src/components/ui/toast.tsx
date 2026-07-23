@@ -19,7 +19,11 @@ import { cn } from "~/lib/utils";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { APP_TOOLTIP_SURFACE_CLASS_NAME } from "~/components/chat/composerPickerStyles";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
-import { buildVisibleToastLayout, shouldHideCollapsedToastContent } from "./toast.logic";
+import {
+  buildVisibleToastLayout,
+  shouldHideCollapsedToastContent,
+  shouldUseCompactToast,
+} from "./toast.logic";
 import {
   COMPACT_NOTIFICATION_SURFACE_CLASS_NAME,
   EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME,
@@ -56,10 +60,6 @@ const TOAST_ICONS = {
   success: CircleCheckIcon,
   warning: TriangleAlertIcon,
 } as const;
-
-function shouldUseCompactToast(toast: ToastObject<ThreadToastData>): boolean {
-  return !toast.data?.copyText && !toast.actionProps && !toast.data?.secondaryActionProps;
-}
 
 function isArchiveUndoToast(toast: ToastObject<ThreadToastData>): boolean {
   return Boolean(toast.data?.archiveUndo);
@@ -509,7 +509,12 @@ function Toasts({ position = "top-center" }: { position: ToastPosition }) {
             visibleIndex,
             visibleToastLayout.items.length,
           );
-          const compact = shouldUseCompactToast(toast);
+          const compact = shouldUseCompactToast({
+            description: toast.description,
+            copyText: toast.data?.copyText,
+            hasPrimaryAction: Boolean(toast.actionProps),
+            hasSecondaryAction: Boolean(toast.data?.secondaryActionProps),
+          });
           const archiveUndoToast = isArchiveUndoToast(toast);
 
           return (
@@ -642,7 +647,14 @@ function AnchoredToasts() {
           .map((toast) => {
             const tooltipStyle = toast.data?.tooltipStyle ?? false;
             const positionerProps = toast.positionerProps;
-            const compact = !tooltipStyle && shouldUseCompactToast(toast);
+            const compact =
+              !tooltipStyle &&
+              shouldUseCompactToast({
+                description: toast.description,
+                copyText: toast.data?.copyText,
+                hasPrimaryAction: Boolean(toast.actionProps),
+                hasSecondaryAction: Boolean(toast.data?.secondaryActionProps),
+              });
 
             if (!positionerProps?.anchor) {
               return null;
