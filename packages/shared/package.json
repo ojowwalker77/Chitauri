@@ -168,6 +168,10 @@
       "types": "./src/taskReferences.ts",
       "import": "./src/taskReferences.ts"
     },
+    "./workerChannelMessages": {
+      "types": "./src/workerChannelMessages.ts",
+      "import": "./src/workerChannelMessages.ts"
+    },
     "./workerMentions": {
       "types": "./src/workerMentions.ts",
       "import": "./src/workerMentions.ts"

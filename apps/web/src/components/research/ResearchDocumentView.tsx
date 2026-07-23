@@ -141,11 +141,19 @@ export function ResearchDocumentView({
 
   return (
     <div className="research-document-scroll min-h-0 flex-1 overflow-y-auto bg-background">
-      <div className="mx-auto grid w-full max-w-[92rem] gap-6 px-4 pb-16 pt-5 sm:px-6 lg:px-8 xl:grid-cols-[minmax(0,1fr)_18rem]">
+      {/* The composer overlays the bottom of this surface, so the document has to
+          scroll clear of it. `--chat-composer-inset` is the composer's measured
+          height, published by ChatView; without it the last lines of the document
+          sit permanently underneath and read as cut off. */}
+      <div className="mx-auto grid w-full max-w-[92rem] gap-6 px-4 pt-5 pb-[calc(4rem+var(--chat-composer-inset,0px))] sm:px-6 lg:px-8 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <article className="min-w-0 overflow-hidden rounded-xl border border-panel-border bg-panel">
           <header className="flex flex-col gap-5 px-6 pb-6 pt-7 sm:px-9 sm:pt-9 lg:px-12">
             <div className="flex flex-wrap items-start justify-between gap-5">
-              <div className="min-w-0 flex-1">
+              {/* A real flex-basis, not just `flex-1`: with `flex: 1 1 0%` the
+                  browser measures this column as zero when deciding whether the
+                  row fits, so it never wrapped the actions to their own line and
+                  instead squeezed the title down to one word per line. */}
+              <div className="min-w-0 flex-1 basis-[26rem]">
                 <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span className="rounded-full bg-selected px-2.5 py-1 font-medium">
                     {document.archivedAt ? "Archived Markdown" : "Markdown research"}

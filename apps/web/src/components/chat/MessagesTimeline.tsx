@@ -114,6 +114,8 @@ import { isAgentActivityWorkEntry } from "./agentActivity.logic";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { deriveDisplayedUserMessageState } from "~/lib/composerMessageContext";
 import { cn } from "~/lib/utils";
+import { WorkerChannelCard } from "./WorkerChannelCard";
+import type { WorkerChannelView } from "./workerChannel";
 import {
   DEFAULT_CHAT_FONT_SIZE_PX,
   normalizeChatFontSizePx,
@@ -399,6 +401,10 @@ function WorktreeSetupCard({ steps }: { steps: ReadonlyArray<WorktreeSetupStep> 
 
 interface MessagesTimelineProps {
   assistantProvider?: ProviderKind;
+  /** Cross-Worker request channels this Thread is an end of. */
+  workerChannels?: ReadonlyArray<WorkerChannelView> | undefined;
+  onOpenPeerThread?: ((channel: WorkerChannelView) => void) | undefined;
+  onCloseWorkerChannel?: ((channel: WorkerChannelView) => void) | undefined;
   hasMessages: boolean;
   isWorking: boolean;
   activeTurnInProgress: boolean;
@@ -503,6 +509,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   chatFontSizePx = DEFAULT_CHAT_FONT_SIZE_PX,
   timestampFormat,
   workspaceRoot,
+  workerChannels,
+  onOpenPeerThread,
+  onCloseWorkerChannel,
   emptyStateContent,
   bottomContentInsetPx,
   contentInsetRightPx,
@@ -617,8 +626,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         activeTurnStartedAt,
         turnDiffSummaryByAssistantMessageId,
         revertTurnCountByUserMessageId,
+        workerChannels,
       }),
     [
+      workerChannels,
       timelineEntries,
       isWorking,
       presentedWorktreeSetup,
@@ -1717,6 +1728,15 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             chatTypographyStyle={chatTypographyStyle}
           />
         </div>
+      )}
+
+      {row.kind === "worker-channel" && (
+        <WorkerChannelCard
+          channel={row.channel}
+          chatMetaFontSizePx={appTypographyScale.uiSmPx}
+          onOpenPeerThread={onOpenPeerThread}
+          onCloseChannel={onCloseWorkerChannel}
+        />
       )}
 
       {row.kind === "working-header" && (

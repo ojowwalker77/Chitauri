@@ -4,6 +4,8 @@
 // Exports: row derivation, structural sharing, copy/timer helpers
 
 import { type MessageId, type TurnId } from "@t3tools/contracts";
+import { workerChannelTaskIdOf } from "@t3tools/shared/workerChannelMessages";
+import type { WorkerChannelView } from "./workerChannel";
 import { type TimelineEntry, type WorkLogEntry, formatElapsed } from "../../session-logic";
 import { normalizeCompactToolLabel as normalizeCompactToolLabelValue } from "../../lib/toolCallLabel";
 import {
@@ -75,6 +77,15 @@ export type MessagesTimelineRow =
       id: string;
       createdAt: string;
       proposedPlan: ProposedPlan;
+    }
+  | {
+      // The transcript artifact for a cross-Worker request channel. Replaces the
+      // raw protocol message the channel injects, which is model-facing text and
+      // reads as noise.
+      kind: "worker-channel";
+      id: string;
+      createdAt: string;
+      channel: WorkerChannelView;
     }
   | {
       // Live-turn header that mirrors the settled "Worked for Xs" disclosure
@@ -239,6 +250,8 @@ export function deriveMessagesTimelineRows(input: {
   activeTurnStartedAt: string | null;
   turnDiffSummaryByAssistantMessageId: ReadonlyMap<MessageId, TurnDiffSummary>;
   revertTurnCountByUserMessageId: ReadonlyMap<MessageId, number>;
+  /** Channels this Thread is an end of, keyed for lookup by injected message id. */
+  workerChannels?: ReadonlyArray<WorkerChannelView> | undefined;
 }): MessagesTimelineRow[] {
   const nextRows: MessagesTimelineRow[] = [];
   const timelineMessages = input.timelineEntries.flatMap((entry) =>
@@ -291,10 +304,34 @@ export function deriveMessagesTimelineRows(input: {
     pendingWorkGroup = null;
   };
 
+  // A channel renders once, at the point its first message lands, so the card
+  // keeps the chronological position of the exchange it replaces.
+  const channelByTaskId = new Map((input.workerChannels ?? []).map((c) => [c.taskId as string, c]));
+  const renderedChannelTaskIds = new Set<string>();
+
   for (let index = 0; index < input.timelineEntries.length; index += 1) {
     const timelineEntry = input.timelineEntries[index];
     if (!timelineEntry) {
       continue;
+    }
+
+    if (timelineEntry.kind === "message") {
+      const channelTaskId = workerChannelTaskIdOf(timelineEntry.message.id);
+      if (channelTaskId) {
+        // Channel traffic never renders as a typed message. The card owns it.
+        const channel = channelByTaskId.get(channelTaskId);
+        if (channel && !renderedChannelTaskIds.has(channelTaskId)) {
+          renderedChannelTaskIds.add(channelTaskId);
+          flushPendingWorkGroup();
+          nextRows.push({
+            kind: "worker-channel",
+            id: `worker-channel-${channelTaskId}`,
+            createdAt: timelineEntry.message.createdAt,
+            channel,
+          });
+        }
+        continue;
+      }
     }
 
     if (timelineEntry.kind === "work") {
@@ -381,6 +418,20 @@ export function deriveMessagesTimelineRows(input: {
       id: "worktree-setup-row",
       steps: input.worktreeSetup.steps,
       open: input.worktreeSetupOpen,
+    });
+  }
+
+  // The requester Thread receives no injected message when it sends a request —
+  // only when a reply comes back — so a freshly sent channel would otherwise be
+  // invisible until the peer answers.
+  for (const channel of input.workerChannels ?? []) {
+    if (renderedChannelTaskIds.has(channel.taskId)) continue;
+    renderedChannelTaskIds.add(channel.taskId);
+    nextRows.push({
+      kind: "worker-channel",
+      id: `worker-channel-${channel.taskId}`,
+      createdAt: channel.createdAt,
+      channel,
     });
   }
 
@@ -784,6 +835,9 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
   if (a.kind !== b.kind || a.id !== b.id) return false;
 
   switch (a.kind) {
+    case "worker-channel":
+      return a.channel === (b as typeof a).channel;
+
     case "working-header":
       return a.createdAt === (b as typeof a).createdAt;
 

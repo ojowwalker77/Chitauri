@@ -214,10 +214,7 @@ function ResearchDetailRoute() {
           threadId={threadId}
           transcriptContent={transcriptContent}
           surfaceTitle={document?.title ?? "Research Library"}
-          composerDisclosure={{
-            label: "Polish with agent",
-            description: "Open the composer for larger revisions",
-          }}
+          composerCollapsedByDefault
           {...(document
             ? {
                 transformOutgoingPrompt: (prompt: string) =>

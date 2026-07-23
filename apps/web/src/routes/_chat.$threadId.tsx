@@ -1,13 +1,12 @@
 // FILE: _chat.$threadId.tsx
 // Purpose: Resolves the active thread route into its chat surface.
 // Layer: Route container
-// Depends on: ChatView and the thread-route restore helpers.
+// Depends on: ChatSplitSurface and the thread-route restore helpers.
 
 import { type ProjectId, ThreadId } from "@t3tools/contracts";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import ChatView from "../components/ChatView";
-import { ProjectSurfaceFrame } from "../components/ProjectSurfaceFrame";
+import { ChatSplitSurface } from "../components/chat/ChatSplitSurface";
 import { useComposerDraftStore } from "../composerDraftStore";
 import {
   type EmptyRouteRestoreRecoveryState,
@@ -18,42 +17,15 @@ import {
   refreshEmptyRouteRestoreSnapshot,
   waitForEmptyRouteRestoreFallbackDelay,
 } from "../chatRouteRecovery";
-import { SINGLE_CHAT_PANE_SCOPE_ID } from "../lib/chatPaneScope";
 import { useStore } from "../store";
 import { readNativeApi } from "../nativeApi";
 import { createThreadExistsSelector, createThreadProjectIdSelector } from "../storeSelectors";
-import {
-  CHAT_SURFACE_TRANSPARENT_CLASS_NAME,
-  CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME,
-  CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME,
-} from "../components/chat/composerPickerStyles";
-import { cn } from "~/lib/utils";
-import { RouteInsetSurface } from "~/components/RouteInsetSurface";
 
 function resolveSingleProjectId(input: {
   threadProjectId: ProjectId | null;
   draftProjectId: ProjectId | null;
 }): ProjectId | null {
   return input.threadProjectId ?? input.draftProjectId ?? null;
-}
-
-function SingleChatSurface(props: { threadId: ThreadId }) {
-  return (
-    <ProjectSurfaceFrame>
-      <div
-        className={cn(CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME, CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME)}
-      >
-        <RouteInsetSurface surfaceClassName={CHAT_SURFACE_TRANSPARENT_CLASS_NAME}>
-          <ChatView
-            threadId={props.threadId}
-            paneScopeId={SINGLE_CHAT_PANE_SCOPE_ID}
-            surfaceMode="single"
-            isFocusedPane={true}
-          />
-        </RouteInsetSurface>
-      </div>
-    </ProjectSurfaceFrame>
-  );
 }
 
 function ChatThreadRouteView() {
@@ -170,7 +142,7 @@ function ChatThreadRouteView() {
     return null;
   }
 
-  return <SingleChatSurface threadId={threadId} />;
+  return <ChatSplitSurface routeThreadId={threadId} />;
 }
 
 export const Route = createFileRoute("/_chat/$threadId")({

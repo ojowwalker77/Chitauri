@@ -9,7 +9,6 @@ import {
   type ProjectScript,
   type ModelSlug,
   type ProviderKind,
-  type ProjectEntry,
   type ProjectId,
   type ProviderApprovalDecision,
   type ProviderAgentDescriptor,
@@ -60,9 +59,10 @@ import {
   useState,
   type MouseEvent,
   type ReactNode,
+  type CSSProperties,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Debouncer, useDebouncedValue } from "@tanstack/react-pacer";
+import { Debouncer } from "@tanstack/react-pacer";
 import { useNavigate } from "@tanstack/react-router";
 import { type LegendListRef } from "@legendapp/list/react";
 import {
@@ -82,7 +82,6 @@ import {
   supportsSkillDiscovery,
   supportsThreadCompaction,
 } from "~/lib/providerDiscoveryReactQuery";
-import { projectSearchEntriesQueryOptions } from "~/lib/projectReactQuery";
 import { serverConfigQueryOptions, serverQueryKeys } from "~/lib/serverReactQuery";
 import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
 import { SINGLE_CHAT_PANE_SCOPE_ID } from "~/lib/chatPaneScope";
@@ -94,7 +93,6 @@ import {
   providerSkillReferencesEqual,
   skillMentionPrefix,
 } from "~/lib/composerMentions";
-import { getLocalFolderBrowseRootPath, isLocalFolderMentionQuery } from "~/lib/localFolderMentions";
 import {
   findProviderStatus,
   isProviderUsable,
@@ -230,16 +228,16 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ComposerSendArrowIcon,
-  LayoutSidebarIcon,
   PencilIcon,
+  LayoutSidebarIcon,
   RefreshCwIcon,
   XIcon,
 } from "~/lib/icons";
 import { ComposerQueuedHeader } from "./chat/ComposerQueuedHeader";
 import { ComposerLiveChangesHeader } from "./chat/ComposerLiveChangesHeader";
+import { ProviderIcon } from "./ProviderIcon";
 import { Button } from "./ui/button";
-import { DisclosureChevron } from "./ui/DisclosureChevron";
-import { DisclosureRegion } from "./ui/DisclosureRegion";
+import { IconButton } from "./ui/icon-button";
 import { Skeleton } from "./ui/skeleton";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "./ui/menu";
 // terminalSession removed
@@ -257,7 +255,10 @@ import {
   type ProjectScriptRunOptions,
   type ProjectScriptRunResult,
 } from "~/projectScripts";
+import { disclosurePopClassName } from "~/lib/disclosureMotion";
+import { useMeasuredHeight } from "~/hooks/useMeasuredHeight";
 import { launchProjectRun } from "~/projectRunLauncher";
+import { deriveWorkerChannels, type WorkerChannelView } from "./chat/workerChannel";
 import { newCommandId, newMessageId, newProjectId, newThreadId } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
 // terminalCloseConfirmation removed
@@ -358,10 +359,6 @@ import {
 import { ComposerModelEffortPicker } from "./chat/ComposerModelEffortPicker";
 import { resolveTraitsTriggerSummary, TraitsPicker } from "./chat/TraitsPicker";
 import { ComposerCommandItem, ComposerCommandMenu } from "./chat/ComposerCommandMenu";
-import {
-  ComposerLocalDirectoryMenu,
-  type ComposerLocalDirectoryMenuHandle,
-} from "./chat/ComposerLocalDirectoryMenu";
 import { ComposerPendingApprovalPanel } from "./chat/ComposerPendingApprovalPanel";
 import { ComposerInputBanners } from "./chat/ComposerInputBanners";
 import { ComposerPendingUserInputPanel } from "./chat/ComposerPendingUserInputPanel";
@@ -455,7 +452,6 @@ const EMPTY_PINNED_MESSAGES: readonly PinnedMessage[] = [];
 const EMPTY_THREAD_MARKERS: readonly ThreadMarker[] = [];
 const EMPTY_PINNED_TEXT: ReadonlyMap<MessageId, string> = new Map();
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
-const EMPTY_PROJECT_ENTRIES: ProjectEntry[] = [];
 const EMPTY_PROVIDER_NATIVE_COMMANDS: ProviderNativeCommandDescriptor[] = [];
 const EMPTY_PROVIDER_SKILLS: ProviderSkillDescriptor[] = [];
 const LOCAL_PROJECT_DRAFT_CONTEXT = {
@@ -657,8 +653,6 @@ function formatPastedTextTitleSeed(pastedTexts: ReadonlyArray<PastedTextDraft>):
     : `${pastedTexts.length} pasted texts`;
 }
 
-const COMPOSER_PATH_QUERY_DEBOUNCE_MS = 120;
-
 function ComposerControlSkeleton(props: { widthClassName: string }) {
   return (
     <div
@@ -704,6 +698,8 @@ interface ChatViewProps {
     onClick: () => void;
   } | null;
   onChangeThreadInSplitPane?: () => void;
+  /** Provided for a pane in a split; the only surface that can be closed. */
+  onClosePane?: (() => void) | undefined;
   onCloseThreadPane?: () => void;
   /** Replaces the transcript while preserving TeaCode's real composer and thread runtime. */
   transcriptContent?: ReactNode;
@@ -711,11 +707,13 @@ interface ChatViewProps {
   surfaceTitle?: string;
   /** Adds surface-specific context to provider messages without changing the visible draft. */
   transformOutgoingPrompt?: (prompt: string) => string;
-  /** Keeps a secondary surface's agent composer available without competing with its content. */
-  composerDisclosure?: {
-    label: string;
-    description: string;
-  };
+  /**
+   * Starts the Thread with the composer collapsed, for surfaces whose own content
+   * is the point (research documents). A boolean, not a copy object: an inline
+   * object prop changes identity every render, which made the reset effect below
+   * re-run continuously and flicker the composer open and shut.
+   */
+  composerCollapsedByDefault?: boolean;
 }
 
 function normalizeRestoredQueuedPrompt(value: string): string {
@@ -756,15 +754,17 @@ export default function ChatView({
   onMaximizeSurface,
   viewModeAction = null,
   onChangeThreadInSplitPane,
+  onClosePane,
   onCloseThreadPane,
   transcriptContent,
   surfaceTitle,
   transformOutgoingPrompt,
-  composerDisclosure,
+  composerCollapsedByDefault = false,
 }: ChatViewProps) {
   const markThreadVisited = useStore((store) => store.markThreadVisited);
   const workerProjects = useStore((store) => store.projects);
   const workerTasks = useStore((store) => store.tasks);
+  const allThreads = useStore((store) => store.threads);
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
   const setStoreThreadError = useStore((store) => store.setError);
   const setStoreThreadWorkspace = useStore((store) => store.setThreadWorkspace);
@@ -785,10 +785,10 @@ export default function ChatView({
   const queryClient = useQueryClient();
   const isEditorRail = presentationMode === "editor";
   const isInactiveSplitPane = surfaceMode === "split" && !isFocusedPane;
-  const [composerDisclosureRequestedOpen, setComposerDisclosureRequestedOpen] = useState(false);
+  const [composerCollapsed, setComposerCollapsed] = useState(composerCollapsedByDefault);
   useEffect(() => {
-    setComposerDisclosureRequestedOpen(false);
-  }, [composerDisclosure?.label, threadId]);
+    setComposerCollapsed(composerCollapsedByDefault);
+  }, [composerCollapsedByDefault, threadId]);
   const composerDraft = useComposerThreadDraft(threadId);
   const prompt = composerDraft.prompt;
   const composerPromptHistorySavedDraft = composerDraft.promptHistorySavedDraft;
@@ -922,6 +922,10 @@ export default function ChatView({
   // can re-plan without re-subscribing; the sync function is exposed via ref
   // so label changes can re-plan without a resize.
   const [composerFooterTier, setComposerFooterTier] = useState(0);
+  // The picker cluster moved out of the composer footer and into the branch
+  // underbar, so overflow has to be measured there — the footer no longer holds
+  // the controls the tiering degrades.
+  const composerUnderbarRef = useRef<HTMLDivElement | null>(null);
   const composerFooterTierRef = useRef(0);
   const composerFooterDemotionWidthsRef = useRef<ReadonlyArray<number | undefined>>([]);
   const composerFooterLayoutSyncRef = useRef<(() => void) | null>(null);
@@ -1060,7 +1064,6 @@ export default function ChatView({
   // blocked it; nothing else re-triggers the effect once they reset.
   const [queuedAutoDispatchTick, setQueuedAutoDispatchTick] = useState(0);
   const activeComposerMenuItemRef = useRef<ComposerCommandItem | null>(null);
-  const localDirectoryMenuRef = useRef<ComposerLocalDirectoryMenuHandle | null>(null);
   const attachmentPreviewHandoffByMessageIdRef = useRef<Record<string, string[]>>({});
   const attachmentPreviewHandoffTimeoutByMessageIdRef = useRef<Record<string, number>>({});
   const sendInFlightRef = useRef(false);
@@ -2071,8 +2074,8 @@ export default function ChatView({
   // (live file changes, active task list, queued follow-ups). The composer overlaps the
   // scrolling transcript, so the transcript reserves matching bottom space to keep its
   // last rows clear of this chrome instead of letting them slide underneath and clip.
-  const [composerStackedChromeHeight, setComposerStackedChromeHeight] = useState(0);
-  const composerStackedChromeObserverRef = useRef<ResizeObserver | null>(null);
+  const [composerStackedChromeHeight, measureComposerStackedChrome] = useMeasuredHeight();
+  const [composerFloatingHeight, measureComposerFloating] = useMeasuredHeight();
   const previousComposerStackedChromeHeightRef = useRef(0);
   const activeTaskList = useMemo((): ActiveTaskListState | null => {
     if (showDebugTaskBanner) {
@@ -2125,44 +2128,18 @@ export default function ChatView({
   // the composer mounts/unmounts, and the observer catches every panel appearing,
   // resizing, or collapsing. Measuring the wrapper (rather than each panel) keeps one
   // source of truth as panels are added or removed.
-  const measureComposerStackedChrome = useCallback((element: HTMLDivElement | null) => {
-    composerStackedChromeObserverRef.current?.disconnect();
-    composerStackedChromeObserverRef.current = null;
-    if (!element) {
-      setComposerStackedChromeHeight(0);
-      return;
-    }
-
-    const updateHeight = () => {
-      setComposerStackedChromeHeight(Math.ceil(element.getBoundingClientRect().height));
-    };
-
-    updateHeight();
-    if (typeof ResizeObserver === "undefined") {
-      return;
-    }
-
-    const observer = new ResizeObserver(updateHeight);
-    observer.observe(element);
-    composerStackedChromeObserverRef.current = observer;
-    // React invokes this callback ref with null on unmount (and re-attaches if the node
-    // changes), so the disconnect at the top of this function is the single teardown path.
-  }, []);
   const showPlanFollowUpPrompt =
     pendingUserInputs.length === 0 &&
     latestTurnSettled &&
     hasActionableProposedPlan(activeProposedPlan);
   const activePendingApproval = pendingApprovals[0] ?? null;
+  // Forced open only for states that need the composer in view: a running turn to
+  // watch or stop, and prompts that need answering. Connecting is not one of them
+  // — a research Thread connects its session on open, which kept the composer
+  // expanded on arrival even though the disclosure defaults to closed.
   const composerDisclosureForcedOpen =
-    composerDisclosure !== undefined &&
-    (isConnecting ||
-      phase === "running" ||
-      activePendingApproval !== null ||
-      pendingUserInputs.length > 0);
-  const composerDisclosureOpen =
-    composerDisclosure === undefined ||
-    composerDisclosureRequestedOpen ||
-    composerDisclosureForcedOpen;
+    phase === "running" || activePendingApproval !== null || pendingUserInputs.length > 0;
+  const composerDisclosureOpen = !composerCollapsed || composerDisclosureForcedOpen;
   const serverAcknowledgedLocalDispatch = useMemo(
     () =>
       hasServerAcknowledgedLocalDispatch({
@@ -2642,25 +2619,8 @@ export default function ChatView({
       })
     : null;
   const composerTriggerKind = composerTrigger?.kind ?? null;
-  const mentionTriggerQuery = composerTrigger?.kind === "mention" ? composerTrigger.query : "";
-  const isMentionTrigger = composerTriggerKind === "mention";
-  const platform = typeof navigator === "undefined" ? "" : navigator.platform;
   const branchesQuery = useQuery(gitBranchesQueryOptions(gitBranchSourceCwd));
-  const localFolderBrowseRootPath = getLocalFolderBrowseRootPath(
-    serverConfigQuery.data?.homeDir ?? null,
-    isMacPlatform(platform),
-  );
-  const isLocalFolderBrowserOpen =
-    composerCommandPicker === null &&
-    isMentionTrigger &&
-    isLocalFolderMentionQuery(mentionTriggerQuery);
   const isSkillTrigger = composerTriggerKind === "skill";
-  const [debouncedPathQuery, composerPathQueryDebouncer] = useDebouncedValue(
-    mentionTriggerQuery,
-    { wait: COMPOSER_PATH_QUERY_DEBOUNCE_MS },
-    (debouncerState) => ({ isPending: debouncerState.isPending }),
-  );
-  const effectiveMentionQuery = mentionTriggerQuery.length > 0 ? debouncedPathQuery : "";
   const composerSkillCwd = providerModelDiscoveryCwd;
   const providerComposerCapabilitiesQuery = useQuery(
     providerComposerCapabilitiesQueryOptions(selectedProvider),
@@ -2723,15 +2683,6 @@ export default function ChatView({
         composerSkillCwd !== null,
     }),
   );
-  const workspaceEntriesQuery = useQuery(
-    projectSearchEntriesQueryOptions({
-      cwd: gitCwd,
-      query: effectiveMentionQuery,
-      enabled: isMentionTrigger && !isLocalFolderBrowserOpen,
-      limit: 80,
-    }),
-  );
-  const workspaceEntries = workspaceEntriesQuery.data?.entries ?? EMPTY_PROJECT_ENTRIES;
   const activeRootBranch = useMemo(
     () =>
       resolveComposerSlashRootBranch({
@@ -2842,7 +2793,6 @@ export default function ChatView({
     providerPlugins,
     providerNativeCommands,
     providerSkills,
-    workspaceEntries,
     workers: workerProjects.filter((project) => project.kind === "project"),
     tasks: workerTasks,
     currentWorkerId: activeThread?.projectId ?? "",
@@ -3084,6 +3034,10 @@ export default function ChatView({
     () => shortcutLabelForCommand(keybindings, "chat.split"),
     [keybindings],
   );
+  const composerCollapseShortcutLabel = useMemo(
+    () => shortcutLabelForCommand(keybindings, "composer.collapse.toggle"),
+    [keybindings],
+  );
   const modelPickerShortcutLabel = useMemo(
     () =>
       shortcutLabelForCommand(keybindings, "modelPicker.toggle") ??
@@ -3204,24 +3158,36 @@ export default function ChatView({
     [setStoreThreadError],
   );
 
-  const focusComposer = useCallback(() => {
-    if (composerDisclosure && !composerDisclosureOpen) {
-      pendingComposerFocusRef.current = true;
-      setComposerDisclosureRequestedOpen(true);
-      return;
-    }
-    // Secondary chrome is deferred during thread switches; replay focus once it
-    // mounts. A disabled editor (dispatch connecting, pending approval) cannot
-    // take focus either, so keep the request pending until it re-enables.
-    const editor = composerEditorRef.current;
-    if (!secondaryChromeReady || !editor || isComposerEditorDisabled) {
-      pendingComposerFocusRef.current = true;
-      return;
-    }
-    pendingComposerFocusRef.current = false;
-    editor.focusAtEnd();
-  }, [composerDisclosure, composerDisclosureOpen, secondaryChromeReady, isComposerEditorDisabled]);
+  // `expand` separates an explicit "put me in the composer" (⌘L, the collapsed
+  // bar) from the ambient refocus the app does on thread mount and after a send.
+  // Without it, any ambient focus reopened a composer the user had just hidden —
+  // which read as ⌘J collapsing and instantly uncollapsing.
+  const focusComposer = useCallback(
+    (options?: { expand?: boolean }) => {
+      if (!composerDisclosureOpen) {
+        if (!options?.expand) return;
+        pendingComposerFocusRef.current = true;
+        setComposerCollapsed(false);
+        return;
+      }
+      // Secondary chrome is deferred during thread switches; replay focus once it
+      // mounts. A disabled editor (dispatch connecting, pending approval) cannot
+      // take focus either, so keep the request pending until it re-enables.
+      const editor = composerEditorRef.current;
+      if (!secondaryChromeReady || !editor || isComposerEditorDisabled) {
+        pendingComposerFocusRef.current = true;
+        return;
+      }
+      pendingComposerFocusRef.current = false;
+      editor.focusAtEnd();
+    },
+    [composerDisclosureOpen, secondaryChromeReady, isComposerEditorDisabled],
+  );
   const toggleComposerFocus = useCallback(() => {
+    if (!composerDisclosureOpen) {
+      focusComposer({ expand: true });
+      return;
+    }
     const editor = composerEditorRef.current;
     if (secondaryChromeReady && editor?.isFocused()) {
       pendingComposerFocusRef.current = false;
@@ -3229,7 +3195,7 @@ export default function ChatView({
       return;
     }
     focusComposer();
-  }, [focusComposer, secondaryChromeReady]);
+  }, [composerDisclosureOpen, focusComposer, secondaryChromeReady]);
   const scheduleComposerFocus = useCallback(() => {
     pendingComposerFocusRef.current = true;
     window.requestAnimationFrame(() => {
@@ -3870,21 +3836,14 @@ export default function ChatView({
       // Tier the footer controls by MEASURED overflow: demote one step while
       // the footer row's content is wider than the row, promote back (with
       // hysteresis) when the recorded overflow width is comfortably exceeded.
-      const footerRow = composerForm.querySelector<HTMLElement>("[data-chat-composer-footer]");
-      if (footerRow) {
-        const rowOverflows = footerRow.scrollWidth > footerRow.clientWidth + 1;
-        // The leading cluster clips (overflow-hidden) in compact mode instead
-        // of growing the row's scrollWidth, so check it directly — a clipped
-        // leading cluster must also demote the tier.
-        const leadingCluster = footerRow.querySelector<HTMLElement>("[data-chat-composer-leading]");
-        const leadingClips =
-          nextCompact &&
-          leadingCluster !== null &&
-          leadingCluster.scrollWidth > leadingCluster.clientWidth + 1;
+      // The underbar is `overflow-hidden`, so its content clips rather than
+      // growing the row — compare scroll width against client width directly.
+      const pickerRow = composerUnderbarRef.current;
+      if (pickerRow) {
         const nextStep = resolveNextComposerFooterTier({
           currentTier: composerFooterTierRef.current,
-          clientWidth: footerRow.clientWidth,
-          isOverflowing: rowOverflows || leadingClips,
+          clientWidth: pickerRow.clientWidth,
+          isOverflowing: pickerRow.scrollWidth > pickerRow.clientWidth + 1,
           demotionWidths: composerFooterDemotionWidthsRef.current,
         });
         composerFooterDemotionWidthsRef.current = nextStep.demotionWidths;
@@ -3933,6 +3892,11 @@ export default function ChatView({
     });
 
     observer.observe(composerForm);
+    // The underbar holds the tiered pickers now and can change width independently
+    // of the composer form (split resize, branch label length), so it needs its own
+    // observation or the tier never re-evaluates.
+    const underbar = composerUnderbarRef.current;
+    if (underbar) observer.observe(underbar);
     return () => {
       observer.disconnect();
     };
@@ -4424,6 +4388,17 @@ export default function ChatView({
         return;
       }
 
+      if (command === "composer.collapse.toggle") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (composerDisclosureForcedOpen) return;
+        setComposerCollapsed((collapsed) => {
+          if (collapsed) window.requestAnimationFrame(() => scheduleComposerFocus());
+          return !collapsed;
+        });
+        return;
+      }
+
       if (command === "modelPicker.toggle") {
         if (!composerPickerShortcutActive) return;
         event.preventDefault();
@@ -4471,6 +4446,7 @@ export default function ChatView({
   }, [
     activeProject,
     activeThreadId,
+    composerDisclosureForcedOpen,
     runProjectScript,
     keybindings,
     onToggleDiff,
@@ -6350,8 +6326,17 @@ export default function ChatView({
   useLayoutEffect(() => {
     composerFooterLayoutSyncRef.current?.();
   }, [composerFooterTier]);
-  const composerModelPickerWidthClassName = isComposerFooterCompact ? "w-32" : "w-36 sm:w-44";
-  const composerOptionsPickerWidthClassName = isComposerFooterCompact ? "w-28" : "w-32";
+  // Capped rather than fixed widths. These pickers moved out of the composer
+  // footer and into the branch underbar, which is narrower and shares its row with
+  // the worktree and branch controls — a hard `w-*` there overflows a split pane
+  // instead of giving way. `isComposerFooterCompact` still sets the ceiling, since
+  // it tracks the same pane width.
+  const composerModelPickerWidthClassName = isComposerFooterCompact
+    ? "w-full min-w-0 max-w-32 shrink"
+    : "w-full min-w-0 max-w-36 shrink sm:max-w-44";
+  const composerOptionsPickerWidthClassName = isComposerFooterCompact
+    ? "w-full min-w-0 max-w-28 shrink"
+    : "w-full min-w-0 max-w-32 shrink";
   const composerModelEffortPickerWidthClassName = isComposerFooterCompact ? "w-40" : "w-44 sm:w-52";
   const isComposerModelEffortPickerOpen = isModelPickerOpen || isTraitsPickerOpen;
   const handleComposerModelEffortPickerOpenChange = useCallback(
@@ -6833,38 +6818,11 @@ export default function ChatView({
   );
 
   // Replaces the active `@...` token with a completed absolute folder mention.
-  const handleSelectLocalDirectoryMention = useCallback(
-    (absolutePath: string) => {
-      const { snapshot, trigger } = resolveActiveComposerTrigger();
-      if (!trigger) return;
-      applyComposerTriggerReplacement({
-        snapshot,
-        trigger,
-        base: `${formatComposerMentionToken(absolutePath)} `,
-      });
-    },
-    [applyComposerTriggerReplacement, resolveActiveComposerTrigger],
-  );
 
   // Rewrites the active `@...` mention to an absolute folder path with a trailing separator
   // so the local-folder picker stays open and the user can keep browsing by clicking or typing.
   // Paths with whitespace are written as an unclosed `@"...` so detectComposerTrigger keeps
   // matching and the picker stays open while the user descends into folders with spaces.
-  const handleNavigateLocalFolder = useCallback(
-    (absolutePath: string) => {
-      const { snapshot, trigger } = resolveActiveComposerTrigger();
-      if (!trigger) return;
-      const separator = absolutePath.includes("\\") ? "\\" : "/";
-      const withTrailingSeparator = absolutePath.endsWith(separator)
-        ? absolutePath
-        : `${absolutePath}${separator}`;
-      const base = /\s/.test(withTrailingSeparator)
-        ? `@"${withTrailingSeparator}`
-        : `@${withTrailingSeparator}`;
-      applyComposerTriggerReplacement({ snapshot, trigger, base });
-    },
-    [applyComposerTriggerReplacement, resolveActiveComposerTrigger],
-  );
 
   const setComposerPromptValue = useCallback(
     (nextPrompt: string) => {
@@ -7003,18 +6961,6 @@ export default function ChatView({
       }
       const { snapshot, trigger } = resolveActiveComposerTrigger();
       if (!trigger) return;
-      if (item.type === "path") {
-        applyComposerTriggerReplacement({
-          snapshot,
-          trigger,
-          base: `${formatComposerMentionToken(item.path)} `,
-        });
-        return;
-      }
-      if (item.type === "local-root") {
-        handleNavigateLocalFolder(localFolderBrowseRootPath ?? "/");
-        return;
-      }
       if (item.type === "slash-command") {
         handleSlashCommandSelection(item);
         return;
@@ -7090,12 +7036,10 @@ export default function ChatView({
       applyComposerTriggerReplacement,
       scheduleComposerFocus,
       handleForkTargetSelection,
-      handleNavigateLocalFolder,
       handleReviewTargetSelection,
       handleSlashCommandSelection,
       onProviderModelSelect,
       setComposerCommandPicker,
-      localFolderBrowseRootPath,
       selectedProvider,
       updateSelectedComposerMentions,
       updateSelectedComposerSkills,
@@ -7125,11 +7069,7 @@ export default function ChatView({
   );
   const isComposerMenuLoading =
     (composerTriggerKind === "mention" &&
-      ((mentionTriggerQuery.length > 0 && composerPathQueryDebouncer.state.isPending) ||
-        workspaceEntriesQuery.isLoading ||
-        workspaceEntriesQuery.isFetching ||
-        providerPluginsQuery.isLoading ||
-        providerPluginsQuery.isFetching)) ||
+      (providerPluginsQuery.isLoading || providerPluginsQuery.isFetching)) ||
     (composerTriggerKind === "slash-command" &&
       (providerCommandsQuery.isLoading ||
         providerCommandsQuery.isFetching ||
@@ -7255,20 +7195,6 @@ export default function ChatView({
 
     const { snapshot, trigger } = resolveActiveComposerTrigger();
     const menuIsActive = composerMenuOpenRef.current || trigger !== null;
-    if (menuIsActive && isLocalFolderBrowserOpen) {
-      if (key === "ArrowDown") {
-        localDirectoryMenuRef.current?.moveHighlight("down");
-        return true;
-      }
-      if (key === "ArrowUp") {
-        localDirectoryMenuRef.current?.moveHighlight("up");
-        return true;
-      }
-      if (key === "Enter" || key === "Tab") {
-        localDirectoryMenuRef.current?.activateHighlighted();
-        return true;
-      }
-    }
 
     if (menuIsActive) {
       const currentItems = composerMenuItemsRef.current;
@@ -7403,6 +7329,62 @@ export default function ChatView({
     }
     onOpenTurnDiff(activeTurnLiveDiffState.turnId);
   }, [activeTurnLiveDiffState.turnId, onOpenTurnDiff]);
+  // Cross-Worker request channels this Thread is an end of. Derived from durable
+  // Task state rather than the message stream, so a channel still renders after a
+  // reload with no traffic in view.
+  const workerChannels = useMemo(
+    () =>
+      deriveWorkerChannels({
+        threadId: activeThreadId ?? null,
+        threadTaskId: activeThread?.taskId ?? null,
+        tasks: workerTasks,
+        threads: allThreads,
+        workers: workerProjects.map((project) => ({ id: project.id, title: project.name })),
+        messages: (activeThread?.messages ?? []).map((message) => ({
+          id: message.id,
+          text: message.text ?? "",
+          createdAt: message.createdAt,
+        })),
+      }),
+    [
+      activeThreadId,
+      activeThread?.taskId,
+      activeThread?.messages,
+      workerTasks,
+      allThreads,
+      workerProjects,
+    ],
+  );
+
+  const onOpenPeerThread = useCallback(
+    (channel: WorkerChannelView) => {
+      if (!channel.peerThreadId) return;
+      void navigate({ to: "/$threadId", params: { threadId: channel.peerThreadId } });
+    },
+    [navigate],
+  );
+
+  // Closing is a Task close: the channel is the Task, so there is no separate
+  // channel lifecycle to keep in sync.
+  const onCloseWorkerChannel = useCallback(async (channel: WorkerChannelView) => {
+    const api = readNativeApi();
+    if (!api) return;
+    try {
+      await api.orchestration.dispatchCommand({
+        type: "task.update",
+        commandId: newCommandId(),
+        taskId: channel.taskId,
+        status: "completed",
+      });
+    } catch (error) {
+      toastManager.add({
+        type: "error",
+        title: "Could not close the channel",
+        description: error instanceof Error ? error.message : "Unable to close the request.",
+      });
+    }
+  }, []);
+
   const onNavigateToThread = useCallback(
     (nextThreadId: ThreadId) => {
       void navigate({
@@ -7785,31 +7767,18 @@ export default function ChatView({
                 >
                   {composerMenuOpen && !isComposerApprovalState ? (
                     <div className={COMPOSER_COMMAND_MENU_FLOATING_WRAPPER_CLASS_NAME}>
-                      {isLocalFolderBrowserOpen ? (
-                        <ComposerLocalDirectoryMenu
-                          mentionQuery={mentionTriggerQuery}
-                          rootLabel={localFolderBrowseRootPath ?? "Local folders unavailable"}
-                          homeDir={serverConfigQuery.data?.homeDir ?? null}
-                          onSelectEntry={(absolutePath) =>
-                            handleSelectLocalDirectoryMention(absolutePath)
-                          }
-                          onNavigateFolder={handleNavigateLocalFolder}
-                          handleRef={localDirectoryMenuRef}
-                        />
-                      ) : (
-                        <ComposerCommandMenu
-                          items={composerMenuItems}
-                          isLoading={isComposerMenuLoading}
-                          triggerKind={
-                            composerCommandPicker !== null
-                              ? "slash-command"
-                              : effectiveComposerTriggerKind
-                          }
-                          activeItemId={activeComposerMenuItem?.id ?? null}
-                          onHighlightedItemChange={onComposerMenuItemHighlighted}
-                          onSelect={onSelectComposerItem}
-                        />
-                      )}
+                      <ComposerCommandMenu
+                        items={composerMenuItems}
+                        isLoading={isComposerMenuLoading}
+                        triggerKind={
+                          composerCommandPicker !== null
+                            ? "slash-command"
+                            : effectiveComposerTriggerKind
+                        }
+                        activeItemId={activeComposerMenuItem?.id ?? null}
+                        onHighlightedItemChange={onComposerMenuItemHighlighted}
+                        onSelect={onSelectComposerItem}
+                      />
                     </div>
                   ) : null}
                   {!isComposerApprovalState &&
@@ -7893,7 +7862,6 @@ export default function ChatView({
                           : "min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:min-w-max sm:overflow-visible",
                       )}
                     >
-                      {composerPickerControls}
                       {activeTaskList || sidebarProposedPlan || planSidebarOpen ? (
                         <Button
                           variant="ghost"
@@ -7914,6 +7882,30 @@ export default function ChatView({
                       data-chat-composer-actions="right"
                       className="flex shrink-0 items-center gap-1"
                     >
+                      {/* Collapsing is a keyboard shortcut, which nothing advertises.
+                          This is the affordance that makes it findable; it hides while
+                          a turn or prompt needs the composer, matching the shortcut. */}
+                      {composerDisclosureForcedOpen ? null : (
+                        <IconButton
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          label={
+                            composerCollapseShortcutLabel
+                              ? `Hide composer (${composerCollapseShortcutLabel})`
+                              : "Hide composer"
+                          }
+                          title={
+                            composerCollapseShortcutLabel
+                              ? `Hide composer (${composerCollapseShortcutLabel})`
+                              : "Hide composer"
+                          }
+                          className="shrink-0 text-faint hover:text-foreground"
+                          onClick={() => setComposerCollapsed(true)}
+                        >
+                          <ChevronDownIcon className="size-3.5" />
+                        </IconButton>
+                      )}
                       {activePendingProgress ? (
                         <Button
                           type="submit"
@@ -8058,46 +8050,6 @@ export default function ChatView({
       </div>
     );
 
-  const composerSectionWithDisclosure = composerDisclosure ? (
-    <div className="w-full">
-      <div className={COMPOSER_COLUMN_FRAME_CLASS_NAME}>
-        <button
-          type="button"
-          aria-expanded={composerDisclosureOpen}
-          onClick={() => {
-            if (composerDisclosureForcedOpen) return;
-            const nextOpen = !composerDisclosureRequestedOpen;
-            setComposerDisclosureRequestedOpen(nextOpen);
-            if (nextOpen) {
-              window.requestAnimationFrame(() => scheduleComposerFocus());
-            }
-          }}
-          className="group flex min-h-11 w-full items-center gap-3 rounded-xl border border-panel-border bg-panel px-3.5 py-2 text-left shadow-xs transition-[background-color,border-color,scale] duration-press ease-out hover:border-border hover:bg-hover active:scale-[0.98] motion-reduce:transition-none"
-        >
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-selected text-muted-foreground group-hover:text-foreground">
-            <PencilIcon className="size-3.5" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium text-foreground">
-              {composerDisclosure.label}
-            </span>
-            <span className="block truncate text-xs text-muted-foreground">
-              {composerDisclosureForcedOpen
-                ? "Finish the active agent interaction before collapsing"
-                : composerDisclosure.description}
-            </span>
-          </span>
-          <DisclosureChevron open={composerDisclosureOpen} className="size-4" />
-        </button>
-      </div>
-      <DisclosureRegion open={composerDisclosureOpen} contentClassName="pt-2">
-        {composerSection}
-      </DisclosureRegion>
-    </div>
-  ) : (
-    composerSection
-  );
-
   return (
     <div
       className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
@@ -8180,6 +8132,11 @@ export default function ChatView({
                   }
                 : null
           }
+          closePaneAction={
+            surfaceMode === "split" && onClosePane
+              ? { label: "Close this pane", onClick: onClosePane }
+              : undefined
+          }
           changeThreadAction={
             surfaceMode === "split" && isFocusedPane && onChangeThreadInSplitPane
               ? {
@@ -8219,6 +8176,44 @@ export default function ChatView({
       <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
         {/* Chat column */}
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+          {/* The composer collapses into this. Absolutely positioned so a collapsed
+              composer costs the transcript no layout height at all, and kept
+              mounted either way so the fade/scale can play in both directions. */}
+          {shouldRenderChatPaneContent && !isCenteredEmptyLanding ? (
+            <button
+              type="button"
+              aria-label={
+                composerCollapseShortcutLabel
+                  ? `Show composer (${composerCollapseShortcutLabel})`
+                  : "Show composer"
+              }
+              title={
+                composerCollapseShortcutLabel
+                  ? `Show composer (${composerCollapseShortcutLabel})`
+                  : "Show composer"
+              }
+              aria-hidden={composerDisclosureOpen ? true : undefined}
+              tabIndex={composerDisclosureOpen ? -1 : 0}
+              onClick={() => {
+                setComposerCollapsed(false);
+                window.requestAnimationFrame(() => scheduleComposerFocus());
+              }}
+              className={disclosurePopClassName(
+                !composerDisclosureOpen,
+                "absolute bottom-3 left-3 z-20 inline-flex size-9 items-center justify-center rounded-lg border border-border bg-panel text-muted-foreground hover:bg-hover hover:text-foreground",
+              )}
+            >
+              {/* The provider the collapsed composer would send to, so the icon says
+                  what comes back rather than just "compose". Falls back to a pencil
+                  when no provider is resolved yet. */}
+              <ProviderIcon
+                provider={selectedProvider}
+                tone="header"
+                className="size-4"
+                fallback={<PencilIcon className="size-3.5" />}
+              />
+            </button>
+          ) : null}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {shouldRenderChatPaneContent && isCenteredEmptyLanding ? (
               <div
@@ -8240,7 +8235,19 @@ export default function ChatView({
 
             {shouldRenderChatPaneContent && !isCenteredEmptyLanding ? (
               <div className="flex min-h-0 flex-1 flex-col">
-                <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div
+                  className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
+                  // The composer overlays the content (negative top margin, z-10), so
+                  // a scrolling surface has to reserve room for it or its last lines
+                  // sit permanently underneath. MessagesTimeline gets this as
+                  // `bottomContentInsetPx`; custom transcript content reads the same
+                  // measurement from here.
+                  style={
+                    {
+                      "--chat-composer-inset": `${composerFloatingHeight > 0 ? composerFloatingHeight + 8 : 0}px`,
+                    } as CSSProperties
+                  }
+                >
                   {transcriptContent ?? (
                     <ChatTranscriptPane
                       activeThreadId={activeThread.id}
@@ -8265,6 +8272,9 @@ export default function ChatView({
                       turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}
                       onOpenTurnDiff={onOpenTurnDiff}
                       onOpenThread={onNavigateToThread}
+                      workerChannels={workerChannels}
+                      onOpenPeerThread={onOpenPeerThread}
+                      onCloseWorkerChannel={(channel) => void onCloseWorkerChannel(channel)}
                       revertTurnCountByUserMessageId={revertTurnCountByUserMessageId}
                       onRevertUserMessage={onRevertUserMessage}
                       onEditUserMessage={onEditUserMessage}
@@ -8307,37 +8317,66 @@ export default function ChatView({
                       scrollButtonVisible={showScrollToBottom}
                       onScrollToBottom={onScrollToBottom}
                       bottomContentInsetPx={
-                        composerStackedChromeHeight > 0
-                          ? composerStackedChromeHeight + 8
-                          : undefined
+                        composerFloatingHeight > 0 ? composerFloatingHeight + 8 : undefined
                       }
                     />
                   )}
                 </div>
 
                 <div
+                  ref={measureComposerFloating}
                   className={cn(
-                    "relative z-10 w-full shrink-0 overflow-visible",
+                    // Floating, never in flow: as a flex sibling the composer took
+                    // height off the content region, which cut scrolling surfaces
+                    // short and clipped the research card at its top edge. Absolute
+                    // keeps the content full-height and lets it scroll underneath.
+                    "absolute inset-x-0 bottom-0 z-10 overflow-visible",
                     CHAT_COLUMN_GUTTER_CLASS_NAME,
-                    composerDisclosure ? "pt-2" : "-mt-5 pt-0 sm:pt-0",
-                    "pb-1 sm:pb-1.5",
+                    "pt-2 pb-1 sm:pt-2 sm:pb-1.5",
+                    // No surface on the band itself — the composer brings its own,
+                    // and painting the surround would put a slab across the pane.
+                    // Click-through for the same reason: the band is empty space.
+                    "pointer-events-none",
+                    // Not height-animated, and not merely faded: the composer must
+                    // keep `overflow: visible` so its model picker and command menu
+                    // can escape upward, which rules out the shared height-collapse
+                    // recipe. A faded-but-present composer would also still hold the
+                    // height that collapsing exists to give back.
+                    composerDisclosureOpen ? "" : "hidden",
                   )}
                   // Match the transcript's right inset so the composer stays aligned with chat
                   // content (and clear of the docked Environment overlay).
                 >
-                  {composerSectionWithDisclosure}
-                </div>
-                {secondaryChromeReady ? (
-                  <div className={CHAT_COLUMN_GUTTER_CLASS_NAME}>
-                    <div
-                      className={cn(COMPOSER_COLUMN_FRAME_CLASS_NAME, "flex items-center gap-2")}
-                    >
-                      {isGitRepo ? (
-                        <BranchToolbar {...branchToolbarProps} className="min-w-0 flex-1" />
-                      ) : null}
+                  <div className="pointer-events-auto relative z-10">{composerSection}</div>
+                  {/* Part of the same floating unit as the composer, so it neither
+                      reserves height nor drifts away from it. Unlike the composer it
+                      has no surface of its own, so scrolling content read straight
+                      through the branch labels — hence the opaque row here only. */}
+                  {secondaryChromeReady ? (
+                    <div className={COMPOSER_COLUMN_FRAME_CLASS_NAME}>
+                      {/* Narrower than the composer and centred on it, tucked up behind
+                          its bottom edge (negative margin, lower z) so it reads as
+                          sliding out from underneath rather than sitting as a second
+                          bar. The top padding puts the content back where it was. */}
+                      <div
+                        ref={composerUnderbarRef}
+                        className="chat-composer-underbar pointer-events-auto relative z-0 mx-auto -mt-4 flex w-4/5 max-w-full min-w-0 items-center justify-center gap-1 overflow-hidden rounded-t-none px-3 pt-4.5 pb-0.5"
+                      >
+                        {composerPickerControls}
+                        {/* BranchToolbar is built for a full-width row (`w-full`,
+                            `justify-between`). Here it is one item among several, so it
+                            has to size to its content and be allowed to shrink —
+                            otherwise it claims the row and overflows a narrow pane. */}
+                        {isGitRepo ? (
+                          <BranchToolbar
+                            {...branchToolbarProps}
+                            className="w-auto min-w-0 shrink justify-start px-0 py-0"
+                          />
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
               </div>
             ) : null}
 

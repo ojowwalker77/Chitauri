@@ -275,6 +275,13 @@
     border-left: 1px solid var(--sidebar-border);
   }
 
+  /* Peeked, the sidebar floats over the main content instead of over the shell
+     canvas, so it has to paint its own opaque surface — transparency here shows
+     the chat header straight through the panel. */
+  [data-slot="sidebar"][data-peek="true"] .app-sidebar-surface {
+    --app-sidebar-surface: var(--panel);
+  }
+
   .app-sidebar-surface [data-slot="sidebar-footer"] {
     flex: none;
     padding: 0.625rem 0.75rem;
@@ -2297,6 +2304,14 @@ diffs-container {
 .chat-composer-stacked-top[data-composer-stacked-attached="true"] {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
+}
+
+/* The branch row floats over scrolling content with no surface of its own, so it
+   borrows the composer's fill and radius instead of inventing a second treatment.
+   Without a fill the content read straight through the branch labels. */
+.chat-composer-underbar {
+  background: var(--composer-surface);
+  border-radius: var(--composer-radius);
 }
 
 .chat-composer-surface {

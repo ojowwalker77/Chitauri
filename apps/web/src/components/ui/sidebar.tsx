@@ -2,6 +2,9 @@ import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
+import { disclosurePeekClassName } from "~/lib/disclosureMotion";
+import { useSidebarEdgePeek } from "~/hooks/useSidebarEdgePeek";
+import { SIDEBAR_PEEK } from "~/lib/sidebarPeek";
 import { cn } from "~/lib/utils";
 import { CentralIcon } from "~/lib/central-icons";
 import { Button } from "~/components/ui/button";
@@ -256,6 +259,9 @@ function Sidebar({
   transparentSurface?: boolean;
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const peek = useSidebarEdgePeek({
+    enabled: !isMobile && collapsible === "offcanvas" && state === "collapsed",
+  });
   const resolvedResizable = React.useMemo<SidebarResolvedResizableOptions | null>(
     () => resolveSidebarResizable(resizable, { collapsible, isMobile }),
     [collapsible, isMobile, resizable],
@@ -319,11 +325,26 @@ function Sidebar({
       <div
         className="group peer hidden text-sidebar-foreground md:block"
         data-collapsible={state === "collapsed" ? collapsible : ""}
+        data-peek={peek.peeking ? "true" : undefined}
         data-side={side}
         data-slot="sidebar"
         data-state={state}
         data-variant={variant}
       >
+        {/* Invisible edge strip that opens the peek. Rendered only once armed, so
+            the pointer that collapsed the sidebar cannot immediately reopen it. */}
+        {peek.armed ? (
+          <div
+            aria-hidden="true"
+            className={cn(
+              "fixed inset-y-0 z-[90] hidden md:block",
+              side === "left" ? "left-0" : "right-0",
+            )}
+            data-slot="sidebar-peek-trigger"
+            style={{ width: `${SIDEBAR_PEEK.triggerWidthPx}px` }}
+            {...peek.triggerProps}
+          />
+        ) : null}
         {/* This is what handles the sidebar gap on desktop */}
         <div
           className={cn(
@@ -343,6 +364,18 @@ function Sidebar({
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
+            // The peek slides the collapsed panel back over the content rather
+            // than reopening the sidebar: the gap element stays 0-width, so the
+            // main content never reflows underneath it. Raised above content only
+            // while peeked, so the resting sidebar keeps its usual stacking.
+            disclosurePeekClassName(
+              peek.peeking,
+              side === "left" ? "translate-x-(--sidebar-width)" : "-translate-x-(--sidebar-width)",
+            ),
+            // Above the app chrome it now floats over (the documented ladder puts
+            // app surfaces at z-90), but below hover cards (100) and modals (200+),
+            // including the sidebar's own row hover cards.
+            peek.peeking && "z-[95]",
             // Adjust the padding for floating and inset variants.
             variant === "floating" || variant === "inset"
               ? "p-3 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
@@ -355,6 +388,8 @@ function Sidebar({
             className,
           )}
           data-slot="sidebar-container"
+          ref={peek.panelRef}
+          {...peek.panelProps}
           {...props}
         >
           {/* The inner surface is the safe place for visual skinning. The outer shell owns
@@ -442,6 +477,8 @@ function SidebarRail({
   const railRef = React.useRef<HTMLButtonElement | null>(null);
   const suppressClickRef = React.useRef(false);
   const resizeStateRef = React.useRef<{
+    /** Removes the window listeners this drag installed. */
+    abort: AbortController;
     moved: boolean;
     pointerId: number;
     pendingWidth: number;
@@ -476,6 +513,7 @@ function SidebarRail({
         setLocalStorageItem(resolvedResizable.storageKey, resizeState.width, Schema.Finite);
       }
       resolvedResizable?.onResize?.(resizeState.width);
+      resizeState.abort.abort();
       resizeStateRef.current = null;
       if (resizeState.rail.hasPointerCapture(pointerId)) {
         resizeState.rail.releasePointerCapture(pointerId);
@@ -486,66 +524,8 @@ function SidebarRail({
     [resolvedResizable],
   );
 
-  const handlePointerDown = React.useCallback(
-    (event: React.PointerEvent<HTMLButtonElement>) => {
-      onPointerDown?.(event);
-      if (event.defaultPrevented) return;
-      if (!resolvedResizable || !open || event.button !== 0) return;
-
-      const wrapper = event.currentTarget.closest<HTMLElement>("[data-slot='sidebar-wrapper']");
-      const sidebarRoot =
-        event.currentTarget.closest<HTMLElement>("[data-slot='sidebar']") ??
-        wrapper?.querySelector<HTMLElement>("[data-slot='sidebar']") ??
-        null;
-      if (!wrapper || !sidebarRoot) {
-        return;
-      }
-
-      const sidebarContainer = sidebarRoot.querySelector<HTMLElement>(
-        "[data-slot='sidebar-container']",
-      );
-      if (!sidebarContainer) {
-        return;
-      }
-
-      const startWidth = sidebarContainer.getBoundingClientRect().width;
-      const initialWidth = clampSidebarWidth(startWidth, resolvedResizable);
-      const transitionTargets = [
-        sidebarRoot.querySelector<HTMLElement>("[data-slot='sidebar-gap']"),
-        sidebarRoot.querySelector<HTMLElement>("[data-slot='sidebar-container']"),
-      ].filter((element): element is HTMLElement => element !== null);
-      transitionTargets.forEach((element) => {
-        element.style.setProperty("transition-duration", "0ms");
-      });
-
-      event.preventDefault();
-      event.stopPropagation();
-      resizeStateRef.current = {
-        moved: false,
-        pointerId: event.pointerId,
-        pendingWidth: initialWidth,
-        rail: event.currentTarget,
-        rafId: null,
-        sidebarRoot,
-        side: sidebarInstance?.side ?? "left",
-        startWidth: initialWidth,
-        startX: event.clientX,
-        transitionTargets,
-        width: initialWidth,
-        wrapper,
-      };
-      wrapper.style.setProperty("--sidebar-width", `${initialWidth}px`);
-      event.currentTarget.setPointerCapture(event.pointerId);
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    },
-    [onPointerDown, open, resolvedResizable, sidebarInstance?.side],
-  );
-
-  const handlePointerMove = React.useCallback(
-    (event: React.PointerEvent<HTMLButtonElement>) => {
-      onPointerMove?.(event);
-      if (event.defaultPrevented) return;
+  const handleWindowPointerMove = React.useCallback(
+    (event: PointerEvent) => {
       const resizeState = resizeStateRef.current;
       if (!resizeState || resizeState.pointerId !== event.pointerId || !resolvedResizable) return;
 
@@ -588,37 +568,137 @@ function SidebarRail({
         activeResizeState.width = nextWidth;
       });
     },
-    [onPointerMove, resolvedResizable],
+    [resolvedResizable],
   );
 
-  const endResizeInteraction = React.useCallback(
-    (event: React.PointerEvent<HTMLButtonElement>) => {
+  const handleWindowPointerEnd = React.useCallback(
+    (event: PointerEvent) => {
       const resizeState = resizeStateRef.current;
+      // `lostpointercapture` fires for the same pointer, so the id check keeps a
+      // stray pointer from ending someone else's drag.
       if (!resizeState || resizeState.pointerId !== event.pointerId) return;
-
-      event.preventDefault();
       suppressClickRef.current = resizeState.moved;
       stopResize(event.pointerId);
     },
     [stopResize],
   );
 
+  const handleWindowBlur = React.useCallback(() => {
+    const resizeState = resizeStateRef.current;
+    if (!resizeState) return;
+    suppressClickRef.current = resizeState.moved;
+    stopResize(resizeState.pointerId);
+  }, [stopResize]);
+
+  // Unmounting mid-drag would otherwise leave the body stuck with `col-resize`
+  // and `user-select: none` for the rest of the session.
+  React.useEffect(
+    () => () => {
+      const resizeState = resizeStateRef.current;
+      if (resizeState) stopResize(resizeState.pointerId);
+    },
+    [stopResize],
+  );
+
+  const handlePointerDown = React.useCallback(
+    (event: React.PointerEvent<HTMLButtonElement>) => {
+      onPointerDown?.(event);
+      if (event.defaultPrevented) return;
+      if (!resolvedResizable || !open || event.button !== 0) return;
+
+      const wrapper = event.currentTarget.closest<HTMLElement>("[data-slot='sidebar-wrapper']");
+      const sidebarRoot =
+        event.currentTarget.closest<HTMLElement>("[data-slot='sidebar']") ??
+        wrapper?.querySelector<HTMLElement>("[data-slot='sidebar']") ??
+        null;
+      if (!wrapper || !sidebarRoot) {
+        return;
+      }
+
+      const sidebarContainer = sidebarRoot.querySelector<HTMLElement>(
+        "[data-slot='sidebar-container']",
+      );
+      if (!sidebarContainer) {
+        return;
+      }
+
+      const startWidth = sidebarContainer.getBoundingClientRect().width;
+      const initialWidth = clampSidebarWidth(startWidth, resolvedResizable);
+      const transitionTargets = [
+        sidebarRoot.querySelector<HTMLElement>("[data-slot='sidebar-gap']"),
+        sidebarRoot.querySelector<HTMLElement>("[data-slot='sidebar-container']"),
+      ].filter((element): element is HTMLElement => element !== null);
+      transitionTargets.forEach((element) => {
+        element.style.setProperty("transition-duration", "0ms");
+      });
+
+      event.preventDefault();
+      event.stopPropagation();
+      const abort = new AbortController();
+      resizeStateRef.current = {
+        abort,
+        moved: false,
+        pointerId: event.pointerId,
+        pendingWidth: initialWidth,
+        rail: event.currentTarget,
+        rafId: null,
+        sidebarRoot,
+        side: sidebarInstance?.side ?? "left",
+        startWidth: initialWidth,
+        startX: event.clientX,
+        transitionTargets,
+        width: initialWidth,
+        wrapper,
+      };
+      wrapper.style.setProperty("--sidebar-width", `${initialWidth}px`);
+      event.currentTarget.setPointerCapture(event.pointerId);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+
+      // The drag runs on window listeners, not on the rail's own pointer events.
+      // Pointer capture is not guaranteed to survive: a re-render can detach the
+      // rail, and a release outside the window never reaches it at all. When that
+      // happened the drag never ended — the ref stayed set, the body kept
+      // `col-resize`, and the next pointer move resized the sidebar again.
+      const { signal } = abort;
+      window.addEventListener("pointermove", handleWindowPointerMove, { signal });
+      for (const type of ["pointerup", "pointercancel", "lostpointercapture"] as const) {
+        window.addEventListener(type, handleWindowPointerEnd, { signal });
+      }
+      // A window that loses focus mid-drag (app switch, window drag) may never
+      // deliver the release at all.
+      window.addEventListener("blur", handleWindowBlur, { signal });
+    },
+    [
+      handleWindowBlur,
+      handleWindowPointerEnd,
+      handleWindowPointerMove,
+      onPointerDown,
+      open,
+      resolvedResizable,
+      sidebarInstance?.side,
+    ],
+  );
+
   const handlePointerUp = React.useCallback(
     (event: React.PointerEvent<HTMLButtonElement>) => {
       onPointerUp?.(event);
-      if (event.defaultPrevented) return;
-      endResizeInteraction(event);
     },
-    [endResizeInteraction, onPointerUp],
+    [onPointerUp],
   );
 
   const handlePointerCancel = React.useCallback(
     (event: React.PointerEvent<HTMLButtonElement>) => {
       onPointerCancel?.(event);
-      if (event.defaultPrevented) return;
-      endResizeInteraction(event);
     },
-    [endResizeInteraction, onPointerCancel],
+    [onPointerCancel],
+  );
+
+  const handlePointerMove = React.useCallback(
+    (event: React.PointerEvent<HTMLButtonElement>) => {
+      onPointerMove?.(event);
+    },
+    [onPointerMove],
   );
 
   const handleClick = React.useCallback(

@@ -824,7 +824,7 @@ export function BranchToolbarBranchSelector({
         className={
           isPanel
             ? ENVIRONMENT_ROW_CLASS_NAME
-            : `${COMPOSER_TOOLBAR_PICKER_TRIGGER_CLASS_NAME} disabled:cursor-not-allowed disabled:opacity-50`
+            : `${COMPOSER_TOOLBAR_PICKER_TRIGGER_CLASS_NAME} min-w-0 disabled:cursor-not-allowed disabled:opacity-50`
         }
         disabled={(branchesQuery.isLoading && branches.length === 0) || isBranchActionPending}
       >
@@ -837,7 +837,9 @@ export function BranchToolbarBranchSelector({
         ) : (
           <>
             <CentralIcon name="branch" className="size-3.5 shrink-0" />
-            <span className="max-w-[240px] truncate">{triggerLabel}</span>
+            {/* Shrinkable, not a fixed max-width: at 240px a narrower row clipped
+                the label with a hard edge instead of letting it ellipsise. */}
+            <span className="min-w-0 max-w-[240px] flex-1 truncate">{triggerLabel}</span>
             <ChevronDownIcon className="size-3.5 text-muted-foreground" />
           </>
         )}

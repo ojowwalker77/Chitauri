@@ -59,94 +59,30 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   },
   {
     id: "general:permissions-mode",
-    section: "general",
+    section: "permissions",
     title: "Permissions Mode",
     keywords:
       "Choose the default access level for new chats. full access approval permissions ask first bypass",
   },
   {
     id: "general:project-order",
-    section: "general",
+    section: "sidebar",
     title: "Worker order",
     keywords: "Controls how Workers are arranged in the main sidebar. sort updated created manual",
   },
   {
     id: "general:thread-order",
-    section: "general",
-    title: "Unfiled Thread order",
+    section: "sidebar",
+    title: "Worker Thread order",
     keywords:
-      "Controls how Unfiled Threads are arranged inside each Worker in the main sidebar. sort updated created",
+      "Controls how Worker Threads are arranged inside each Worker in the main sidebar. sort updated created",
   },
   {
     id: "general:chats-section",
-    section: "general",
+    section: "sidebar",
     title: "Chats",
     keywords:
       "Show the standalone Chats list in the sidebar footer chats not tied to a Worker. sidebar section",
-  },
-  {
-    id: "general:workspace-section",
-    section: "general",
-    title: "Workspace",
-    keywords:
-      "Show the Workspace tab in the sidebar switcher. The Threads tab always stays visible. sidebar section",
-  },
-  {
-    id: "general:environment-panel",
-    section: "general",
-    title: "Environment panel",
-    keywords:
-      "Show or hide the Environment panel side dock with git status, usage, notes, and more. disable hide",
-  },
-  {
-    id: "general:environment-usage",
-    section: "general",
-    title: "Usage",
-    keywords: "Show the provider usage row in the chat Environment panel.",
-  },
-  {
-    id: "general:environment-repository",
-    section: "general",
-    title: "Repository",
-    keywords: "Show the GitHub repository link in the chat Environment panel. git changes worktree",
-  },
-  {
-    id: "general:environment-pull-request",
-    section: "general",
-    title: "Pull request",
-    keywords:
-      "Show the open pull request CI checks and review comments in the chat Environment panel. pr fix github",
-  },
-  {
-    id: "general:environment-editor",
-    section: "general",
-    title: "Editor",
-    keywords:
-      "Show the Editor section in-app editor view and Open in editor picker in the chat Environment panel.",
-  },
-  {
-    id: "general:environment-recap",
-    section: "general",
-    title: "Recap",
-    keywords: "Show the auto-generated chat recap in the Environment panel.",
-  },
-  {
-    id: "general:environment-pinned",
-    section: "general",
-    title: "Pinned messages",
-    keywords: "Show the pinned-messages checklist in the Environment panel.",
-  },
-  {
-    id: "general:environment-markers",
-    section: "general",
-    title: "Text markers",
-    keywords: "Show highlighted and underlined transcript text in the Environment panel.",
-  },
-  {
-    id: "general:environment-notepad",
-    section: "general",
-    title: "Notepad",
-    keywords: "Show the per-thread notepad in the Environment panel.",
   },
 
   // ── Appearance ───────────────────────────────────────────────────────────────
@@ -155,13 +91,6 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     section: "appearance",
     title: "Theme",
     keywords: "Choose how TeaCode looks across the app. follow system dark light appearance",
-  },
-  {
-    id: "appearance:ui-density",
-    section: "appearance",
-    title: "UI density",
-    keywords:
-      "Control spacing in the sidebar, composer, chat gutters, and settings rows without changing font size. compact comfortable",
   },
   {
     id: "appearance:highlight-color",
@@ -191,7 +120,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   },
   {
     id: "appearance:time-format",
-    section: "appearance",
+    section: "general",
     title: "Time format",
     keywords:
       "System default follows your browser or OS clock preference. timestamp 12-hour 24-hour locale",
@@ -207,14 +136,14 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   // ── Notifications ─────────────────────────────────────────────────────────────
   {
     id: "notifications:activity-toasts",
-    section: "general",
+    section: "notifications",
     title: "Activity toasts",
     keywords:
       "Show an in-app toast when a chat or managed terminal agent finishes or needs input. alerts",
   },
   {
     id: "notifications:desktop-notifications",
-    section: "general",
+    section: "notifications",
     title: "Desktop notifications",
     keywords:
       "Show an OS notification when a chat or managed terminal agent finishes or needs input while the app is in the background. alerts toast",
@@ -230,31 +159,31 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   },
   {
     id: "behavior:assistant-output",
-    section: "general",
+    section: "permissions",
     title: "Assistant output",
     keywords: "Show token-by-token output while a response is in progress. streaming",
   },
   {
     id: "behavior:diff-line-wrapping",
-    section: "general",
+    section: "permissions",
     title: "Diff line wrapping",
     keywords: "Set the default wrap state when the diff panel opens. word wrap",
   },
   {
     id: "behavior:delete-confirmation",
-    section: "general",
+    section: "permissions",
     title: "Delete confirmation",
     keywords: "Ask before deleting a thread and its chat history. safety confirm",
   },
   {
     id: "behavior:archive-confirmation",
-    section: "general",
+    section: "permissions",
     title: "Archive confirmation",
     keywords: "Ask before archiving a thread. safety confirm",
   },
   {
     id: "behavior:terminal-close-confirmation",
-    section: "general",
+    section: "permissions",
     title: "Terminal close confirmation",
     keywords: "Ask before closing a terminal tab and clearing its history. safety confirm",
   },
@@ -262,7 +191,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   // ── Keyboard Shortcuts ────────────────────────────────────────────────────────
   {
     id: "shortcuts:keyboard-shortcuts",
-    section: "advanced",
+    section: "shortcuts",
     title: "Keyboard Shortcuts",
     keywords:
       "Every keyboard shortcut available in TeaCode, grouped by context. keybindings hotkeys key combo cmd ctrl reference",
@@ -272,7 +201,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   // ── Worktrees ─────────────────────────────────────────────────────────────────
   {
     id: "worktrees:managed-worktrees",
-    section: "advanced",
+    section: "workspaces",
     title: "Managed worktrees",
     keywords: "Review and clean up the worktrees created by TeaCode. git branch remove",
     target: null,
@@ -281,7 +210,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   // ── Archived ──────────────────────────────────────────────────────────────────
   {
     id: "archived:archived-threads",
-    section: "advanced",
+    section: "workspaces",
     title: "Archived threads",
     keywords: "View and restore archived threads. unarchive history",
     target: null,
@@ -348,6 +277,21 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   },
 
   // ── Advanced ──────────────────────────────────────────────────────────────────
+  {
+    id: "profile:stats",
+    section: "profile",
+    title: "Profile",
+    keywords:
+      "Your local activity dashboard: streaks, prompts, tokens, and per-provider totals. stats usage history",
+    target: null,
+  },
+  {
+    id: "profile:share",
+    section: "profile",
+    title: "Share your stats",
+    keywords: "Share a card of your local TeaCode activity. share card handle export image",
+    target: null,
+  },
   {
     id: "advanced:keybindings",
     section: "advanced",
