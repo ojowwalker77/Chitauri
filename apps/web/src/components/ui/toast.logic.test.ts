@@ -1,5 +1,32 @@
 import { assert, describe, it } from "vitest";
-import { buildVisibleToastLayout, shouldHideCollapsedToastContent } from "./toast.logic";
+import {
+  buildVisibleToastLayout,
+  shouldHideCollapsedToastContent,
+  shouldUseCompactToast,
+} from "./toast.logic";
+
+describe("shouldUseCompactToast", () => {
+  it("keeps description-only errors expanded so their message is visible", () => {
+    assert.equal(
+      shouldUseCompactToast({
+        description: "No visible shareable window is available outside TeaCode.",
+        hasPrimaryAction: false,
+        hasSecondaryAction: false,
+      }),
+      false,
+    );
+  });
+
+  it("keeps title-only notifications compact", () => {
+    assert.equal(
+      shouldUseCompactToast({
+        hasPrimaryAction: false,
+        hasSecondaryAction: false,
+      }),
+      true,
+    );
+  });
+});
 
 describe("shouldHideCollapsedToastContent", () => {
   it("keeps a single visible toast readable", () => {

@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   AppSettingsSchema,
+  DEFAULT_APP_SNAP_CHORD,
   DEFAULT_CHAT_FONT_SIZE_PX,
   DEFAULT_SIDEBAR_PROJECT_SORT_ORDER,
   DEFAULT_TASK_LIST_DISPLAY_MODE,
@@ -678,6 +679,7 @@ describe("AppSettingsSchema", () => {
       confirmTerminalTabClose: true,
       enableAssistantStreaming: true,
       enableAppSnap: false,
+      appSnapChord: DEFAULT_APP_SNAP_CHORD,
       appSnapPlaySound: true,
       sidebarProjectSortOrder: DEFAULT_SIDEBAR_PROJECT_SORT_ORDER,
       sidebarThreadSortOrder: DEFAULT_SIDEBAR_THREAD_SORT_ORDER,

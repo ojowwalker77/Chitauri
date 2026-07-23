@@ -1,3 +1,14 @@
+export function shouldUseCompactToast(input: {
+  description?: unknown;
+  copyText?: unknown;
+  hasPrimaryAction: boolean;
+  hasSecondaryAction: boolean;
+}): boolean {
+  return (
+    !input.description && !input.copyText && !input.hasPrimaryAction && !input.hasSecondaryAction
+  );
+}
+
 export function shouldHideCollapsedToastContent(
   visibleToastIndex: number,
   visibleToastCount: number,

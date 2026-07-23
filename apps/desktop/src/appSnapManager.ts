@@ -13,11 +13,24 @@ import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
   type DesktopAppSnapCapture,
+  type DesktopAppSnapChord,
   type DesktopAppSnapErrorEvent,
   type DesktopAppSnapPermission,
   type DesktopAppSnapPlatform,
   type DesktopAppSnapState,
 } from "@t3tools/contracts";
+
+const DEFAULT_APP_SNAP_CHORD: DesktopAppSnapChord = "option";
+const APP_SNAP_CHORDS: ReadonlySet<DesktopAppSnapChord> = new Set([
+  "option",
+  "shift",
+  "control",
+  "command",
+]);
+
+export function isDesktopAppSnapChord(value: unknown): value is DesktopAppSnapChord {
+  return typeof value === "string" && APP_SNAP_CHORDS.has(value as DesktopAppSnapChord);
+}
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const PENDING_VERSION = 1;
@@ -304,6 +317,7 @@ export class DesktopAppSnapManager {
   };
   readonly #platform: DesktopAppSnapPlatform;
   #enabled = false;
+  #chord: DesktopAppSnapChord = DEFAULT_APP_SNAP_CHORD;
   #status: DesktopAppSnapState["status"];
   #message: string | null;
   #inputPermission: DesktopAppSnapPermission = "unknown";
@@ -338,7 +352,7 @@ export class DesktopAppSnapManager {
       supported: this.#platform === "macos",
       enabled: this.#enabled,
       status: this.#status,
-      shortcut: this.#platform === "macos" ? "both-option-keys" : null,
+      shortcut: this.#platform === "macos" ? this.#chord : null,
       inputMonitoringPermission: this.#inputPermission,
       screenRecordingPermission: this.#screenPermission,
       message: this.#message,
@@ -366,6 +380,18 @@ export class DesktopAppSnapManager {
   async requestPermissions(): Promise<DesktopAppSnapState> {
     if (this.#platform !== "macos" || this.#disposed) return this.getState();
     if (await this.#runPermissionCommand("--request-permissions")) await this.#reconcile();
+    return this.getState();
+  }
+
+  async setChord(chord: DesktopAppSnapChord): Promise<DesktopAppSnapState> {
+    if (this.#platform !== "macos" || this.#disposed || this.#chord === chord) {
+      return this.getState();
+    }
+    this.#chord = chord;
+    // The watcher only reads the chord at spawn time, so a live change has to restart it
+    // — the same reconcile path `setEnabled` uses, which no-ops if nothing is watching yet.
+    if (this.#watchProcess) this.#stopWatcher();
+    await this.#reconcile();
     return this.getState();
   }
 
@@ -573,6 +599,8 @@ export class DesktopAppSnapManager {
         this.#options.captureDirectory,
         "--excluded-bundle-id",
         this.#options.excludedBundleId,
+        "--chord",
+        this.#chord,
       ],
       { stdio: ["ignore", "pipe", "pipe"] },
     );

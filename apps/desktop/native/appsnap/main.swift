@@ -35,6 +35,20 @@ else {
     exit(EXIT_FAILURE)
 }
 
+let chord: ModifierChord
+if let chordIndex = arguments.firstIndex(of: "--chord"), arguments.indices.contains(chordIndex + 1) {
+    guard let parsedChord = ModifierChord(rawValue: arguments[chordIndex + 1]) else {
+        emitter.emitError(AppSnapFailure(
+            code: "invalid_arguments",
+            message: "Unknown --chord value; expected option, shift, control, or command."
+        ))
+        exit(EXIT_FAILURE)
+    }
+    chord = parsedChord
+} else {
+    chord = .default
+}
+
 let outputDirectory = URL(fileURLWithPath: arguments[outputIndex + 1], isDirectory: true)
 do {
     try preparePrivateOutputDirectory(outputDirectory)
@@ -50,7 +64,7 @@ let coordinator = WindowCaptureCoordinator(
     outputDirectory: outputDirectory,
     excludedBundleIdentifier: arguments[excludedIndex + 1]
 )
-let monitor = OptionChordMonitor(emitter: emitter) { coordinator.handleGesture() }
+let monitor = ModifierChordMonitor(chord: chord, emitter: emitter) { coordinator.handleGesture() }
 let parentMonitor = ParentProcessMonitor()
 parentMonitor.start()
 monitor.start()

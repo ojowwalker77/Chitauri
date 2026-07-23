@@ -29,6 +29,7 @@ export const DESKTOP_IPC_CHANNELS = {
   appSnap: {
     getState: "desktop:appsnap:get-state",
     setEnabled: "desktop:appsnap:set-enabled",
+    setChord: "desktop:appsnap:set-chord",
     requestPermissions: "desktop:appsnap:request-permissions",
     listPendingCaptures: "desktop:appsnap:list-pending-captures",
     acknowledgeCapture: "desktop:appsnap:acknowledge-capture",

@@ -44,6 +44,7 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import {
   type AppSettings,
+  type AppSnapChord,
   type TaskListDisplayMode,
   MAX_CHAT_FONT_SIZE_PX,
   MAX_TERMINAL_FONT_SIZE_PX,
@@ -257,6 +258,20 @@ const SIDEBAR_PROJECT_SORT_ORDER_LABELS = {
   created_at: "Recently added",
   manual: "Manual order",
 } as const;
+
+const APP_SNAP_CHORD_LABELS: Record<AppSnapChord, string> = {
+  option: "Option",
+  shift: "Shift",
+  control: "Control",
+  command: "Command",
+};
+
+const APP_SNAP_CHORD_KEYCAPS: Record<AppSnapChord, string> = {
+  option: "⌥",
+  shift: "⇧",
+  control: "⌃",
+  command: "⌘",
+};
 
 const SIDEBAR_THREAD_SORT_ORDER_LABELS = {
   updated_at: "Recently active",
@@ -1664,6 +1679,24 @@ function SettingsRouteView() {
     }
   };
 
+  const updateAppSnapChord = async (chord: AppSnapChord) => {
+    const request = appSnapRequestGuardRef.current.begin();
+    updateSettings({ appSnapChord: chord });
+    const bridge = window.desktopBridge?.appSnap;
+    if (!bridge) return;
+    try {
+      const state = await bridge.setChord(chord);
+      if (appSnapRequestGuardRef.current.isCurrent(request)) setAppSnapState(state);
+    } catch (error) {
+      if (!appSnapRequestGuardRef.current.isCurrent(request)) return;
+      toastManager.add({
+        type: "error",
+        title: "Could not update the AppSnap shortcut",
+        description: error instanceof Error ? error.message : "The desktop helper did not respond.",
+      });
+    }
+  };
+
   const recheckAppSnapPermissions = async () => {
     const bridge = window.desktopBridge?.appSnap;
     if (!bridge) return;
@@ -1688,15 +1721,17 @@ function SettingsRouteView() {
 
   const renderAppSnapPanel = () => {
     const supported = appSnapState?.supported === true;
+    const chordLabel = APP_SNAP_CHORD_LABELS[settings.appSnapChord];
+    const chordKeycap = APP_SNAP_CHORD_KEYCAPS[settings.appSnapChord];
     return (
       <div className="space-y-6">
         <SettingsCard>
           <div className="p-4">
             <p className="text-sm font-medium text-foreground">Capture a window into your task</p>
             <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-              Press left Option and right Option together while another app is frontmost. TeaCode
-              captures only that selected window and places it in your most recent task for 60
-              seconds, or starts a fresh task.
+              Press left {chordLabel} and right {chordLabel} together while another app is
+              frontmost. TeaCode captures only that selected window and places it in your most
+              recent task for 60 seconds, or starts a fresh task.
             </p>
             <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
               Nothing you type is recorded. The capture stays on this device until you explicitly
@@ -1711,7 +1746,7 @@ function SettingsRouteView() {
             description={
               appSnapState === null
                 ? "Available in the TeaCode macOS desktop app."
-                : appSnapState.message || "Listen passively for the two-Option-key shortcut."
+                : appSnapState.message || `Listen passively for the two-${chordLabel}-key shortcut.`
             }
             status={appSnapState?.status ?? "Unavailable"}
             resetAction={
@@ -1733,8 +1768,40 @@ function SettingsRouteView() {
           />
           <SettingsRow
             title="Shortcut"
-            description="The physical left and right Option keys must be held together."
-            control={<kbd className="text-xs text-muted-foreground">left ⌥ + right ⌥</kbd>}
+            description={`The physical left and right ${chordLabel} keys must be held together.`}
+            resetAction={
+              settings.appSnapChord !== defaults.appSnapChord ? (
+                <SettingResetButton
+                  label="AppSnap shortcut"
+                  onClick={() => void updateAppSnapChord(defaults.appSnapChord)}
+                />
+              ) : null
+            }
+            control={
+              <SettingsSelectControl
+                value={settings.appSnapChord}
+                onValueChange={(value) => {
+                  if (
+                    value !== "option" &&
+                    value !== "shift" &&
+                    value !== "control" &&
+                    value !== "command"
+                  ) {
+                    return;
+                  }
+                  void updateAppSnapChord(value);
+                }}
+                ariaLabel="AppSnap shortcut"
+                triggerClassName="w-full sm:w-40"
+                valueContent={`left ${chordKeycap} + right ${chordKeycap}`}
+              >
+                {(Object.keys(APP_SNAP_CHORD_LABELS) as AppSnapChord[]).map((chord) => (
+                  <SelectItem hideIndicator key={chord} value={chord}>
+                    left {APP_SNAP_CHORD_KEYCAPS[chord]} + right {APP_SNAP_CHORD_KEYCAPS[chord]}
+                  </SelectItem>
+                ))}
+              </SettingsSelectControl>
+            }
           />
           <SettingsRow
             title="Destination"
@@ -1771,7 +1838,7 @@ function SettingsRouteView() {
         <SettingsSection title="macOS permissions">
           <SettingsRow
             title="Input Monitoring"
-            description="Used only to detect the simultaneous physical Option keys."
+            description={`Used only to detect the simultaneous physical ${chordLabel} keys.`}
             control={
               <span className="text-xs text-muted-foreground">
                 {appSnapPermissionLabel(appSnapState?.inputMonitoringPermission ?? "unknown")}

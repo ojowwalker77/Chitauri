@@ -68,7 +68,11 @@ export const DEFAULT_SIDEBAR_POSITION: SidebarPosition = "left";
 /** Optional decorative image behind the main chat canvas. */
 export const TaskListDisplayMode = Schema.Literals(["sidebar", "composer"]);
 export type TaskListDisplayMode = typeof TaskListDisplayMode.Type;
-export const DEFAULT_TASK_LIST_DISPLAY_MODE: TaskListDisplayMode = "sidebar";
+export const DEFAULT_TASK_LIST_DISPLAY_MODE: TaskListDisplayMode = "composer";
+/** Which pair of physical modifier keys must be held together to trigger AppSnap. */
+export const AppSnapChord = Schema.Literals(["option", "shift", "control", "command"]);
+export type AppSnapChord = typeof AppSnapChord.Type;
+export const DEFAULT_APP_SNAP_CHORD: AppSnapChord = "option";
 
 export const ChatHeaderControlIdSchema = Schema.Literals(DEFAULT_CHAT_HEADER_CONTROL_ORDER);
 
@@ -155,6 +159,7 @@ export const AppSettingsSchema = Schema.Struct({
   enableTaskCompletionToasts: Schema.Boolean.pipe(withDefaults(() => true)),
   enableSystemTaskCompletionNotifications: Schema.Boolean.pipe(withDefaults(() => true)),
   enableAppSnap: Schema.Boolean.pipe(withDefaults(() => false)),
+  appSnapChord: AppSnapChord.pipe(withDefaults(() => DEFAULT_APP_SNAP_CHORD)),
   appSnapPlaySound: Schema.Boolean.pipe(withDefaults(() => true)),
   sidebarProjectSortOrder: SidebarProjectSortOrder.pipe(
     withDefaults(() => DEFAULT_SIDEBAR_PROJECT_SORT_ORDER),

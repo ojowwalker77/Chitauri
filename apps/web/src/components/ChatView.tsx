@@ -2133,13 +2133,19 @@ export default function ChatView({
     latestTurnSettled &&
     hasActionableProposedPlan(activeProposedPlan);
   const activePendingApproval = pendingApprovals[0] ?? null;
-  // Forced open only for states that need the composer in view: a running turn to
+  // Pops the composer open once for states that need it in view: a running turn to
   // watch or stop, and prompts that need answering. Connecting is not one of them
   // — a research Thread connects its session on open, which kept the composer
   // expanded on arrival even though the disclosure defaults to closed.
+  // This only opens it — collapsing must stay a manual action the user can take back
+  // at any time afterward, so it is never wired into `composerDisclosureOpen` itself
+  // (see the effect below).
   const composerDisclosureForcedOpen =
     phase === "running" || activePendingApproval !== null || pendingUserInputs.length > 0;
-  const composerDisclosureOpen = !composerCollapsed || composerDisclosureForcedOpen;
+  const composerDisclosureOpen = !composerCollapsed;
+  useEffect(() => {
+    if (composerDisclosureForcedOpen) setComposerCollapsed(false);
+  }, [composerDisclosureForcedOpen]);
   const serverAcknowledgedLocalDispatch = useMemo(
     () =>
       hasServerAcknowledgedLocalDispatch({
@@ -4391,7 +4397,6 @@ export default function ChatView({
       if (command === "composer.collapse.toggle") {
         event.preventDefault();
         event.stopPropagation();
-        if (composerDisclosureForcedOpen) return;
         setComposerCollapsed((collapsed) => {
           if (collapsed) window.requestAnimationFrame(() => scheduleComposerFocus());
           return !collapsed;
@@ -4446,7 +4451,6 @@ export default function ChatView({
   }, [
     activeProject,
     activeThreadId,
-    composerDisclosureForcedOpen,
     runProjectScript,
     keybindings,
     onToggleDiff,
@@ -7883,29 +7887,29 @@ export default function ChatView({
                       className="flex shrink-0 items-center gap-1"
                     >
                       {/* Collapsing is a keyboard shortcut, which nothing advertises.
-                          This is the affordance that makes it findable; it hides while
-                          a turn or prompt needs the composer, matching the shortcut. */}
-                      {composerDisclosureForcedOpen ? null : (
-                        <IconButton
-                          type="button"
-                          variant="ghost"
-                          size="icon-xs"
-                          label={
-                            composerCollapseShortcutLabel
-                              ? `Hide composer (${composerCollapseShortcutLabel})`
-                              : "Hide composer"
-                          }
-                          title={
-                            composerCollapseShortcutLabel
-                              ? `Hide composer (${composerCollapseShortcutLabel})`
-                              : "Hide composer"
-                          }
-                          className="shrink-0 text-faint hover:text-foreground"
-                          onClick={() => setComposerCollapsed(true)}
-                        >
-                          <ChevronDownIcon className="size-3.5" />
-                        </IconButton>
-                      )}
+                          This is the affordance that makes it findable — always available,
+                          even mid-turn or with a prompt pending; that state only pops the
+                          composer open once (see the effect near composerDisclosureOpen),
+                          it never locks it open. */}
+                      <IconButton
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        label={
+                          composerCollapseShortcutLabel
+                            ? `Hide composer (${composerCollapseShortcutLabel})`
+                            : "Hide composer"
+                        }
+                        title={
+                          composerCollapseShortcutLabel
+                            ? `Hide composer (${composerCollapseShortcutLabel})`
+                            : "Hide composer"
+                        }
+                        className="shrink-0 text-faint hover:text-foreground"
+                        onClick={() => setComposerCollapsed(true)}
+                      >
+                        <ChevronDownIcon className="size-3.5" />
+                      </IconButton>
                       {activePendingProgress ? (
                         <Button
                           type="submit"
