@@ -44,6 +44,7 @@ import {
   isCodexCliVersionSupported,
   parseCodexCliVersion,
 } from "./provider/codexCliVersion";
+import { terminateChildProcessTree } from "./childProcessTreeTerminator.ts";
 import { isNonFatalCodexErrorMessage } from "./codexErrorClassification.ts";
 import { buildCodexProcessEnv } from "./codexProcessEnv.ts";
 import { ensureIsolatedScratchWorkspace } from "./scratchWorkspaces.ts";
@@ -428,20 +429,34 @@ export function resolveCodexModelForAccount(
   return CODEX_DEFAULT_MODEL;
 }
 
-// Windows `.cmd` shims still run under an explicit cmd.exe wrapper; taskkill
-// keeps cancellation from leaving the real provider process behind.
-function killChildTree(child: ChildProcessWithoutNullStreams): void {
-  if (process.platform === "win32" && child.pid !== undefined) {
-    try {
-      spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], {
-        stdio: "ignore",
-      });
-      return;
-    } catch {
-      // fallback to direct kill
-    }
-  }
-  child.kill();
+// Tears down the codex app-server AND every process it spawned (MCP servers,
+// shells) so a closed session leaves nothing behind. Delegates to the shared
+// tree terminator: graceful SIGTERM, then forced SIGKILL of survivors, with
+// structured lifecycle logs. See childProcessTreeTerminator.ts.
+function killChildTree(
+  child: ChildProcessWithoutNullStreams,
+  logContext: { readonly threadId?: string; readonly kind: "session" | "discovery" },
+): void {
+  terminateChildProcessTree(child, {
+    log: (event) => {
+      const context = {
+        threadId: logContext.threadId,
+        kind: logContext.kind,
+        pid: event.pid,
+        pgid: event.pgid,
+        descendants: event.descendantPids.length,
+        descendantPids: event.descendantPids.length > 0 ? event.descendantPids : undefined,
+        signal: event.signal,
+        graceMs: event.graceMs,
+        detail: event.detail,
+      };
+      if (event.phase === "escalate" || event.phase === "error") {
+        log.warn("codex app-server force-terminated child tree", context);
+      } else if (event.phase === "terminate") {
+        log.info("codex app-server terminating child tree", context);
+      }
+    },
+  });
 }
 
 function spawnCodexAppServer(input: {
@@ -459,6 +474,11 @@ function spawnCodexAppServer(input: {
     stdio: ["pipe", "pipe", "pipe"],
     shell: prepared.shell,
     windowsHide: prepared.windowsHide,
+    // POSIX: give the app-server its own process group so session teardown can
+    // signal the whole group (codex + any MCP children) at once. We never
+    // unref the child — its lifecycle stays owned by this manager. Windows uses
+    // taskkill /T for tree teardown instead.
+    detached: process.platform !== "win32",
   });
 }
 
@@ -1615,7 +1635,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     context.output.close();
 
     if (!context.child.killed) {
-      killChildTree(context.child);
+      killChildTree(context.child, { threadId, kind: "session" });
     }
 
     this.updateSession(context, {
@@ -1954,7 +1974,10 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     context.output.close();
 
     if (!context.child.killed) {
-      killChildTree(context.child);
+      killChildTree(context.child, {
+        threadId: context.session.threadId,
+        kind: "discovery",
+      });
     }
 
     this.discoverySessions.delete(discoveryKey);
