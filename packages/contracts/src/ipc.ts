@@ -181,7 +181,14 @@ import type {
   ProviderReadPluginInput,
   ProviderReadPluginResult,
 } from "./providerDiscovery";
-import type { ProviderCompactThreadInput } from "./provider";
+import type {
+  ProviderCompactThreadInput,
+  ProviderListRealtimeVoicesInput,
+  ProviderListRealtimeVoicesResult,
+  ProviderRealtimeEvent,
+  ProviderStartRealtimeInput,
+  ProviderStopRealtimeInput,
+} from "./provider";
 import type {
   StatsGetProfileStatsInput,
   StatsGetProfileStatsResult,
@@ -504,6 +511,12 @@ export interface NativeApi {
       input: ProviderGetComposerCapabilitiesInput,
     ) => Promise<ProviderComposerCapabilities>;
     compactThread: (input: ProviderCompactThreadInput) => Promise<void>;
+    startRealtime: (input: ProviderStartRealtimeInput) => Promise<void>;
+    stopRealtime: (input: ProviderStopRealtimeInput) => Promise<void>;
+    listRealtimeVoices: (
+      input: ProviderListRealtimeVoicesInput,
+    ) => Promise<ProviderListRealtimeVoicesResult>;
+    onRealtimeEvent: (callback: (event: ProviderRealtimeEvent) => void) => () => void;
     listCommands: (input: ProviderListCommandsInput) => Promise<ProviderListCommandsResult>;
     listSkills: (input: ProviderListSkillsInput) => Promise<ProviderListSkillsResult>;
     listSkillsCatalog: (input: ProviderSkillsCatalogInput) => Promise<ProviderSkillsCatalogResult>;

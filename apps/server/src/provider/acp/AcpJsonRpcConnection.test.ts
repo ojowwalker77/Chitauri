@@ -16,6 +16,67 @@ const mockAgentPath = path.join(__dirname, "../../../scripts/acp-mock-agent.ts")
 const bunExe = "bun";
 
 describe("AcpSessionRuntime", () => {
+  it.effect("does not authenticate unless the adapter explicitly opts in", () => {
+    const requestEvents: Array<AcpSessionRequestLogEvent> = [];
+    return Effect.gen(function* () {
+      const runtime = yield* AcpSessionRuntime;
+      const started = yield* runtime.start();
+
+      expect(started.sessionId).toBe("mock-session-1");
+      expect(requestEvents.some((event) => event.method === "authenticate")).toBe(false);
+      expect(requestEvents.some((event) => event.method === "session/new")).toBe(true);
+    }).pipe(
+      Effect.provide(
+        AcpSessionRuntime.layer({
+          spawn: {
+            command: bunExe,
+            args: [mockAgentPath],
+          },
+          cwd: process.cwd(),
+          clientInfo: { name: "t3-test", version: "0.0.0" },
+          requestLogger: (event) =>
+            Effect.sync(() => {
+              requestEvents.push(event);
+            }),
+        }),
+      ),
+      Effect.scoped,
+      Effect.provide(NodeServices.layer),
+    );
+  });
+
+  it.effect("authenticates when the adapter explicitly opts in via authMethodId", () => {
+    const requestEvents: Array<AcpSessionRequestLogEvent> = [];
+    return Effect.gen(function* () {
+      const runtime = yield* AcpSessionRuntime;
+      const started = yield* runtime.start();
+
+      expect(started.sessionId).toBe("mock-session-1");
+      expect(requestEvents.some((event) => event.method === "authenticate")).toBe(true);
+    }).pipe(
+      Effect.provide(
+        AcpSessionRuntime.layer({
+          spawn: {
+            command: bunExe,
+            args: [mockAgentPath],
+          },
+          cwd: process.cwd(),
+          clientInfo: { name: "t3-test", version: "0.0.0" },
+          // Simulates an explicit, user-initiated connect action opting into
+          // authentication — mirrors what a real adapter's resolveAuthMethodId
+          // would do once the user asks to connect a provider.
+          authMethodId: "test",
+          requestLogger: (event) =>
+            Effect.sync(() => {
+              requestEvents.push(event);
+            }),
+        }),
+      ),
+      Effect.scoped,
+      Effect.provide(NodeServices.layer),
+    );
+  });
+
   it.effect("merges custom initialize client capabilities into the ACP handshake", () => {
     const requestEvents: Array<AcpSessionRequestLogEvent> = [];
     return Effect.gen(function* () {

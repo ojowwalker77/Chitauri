@@ -106,8 +106,10 @@ export const makeCursorAcpRuntime = (
       AcpSessionRuntime.layer({
         ...input,
         spawn: buildCursorAcpSpawnInput(input.cursorSettings, input.cwd),
-        authMethodId: "cursor_login",
-        authenticateMeta: { headless: true },
+        // `cursor_login` opens a browser when the CLI has no cached session.
+        // TeaCode must never trigger that interactive flow during automatic
+        // model discovery or thread startup. Users authenticate Cursor explicitly
+        // outside TeaCode; cached credentials are used by session/new directly.
         clientCapabilities: CURSOR_PARAMETERIZED_MODEL_PICKER_CAPABILITIES,
       }).pipe(
         Layer.provide(

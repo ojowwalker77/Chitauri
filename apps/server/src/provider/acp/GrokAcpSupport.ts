@@ -87,6 +87,16 @@ function availableAuthMethodIds(
   return new Set((initializeResult.authMethods ?? []).map((method) => method.id.trim()));
 }
 
+// Exported for a future explicit, user-initiated "connect Grok" action only.
+// `cached_token` is Grok CLI's fallback ACP auth method whenever no API key
+// env var is set, and it is picked here purely based on the CLI *advertising*
+// it in `initialize` — not on any confirmation that a token is actually cached
+// on disk. Nothing in this codebase (and nothing vendored from xAI) proves
+// that calling `authenticate({ methodId: "cached_token" })` is a passive
+// no-op when no token is cached rather than a fallback interactive/browser
+// login. Per the `authMethodId` gate in AcpSessionRuntime.ts, authenticate()
+// must only run when an adapter explicitly opts in — do NOT wire this
+// function into `makeGrokAcpRuntime`'s implicit session-start path.
 export const resolveGrokAcpAuthMethodId = (
   initializeResult: EffectAcpSchema.InitializeResponse,
 ): Effect.Effect<string, EffectAcpErrors.AcpError> =>
@@ -116,8 +126,16 @@ export const makeGrokAcpRuntime = (
       AcpSessionRuntime.layer({
         ...input,
         spawn: buildGrokAcpSpawnInput(input.grokSettings, input.cwd),
-        resolveAuthMethodId: resolveGrokAcpAuthMethodId,
-        authenticateMeta: { headless: true },
+        // Do not resolve/pass an auth method here: TeaCode must never trigger
+        // an interactive Grok login as a side effect of automatic session
+        // startup (see resolveGrokAcpAuthMethodId above and the `authMethodId`
+        // gate in AcpSessionRuntime.ts). A user's XAI_API_KEY /
+        // GROK_CODE_XAI_API_KEY still works without a browser: the `grok`
+        // child process inherits the full parent environment (see the spawn
+        // env merge in AcpSessionRuntime.ts) and reads the key itself, same as
+        // running `grok` directly from a terminal. A Grok CLI that truly has
+        // no cached credentials and no env key simply fails session/new with
+        // a normal error instead of TeaCode opening a login browser.
       }).pipe(
         Layer.provide(
           Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, input.childProcessSpawner),

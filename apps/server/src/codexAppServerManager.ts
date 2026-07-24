@@ -11,6 +11,7 @@ import {
   ProviderItemId,
   type ProviderListModelsResult,
   type ProviderListPluginsResult,
+  type ProviderListRealtimeVoicesResult,
   type ProviderMentionReference,
   type ProviderPluginAppSummary,
   type ProviderPluginDescriptor,
@@ -32,6 +33,7 @@ import {
   type ProviderEvent,
   type ProviderSession,
   type ProviderSessionStartInput,
+  type ProviderStartRealtimeInput,
   type ProviderTurnStartResult,
   RuntimeMode,
 } from "@t3tools/contracts";
@@ -113,6 +115,7 @@ interface CodexSessionContext {
   nextRequestId: number;
   stopping: boolean;
   discovery?: boolean;
+  realtimeFeatureEnabled?: boolean;
 }
 
 interface CodexSkillListInput {
@@ -188,6 +191,11 @@ export interface CodexAppServerSendTurnInput {
   readonly effort?: string;
 }
 
+export type CodexAppServerStartRealtimeInput = Pick<
+  ProviderStartRealtimeInput,
+  "threadId" | "sdp" | "voice"
+>;
+
 type CodexAppServerReviewTarget = ProviderStartReviewInput["target"];
 
 export interface CodexAppServerStartSessionInput {
@@ -257,6 +265,7 @@ const BENIGN_PROCESS_OUTPUT_REGEXES = [/^(?:\^C)?Token usage:/i];
 const RECOVERABLE_THREAD_RESUME_ERROR_SNIPPETS = [
   "not found",
   "missing thread",
+  "no rollout found",
   "no such thread",
   "unknown thread",
   "does not exist",
@@ -449,10 +458,14 @@ function spawnCodexAppServer(input: {
   readonly cwd: string;
   readonly env: NodeJS.ProcessEnv;
 }): ChildProcessWithoutNullStreams {
-  const prepared = prepareWindowsSafeProcess(input.binaryPath, ["app-server"], {
-    cwd: input.cwd,
-    env: input.env,
-  });
+  const prepared = prepareWindowsSafeProcess(
+    input.binaryPath,
+    ["app-server", "--enable", "realtime_conversation"],
+    {
+      cwd: input.cwd,
+      env: input.env,
+    },
+  );
   return spawn(prepared.command, prepared.args, {
     cwd: input.cwd,
     env: input.env,
@@ -722,6 +735,9 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       await this.sendRequest(context, "initialize", buildCodexInitializeParams());
 
       this.writeMessage(context, { method: "initialized" });
+      // Codex snapshots feature enablement into each Thread when it is opened.
+      // Enabling realtime at the later startRealtime call is too late.
+      await this.enableRealtimeConversation(context);
       await this.registerChitauriSkillsRoot(context);
       try {
         const modelListResponse = await this.sendRequest(context, "model/list", {});
@@ -998,6 +1014,41 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         ? { resumeCursor: context.session.resumeCursor }
         : {}),
     };
+  }
+
+  async startRealtime(input: CodexAppServerStartRealtimeInput): Promise<void> {
+    const context = this.requireSession(input.threadId);
+    const providerThreadId = this.requireProviderThreadId(context);
+    await this.enableRealtimeConversation(context);
+    await this.sendRequest(context, "thread/realtime/start", {
+      threadId: providerThreadId,
+      outputModality: "audio",
+      // V2 cannot use WebRTC, while legacy V1 currently routes some accounts
+      // to the retired quicksilver endpoint. V3 is the supported WebRTC path.
+      version: "v3",
+      transport: {
+        type: "webrtc",
+        sdp: input.sdp,
+      },
+      ...(input.voice !== undefined ? { voice: input.voice } : {}),
+    });
+  }
+
+  async stopRealtime(threadId: ThreadId): Promise<void> {
+    const context = this.requireSession(threadId);
+    await this.sendRequest(context, "thread/realtime/stop", {
+      threadId: this.requireProviderThreadId(context),
+    });
+  }
+
+  async listRealtimeVoices(threadId: ThreadId): Promise<ProviderListRealtimeVoicesResult> {
+    const context = this.requireSession(threadId);
+    await this.enableRealtimeConversation(context);
+    return this.sendRequest<ProviderListRealtimeVoicesResult>(
+      context,
+      "thread/realtime/listVoices",
+      {},
+    );
   }
 
   async steerTurn(input: CodexAppServerSendTurnInput): Promise<ProviderTurnStartResult> {
@@ -1352,6 +1403,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
       await this.sendRequest(context, "initialize", buildCodexInitializeParams());
       this.writeMessage(context, { method: "initialized" });
+      await this.enableRealtimeConversation(context);
       await this.registerChitauriSkillsRoot(context);
       try {
         const accountReadResponse = await this.sendRequest(context, "account/read", {});
@@ -2390,6 +2442,30 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     });
 
     return result as TResponse;
+  }
+
+  private requireProviderThreadId(context: CodexSessionContext): string {
+    const providerThreadId = readResumeThreadId({
+      threadId: context.session.threadId,
+      runtimeMode: context.session.runtimeMode,
+      resumeCursor: context.session.resumeCursor,
+    });
+    if (!providerThreadId) {
+      throw new Error("Session is missing provider resume thread id.");
+    }
+    return providerThreadId;
+  }
+
+  private async enableRealtimeConversation(context: CodexSessionContext): Promise<void> {
+    if (context.realtimeFeatureEnabled) {
+      return;
+    }
+    await this.sendRequest(context, "experimentalFeature/enablement/set", {
+      enablement: {
+        realtime_conversation: true,
+      },
+    });
+    context.realtimeFeatureEnabled = true;
   }
 
   private writeMessage(context: CodexSessionContext, message: unknown): void {

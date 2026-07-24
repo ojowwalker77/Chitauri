@@ -380,6 +380,29 @@ describe("wsNativeApi", () => {
     });
   });
 
+  it("subscribes to ephemeral realtime events only while voice listeners exist", async () => {
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    const listener = vi.fn();
+
+    expect(channelListeners.has(WS_CHANNELS.providerRealtimeEvent)).toBe(false);
+    const unsubscribe = api.provider.onRealtimeEvent(listener);
+    expect(channelListeners.has(WS_CHANNELS.providerRealtimeEvent)).toBe(true);
+
+    const event = {
+      type: "transcript.delta",
+      threadId: ThreadId.makeUnsafe("thread-voice"),
+      createdAt: "2026-07-23T00:00:00.000Z",
+      role: "assistant",
+      delta: "Hello",
+    } as const;
+    emitPush(WS_CHANNELS.providerRealtimeEvent, event);
+
+    expect(listener).toHaveBeenCalledWith(event);
+    unsubscribe();
+    expect(channelListeners.has(WS_CHANNELS.providerRealtimeEvent)).toBe(false);
+  });
+
   it("wraps orchestration dispatch commands in the command envelope", async () => {
     requestMock.mockResolvedValue(undefined);
     const { createWsNativeApi } = await import("./wsNativeApi");

@@ -32,6 +32,7 @@ describe("OrchestrationReactor", () => {
         ),
         Layer.provideMerge(
           Layer.succeed(ProviderCommandReactor, {
+            ensureSession: (threadId) => Effect.succeed(threadId),
             start: Effect.sync(() => {
               started.push("provider-command-reactor");
             }),

@@ -58,6 +58,18 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     keywords: "Choose the provider used for new chats. agent codex claude",
   },
   {
+    id: "general:new-thread-workspace",
+    section: "general",
+    title: "New thread workspace",
+    keywords: "new worktree current branch checkout default thread workspace isolation",
+  },
+  {
+    id: "general:worktree-base-branch",
+    section: "general",
+    title: "Worktree base branch",
+    keywords: "default branch origin remote main master new worktree base",
+  },
+  {
     id: "general:permissions-mode",
     section: "permissions",
     title: "Permissions Mode",

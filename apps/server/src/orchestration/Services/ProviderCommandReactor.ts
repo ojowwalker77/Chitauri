@@ -6,6 +6,7 @@
  *
  * @module ProviderCommandReactor
  */
+import type { ThreadId } from "@t3tools/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Scope } from "effect";
 
@@ -13,6 +14,13 @@ import type { Effect, Scope } from "effect";
  * ProviderCommandReactorShape - Service API for provider command reactors.
  */
 export interface ProviderCommandReactorShape {
+  /**
+   * Establish or recover the canonical provider session for a projected Thread.
+   * Non-turn provider features must use this instead of inventing a partial
+   * session startup path.
+   */
+  readonly ensureSession: (threadId: ThreadId) => Effect.Effect<ThreadId, unknown>;
+
   /**
    * Start reacting to provider-intent orchestration domain events.
    *

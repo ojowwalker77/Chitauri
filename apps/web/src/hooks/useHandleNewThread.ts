@@ -9,6 +9,7 @@ import {
   useComposerDraftStore,
 } from "../composerDraftStore";
 import {
+  applyNewThreadWorkspaceDefaults,
   buildDraftThreadContextPatch,
   createActiveDraftThreadSnapshot,
   createActiveThreadSnapshot,
@@ -45,6 +46,7 @@ export function useHandleNewThread() {
       options?: NewThreadOptions,
       navigation?: NewThreadNavigationOptions,
     ): Promise<ThreadId> => {
+      const resolvedOptions = applyNewThreadWorkspaceDefaults(options, settings);
       const navigateToThread = (threadId: ThreadId) =>
         navigation?.navigate
           ? navigation.navigate(threadId)
@@ -181,8 +183,8 @@ export function useHandleNewThread() {
           ...createFreshDraftThreadSeed({
             createdAt,
             options: {
-              ...options,
-              runtimeMode: options?.runtimeMode ?? settings.defaultRuntimeMode,
+              ...resolvedOptions,
+              runtimeMode: resolvedOptions.runtimeMode ?? settings.defaultRuntimeMode,
             },
           }),
         });
@@ -193,7 +195,13 @@ export function useHandleNewThread() {
         return threadId;
       })();
     },
-    [navigate, focusedThreadId, settings.defaultRuntimeMode],
+    [
+      navigate,
+      focusedThreadId,
+      settings.defaultNewThreadWorkspaceMode,
+      settings.defaultRuntimeMode,
+      settings.defaultWorktreeBaseBranch,
+    ],
   );
 
   return {

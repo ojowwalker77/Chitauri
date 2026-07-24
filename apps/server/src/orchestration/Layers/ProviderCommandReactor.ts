@@ -2193,6 +2193,9 @@ const make = Effect.gen(function* () {
 
   const worker = yield* makeDrainableWorker(processDomainEventSafely);
 
+  const ensureSession: ProviderCommandReactorShape["ensureSession"] = (threadId) =>
+    ensureSessionForThread(threadId, new Date().toISOString());
+
   const start: ProviderCommandReactorShape["start"] = Effect.all([
     Stream.runForEach(orchestrationEngine.streamDomainEvents, (event) => {
       if (
@@ -2221,6 +2224,7 @@ const make = Effect.gen(function* () {
   ]).pipe(Effect.asVoid);
 
   return {
+    ensureSession,
     start,
     drain: worker.drain,
   } satisfies ProviderCommandReactorShape;

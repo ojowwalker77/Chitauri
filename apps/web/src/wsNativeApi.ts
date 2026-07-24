@@ -20,6 +20,7 @@ import {
   type OrchestrationShellStreamItem,
   type OrchestrationThreadStreamItem,
   type ProjectDevServerEvent,
+  type ProviderRealtimeEvent,
   type ServerProviderStatusesUpdatedPayload,
   type ServerLifecycleStreamEvent,
   type ServerSettingsUpdatedPayload,
@@ -47,6 +48,8 @@ const serverProviderStatusesUpdatedListeners = new Set<
 const serverMaintenanceUpdatedListeners = new Set<(payload: ServerLifecycleStreamEvent) => void>();
 const serverSettingsUpdatedListeners = new Set<(payload: ServerSettingsUpdatedPayload) => void>();
 const gitActionProgressListeners = new Set<(payload: GitActionProgressEvent) => void>();
+const providerRealtimeEventListeners = new Set<(payload: ProviderRealtimeEvent) => void>();
+let providerRealtimeEventUnsubscribe: (() => void) | null = null;
 
 function omitNullUserInputAnswers(
   command: Parameters<NativeApi["orchestration"]["dispatchCommand"]>[0],
@@ -529,6 +532,32 @@ export function createWsNativeApi(): NativeApi {
       getComposerCapabilities: (input) =>
         transport.request(WS_METHODS.providerGetComposerCapabilities, input),
       compactThread: (input) => transport.request(WS_METHODS.providerCompactThread, input),
+      startRealtime: (input) => transport.request(WS_METHODS.providerStartRealtime, input),
+      stopRealtime: (input) => transport.request(WS_METHODS.providerStopRealtime, input),
+      listRealtimeVoices: (input) =>
+        transport.request(WS_METHODS.providerListRealtimeVoices, input),
+      onRealtimeEvent: (callback) => {
+        providerRealtimeEventListeners.add(callback);
+        providerRealtimeEventUnsubscribe ??= transport.subscribe(
+          WS_CHANNELS.providerRealtimeEvent,
+          (message) => {
+            for (const listener of providerRealtimeEventListeners) {
+              try {
+                listener(message.data);
+              } catch {
+                // Listener errors must not break the shared voice stream.
+              }
+            }
+          },
+        );
+        return () => {
+          providerRealtimeEventListeners.delete(callback);
+          if (providerRealtimeEventListeners.size === 0) {
+            providerRealtimeEventUnsubscribe?.();
+            providerRealtimeEventUnsubscribe = null;
+          }
+        };
+      },
       listCommands: (input) => transport.request(WS_METHODS.providerListCommands, input),
       listSkills: (input) => transport.request(WS_METHODS.providerListSkills, input),
       listSkillsCatalog: (input) => transport.request(WS_METHODS.providerListSkillsCatalog, input),
@@ -616,6 +645,9 @@ export function resetWsNativeApiForTest(): void {
   serverMaintenanceUpdatedListeners.clear();
   serverSettingsUpdatedListeners.clear();
   gitActionProgressListeners.clear();
+  providerRealtimeEventUnsubscribe?.();
+  providerRealtimeEventUnsubscribe = null;
+  providerRealtimeEventListeners.clear();
   projectDevServerEventListeners.clear();
   orchestrationDomainEventUnsubscribe = null;
   orchestrationDomainEventListeners.clear();
@@ -632,6 +664,9 @@ if (import.meta.hot) {
     serverProviderStatusesUpdatedListeners.clear();
     serverSettingsUpdatedListeners.clear();
     gitActionProgressListeners.clear();
+    providerRealtimeEventUnsubscribe?.();
+    providerRealtimeEventUnsubscribe = null;
+    providerRealtimeEventListeners.clear();
     projectDevServerEventListeners.clear();
     orchestrationDomainEventUnsubscribe = null;
     orchestrationDomainEventListeners.clear();

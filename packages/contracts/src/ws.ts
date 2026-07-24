@@ -107,7 +107,13 @@ import {
   ProviderListSkillsInput,
   ProviderSkillsCatalogInput,
 } from "./providerDiscovery";
-import { ProviderCompactThreadInput } from "./provider";
+import {
+  ProviderCompactThreadInput,
+  ProviderRealtimeEvent,
+  ProviderStartRealtimeInput,
+  ProviderStopRealtimeInput,
+  ProviderListRealtimeVoicesInput,
+} from "./provider";
 import { ResearchListInput, ResearchReadInput, ResearchSetArchivedInput } from "./research";
 
 // ── WebSocket RPC Method Names ───────────────────────────────────────
@@ -206,6 +212,10 @@ export const WS_METHODS = {
   // Provider discovery
   providerGetComposerCapabilities: "provider.getComposerCapabilities",
   providerCompactThread: "provider.compactThread",
+  providerStartRealtime: "provider.startRealtime",
+  providerStopRealtime: "provider.stopRealtime",
+  providerListRealtimeVoices: "provider.listRealtimeVoices",
+  subscribeProviderRealtimeEvents: "provider.subscribeRealtimeEvents",
   providerListCommands: "provider.listCommands",
   providerListSkills: "provider.listSkills",
   providerListSkillsCatalog: "provider.listSkillsCatalog",
@@ -230,6 +240,7 @@ export const WS_METHODS = {
 
 export const WS_CHANNELS = {
   automationEvent: "automation.event",
+  providerRealtimeEvent: "provider.realtimeEvent",
   gitActionProgress: "git.actionProgress",
   projectDevServerEvent: "project.devServerEvent",
   serverWelcome: "server.welcome",
@@ -366,6 +377,10 @@ const WebSocketRequestBody = Schema.Union([
   // Provider discovery
   tagRequestBody(WS_METHODS.providerGetComposerCapabilities, ProviderGetComposerCapabilitiesInput),
   tagRequestBody(WS_METHODS.providerCompactThread, ProviderCompactThreadInput),
+  tagRequestBody(WS_METHODS.providerStartRealtime, ProviderStartRealtimeInput),
+  tagRequestBody(WS_METHODS.providerStopRealtime, ProviderStopRealtimeInput),
+  tagRequestBody(WS_METHODS.providerListRealtimeVoices, ProviderListRealtimeVoicesInput),
+  tagRequestBody(WS_METHODS.subscribeProviderRealtimeEvents, Schema.Struct({})),
   tagRequestBody(WS_METHODS.providerListCommands, ProviderListCommandsInput),
   tagRequestBody(WS_METHODS.providerListSkills, ProviderListSkillsInput),
   tagRequestBody(WS_METHODS.providerListSkillsCatalog, ProviderSkillsCatalogInput),
@@ -423,6 +438,7 @@ export interface WsPushPayloadByChannel {
   readonly [WS_CHANNELS.serverProviderStatusesUpdated]: typeof ServerProviderStatusesUpdatedPayload.Type;
   readonly [WS_CHANNELS.serverSettingsUpdated]: typeof ServerSettingsUpdatedPayload.Type;
   readonly [WS_CHANNELS.automationEvent]: typeof AutomationStreamEvent.Type;
+  readonly [WS_CHANNELS.providerRealtimeEvent]: typeof ProviderRealtimeEvent.Type;
   readonly [WS_CHANNELS.gitActionProgress]: typeof GitActionProgressEvent.Type;
   readonly [WS_CHANNELS.projectDevServerEvent]: typeof ProjectDevServerEvent.Type;
   readonly [ORCHESTRATION_WS_CHANNELS.domainEvent]: OrchestrationEvent;
@@ -465,6 +481,10 @@ export const WsPushAutomationEvent = makeWsPushSchema(
   WS_CHANNELS.automationEvent,
   AutomationStreamEvent,
 );
+export const WsPushProviderRealtimeEvent = makeWsPushSchema(
+  WS_CHANNELS.providerRealtimeEvent,
+  ProviderRealtimeEvent,
+);
 export const WsPushGitActionProgress = makeWsPushSchema(
   WS_CHANNELS.gitActionProgress,
   GitActionProgressEvent,
@@ -494,6 +514,7 @@ export const WsPushChannelSchema = Schema.Literals([
   WS_CHANNELS.serverProviderStatusesUpdated,
   WS_CHANNELS.serverSettingsUpdated,
   WS_CHANNELS.automationEvent,
+  WS_CHANNELS.providerRealtimeEvent,
   WS_CHANNELS.projectDevServerEvent,
   ORCHESTRATION_WS_CHANNELS.domainEvent,
   ORCHESTRATION_WS_CHANNELS.shellEvent,
@@ -508,6 +529,7 @@ export const WsPush = Schema.Union([
   WsPushServerProviderStatusesUpdated,
   WsPushServerSettingsUpdated,
   WsPushAutomationEvent,
+  WsPushProviderRealtimeEvent,
   WsPushGitActionProgress,
   WsPushProjectDevServerEvent,
   WsPushOrchestrationDomainEvent,

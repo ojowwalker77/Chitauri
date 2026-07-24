@@ -103,7 +103,11 @@ function createProviderServiceHarness(
     getCapabilities: () => Effect.succeed({ sessionModelSwitch: "in-session" }),
     rollbackConversation,
     compactThread: () => unsupported(),
+    startRealtime: () => unsupported(),
+    stopRealtime: () => unsupported(),
+    listRealtimeVoices: () => unsupported(),
     streamEvents: Stream.fromPubSub(runtimeEventPubSub),
+    streamRealtimeEvents: Stream.empty,
   };
 
   const emit = (event: LegacyProviderRuntimeEvent): void => {

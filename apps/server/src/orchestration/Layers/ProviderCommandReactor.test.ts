@@ -326,7 +326,11 @@ describe("ProviderCommandReactor", () => {
         }),
       rollbackConversation,
       compactThread: () => unsupported(),
+      startRealtime: () => unsupported(),
+      stopRealtime: () => unsupported(),
+      listRealtimeVoices: () => unsupported(),
       streamEvents: Stream.fromPubSub(runtimeEventPubSub),
+      streamRealtimeEvents: Stream.empty,
     };
 
     const orchestrationLayer = OrchestrationEngineLive.pipe(

@@ -87,7 +87,14 @@ import {
   OrchestrationShellStreamItem,
   OrchestrationThreadStreamItem,
 } from "./orchestration";
-import { ProviderCompactThreadInput } from "./provider";
+import {
+  ProviderCompactThreadInput,
+  ProviderListRealtimeVoicesInput,
+  ProviderListRealtimeVoicesResult,
+  ProviderRealtimeEvent,
+  ProviderStartRealtimeInput,
+  ProviderStopRealtimeInput,
+} from "./provider";
 import {
   ResearchListInput,
   ResearchListResult,
@@ -746,6 +753,34 @@ export const WsProviderCompactThreadRpc = Rpc.make(WS_METHODS.providerCompactThr
   error: WsRpcError,
 });
 
+export const WsProviderStartRealtimeRpc = Rpc.make(WS_METHODS.providerStartRealtime, {
+  payload: ProviderStartRealtimeInput,
+  success: Schema.Void,
+  error: WsRpcError,
+});
+
+export const WsProviderStopRealtimeRpc = Rpc.make(WS_METHODS.providerStopRealtime, {
+  payload: ProviderStopRealtimeInput,
+  success: Schema.Void,
+  error: WsRpcError,
+});
+
+export const WsProviderListRealtimeVoicesRpc = Rpc.make(WS_METHODS.providerListRealtimeVoices, {
+  payload: ProviderListRealtimeVoicesInput,
+  success: ProviderListRealtimeVoicesResult,
+  error: WsRpcError,
+});
+
+export const WsSubscribeProviderRealtimeEventsRpc = Rpc.make(
+  WS_METHODS.subscribeProviderRealtimeEvents,
+  {
+    payload: Schema.Struct({}),
+    success: ProviderRealtimeEvent,
+    error: WsRpcError,
+    stream: true,
+  },
+);
+
 export const WsProviderListCommandsRpc = Rpc.make(WS_METHODS.providerListCommands, {
   payload: ProviderListCommandsInput,
   success: ProviderListCommandsResult,
@@ -929,6 +964,10 @@ export const WsRpcGroup = RpcGroup.make(
   WsSubscribeServerSettingsRpc,
   WsProviderGetComposerCapabilitiesRpc,
   WsProviderCompactThreadRpc,
+  WsProviderStartRealtimeRpc,
+  WsProviderStopRealtimeRpc,
+  WsProviderListRealtimeVoicesRpc,
+  WsSubscribeProviderRealtimeEventsRpc,
   WsProviderListCommandsRpc,
   WsProviderListSkillsRpc,
   WsProviderListSkillsCatalogRpc,

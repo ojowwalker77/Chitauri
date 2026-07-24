@@ -628,6 +628,11 @@ describe("isRecoverableThreadResumeError", () => {
     expect(
       isRecoverableThreadResumeError(new Error("thread/resume failed: thread not found")),
     ).toBe(true);
+    expect(
+      isRecoverableThreadResumeError(
+        new Error("thread/resume failed: no rollout found for thread id thread_1"),
+      ),
+    ).toBe(true);
   });
 
   it("ignores non-resume errors", () => {
@@ -1775,6 +1780,34 @@ describe("CodexAppServerManager discovery", () => {
 });
 
 describe("thread checkpoint control", () => {
+  it("starts WebRTC realtime with feature enablement and the compatible protocol", async () => {
+    const { manager, context, requireSession, sendRequest } = createThreadControlHarness();
+    sendRequest.mockResolvedValue({});
+
+    await manager.startRealtime({
+      threadId: asThreadId("thread_1"),
+      sdp: "v=0\r\ns=-\r\n",
+      voice: "cedar",
+    });
+
+    expect(requireSession).toHaveBeenCalledWith("thread_1");
+    expect(sendRequest).toHaveBeenNthCalledWith(1, context, "experimentalFeature/enablement/set", {
+      enablement: {
+        realtime_conversation: true,
+      },
+    });
+    expect(sendRequest).toHaveBeenNthCalledWith(2, context, "thread/realtime/start", {
+      threadId: "thread_1",
+      outputModality: "audio",
+      version: "v3",
+      transport: {
+        type: "webrtc",
+        sdp: "v=0\r\ns=-\r\n",
+      },
+      voice: "cedar",
+    });
+  });
+
   it("lists resumable desktop threads with normalized metadata", async () => {
     const manager = new CodexAppServerManager();
     const context = { discovery: true };

@@ -53,6 +53,7 @@ import {
   LockClosedIcon as HeroLockClosedIcon,
   LockOpenIcon as HeroLockOpenIcon,
   MinusIcon as HeroMinusIcon,
+  MicrophoneIcon as HeroMicrophoneIcon,
   MoonIcon as HeroMoonIcon,
   PaperClipIcon as HeroPaperClipIcon,
   PlayIcon as HeroPlayIcon,
@@ -215,6 +216,7 @@ export const WebSearchIcon: LucideIcon = centralIconWrapper("globe");
 export const McpIcon: LucideIcon = (props) => (
   <VscMcp className={props.className} style={props.style} />
 );
+export const MicrophoneIcon = heroIcon(HeroMicrophoneIcon);
 export const PluginIcon: LucideIcon = centralIconWrapper("puzzle");
 // Single hammer/build glyph (tool-call rows, codex provider, "build" scripts).
 // Sourced from the Central set so it matches the other work-row icons (pencil,
