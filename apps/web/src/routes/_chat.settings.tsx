@@ -237,6 +237,20 @@ const TASK_LIST_DISPLAY_OPTIONS = [
   label: string;
 }>;
 
+const NEW_THREAD_WORKSPACE_OPTIONS = [
+  {
+    value: "worktree",
+    label: "New worktree",
+  },
+  {
+    value: "local",
+    label: "Current branch",
+  },
+] as const satisfies ReadonlyArray<{
+  value: AppSettings["defaultNewThreadWorkspaceMode"];
+  label: string;
+}>;
+
 const PROVIDER_SELECT_OPTIONS = [
   "codex",
   "claudeAgent",
@@ -1914,6 +1928,60 @@ function SettingsRouteView() {
                 </SelectItem>
               ))}
             </SettingsSelectControl>
+          }
+        />
+        <SettingsRow
+          title="New thread workspace"
+          description="Choose whether new Worker threads get an isolated worktree or use the Worker's current checkout."
+          resetAction={
+            settings.defaultNewThreadWorkspaceMode !== defaults.defaultNewThreadWorkspaceMode ? (
+              <SettingResetButton
+                label="new thread workspace"
+                onClick={() =>
+                  updateSettings({
+                    defaultNewThreadWorkspaceMode: defaults.defaultNewThreadWorkspaceMode,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <SettingsSegmentedControl
+              value={settings.defaultNewThreadWorkspaceMode}
+              onValueChange={(value) => updateSettings({ defaultNewThreadWorkspaceMode: value })}
+              options={NEW_THREAD_WORKSPACE_OPTIONS}
+              ariaLabel="New thread workspace"
+            />
+          }
+        />
+        <SettingsRow
+          title="Worktree base branch"
+          description={
+            settings.defaultNewThreadWorkspaceMode === "worktree"
+              ? "Branch new worktrees from this branch. Leave empty to use the repository's remote default."
+              : "Used when New thread workspace is set to New worktree."
+          }
+          resetAction={
+            settings.defaultWorktreeBaseBranch !== defaults.defaultWorktreeBaseBranch ? (
+              <SettingResetButton
+                label="worktree base branch"
+                onClick={() =>
+                  updateSettings({
+                    defaultWorktreeBaseBranch: defaults.defaultWorktreeBaseBranch,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <DebouncedSettingTextInput
+              value={settings.defaultWorktreeBaseBranch}
+              onCommit={(value) => updateSettings({ defaultWorktreeBaseBranch: value.trim() })}
+              placeholder="Remote default"
+              aria-label="Default worktree base branch"
+              disabled={settings.defaultNewThreadWorkspaceMode !== "worktree"}
+              className="w-full sm:w-44"
+            />
           }
         />
       </SettingsSection>

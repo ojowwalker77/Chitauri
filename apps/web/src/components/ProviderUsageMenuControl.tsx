@@ -13,13 +13,16 @@ import {
 } from "~/lib/providerUsageDisplay";
 import type { OpenUsageUsageLine } from "~/lib/openUsageRateLimits";
 import type { ProviderRateLimit } from "~/lib/rateLimits";
+import { cn } from "~/lib/utils";
 import { useStore } from "~/store";
 import { createAllThreadsSelector } from "~/storeSelectors";
 
 import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
+import { COMPOSER_TOOLBAR_PICKER_TRIGGER_CLASS_NAME } from "./chat/composerPickerStyles";
 import { ChatHeaderButton } from "./chat/chatHeaderControls";
 import { ProviderIcon } from "./ProviderIcon";
 import { ProviderUsagePanelContent } from "./ProviderUsagePanelContent";
+import { ProviderUsageRing } from "./ProviderUsageRing";
 import { Menu, MenuTrigger } from "./ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 
@@ -66,17 +69,19 @@ export function ProviderUsageMenuPopup({
   provider,
   model,
   align = "end",
+  side = "bottom",
   children,
 }: {
   provider: ProviderKind;
   model: ProviderUsageMenuModel;
   align?: "start" | "end";
+  side?: "top" | "bottom";
   children: ReactNode;
 }) {
   return (
     <Menu modal={false}>
       {children}
-      <ComposerPickerMenuPopup align={align} side="bottom" className="w-64 min-w-64">
+      <ComposerPickerMenuPopup align={align} side={side} className="w-64 min-w-64">
         <ProviderUsagePanelContent
           provider={provider}
           rateLimits={model.rateLimits}
@@ -120,6 +125,45 @@ export function ProviderUsageMenuControl({ provider }: { provider: ProviderKind 
           }
         />
         <TooltipPopup side="bottom">{model.menuTitle}</TooltipPopup>
+      </Tooltip>
+    </ProviderUsageMenuPopup>
+  );
+}
+
+// Composer-underbar variant: a glanceable ring + remaining-% chip that sits next to
+// the model/branch/local controls and opens the same usage popover (upward).
+export function ProviderUsageRingControl({ provider }: { provider: ProviderKind }) {
+  const model = useProviderUsageMenuModel(provider);
+
+  if (!model) {
+    return null;
+  }
+
+  const { primaryRow } = model;
+
+  return (
+    <ProviderUsageMenuPopup provider={provider} model={model} align="start" side="top">
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <MenuTrigger
+              render={
+                <button
+                  type="button"
+                  className={cn(COMPOSER_TOOLBAR_PICKER_TRIGGER_CLASS_NAME, "shrink-0")}
+                  aria-label={`${model.menuTitle}: ${primaryRow.remainingLabel} remaining`}
+                />
+              }
+            >
+              <ProviderUsageRing
+                remainingPercent={primaryRow.remainingPercent}
+                tone={primaryRow.remainingTone}
+              />
+              <span className="tabular-nums">{primaryRow.remainingLabel}</span>
+            </MenuTrigger>
+          }
+        />
+        <TooltipPopup side="top">{model.menuTitle}</TooltipPopup>
       </Tooltip>
     </ProviderUsageMenuPopup>
   );

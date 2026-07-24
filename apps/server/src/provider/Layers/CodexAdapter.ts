@@ -15,6 +15,8 @@ import {
   type ProviderListModelsResult,
   type ProviderListPluginsResult,
   type ProviderReadPluginResult,
+  type ProviderRealtimeAudioChunk,
+  type ProviderRealtimeEvent,
   type ProviderListSkillsResult,
   type ProviderRuntimeEvent,
   type ThreadTokenUsageSnapshot,
@@ -151,6 +153,34 @@ function asNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+function asPositiveInteger(value: unknown): number | undefined {
+  const number = asNumber(value);
+  return number !== undefined && Number.isSafeInteger(number) && number > 0 ? number : undefined;
+}
+
+function mapRealtimeAudioChunk(value: unknown): ProviderRealtimeAudioChunk | undefined {
+  const audio = asObject(value);
+  const data = asString(audio?.data);
+  const sampleRate = asPositiveInteger(audio?.sampleRate ?? audio?.sample_rate);
+  const numChannels = asPositiveInteger(
+    audio?.numChannels ?? audio?.num_channels ?? audio?.channels,
+  );
+  const samplesPerChannel = asPositiveInteger(
+    audio?.samplesPerChannel ?? audio?.samples_per_channel,
+  );
+  const itemId = asString(audio?.itemId ?? audio?.item_id);
+  if (!data || sampleRate === undefined || numChannels === undefined) {
+    return undefined;
+  }
+  return {
+    data,
+    sampleRate,
+    numChannels,
+    ...(samplesPerChannel !== undefined ? { samplesPerChannel } : {}),
+    ...(itemId ? { itemId } : {}),
+  };
+}
+
 // Keep manager-emitted stderr lines visible without escalating them into a fatal thread error.
 function providerErrorMapsToWarning(event: ProviderEvent): boolean {
   return (
@@ -159,6 +189,14 @@ function providerErrorMapsToWarning(event: ProviderEvent): boolean {
       (event.method === "error" &&
         typeof event.message === "string" &&
         isNonFatalCodexErrorMessage(event.message)))
+  );
+}
+
+function isRedundantRealtimeErrorDiagnostic(event: ProviderEvent): boolean {
+  return (
+    event.kind === "error" &&
+    event.method === "process/stderr" &&
+    event.message?.toLowerCase().includes("realtime stream error event received") === true
   );
 }
 
@@ -797,6 +835,12 @@ function mapToRuntimeEvents(
   }
 
   if (event.kind === "error") {
+    // Core emits this stderr line after the typed thread/realtime/error and
+    // thread/realtime/closed notifications. Persisting it creates a second,
+    // less useful warning in the normal transcript after voice fails.
+    if (isRedundantRealtimeErrorDiagnostic(event)) {
+      return [];
+    }
     if (!event.message) {
       return [];
     }
@@ -1553,6 +1597,61 @@ function mapToRuntimeEvents(
   return [];
 }
 
+function mapToRealtimeEvent(event: ProviderEvent): ProviderRealtimeEvent | undefined {
+  if (!event.method.startsWith("thread/realtime/")) {
+    return undefined;
+  }
+  const payload = asObject(event.payload);
+  const base = {
+    threadId: event.threadId,
+    createdAt: event.createdAt,
+  };
+
+  switch (event.method) {
+    case "thread/realtime/started":
+      return {
+        type: "started",
+        ...base,
+        ...(asString(payload?.realtimeSessionId)
+          ? { realtimeSessionId: asString(payload?.realtimeSessionId) }
+          : {}),
+        ...(asString(payload?.version) ? { version: asString(payload?.version) } : {}),
+      };
+    case "thread/realtime/sdp": {
+      const sdp = asString(payload?.sdp);
+      return sdp ? { type: "sdp", ...base, sdp } : undefined;
+    }
+    case "thread/realtime/transcript/delta": {
+      const role = asString(payload?.role);
+      const delta = asString(payload?.delta);
+      return role && delta !== undefined
+        ? { type: "transcript.delta", ...base, role, delta }
+        : undefined;
+    }
+    case "thread/realtime/transcript/done": {
+      const role = asString(payload?.role);
+      const text = asString(payload?.text);
+      return role && text !== undefined
+        ? { type: "transcript.done", ...base, role, text }
+        : undefined;
+    }
+    case "thread/realtime/outputAudio/delta": {
+      const audio = mapRealtimeAudioChunk(payload?.audio ?? event.payload);
+      return audio ? { type: "audio.delta", ...base, audio } : undefined;
+    }
+    case "thread/realtime/error": {
+      const message = asString(payload?.message) ?? event.message;
+      return message ? { type: "error", ...base, message } : undefined;
+    }
+    case "thread/realtime/closed": {
+      const reason = asString(payload?.reason) ?? event.message;
+      return { type: "closed", ...base, ...(reason ? { reason } : {}) };
+    }
+    default:
+      return undefined;
+  }
+}
+
 const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
@@ -1866,6 +1965,24 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         catch: (cause) => toRequestError(threadId, "thread/compact/start", cause),
       });
 
+    const startRealtime: NonNullable<CodexAdapterShape["startRealtime"]> = (input) =>
+      Effect.tryPromise({
+        try: () => manager.startRealtime(input),
+        catch: (cause) => toRequestError(input.threadId, "thread/realtime/start", cause),
+      });
+
+    const stopRealtime: NonNullable<CodexAdapterShape["stopRealtime"]> = (threadId) =>
+      Effect.tryPromise({
+        try: () => manager.stopRealtime(threadId),
+        catch: (cause) => toRequestError(threadId, "thread/realtime/stop", cause),
+      });
+
+    const listRealtimeVoices: NonNullable<CodexAdapterShape["listRealtimeVoices"]> = (threadId) =>
+      Effect.tryPromise({
+        try: () => manager.listRealtimeVoices(threadId),
+        catch: (cause) => toRequestError(threadId, "thread/realtime/listVoices", cause),
+      });
+
     const listExternalThreads: NonNullable<CodexAdapterShape["listExternalThreads"]> = (input) =>
       Effect.tryPromise({
         try: () => manager.listExternalThreads(input.limit),
@@ -1989,6 +2106,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       }).pipe(Effect.map((result) => result satisfies ProviderListModelsResult));
 
     const runtimeEventQueue = yield* Queue.unbounded<ProviderRuntimeEvent>();
+    const realtimeEventQueue = yield* Queue.unbounded<ProviderRealtimeEvent>();
 
     yield* Effect.acquireRelease(
       Effect.gen(function* () {
@@ -2003,6 +2121,19 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         const services = yield* Effect.services<never>();
         const listener = (event: ProviderEvent) =>
           Effect.gen(function* () {
+            const realtimeEvent = mapToRealtimeEvent(event);
+            if (event.method.startsWith("thread/realtime/")) {
+              if (realtimeEvent) {
+                if (realtimeEvent.type === "error") {
+                  yield* Effect.logWarning("Codex realtime session error", {
+                    threadId: realtimeEvent.threadId,
+                    message: realtimeEvent.message,
+                  });
+                }
+                yield* Queue.offer(realtimeEventQueue, realtimeEvent);
+              }
+              return;
+            }
             yield* writeNativeEvent(event);
             const runtimeEvents = mapToRuntimeEvents(event, event.threadId);
             if (runtimeEvents.length === 0) {
@@ -2025,6 +2156,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
             manager.off("event", listener);
           });
           yield* Queue.shutdown(runtimeEventQueue);
+          yield* Queue.shutdown(realtimeEventQueue);
         }),
     );
 
@@ -2040,6 +2172,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         supportsRuntimeModelList: true,
         supportsTurnSteering: true,
         supportsLiveTurnDiffPatch: true,
+        supportsRealtimeVoice: true,
       },
       startSession,
       sendTurn,
@@ -2051,6 +2184,9 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       listExternalThreads,
       rollbackThread,
       compactThread,
+      startRealtime,
+      stopRealtime,
+      listRealtimeVoices,
       forkThread,
       respondToRequest,
       respondToUserInput,
@@ -2064,6 +2200,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       readPlugin,
       listModels,
       streamEvents: Stream.fromQueue(runtimeEventQueue),
+      streamRealtimeEvents: Stream.fromQueue(realtimeEventQueue),
     } satisfies CodexAdapterShape;
   });
 

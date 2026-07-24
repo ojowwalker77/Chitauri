@@ -73,6 +73,9 @@ export const DEFAULT_TASK_LIST_DISPLAY_MODE: TaskListDisplayMode = "composer";
 export const AppSnapChord = Schema.Literals(["option", "shift", "control", "command"]);
 export type AppSnapChord = typeof AppSnapChord.Type;
 export const DEFAULT_APP_SNAP_CHORD: AppSnapChord = "option";
+export const NewThreadWorkspaceMode = Schema.Literals(["worktree", "local"]);
+export type NewThreadWorkspaceMode = typeof NewThreadWorkspaceMode.Type;
+export const DEFAULT_NEW_THREAD_WORKSPACE_MODE: NewThreadWorkspaceMode = "worktree";
 
 export const ChatHeaderControlIdSchema = Schema.Literals(DEFAULT_CHAT_HEADER_CONTROL_ORDER);
 
@@ -180,6 +183,13 @@ export const AppSettingsSchema = Schema.Struct({
   textGenerationModel: Schema.optional(TrimmedNonEmptyString),
   uiFontFamily: Schema.String.check(Schema.isMaxLength(256)).pipe(withDefaults(() => "")),
   defaultProvider: ProviderKind.pipe(withDefaults(() => "codex" as const)),
+  defaultNewThreadWorkspaceMode: NewThreadWorkspaceMode.pipe(
+    withDefaults(() => DEFAULT_NEW_THREAD_WORKSPACE_MODE),
+  ),
+  // Empty means "use the repository's remote default branch".
+  defaultWorktreeBaseBranch: Schema.String.check(Schema.isMaxLength(256)).pipe(
+    withDefaults(() => ""),
+  ),
   // Local-only UI preference: providers explicitly hidden from the composer picker.
   // The active/locked provider for a thread is always shown regardless, so users
   // never get stuck on a thread whose provider they later chose to hide.

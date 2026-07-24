@@ -145,7 +145,7 @@ import {
   unarchiveThreadFromClient,
 } from "../lib/threadArchive";
 import { isHomeChatContainerProject, prewarmHomeChatProject } from "../lib/chatProjects";
-import { useComposerDraftStore } from "../composerDraftStore";
+import { makeModelSelection, useComposerDraftStore } from "../composerDraftStore";
 import { resolveThreadEnvironmentPresentation } from "../lib/threadEnvironment";
 import { dispatchThreadRename } from "../lib/threadRename";
 import { quotePosixShellArgument } from "../lib/shellQuote";
@@ -324,6 +324,7 @@ import type {
   SidebarSearchTask,
   SidebarSearchThread,
 } from "./SidebarSearchPalette.logic";
+import { buildSidebarSearchThreadCommands } from "./SidebarSearchPaletteCommands";
 import { useFocusedChatContext } from "../focusedChatContext";
 import { waitForRecoverableProjectInReadModel } from "../lib/projectCreateRecovery";
 import {
@@ -989,6 +990,7 @@ export default function Sidebar() {
   const reorderProjects = useStore((store) => store.reorderProjects);
   const renameProjectLocally = useStore((store) => store.renameProjectLocally);
   const clearComposerDraftForThread = useComposerDraftStore((store) => store.clearDraftThread);
+  const setComposerModelSelection = useComposerDraftStore((store) => store.setModelSelection);
   const projectRunsByProjectId = useProjectRunStore((state) => state.runsByProjectId);
   const storeRemoveProjectRun = useProjectRunStore((state) => state.removeRun);
   const clearProjectDraftThreads = useComposerDraftStore((store) => store.clearProjectDraftThreads);
@@ -5276,6 +5278,55 @@ export default function Sidebar() {
     shortcutLabelForCommand(keybindings, "sidebar.addProject") ??
     (isMacPlatform(navigator.platform) ? "⇧⌘O" : "Ctrl+Shift+O");
   const usageSettingsShortcutLabel = shortcutLabelForCommand(keybindings, "settings.usage");
+  // Palette commands that act on the active thread (switch model/provider) or the current
+  // project (new thread in provider) — see SidebarSearchPaletteCommands.ts. Switching the
+  // model or provider both land on `setModelSelection`; a thread's provider is just one of
+  // its per-provider model selections, so "switch provider" is really "switch model, for a
+  // provider you haven't necessarily used on this thread yet".
+  const activeSidebarThreadSummaryForPalette = activeSidebarThreadId
+    ? sidebarThreadSummaryById[activeSidebarThreadId]
+    : undefined;
+  const handlePaletteSetModelSelection = useCallback(
+    (provider: ProviderKind, model: string) => {
+      if (!activeSidebarThreadId) return;
+      setComposerModelSelection(activeSidebarThreadId, makeModelSelection(provider, model));
+    },
+    [activeSidebarThreadId, setComposerModelSelection],
+  );
+  const handlePaletteNewThreadInProvider = useCallback(
+    (provider: ProviderKind) => {
+      if (!currentProjectShortcutTargetId) return;
+      void handleNewThread(currentProjectShortcutTargetId, { provider, fresh: true });
+    },
+    [currentProjectShortcutTargetId, handleNewThread],
+  );
+  const searchPaletteThreadCommands = useMemo<SidebarSearchAction[]>(
+    () =>
+      buildSidebarSearchThreadCommands({
+        activeThread: activeSidebarThreadSummaryForPalette
+          ? {
+              provider: activeSidebarThreadSummaryForPalette.modelSelection.provider,
+              model: activeSidebarThreadSummaryForPalette.modelSelection.model,
+            }
+          : null,
+        hasNewThreadProjectTarget: currentProjectShortcutTargetId !== null,
+        hiddenProviders: appSettings.hiddenProviders,
+        providerOrder: appSettings.providerOrder,
+        callbacks: {
+          onSwitchModel: handlePaletteSetModelSelection,
+          onSwitchProvider: handlePaletteSetModelSelection,
+          onNewThreadInProvider: handlePaletteNewThreadInProvider,
+        },
+      }),
+    [
+      activeSidebarThreadSummaryForPalette,
+      appSettings.hiddenProviders,
+      appSettings.providerOrder,
+      currentProjectShortcutTargetId,
+      handlePaletteNewThreadInProvider,
+      handlePaletteSetModelSelection,
+    ],
+  );
   const searchPaletteProjects = useMemo<SidebarSearchProject[]>(
     () =>
       projects.map((project) => ({
@@ -5342,12 +5393,14 @@ export default function Sidebar() {
         keywords: ["usage", "limits", "credits", "quota", "providers"],
         shortcutLabel: usageSettingsShortcutLabel,
       },
+      ...searchPaletteThreadCommands,
     ],
     [
       addProjectShortcutLabel,
       importThreadShortcutLabel,
       newChatShortcutLabel,
       newThreadShortcutLabel,
+      searchPaletteThreadCommands,
       usageSettingsShortcutLabel,
     ],
   );

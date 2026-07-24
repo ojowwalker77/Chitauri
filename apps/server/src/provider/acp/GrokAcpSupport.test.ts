@@ -1,11 +1,18 @@
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import * as EffectAcpErrors from "effect-acp/errors";
 import type * as EffectAcpSchema from "effect-acp/schema";
-import { afterEach, describe, expect, it } from "vitest";
+import { ChildProcessSpawner } from "effect/unstable/process";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import {
+  AcpSessionRuntime,
+  type AcpSessionRuntimeOptions,
+  type AcpSessionRuntimeShape,
+} from "./AcpSessionRuntime.ts";
 import {
   applyGrokAcpModelSelection,
   buildGrokAcpSpawnInput,
+  makeGrokAcpRuntime,
   resolveGrokAcpAuthMethodId,
 } from "./GrokAcpSupport.ts";
 
@@ -31,6 +38,16 @@ describe("buildGrokAcpSpawnInput", () => {
       args: ["agent", "--no-leader", "stdio"],
       cwd: "/tmp/project",
     });
+  });
+
+  it("does not restrict the Grok child process environment", () => {
+    // No `env` override means AcpSessionRuntime spawns Grok with the full
+    // parent process environment (see the spawn env merge in
+    // AcpSessionRuntime.ts). That is how an already-present XAI_API_KEY /
+    // GROK_CODE_XAI_API_KEY reaches the `grok` CLI passively — the same way it
+    // would if a user ran `grok` directly from a terminal — without TeaCode
+    // ever needing to call the ACP `authenticate` method.
+    expect(buildGrokAcpSpawnInput(undefined, "/tmp/project").env).toBeUndefined();
   });
 
   it("passes model and reasoning effort as Grok agent startup options", () => {
@@ -120,6 +137,42 @@ describe("resolveGrokAcpAuthMethodId", () => {
 
     expect(error).toBeInstanceOf(EffectAcpErrors.AcpRequestError);
     expect(error.message).toBe("Grok ACP authentication is unavailable.");
+  });
+});
+
+describe("makeGrokAcpRuntime", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("never wires an auth method into the implicit session-start ACP runtime", async () => {
+    const fakeShape = {} as AcpSessionRuntimeShape;
+    let capturedOptions: AcpSessionRuntimeOptions | undefined;
+    vi.spyOn(AcpSessionRuntime, "layer").mockImplementation((options) => {
+      capturedOptions = options;
+      return Layer.succeed(AcpSessionRuntime, fakeShape);
+    });
+    const spawnerThatMustNotBeCalled = {
+      spawn: () => {
+        throw new Error("child process spawner must not be invoked in this test");
+      },
+    } as unknown as ChildProcessSpawner.ChildProcessSpawner["Service"];
+
+    await Effect.runPromise(
+      makeGrokAcpRuntime({
+        childProcessSpawner: spawnerThatMustNotBeCalled,
+        grokSettings: null,
+        cwd: "/tmp/project",
+        clientInfo: { name: "t3-test", version: "0.0.0" },
+      }).pipe(Effect.scoped),
+    );
+
+    // Mirrors CursorAcpSupport: TeaCode must never call ACP `authenticate` as
+    // a side effect of automatic session startup, only when an adapter
+    // explicitly opts in (see the `authMethodId` gate in AcpSessionRuntime.ts).
+    expect(capturedOptions?.authMethodId).toBeUndefined();
+    expect(capturedOptions?.resolveAuthMethodId).toBeUndefined();
+    expect(capturedOptions?.authenticateMeta).toBeUndefined();
   });
 });
 

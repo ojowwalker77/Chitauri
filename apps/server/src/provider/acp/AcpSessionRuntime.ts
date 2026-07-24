@@ -435,24 +435,23 @@ const makeAcpSessionRuntime = (
           ? yield* options.resolveAuthMethodId(initializeResult)
           : options.authMethodId;
 
-      if (!authMethodId) {
-        return yield* new EffectAcpErrors.AcpRequestError({
-          code: -32602,
-          errorMessage: "ACP agent did not provide an authentication method.",
-          data: { authMethods: initializeResult.authMethods ?? [] },
-        });
+      // Authentication methods are interactive actions in ACP, not passive
+      // credential checks. Only invoke one when the adapter explicitly opts in.
+      // Providers with cached credentials can proceed directly to session setup;
+      // an unauthenticated provider then fails normally without TeaCode opening a
+      // login browser behind the user's back.
+      if (authMethodId) {
+        const authenticatePayload = {
+          methodId: authMethodId,
+          ...(options.authenticateMeta ? { _meta: options.authenticateMeta } : {}),
+        } satisfies EffectAcpSchema.AuthenticateRequest;
+
+        yield* runLoggedRequest(
+          "authenticate",
+          authenticatePayload,
+          acp.agent.authenticate(authenticatePayload),
+        );
       }
-
-      const authenticatePayload = {
-        methodId: authMethodId,
-        ...(options.authenticateMeta ? { _meta: options.authenticateMeta } : {}),
-      } satisfies EffectAcpSchema.AuthenticateRequest;
-
-      yield* runLoggedRequest(
-        "authenticate",
-        authenticatePayload,
-        acp.agent.authenticate(authenticatePayload),
-      );
 
       let sessionId: string;
       let sessionSetupResult:

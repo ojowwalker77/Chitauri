@@ -311,6 +311,25 @@ describe("sidebar sort defaults", () => {
 });
 
 describe("normalizeStoredAppSettings", () => {
+  it("defaults new threads to remote-default worktrees", () => {
+    const decodedSettings = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema))("{}");
+
+    expect(decodedSettings.defaultNewThreadWorkspaceMode).toBe("worktree");
+    expect(decodedSettings.defaultWorktreeBaseBranch).toBe("");
+  });
+
+  it("preserves configured new-thread workspace defaults", () => {
+    const decodedSettings = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema))(
+      JSON.stringify({
+        defaultNewThreadWorkspaceMode: "local",
+        defaultWorktreeBaseBranch: "release/next",
+      }),
+    );
+
+    expect(decodedSettings.defaultNewThreadWorkspaceMode).toBe("local");
+    expect(decodedSettings.defaultWorktreeBaseBranch).toBe("release/next");
+  });
+
   it("defaults native font smoothing by platform", () => {
     expect(getDefaultNativeFontSmoothing("MacIntel")).toBe(true);
     expect(getDefaultNativeFontSmoothing("Win32")).toBe(false);

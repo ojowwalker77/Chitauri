@@ -102,7 +102,11 @@ describe("ProviderSessionReaperLive", () => {
       getCapabilities: () => unsupported(),
       rollbackConversation: () => unsupported(),
       compactThread: () => unsupported(),
+      startRealtime: () => unsupported(),
+      stopRealtime: () => unsupported(),
+      listRealtimeVoices: () => unsupported(),
       streamEvents: Stream.empty,
+      streamRealtimeEvents: Stream.empty,
     };
 
     const scope = await Effect.runPromise(Scope.make());
@@ -161,7 +165,11 @@ describe("ProviderSessionReaperLive", () => {
       getCapabilities: () => unsupported(),
       rollbackConversation: () => unsupported(),
       compactThread: () => unsupported(),
+      startRealtime: () => unsupported(),
+      stopRealtime: () => unsupported(),
+      listRealtimeVoices: () => unsupported(),
       streamEvents: Stream.empty,
+      streamRealtimeEvents: Stream.empty,
     };
 
     const scope = await Effect.runPromise(Scope.make());

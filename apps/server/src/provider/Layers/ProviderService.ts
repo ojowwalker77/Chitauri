@@ -12,6 +12,9 @@
 import {
   ProviderCompactThreadInput,
   ProviderForkThreadInput,
+  ProviderListRealtimeVoicesInput,
+  ProviderStartRealtimeInput,
+  ProviderStopRealtimeInput,
   ModelSelection,
   NonNegativeInt,
   ThreadId,
@@ -25,6 +28,7 @@ import {
   ProviderStopSessionInput,
   ProviderStartOptions,
   type ProviderRuntimeEvent,
+  type ProviderRealtimeEvent,
   type ProviderSession,
 } from "@t3tools/contracts";
 import { Cause, Effect, Exit, Layer, Option, PubSub, Schema, SchemaIssue, Stream } from "effect";
@@ -252,6 +256,8 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
     const registry = yield* ProviderAdapterRegistry;
     const directory = yield* ProviderSessionDirectory;
     const runtimeEventPubSub = yield* PubSub.unbounded<ProviderRuntimeEvent>();
+    const realtimeEventPubSub = yield* PubSub.unbounded<ProviderRealtimeEvent>();
+    const activeRealtimeThreads = new Set<ThreadId>();
     const runtimeIdleTimers = new Map<ThreadId, ReturnType<typeof setTimeout>>();
     // Fired idle callbacks outlive their timer map entry, so use generations to
     // invalidate async stop work when new user work starts in that gap.
@@ -290,6 +296,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
 
     const scheduleRuntimeIdleStop = (threadId: ThreadId) => {
       clearRuntimeIdleTimer(threadId);
+      if (activeRealtimeThreads.has(threadId)) {
+        return;
+      }
       if (runtimeIdleStopMs <= 0) {
         retireRuntimeIdleGeneration(threadId);
         return;
@@ -354,6 +363,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           }
           return;
         case "session.exited":
+          activeRealtimeThreads.delete(event.threadId);
           clearRuntimeIdleTimer(event.threadId);
           retireRuntimeIdleGeneration(event.threadId);
           return;
@@ -619,6 +629,22 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
     // streams do not pay for an extra queue hop in the hot path.
     yield* Effect.forEach(adapters, (adapter) =>
       Stream.runForEach(adapter.streamEvents, processRuntimeEvent).pipe(Effect.forkScoped),
+    ).pipe(Effect.asVoid);
+
+    yield* Effect.forEach(adapters, (adapter) =>
+      adapter.streamRealtimeEvents
+        ? Stream.runForEach(adapter.streamRealtimeEvents, (event) =>
+            Effect.sync(() => {
+              if (event.type === "started") {
+                activeRealtimeThreads.add(event.threadId);
+                clearRuntimeIdleTimer(event.threadId);
+              } else if (event.type === "closed" || event.type === "error") {
+                activeRealtimeThreads.delete(event.threadId);
+                scheduleRuntimeIdleStop(event.threadId);
+              }
+            }).pipe(Effect.andThen(PubSub.publish(realtimeEventPubSub, event)), Effect.asVoid),
+          ).pipe(Effect.forkScoped)
+        : Effect.void,
     ).pipe(Effect.asVoid);
 
     const recoverSessionForThread = (input: {
@@ -1156,6 +1182,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         if (routed.isActive) {
           yield* routed.adapter.stopSession(routed.threadId);
         }
+        activeRealtimeThreads.delete(input.threadId);
         yield* waitForRuntimeIdleStop(input.threadId);
         yield* directory.remove(input.threadId);
         retireRuntimeIdleGeneration(input.threadId);
@@ -1196,6 +1223,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         if (hasActiveSession) {
           yield* adapter.stopSession(input.threadId);
         }
+        activeRealtimeThreads.delete(input.threadId);
         if (!isExpectedIdleStopCurrent()) {
           return;
         }
@@ -1438,6 +1466,89 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         );
       });
 
+    const startRealtime: ProviderServiceShape["startRealtime"] = (rawInput) =>
+      Effect.gen(function* () {
+        const input = yield* decodeInputOrValidationError({
+          operation: "ProviderService.startRealtime",
+          schema: ProviderStartRealtimeInput,
+          payload: rawInput,
+        });
+        yield* runIdleSensitiveProviderWork(
+          input.threadId,
+          Effect.gen(function* () {
+            const routed = yield* resolveRoutableSession({
+              threadId: input.threadId,
+              operation: "ProviderService.startRealtime",
+              allowRecovery: true,
+            });
+            if (!routed.adapter.startRealtime) {
+              return yield* toValidationError(
+                "ProviderService.startRealtime",
+                `Live voice is unavailable for provider '${routed.adapter.provider}'.`,
+              );
+            }
+            activeRealtimeThreads.add(input.threadId);
+            yield* routed.adapter.startRealtime(input).pipe(
+              Effect.onError(() =>
+                Effect.sync(() => {
+                  activeRealtimeThreads.delete(input.threadId);
+                }),
+              ),
+            );
+          }),
+        );
+      });
+
+    const stopRealtime: ProviderServiceShape["stopRealtime"] = (rawInput) =>
+      Effect.gen(function* () {
+        const input = yield* decodeInputOrValidationError({
+          operation: "ProviderService.stopRealtime",
+          schema: ProviderStopRealtimeInput,
+          payload: rawInput,
+        });
+        const routed = yield* resolveRoutableSession({
+          threadId: input.threadId,
+          operation: "ProviderService.stopRealtime",
+          allowRecovery: false,
+        });
+        if (!routed.adapter.stopRealtime) {
+          return yield* toValidationError(
+            "ProviderService.stopRealtime",
+            `Live voice is unavailable for provider '${routed.adapter.provider}'.`,
+          );
+        }
+        yield* routed.adapter.stopRealtime(input.threadId);
+        activeRealtimeThreads.delete(input.threadId);
+        scheduleRuntimeIdleStop(input.threadId);
+      });
+
+    const listRealtimeVoices: ProviderServiceShape["listRealtimeVoices"] = (rawInput) =>
+      Effect.gen(function* () {
+        const input = yield* decodeInputOrValidationError({
+          operation: "ProviderService.listRealtimeVoices",
+          schema: ProviderListRealtimeVoicesInput,
+          payload: rawInput,
+        });
+        return yield* runIdleSensitiveProviderWork(
+          input.threadId,
+          Effect.gen(function* () {
+            const routed = yield* resolveRoutableSession({
+              threadId: input.threadId,
+              operation: "ProviderService.listRealtimeVoices",
+              allowRecovery: true,
+            });
+            if (!routed.adapter.listRealtimeVoices) {
+              return yield* toValidationError(
+                "ProviderService.listRealtimeVoices",
+                `Live voice is unavailable for provider '${routed.adapter.provider}'.`,
+              );
+            }
+            return yield* routed.adapter.listRealtimeVoices(input.threadId);
+          }),
+          { scheduleIdleStopOnSuccess: true },
+        );
+      });
+
     const runStopAll = () =>
       Effect.gen(function* () {
         const stoppedAt = new Date().toISOString();
@@ -1468,6 +1579,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         runtimeIdleTimers.clear();
         runtimeIdleGenerations.clear();
         runtimeIdleStopsInFlight.clear();
+        activeRealtimeThreads.clear();
         stopIdleRuntimeSession = null;
       }).pipe(
         Effect.andThen(runStopAll()),
@@ -1491,11 +1603,17 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
       getCapabilities,
       rollbackConversation,
       compactThread,
+      startRealtime,
+      stopRealtime,
+      listRealtimeVoices,
       // Each access creates a fresh PubSub subscription so that multiple
       // consumers (ProviderRuntimeIngestion, CheckpointReactor, etc.) each
       // independently receive all runtime events.
       get streamEvents(): ProviderServiceShape["streamEvents"] {
         return Stream.fromPubSub(runtimeEventPubSub);
+      },
+      get streamRealtimeEvents(): ProviderServiceShape["streamRealtimeEvents"] {
+        return Stream.fromPubSub(realtimeEventPubSub);
       },
     } satisfies ProviderServiceShape;
   });

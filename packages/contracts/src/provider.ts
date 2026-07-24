@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { TrimmedNonEmptyString } from "./baseSchemas";
+import { PositiveInt, TrimmedNonEmptyString } from "./baseSchemas";
 import {
   ApprovalRequestId,
   EventId,
@@ -135,6 +135,116 @@ export const ProviderCompactThreadInput = Schema.Struct({
   threadId: ThreadId,
 });
 export type ProviderCompactThreadInput = typeof ProviderCompactThreadInput.Type;
+
+export const ProviderRealtimeVoice = Schema.Literals([
+  "alloy",
+  "arbor",
+  "ash",
+  "ballad",
+  "breeze",
+  "cedar",
+  "coral",
+  "cove",
+  "echo",
+  "ember",
+  "juniper",
+  "maple",
+  "marin",
+  "sage",
+  "shimmer",
+  "sol",
+  "spruce",
+  "vale",
+  "verse",
+]);
+export type ProviderRealtimeVoice = typeof ProviderRealtimeVoice.Type;
+
+// SDP is opaque protocol data. A valid offer/answer is multiline and normally
+// ends in CRLF, so it must never pass through a trimming string schema.
+const ProviderRealtimeSdp = Schema.String.check(Schema.isNonEmpty());
+
+export const ProviderStartRealtimeInput = Schema.Struct({
+  threadId: ThreadId,
+  sdp: ProviderRealtimeSdp,
+  voice: Schema.optional(ProviderRealtimeVoice),
+});
+export type ProviderStartRealtimeInput = typeof ProviderStartRealtimeInput.Type;
+
+export const ProviderStopRealtimeInput = Schema.Struct({
+  threadId: ThreadId,
+});
+export type ProviderStopRealtimeInput = typeof ProviderStopRealtimeInput.Type;
+
+export const ProviderListRealtimeVoicesInput = Schema.Struct({
+  threadId: ThreadId,
+});
+export type ProviderListRealtimeVoicesInput = typeof ProviderListRealtimeVoicesInput.Type;
+
+export const ProviderListRealtimeVoicesResult = Schema.Struct({
+  voices: Schema.Struct({
+    v1: Schema.Array(ProviderRealtimeVoice),
+    v2: Schema.Array(ProviderRealtimeVoice),
+    defaultV1: ProviderRealtimeVoice,
+    defaultV2: ProviderRealtimeVoice,
+  }),
+});
+export type ProviderListRealtimeVoicesResult = typeof ProviderListRealtimeVoicesResult.Type;
+
+const ProviderRealtimeEventBase = {
+  threadId: ThreadId,
+  createdAt: IsoDateTime,
+};
+
+export const ProviderRealtimeAudioChunk = Schema.Struct({
+  data: TrimmedNonEmptyString,
+  sampleRate: PositiveInt,
+  numChannels: PositiveInt,
+  samplesPerChannel: Schema.optional(PositiveInt),
+  itemId: Schema.optional(TrimmedNonEmptyString),
+});
+export type ProviderRealtimeAudioChunk = typeof ProviderRealtimeAudioChunk.Type;
+
+export const ProviderRealtimeEvent = Schema.Union([
+  Schema.Struct({
+    type: Schema.Literal("started"),
+    ...ProviderRealtimeEventBase,
+    realtimeSessionId: Schema.optional(TrimmedNonEmptyString),
+    version: Schema.optional(TrimmedNonEmptyString),
+  }),
+  Schema.Struct({
+    type: Schema.Literal("sdp"),
+    ...ProviderRealtimeEventBase,
+    sdp: ProviderRealtimeSdp,
+  }),
+  Schema.Struct({
+    type: Schema.Literal("transcript.delta"),
+    ...ProviderRealtimeEventBase,
+    role: TrimmedNonEmptyString,
+    delta: Schema.String,
+  }),
+  Schema.Struct({
+    type: Schema.Literal("transcript.done"),
+    ...ProviderRealtimeEventBase,
+    role: TrimmedNonEmptyString,
+    text: Schema.String,
+  }),
+  Schema.Struct({
+    type: Schema.Literal("audio.delta"),
+    ...ProviderRealtimeEventBase,
+    audio: ProviderRealtimeAudioChunk,
+  }),
+  Schema.Struct({
+    type: Schema.Literal("error"),
+    ...ProviderRealtimeEventBase,
+    message: TrimmedNonEmptyString,
+  }),
+  Schema.Struct({
+    type: Schema.Literal("closed"),
+    ...ProviderRealtimeEventBase,
+    reason: Schema.optional(TrimmedNonEmptyString),
+  }),
+]);
+export type ProviderRealtimeEvent = typeof ProviderRealtimeEvent.Type;
 
 export const ProviderRespondToRequestInput = Schema.Struct({
   threadId: ThreadId,

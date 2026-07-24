@@ -157,6 +157,59 @@ describe("Worker MCP tools", () => {
     });
     expect(snapshot.threads).toHaveLength(2);
 
+    const delegated = (await call(threadA, "threads_create", {
+      title: "Claude implementation",
+      provider: "claudeAgent",
+      model: "claude-sonnet-4-5",
+      prompt: "Implement the isolated change and report the result.",
+    })) as {
+      id: string;
+      provider: string;
+      parentThreadId: string;
+      dispatched: boolean;
+    };
+    expect(delegated).toMatchObject({
+      provider: "claudeAgent",
+      parentThreadId: threadA,
+      dispatched: true,
+    });
+
+    const threads = (await call(threadA, "threads_list", {})) as Array<{
+      id: string;
+      provider: string;
+    }>;
+    expect(threads).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: delegated.id, provider: "claudeAgent" }),
+      ]),
+    );
+
+    const delegatedRead = (await call(threadA, "threads_read", {
+      thread_id: delegated.id,
+    })) as {
+      messages: Array<{ role: string; text: string }>;
+    };
+    expect(delegatedRead.messages).toEqual([
+      expect.objectContaining({
+        role: "user",
+        text: "Implement the isolated change and report the result.",
+      }),
+    ]);
+
+    await call(threadA, "threads_send", {
+      thread_id: delegated.id,
+      prompt: "Also run the focused tests.",
+    });
+    const delegatedReadAfterSend = (await call(threadA, "threads_read", {
+      thread_id: delegated.id,
+      message_limit: 1,
+    })) as {
+      messages: Array<{ role: string; text: string }>;
+    };
+    expect(delegatedReadAfterSend.messages).toEqual([
+      expect.objectContaining({ role: "user", text: "Also run the focused tests." }),
+    ]);
+
     await system.runtime.dispose();
   });
 });

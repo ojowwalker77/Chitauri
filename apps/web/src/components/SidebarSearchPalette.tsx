@@ -901,7 +901,11 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                     <CommandGroup>
                       <CommandGroupLabel className="pt-0 pb-1.5 pl-3">Suggested</CommandGroupLabel>
                       {matchedActions.map((action) => {
-                        const onSelect = actionHandler(action.id, props);
+                        // Dynamically built commands (switch model/provider, new thread in
+                        // provider — see SidebarSearchPaletteCommands.ts) carry their own bound
+                        // `run` callback. The fixed navigation actions resolve through the
+                        // static id switch instead.
+                        const onSelect = action.run ?? actionHandler(action.id, props);
                         const Icon = ACTION_ICONS[action.id];
                         return (
                           <CommandItem
@@ -930,7 +934,11 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                               onSelect();
                             }}
                           >
-                            {Icon ? <PaletteIcon icon={Icon} /> : null}
+                            {action.providerIcon ? (
+                              <ProviderIcon provider={action.providerIcon} />
+                            ) : Icon ? (
+                              <PaletteIcon icon={Icon} />
+                            ) : null}
                             <span className="min-w-0 flex-1 truncate text-sm text-foreground">
                               {action.label}
                             </span>

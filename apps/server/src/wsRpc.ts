@@ -49,6 +49,7 @@ import { makeImportThreadHandler } from "./orchestration/importThreadRoute";
 import { makeListImportableDesktopThreadsHandler } from "./orchestration/listImportableDesktopThreadsRoute";
 import { OrchestrationEngineService } from "./orchestration/Services/OrchestrationEngine";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
+import { ProviderCommandReactor } from "./orchestration/Services/ProviderCommandReactor";
 import { ProviderDiscoveryService } from "./provider/Services/ProviderDiscoveryService";
 import { discoverSkillsCatalog, chitauriSkillsDir } from "./provider/skillsCatalog";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
@@ -385,6 +386,7 @@ export const makeWsRpcLayer = () =>
       const keybindings = yield* Keybindings;
       const open = yield* Open;
       const orchestrationEngine = yield* OrchestrationEngineService;
+      const providerCommandReactor = yield* ProviderCommandReactor;
       const path = yield* Path.Path;
       const profileStatsQuery = yield* ProfileStatsQuery;
       const projectionReadModelQuery = yield* ProjectionSnapshotQuery;
@@ -1414,6 +1416,21 @@ export const makeWsRpcLayer = () =>
           ),
         [WS_METHODS.providerCompactThread]: (input) =>
           rpcEffect(providerService.compactThread(input), "Failed to compact thread"),
+        [WS_METHODS.providerStartRealtime]: (input) =>
+          rpcEffect(
+            providerCommandReactor
+              .ensureSession(input.threadId)
+              .pipe(Effect.andThen(providerService.startRealtime(input))),
+            "Failed to start live voice",
+          ),
+        [WS_METHODS.providerStopRealtime]: (input) =>
+          rpcEffect(providerService.stopRealtime(input), "Failed to stop live voice"),
+        [WS_METHODS.providerListRealtimeVoices]: (input) =>
+          rpcEffect(providerService.listRealtimeVoices(input), "Failed to list live voice voices"),
+        [WS_METHODS.subscribeProviderRealtimeEvents]: () =>
+          providerService.streamRealtimeEvents.pipe(
+            Stream.mapError((cause) => toWsRpcError(cause, "Live voice stream failed")),
+          ),
         [WS_METHODS.providerListCommands]: (input) =>
           rpcEffect(providerDiscoveryService.listCommands(input), "Failed to list commands"),
         [WS_METHODS.providerListSkills]: (input) =>

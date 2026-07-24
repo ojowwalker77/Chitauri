@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { Schema } from "effect";
 
-import { ProviderSendTurnInput, ProviderSessionStartInput } from "./provider";
+import {
+  ProviderRealtimeEvent,
+  ProviderSendTurnInput,
+  ProviderSessionStartInput,
+  ProviderStartRealtimeInput,
+} from "./provider";
 
 const decodeProviderSessionStartInput = Schema.decodeUnknownSync(ProviderSessionStartInput);
 const decodeProviderSendTurnInput = Schema.decodeUnknownSync(ProviderSendTurnInput);
+const decodeProviderStartRealtimeInput = Schema.decodeUnknownSync(ProviderStartRealtimeInput);
+const decodeProviderRealtimeEvent = Schema.decodeUnknownSync(ProviderRealtimeEvent);
 
 describe("ProviderSessionStartInput", () => {
   it("accepts codex-compatible payloads", () => {
@@ -149,5 +156,60 @@ describe("ProviderSendTurnInput", () => {
       throw new Error("Expected claude modelSelection");
     }
     expect(parsed.modelSelection.options?.effort).toBe("xhigh");
+  });
+});
+
+describe("realtime SDP contracts", () => {
+  const sdp = "v=0\r\no=- 9148632761380695809 2 IN IP4 127.0.0.1\r\ns=-\r\n";
+
+  it("preserves the browser offer without trimming protocol whitespace", () => {
+    const parsed = decodeProviderStartRealtimeInput({
+      threadId: "thread-1",
+      sdp,
+    });
+
+    expect(parsed.sdp).toBe(sdp);
+  });
+
+  it("preserves the provider answer without trimming protocol whitespace", () => {
+    const parsed = decodeProviderRealtimeEvent({
+      type: "sdp",
+      threadId: "thread-1",
+      createdAt: "2026-07-23T22:00:00.000Z",
+      sdp,
+    });
+
+    if (parsed.type !== "sdp") {
+      throw new Error("Expected an SDP realtime event");
+    }
+    expect(parsed.sdp).toBe(sdp);
+  });
+});
+
+describe("realtime audio contracts", () => {
+  it("preserves app-server PCM audio metadata", () => {
+    const parsed = decodeProviderRealtimeEvent({
+      type: "audio.delta",
+      threadId: "thread-1",
+      createdAt: "2026-07-24T12:00:00.000Z",
+      audio: {
+        data: "AAABAP//",
+        sampleRate: 24_000,
+        numChannels: 1,
+        samplesPerChannel: 3,
+        itemId: "item-audio-1",
+      },
+    });
+
+    if (parsed.type !== "audio.delta") {
+      throw new Error("Expected an audio realtime event");
+    }
+    expect(parsed.audio).toEqual({
+      data: "AAABAP//",
+      sampleRate: 24_000,
+      numChannels: 1,
+      samplesPerChannel: 3,
+      itemId: "item-audio-1",
+    });
   });
 });

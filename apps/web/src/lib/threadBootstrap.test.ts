@@ -2,6 +2,7 @@ import { ProjectId, type ModelSelection, ThreadId } from "@t3tools/contracts";
 import { describe, expect, it } from "vitest";
 import { type ComposerThreadDraftState, type DraftThreadState } from "../composerDraftStore";
 import {
+  applyNewThreadWorkspaceDefaults,
   buildDraftThreadContextPatch,
   createActiveDraftThreadSnapshot,
   createActiveThreadSnapshot,
@@ -253,6 +254,50 @@ describe("threadBootstrap", () => {
         options: undefined,
       }),
     ).toMatchObject({ envMode: "worktree", branch: null, worktreePath: null });
+  });
+
+  it("applies a configured worktree base branch to a new thread", () => {
+    expect(
+      applyNewThreadWorkspaceDefaults(undefined, {
+        defaultNewThreadWorkspaceMode: "worktree",
+        defaultWorktreeBaseBranch: " release/next ",
+      }),
+    ).toMatchObject({
+      envMode: "worktree",
+      branch: "release/next",
+    });
+  });
+
+  it("can default a new thread to the current checkout", () => {
+    expect(
+      applyNewThreadWorkspaceDefaults(undefined, {
+        defaultNewThreadWorkspaceMode: "local",
+        defaultWorktreeBaseBranch: "main",
+      }),
+    ).toMatchObject({
+      envMode: "local",
+      branch: null,
+    });
+  });
+
+  it("keeps explicit thread workspace choices ahead of app defaults", () => {
+    expect(
+      applyNewThreadWorkspaceDefaults(
+        {
+          envMode: "worktree",
+          branch: "feature/explicit",
+          worktreePath: "/repo/.worktrees/explicit",
+        },
+        {
+          defaultNewThreadWorkspaceMode: "local",
+          defaultWorktreeBaseBranch: "main",
+        },
+      ),
+    ).toMatchObject({
+      envMode: "worktree",
+      branch: "feature/explicit",
+      worktreePath: "/repo/.worktrees/explicit",
+    });
   });
 
   it("keeps an explicit local picker override ahead of the worktree default", () => {

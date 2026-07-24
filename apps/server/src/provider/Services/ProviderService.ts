@@ -16,11 +16,16 @@ import type {
   ProviderForkThreadResult,
   ProviderInterruptTurnInput,
   ProviderKind,
+  ProviderListRealtimeVoicesInput,
+  ProviderListRealtimeVoicesResult,
+  ProviderRealtimeEvent,
   ProviderRespondToRequestInput,
   ProviderRespondToUserInputInput,
   ProviderRuntimeEvent,
   ProviderSendTurnInput,
   ProviderStartReviewInput,
+  ProviderStartRealtimeInput,
+  ProviderStopRealtimeInput,
   ProviderSteerTurnInput,
   ProviderSession,
   ProviderSessionStartInput,
@@ -150,12 +155,25 @@ export interface ProviderServiceShape {
     readonly threadId: ThreadId;
   }) => Effect.Effect<void, ProviderServiceError>;
 
+  readonly startRealtime: (
+    input: ProviderStartRealtimeInput,
+  ) => Effect.Effect<void, ProviderServiceError>;
+
+  readonly stopRealtime: (
+    input: ProviderStopRealtimeInput,
+  ) => Effect.Effect<void, ProviderServiceError>;
+
+  readonly listRealtimeVoices: (
+    input: ProviderListRealtimeVoicesInput,
+  ) => Effect.Effect<ProviderListRealtimeVoicesResult, ProviderServiceError>;
+
   /**
    * Canonical provider runtime event stream.
    *
    * Fan-out is owned by ProviderService (not by a standalone event-bus service).
    */
   readonly streamEvents: Stream.Stream<ProviderRuntimeEvent>;
+  readonly streamRealtimeEvents: Stream.Stream<ProviderRealtimeEvent>;
 }
 
 /**

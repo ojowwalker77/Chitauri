@@ -15,6 +15,7 @@ import {
   type OrchestrationShellStreamItem,
   type OrchestrationThreadStreamItem,
   type ProjectDevServerEvent,
+  type ProviderRealtimeEvent,
   type ServerConfigStreamEvent,
   type ServerLifecycleStreamEvent,
   type ServerProviderStatusesUpdatedPayload,
@@ -417,6 +418,13 @@ export class WsTransport {
             (event: ProjectDevServerEvent) => this.emit(WS_CHANNELS.projectDevServerEvent, event),
             restartChannel,
           );
+        } else if (channel === WS_CHANNELS.providerRealtimeEvent) {
+          this.startStream(
+            "provider.realtime",
+            client[WS_METHODS.subscribeProviderRealtimeEvents]({}),
+            (event: ProviderRealtimeEvent) => this.emit(WS_CHANNELS.providerRealtimeEvent, event),
+            restartChannel,
+          );
         } else if (channel === ORCHESTRATION_WS_CHANNELS.domainEvent) {
           this.startStream(
             "orchestration.domain",
@@ -442,6 +450,7 @@ export class WsTransport {
       this.stopStream("server.providers");
     else if (channel === WS_CHANNELS.serverSettingsUpdated) this.stopStream("server.settings");
     else if (channel === WS_CHANNELS.projectDevServerEvent) this.stopStream("project.devServers");
+    else if (channel === WS_CHANNELS.providerRealtimeEvent) this.stopStream("provider.realtime");
     else if (channel === ORCHESTRATION_WS_CHANNELS.domainEvent)
       this.stopStream("orchestration.domain");
   }

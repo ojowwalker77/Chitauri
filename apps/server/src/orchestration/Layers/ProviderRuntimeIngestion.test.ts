@@ -85,7 +85,11 @@ function createProviderServiceHarness() {
       }),
     rollbackConversation: () => unsupported(),
     compactThread: () => unsupported(),
+    startRealtime: () => unsupported(),
+    stopRealtime: () => unsupported(),
+    listRealtimeVoices: () => unsupported(),
     streamEvents: Stream.fromPubSub(runtimeEventPubSub),
+    streamRealtimeEvents: Stream.empty,
   };
 
   const setSession = (session: ProviderSession): void => {

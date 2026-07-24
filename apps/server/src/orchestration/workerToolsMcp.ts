@@ -5,14 +5,18 @@ import {
   CommandId,
   DEFAULT_RUNTIME_MODE,
   MessageId,
+  type ModelSelection,
   ProjectId,
+  ProviderKind,
+  type RuntimeMode,
   TaskId,
   ThreadId,
   type OrchestrationShellSnapshot,
   type ProviderSessionStartInput,
   type TaskStatus,
 } from "@t3tools/contracts";
-import { Cause, Effect } from "effect";
+import { getDefaultModel } from "@t3tools/shared/model";
+import { Cause, Effect, Option, Schema } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
 import type { ServerConfigShape } from "../config.ts";
@@ -37,6 +41,19 @@ const TASK_STATUSES = new Set<TaskStatus>([
   "completed",
   "cancelled",
 ]);
+const PROVIDER_KINDS = [
+  "codex",
+  "claudeAgent",
+  "cursor",
+  "grok",
+  "kilo",
+  "opencode",
+  "pi",
+] as const satisfies ReadonlyArray<ProviderKind>;
+const RUNTIME_MODES = [
+  "approval-required",
+  "full-access",
+] as const satisfies ReadonlyArray<RuntimeMode>;
 
 type JsonRpcRequest = {
   readonly jsonrpc?: unknown;
@@ -52,6 +69,87 @@ type WorkerScope = {
 };
 
 const toolDefinitions = [
+  {
+    name: "threads_list",
+    description:
+      "List active TeaCode Threads owned by this repository Worker. Use this to find a thread before delegating or reading its result.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        include_archived: {
+          type: "boolean",
+          description: "Include archived Threads. Defaults to false.",
+        },
+      },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
+  {
+    name: "threads_create",
+    description:
+      "Create a separate TeaCode Thread under this Worker, choose its provider/model, and optionally dispatch its first prompt. The child gets an independent provider context and is linked to the calling Thread.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        prompt: {
+          type: "string",
+          description: "Optional first request to dispatch immediately.",
+        },
+        provider: {
+          type: "string",
+          enum: [...PROVIDER_KINDS],
+          description: "Defaults to the calling Thread's provider.",
+        },
+        model: {
+          type: "string",
+          description: "Defaults to the selected provider's TeaCode default model.",
+        },
+        runtime_mode: {
+          type: "string",
+          enum: [...RUNTIME_MODES],
+          description: "Defaults to the calling Thread's runtime mode.",
+        },
+      },
+      required: ["title"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "threads_send",
+    description:
+      "Send work to an existing Thread owned by this Worker. The target keeps its own provider and context. Use threads_read afterward to hear back.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        thread_id: { type: "string" },
+        prompt: { type: "string" },
+      },
+      required: ["thread_id", "prompt"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "threads_read",
+    description:
+      "Read the latest transcript and status from a Thread owned by this Worker. Use this after delegation to bring the result back into the orchestrator conversation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        thread_id: { type: "string" },
+        message_limit: {
+          type: "number",
+          minimum: 1,
+          maximum: 50,
+          description: "Latest messages to return. Defaults to 12.",
+        },
+      },
+      required: ["thread_id"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true },
+  },
   {
     name: "tasks_list",
     description: "List durable Tasks owned by this Thread's repository Worker.",
@@ -182,6 +280,27 @@ function optionalString(args: Record<string, unknown>, key: string): string | un
   return value.trim();
 }
 
+function optionalInteger(
+  args: Record<string, unknown>,
+  key: string,
+  input: { readonly min: number; readonly max: number },
+): number | undefined {
+  const value = args[key];
+  if (value === undefined) return undefined;
+  if (!Number.isInteger(value) || (value as number) < input.min || (value as number) > input.max) {
+    throw new Error(`'${key}' must be an integer from ${input.min} to ${input.max}.`);
+  }
+  return value as number;
+}
+
+function ownedThread(scope: WorkerScope, rawThreadId: string) {
+  const thread = scope.snapshot.threads.find((candidate) => candidate.id === rawThreadId);
+  if (!thread || thread.projectId !== scope.workerId) {
+    throw new Error(`Thread '${rawThreadId}' is not owned by this Worker.`);
+  }
+  return thread;
+}
+
 function ownedTask(scope: WorkerScope, rawTaskId: string) {
   const task = scope.snapshot.tasks.find((candidate) => candidate.id === rawTaskId);
   if (!task || task.workerId !== scope.workerId) {
@@ -241,11 +360,150 @@ export function runWorkerTool(input: {
 }) {
   return Effect.gen(function* () {
     const engine = yield* OrchestrationEngineService;
+    const snapshotQuery = yield* ProjectionSnapshotQuery;
     const scope = resolveWorkerScope({
       rawThreadId: input.rawThreadId,
       snapshot: input.snapshot,
     });
     const args = record(input.args ?? {});
+
+    if (input.name === "threads_list") {
+      const includeArchived = args.include_archived === true;
+      return scope.snapshot.threads
+        .filter(
+          (thread) =>
+            thread.projectId === scope.workerId && (includeArchived || thread.archivedAt === null),
+        )
+        .map((thread) => ({
+          id: thread.id,
+          title: thread.title,
+          provider: thread.modelSelection.provider,
+          model: thread.modelSelection.model,
+          runtimeMode: thread.runtimeMode,
+          parentThreadId: thread.parentThreadId,
+          status: thread.session?.status ?? (thread.latestTurn ? "idle" : "not-started"),
+          latestTurn: thread.latestTurn,
+          updatedAt: thread.updatedAt,
+        }));
+    }
+
+    if (input.name === "threads_create") {
+      const callingThread = ownedThread(scope, scope.threadId);
+      const rawProvider = optionalString(args, "provider");
+      if (rawProvider !== undefined && !Schema.is(ProviderKind)(rawProvider)) {
+        throw new Error(`Unknown provider '${rawProvider}'.`);
+      }
+      const provider = rawProvider ?? callingThread.modelSelection.provider;
+      const model = optionalString(args, "model") ?? getDefaultModel(provider);
+      if (!model) {
+        throw new Error(`Provider '${provider}' requires an explicit model.`);
+      }
+      const rawRuntimeMode = optionalString(args, "runtime_mode");
+      if (rawRuntimeMode !== undefined && !RUNTIME_MODES.includes(rawRuntimeMode as RuntimeMode)) {
+        throw new Error(`Unknown runtime mode '${rawRuntimeMode}'.`);
+      }
+      const runtimeMode = (rawRuntimeMode as RuntimeMode | undefined) ?? callingThread.runtimeMode;
+      const modelSelection = { provider, model } as ModelSelection;
+      const threadId = ThreadId.makeUnsafe(crypto.randomUUID());
+      const now = new Date().toISOString();
+      const prompt = optionalString(args, "prompt");
+
+      yield* engine.dispatch({
+        type: "thread.create",
+        commandId: commandId(),
+        threadId,
+        projectId: scope.workerId,
+        title: requiredString(args, "title"),
+        modelSelection,
+        runtimeMode,
+        // Child contexts share the orchestrator's concrete checkout. This keeps
+        // delegation immediate and avoids silently creating Git worktrees.
+        envMode: callingThread.envMode,
+        branch: callingThread.branch,
+        worktreePath: callingThread.worktreePath,
+        parentThreadId: scope.threadId,
+        createdAt: now,
+      });
+      if (prompt) {
+        yield* engine.dispatch({
+          type: "thread.turn.start",
+          commandId: commandId(),
+          threadId,
+          message: {
+            messageId: MessageId.makeUnsafe(crypto.randomUUID()),
+            role: "user",
+            text: prompt,
+            attachments: [],
+          },
+          dispatchMode: "queue",
+          dispatchOrigin: "automation",
+          runtimeMode,
+          createdAt: now,
+        });
+      }
+      return {
+        id: threadId,
+        provider,
+        model,
+        parentThreadId: scope.threadId,
+        dispatched: Boolean(prompt),
+      };
+    }
+
+    if (input.name === "threads_send") {
+      const target = ownedThread(scope, requiredString(args, "thread_id"));
+      if (target.archivedAt !== null) {
+        throw new Error(`Thread '${target.id}' is archived.`);
+      }
+      const now = new Date().toISOString();
+      yield* engine.dispatch({
+        type: "thread.turn.start",
+        commandId: commandId(),
+        threadId: target.id,
+        message: {
+          messageId: MessageId.makeUnsafe(crypto.randomUUID()),
+          role: "user",
+          text: requiredString(args, "prompt"),
+          attachments: [],
+        },
+        dispatchMode: "queue",
+        dispatchOrigin: "automation",
+        runtimeMode: target.runtimeMode,
+        createdAt: now,
+      });
+      return {
+        id: target.id,
+        provider: target.modelSelection.provider,
+        model: target.modelSelection.model,
+        dispatched: true,
+      };
+    }
+
+    if (input.name === "threads_read") {
+      const target = ownedThread(scope, requiredString(args, "thread_id"));
+      const messageLimit = optionalInteger(args, "message_limit", { min: 1, max: 50 }) ?? 12;
+      const detailOption = yield* snapshotQuery.getThreadDetailById(target.id);
+      if (Option.isNone(detailOption)) {
+        throw new Error(`Thread '${target.id}' is no longer available.`);
+      }
+      const detail = detailOption.value;
+      return {
+        id: detail.id,
+        title: detail.title,
+        provider: detail.modelSelection.provider,
+        model: detail.modelSelection.model,
+        status: detail.session?.status ?? (detail.latestTurn ? "idle" : "not-started"),
+        latestTurn: detail.latestTurn,
+        messages: detail.messages.slice(-messageLimit).map((message) => ({
+          id: message.id,
+          role: message.role,
+          text: message.text,
+          createdAt: message.createdAt,
+          streaming: message.streaming,
+        })),
+        updatedAt: detail.updatedAt,
+      };
+    }
 
     if (input.name === "tasks_list") {
       const includeClosed = args.include_closed === true;

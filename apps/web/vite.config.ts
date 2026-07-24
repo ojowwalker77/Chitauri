@@ -139,6 +139,11 @@ export default defineConfig({
   },
   resolve: {
     tsconfigPaths: true,
+    // Local file-linked React packages (for example thinking-orbs) may have
+    // their own development copy of React next to their source checkout.
+    // Always render them with TeaCode's React instance so hooks share the
+    // same dispatcher.
+    dedupe: ["react", "react-dom"],
   },
   server: {
     port,

@@ -20,6 +20,7 @@ import {
   type DraftThreadState,
   resolvePreferredComposerModelSelection,
 } from "../composerDraftStore";
+import type { AppSettings, NewThreadWorkspaceMode } from "../appSettings";
 import { type Thread } from "../types";
 
 export interface NewThreadOptions {
@@ -38,6 +39,28 @@ export interface NewThreadOptions {
  * branch; an explicit per-thread picker choice can still override this.
  */
 export const DEFAULT_NEW_THREAD_ENV_MODE = "worktree" as const satisfies DraftThreadEnvMode;
+
+export function applyNewThreadWorkspaceDefaults(
+  options: NewThreadOptions | undefined,
+  settings: Pick<AppSettings, "defaultNewThreadWorkspaceMode" | "defaultWorktreeBaseBranch">,
+): NewThreadOptions {
+  const hasPinnedWorktree = Boolean(options?.worktreePath);
+  const envMode: NewThreadWorkspaceMode =
+    options?.envMode ?? (hasPinnedWorktree ? "worktree" : settings.defaultNewThreadWorkspaceMode);
+  const defaultBaseBranch = settings.defaultWorktreeBaseBranch.trim();
+  const branch =
+    options?.branch !== undefined
+      ? options.branch
+      : envMode === "worktree" && defaultBaseBranch.length > 0
+        ? defaultBaseBranch
+        : null;
+
+  return {
+    ...options,
+    envMode,
+    branch,
+  };
+}
 
 export interface InheritedThreadContext {
   branch: string | null;

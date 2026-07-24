@@ -1037,7 +1037,9 @@ function isGrokReasoningEffort(value: unknown): value is GrokReasoningEffort {
   return typeof value === "string" && GROK_REASONING_EFFORT_SET.has(value);
 }
 
-function makeModelSelection(
+// Exported so callers outside this store (e.g. the sidebar command palette) can build a
+// well-typed `ModelSelection` for a provider/model pair without duplicating this switch.
+export function makeModelSelection(
   provider: ProviderKind,
   model: string,
   options?: ProviderModelOptions[ProviderKind],

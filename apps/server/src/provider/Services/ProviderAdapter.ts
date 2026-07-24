@@ -22,6 +22,7 @@ import type {
   ProviderListModelsResult,
   ProviderListPluginsInput,
   ProviderListPluginsResult,
+  ProviderListRealtimeVoicesResult,
   ProviderReadPluginInput,
   ProviderReadPluginResult,
   ProviderListSkillsResult,
@@ -29,7 +30,9 @@ import type {
   ProviderStartReviewInput,
   ProviderUserInputAnswers,
   ProviderRuntimeEvent,
+  ProviderRealtimeEvent,
   ProviderSendTurnInput,
+  ProviderStartRealtimeInput,
   ProviderSteerTurnInput,
   ProviderSession,
   ProviderSessionStartInput,
@@ -56,6 +59,7 @@ export interface ProviderAdapterCapabilities {
   readonly supportsTurnSteering?: boolean;
   /** True when `turn.diff.updated.payload.unifiedDiff` contains a parseable live patch. */
   readonly supportsLiveTurnDiffPatch?: boolean;
+  readonly supportsRealtimeVoice?: boolean;
 }
 
 export interface ProviderThreadTurnSnapshot {
@@ -207,6 +211,18 @@ export interface ProviderAdapterShape<TError> {
    * Canonical runtime event stream emitted by this adapter.
    */
   readonly streamEvents: Stream.Stream<ProviderRuntimeEvent>;
+
+  /**
+   * Ephemeral realtime voice events. These are intentionally separate from
+   * canonical runtime events so SDP and transcript deltas are never persisted.
+   */
+  readonly streamRealtimeEvents?: Stream.Stream<ProviderRealtimeEvent>;
+
+  readonly startRealtime?: (input: ProviderStartRealtimeInput) => Effect.Effect<void, TError>;
+  readonly stopRealtime?: (threadId: ThreadId) => Effect.Effect<void, TError>;
+  readonly listRealtimeVoices?: (
+    threadId: ThreadId,
+  ) => Effect.Effect<ProviderListRealtimeVoicesResult, TError>;
 
   /**
    * Read provider-specific composer capabilities.

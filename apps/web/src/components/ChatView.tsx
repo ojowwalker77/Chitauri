@@ -65,6 +65,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Debouncer } from "@tanstack/react-pacer";
 import { useNavigate } from "@tanstack/react-router";
 import { type LegendListRef } from "@legendapp/list/react";
+import { ThinkingOrb } from "thinking-orbs";
 import {
   GIT_WORKING_TREE_DIFF_LIVE_REFETCH_INTERVAL_MS,
   gitBranchesQueryOptions,
@@ -214,6 +215,7 @@ import { useThreadWorkspaceHandoff } from "../hooks/useThreadWorkspaceHandoff";
 import { useComposerCommandMenuItems } from "../hooks/useComposerCommandMenuItems";
 import { useThreadHandoff } from "../hooks/useThreadHandoff";
 import { useTurnDiffSummaries } from "../hooks/useTurnDiffSummaries";
+import { useCodexVoiceSession } from "../hooks/useCodexVoiceSession";
 import BranchToolbar from "./BranchToolbar";
 import { ThreadWorktreeHandoffDialog } from "./ThreadWorktreeHandoffDialog";
 import {
@@ -234,8 +236,10 @@ import {
   XIcon,
 } from "~/lib/icons";
 import { ComposerQueuedHeader } from "./chat/ComposerQueuedHeader";
+import { VoiceFocusSurface } from "./chat/VoiceFocusSurface";
 import { ComposerLiveChangesHeader } from "./chat/ComposerLiveChangesHeader";
 import { ProviderIcon } from "./ProviderIcon";
+import { ProviderUsageRingControl } from "./ProviderUsageMenuControl";
 import { Button } from "./ui/button";
 import { IconButton } from "./ui/icon-button";
 import { Skeleton } from "./ui/skeleton";
@@ -349,6 +353,7 @@ import { ChatTranscriptPane } from "./chat/ChatTranscriptPane";
 import type { MessagesTimelineController } from "./chat/MessagesTimeline";
 import { buildTurnDiffSummaryByAssistantMessageId } from "./chat/MessagesTimeline.logic";
 import { deriveAgentActivityTimelineState } from "./chat/agentActivity.logic";
+import { resolveVoiceOrbState } from "../lib/voiceFocus";
 import { ComposerSlashStatusDialog } from "./chat/ComposerSlashStatusDialog";
 import { ExpandedImagePreview } from "./chat/ExpandedImagePreview";
 import {
@@ -1496,6 +1501,11 @@ export default function ChatView({
     : null;
   const selectedProvider: ProviderKind =
     lockedProvider ?? selectedProviderByThreadId ?? threadProvider ?? settings.defaultProvider;
+  // A draft Thread already has its final id. Voice startup promotes it to the
+  // server before opening realtime, so requiring a prior text turn here would
+  // make New Thread voice needlessly unavailable.
+  const voiceThreadId = selectedProvider === "codex" ? activeThreadId : null;
+  const voiceSession = useCodexVoiceSession(voiceThreadId);
   const previousSelectedProviderRef = useRef<{
     threadId: ThreadId;
     provider: ProviderKind;
@@ -2172,6 +2182,10 @@ export default function ChatView({
   const isPreparingWorktree = activeWorktreeSetup !== null;
   const hasLiveTurn = phase === "running";
   const isWorking = hasLiveTurn || isSendBusy || isConnecting || isRevertingCheckpoint;
+  const voiceOrbState = resolveVoiceOrbState({
+    isWorking,
+    workEntries: agentActivityTimelineState.timelineWorkEntries,
+  });
   const hasStreamingAssistantText =
     activeThread?.messages.some((message) => message.role === "assistant" && message.streaming) ??
     false;
@@ -2188,6 +2202,8 @@ export default function ChatView({
     activeThreadId === null ? null : `${activeThreadId}:${activeLatestTurn?.turnId ?? "idle"}`;
   const activeTurnInProgress = activeTurnLayoutLive || keepSettledActiveTurnLayout;
   const isComposerApprovalState = activePendingApproval !== null;
+  const canStartVoice =
+    voiceThreadId !== null && pendingUserInputs.length === 0 && !activePendingApproval;
   const isComposerEditorDisabled = isConnecting || isComposerApprovalState;
   const canCollapsePastedTextToDraft = shouldEnableComposerPastedTextCollapse({
     isComposerApprovalState,
@@ -5499,6 +5515,121 @@ export default function ChatView({
     return turnStartSucceeded;
   };
 
+  const onStartVoice = useCallback(async () => {
+    const api = readNativeApi();
+    if (
+      !api ||
+      !activeThread ||
+      !activeProject ||
+      !voiceThreadId ||
+      selectedProvider !== "codex" ||
+      isSendBusy ||
+      isConnecting ||
+      sendInFlightRef.current
+    ) {
+      return;
+    }
+
+    const availability = await resolveProviderSendAvailabilityWithRefresh({
+      provider: "codex",
+      statuses: providerStatuses,
+      refreshStatuses: () => refreshProviderStatuses({ silent: true }),
+    });
+    if (!availability.usable) {
+      toastManager.add({ type: "error", title: availability.unavailableReason });
+      return;
+    }
+
+    sendInFlightRef.current = true;
+    beginLocalDispatch(
+      envMode === "worktree" && !activeThread.worktreePath
+        ? { worktreeSetupStepId: "prepare-thread", setupScriptName: null }
+        : undefined,
+    );
+
+    try {
+      let nextBranch = activeThread.branch;
+      let nextWorktreePath = activeThread.worktreePath;
+
+      if (isLocalDraftThread) {
+        await promoteThreadCreate(
+          {
+            type: "thread.create",
+            commandId: newCommandId(),
+            threadId: voiceThreadId,
+            projectId: activeProject.id,
+            title: activeThread.title,
+            modelSelection: selectedModelSelection,
+            runtimeMode,
+            envMode,
+            branch: nextBranch,
+            worktreePath: nextWorktreePath,
+            lastKnownPr: activeThread.lastKnownPr ?? null,
+            createdAt: activeThread.createdAt,
+          },
+          api,
+        );
+      }
+
+      if (envMode === "worktree" && !nextWorktreePath) {
+        const result = await api.workspace.provisionThreadWorktree({
+          threadId: voiceThreadId,
+          baseBranch: nextBranch,
+          newBranch: buildTemporaryWorktreeBranchName(),
+        });
+        nextBranch = result.branch;
+        nextWorktreePath = result.worktreePath;
+        setStoreThreadWorkspace(voiceThreadId, {
+          envMode: result.envMode,
+          branch: result.branch,
+          worktreePath: result.worktreePath,
+          associatedWorktreePath: result.associatedWorktreePath,
+          associatedWorktreeBranch: result.associatedWorktreeBranch,
+          associatedWorktreeRef: result.associatedWorktreeRef,
+        });
+      }
+
+      beginLocalDispatch();
+      rememberCustomBinaryPathForDispatch({
+        threadId: voiceThreadId,
+        provider: "codex",
+        providerOptions: providerOptionsForDispatch,
+      });
+      await voiceSession.start();
+    } catch (error) {
+      const description = error instanceof Error ? error.message : "Failed to start live voice.";
+      setThreadError(voiceThreadId, description);
+      toastManager.add({
+        type: "error",
+        title: "Live voice unavailable",
+        description,
+      });
+    } finally {
+      sendInFlightRef.current = false;
+      resetLocalDispatch();
+    }
+  }, [
+    activeProject,
+    activeThread,
+    beginLocalDispatch,
+    envMode,
+    isConnecting,
+    isLocalDraftThread,
+    isSendBusy,
+    providerOptionsForDispatch,
+    providerStatuses,
+    refreshProviderStatuses,
+    rememberCustomBinaryPathForDispatch,
+    resetLocalDispatch,
+    runtimeMode,
+    selectedModelSelection,
+    selectedProvider,
+    setStoreThreadWorkspace,
+    setThreadError,
+    voiceSession,
+    voiceThreadId,
+  ]);
+
   const onRespondToApproval = useCallback(
     async (requestId: ApprovalRequestId, decision: ProviderApprovalDecision) => {
       const api = readNativeApi();
@@ -7569,6 +7700,7 @@ export default function ChatView({
       showEmptyLandingBranchToolbar);
   const emptyLandingControls = showEmptyLandingControls ? (
     <div
+      ref={composerUnderbarRef}
       className={cn(
         // Full-width tray under the composer that reads as UNITED but not fused: it carries extra
         // top height (pt-6) and is pulled up by that amount (-mt-5 = 20px, just past the
@@ -7580,6 +7712,7 @@ export default function ChatView({
         COMPOSER_COLUMN_FRAME_CLASS_NAME,
       )}
     >
+      {composerPickerControls}
       {isEmptyChatLanding ? (
         <ProjectPicker
           align="start"
@@ -7910,6 +8043,20 @@ export default function ChatView({
                       >
                         <ChevronDownIcon className="size-3.5" />
                       </IconButton>
+                      {canStartVoice && phase !== "running" && !voiceSession.isActive ? (
+                        <IconButton
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          label="Start live voice"
+                          title="Start live voice with Codex (experimental)"
+                          className="shrink-0 text-faint hover:text-foreground"
+                          disabled={isSendBusy || isConnecting}
+                          onClick={() => void onStartVoice()}
+                        >
+                          <ThinkingOrb state="composing" size={20} paused aria-hidden="true" />
+                        </IconButton>
+                      ) : null}
                       {activePendingProgress ? (
                         <Button
                           type="submit"
@@ -8183,7 +8330,7 @@ export default function ChatView({
           {/* The composer collapses into this. Absolutely positioned so a collapsed
               composer costs the transcript no layout height at all, and kept
               mounted either way so the fade/scale can play in both directions. */}
-          {shouldRenderChatPaneContent && !isCenteredEmptyLanding ? (
+          {shouldRenderChatPaneContent && (!isCenteredEmptyLanding || voiceSession.isActive) ? (
             <button
               type="button"
               aria-label={
@@ -8219,7 +8366,7 @@ export default function ChatView({
             </button>
           ) : null}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            {shouldRenderChatPaneContent && isCenteredEmptyLanding ? (
+            {shouldRenderChatPaneContent && isCenteredEmptyLanding && !voiceSession.isActive ? (
               <div
                 className={cn(
                   "chat-pane-enter flex flex-1 items-center justify-center",
@@ -8237,7 +8384,7 @@ export default function ChatView({
               </div>
             ) : null}
 
-            {shouldRenderChatPaneContent && !isCenteredEmptyLanding ? (
+            {shouldRenderChatPaneContent && (!isCenteredEmptyLanding || voiceSession.isActive) ? (
               <div className="flex min-h-0 flex-1 flex-col">
                 <div
                   className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
@@ -8252,78 +8399,92 @@ export default function ChatView({
                     } as CSSProperties
                   }
                 >
-                  {transcriptContent ?? (
-                    <ChatTranscriptPane
-                      activeThreadId={activeThread.id}
-                      assistantProvider={
-                        activeThread.session?.provider ?? activeThread.modelSelection.provider
-                      }
-                      activeTurnId={activeThread.session?.activeTurnId ?? null}
-                      agentActivityDetail={openAgentActivityDetail}
-                      hasMessages={timelineEntries.length > 0}
-                      isWorking={isWorking}
-                      worktreeSetup={activeWorktreeSetup}
-                      activeTurnInProgress={activeTurnInProgress}
-                      activeTurnStartedAt={activeWorkStartedAt}
-                      listRef={legendListRef}
-                      timelineControllerRef={timelineControllerRef}
-                      pinnedMessageIds={pinnedMessageIds}
-                      canPinMessage={(messageId) => !isPendingSetupBubbleId(messageId)}
-                      onTogglePinMessage={handleTogglePinMessageGuarded}
-                      threadMarkers={threadMarkers}
-                      enteringUserMessageIds={enteringUserMessageIds}
-                      timelineEntries={timelineEntries}
-                      turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}
-                      onOpenTurnDiff={onOpenTurnDiff}
-                      onOpenThread={onNavigateToThread}
-                      workerChannels={workerChannels}
-                      onOpenPeerThread={onOpenPeerThread}
-                      onCloseWorkerChannel={(channel) => void onCloseWorkerChannel(channel)}
-                      revertTurnCountByUserMessageId={revertTurnCountByUserMessageId}
-                      onRevertUserMessage={onRevertUserMessage}
-                      onEditUserMessage={onEditUserMessage}
-                      isRevertingCheckpoint={isRevertingCheckpoint}
-                      onExpandTimelineImage={onExpandTimelineImage}
-                      followLiveOutput={hasStreamingAssistantText}
-                      onIsAtEndChange={onIsAtEndChange}
-                      markdownCwd={threadWorkspaceCwd ?? undefined}
-                      chatFontSizePx={settings.chatFontSizePx}
-                      timestampFormat={timestampFormat}
-                      workspaceRoot={activeProject?.cwd ?? undefined}
-                      emptyStateContent={
-                        isEditorRail ? (
-                          <span aria-hidden="true" />
-                        ) : threadHistoryPending ? (
-                          <div
-                            role="status"
-                            aria-label="Loading conversation"
-                            className="flex w-full max-w-md flex-col gap-3 px-6"
-                          >
-                            <Skeleton className="h-4 w-2/5" />
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-4/5" />
-                          </div>
-                        ) : undefined
-                      }
-                      emptyStateProjectName={activeProjectDisplayName}
-                      onMessagesScroll={onMessagesScroll}
-                      onMessagesClickCapture={onMessagesClickCapture}
-                      onMessagesMouseUp={onMessagesMouseUp}
-                      onMessagesWheel={onMessagesWheel}
-                      onMessagesPointerDown={onMessagesPointerDown}
-                      onMessagesPointerUp={onMessagesPointerUp}
-                      onMessagesPointerCancel={onMessagesPointerCancel}
-                      onMessagesTouchStart={onMessagesTouchStart}
-                      onMessagesTouchMove={onMessagesTouchMove}
-                      onMessagesTouchEnd={onMessagesTouchEnd}
-                      onOpenAgentActivity={setOpenAgentActivityId}
-                      onCloseAgentActivityDetail={() => setOpenAgentActivityId(null)}
-                      scrollButtonVisible={showScrollToBottom}
-                      onScrollToBottom={onScrollToBottom}
-                      bottomContentInsetPx={
-                        composerFloatingHeight > 0 ? composerFloatingHeight + 8 : undefined
-                      }
+                  {voiceSession.isActive ? (
+                    <VoiceFocusSurface
+                      status={voiceSession.status}
+                      error={voiceSession.error}
+                      transcript={voiceSession.transcript}
+                      orbState={voiceOrbState}
+                      muted={voiceSession.isMuted}
+                      onToggleMute={voiceSession.toggleMute}
+                      onEnd={() => void voiceSession.stop()}
+                      onRetry={() => void voiceSession.start()}
+                      onDismissError={voiceSession.dismissError}
                     />
+                  ) : (
+                    (transcriptContent ?? (
+                      <ChatTranscriptPane
+                        activeThreadId={activeThread.id}
+                        assistantProvider={
+                          activeThread.session?.provider ?? activeThread.modelSelection.provider
+                        }
+                        activeTurnId={activeThread.session?.activeTurnId ?? null}
+                        agentActivityDetail={openAgentActivityDetail}
+                        hasMessages={timelineEntries.length > 0}
+                        isWorking={isWorking}
+                        worktreeSetup={activeWorktreeSetup}
+                        activeTurnInProgress={activeTurnInProgress}
+                        activeTurnStartedAt={activeWorkStartedAt}
+                        listRef={legendListRef}
+                        timelineControllerRef={timelineControllerRef}
+                        pinnedMessageIds={pinnedMessageIds}
+                        canPinMessage={(messageId) => !isPendingSetupBubbleId(messageId)}
+                        onTogglePinMessage={handleTogglePinMessageGuarded}
+                        threadMarkers={threadMarkers}
+                        enteringUserMessageIds={enteringUserMessageIds}
+                        timelineEntries={timelineEntries}
+                        turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}
+                        onOpenTurnDiff={onOpenTurnDiff}
+                        onOpenThread={onNavigateToThread}
+                        workerChannels={workerChannels}
+                        onOpenPeerThread={onOpenPeerThread}
+                        onCloseWorkerChannel={(channel) => void onCloseWorkerChannel(channel)}
+                        revertTurnCountByUserMessageId={revertTurnCountByUserMessageId}
+                        onRevertUserMessage={onRevertUserMessage}
+                        onEditUserMessage={onEditUserMessage}
+                        isRevertingCheckpoint={isRevertingCheckpoint}
+                        onExpandTimelineImage={onExpandTimelineImage}
+                        followLiveOutput={hasStreamingAssistantText}
+                        onIsAtEndChange={onIsAtEndChange}
+                        markdownCwd={threadWorkspaceCwd ?? undefined}
+                        chatFontSizePx={settings.chatFontSizePx}
+                        timestampFormat={timestampFormat}
+                        workspaceRoot={activeProject?.cwd ?? undefined}
+                        emptyStateContent={
+                          isEditorRail ? (
+                            <span aria-hidden="true" />
+                          ) : threadHistoryPending ? (
+                            <div
+                              role="status"
+                              aria-label="Loading conversation"
+                              className="flex w-full max-w-md flex-col gap-3 px-6"
+                            >
+                              <Skeleton className="h-4 w-2/5" />
+                              <Skeleton className="h-4 w-full" />
+                              <Skeleton className="h-4 w-4/5" />
+                            </div>
+                          ) : undefined
+                        }
+                        emptyStateProjectName={activeProjectDisplayName}
+                        onMessagesScroll={onMessagesScroll}
+                        onMessagesClickCapture={onMessagesClickCapture}
+                        onMessagesMouseUp={onMessagesMouseUp}
+                        onMessagesWheel={onMessagesWheel}
+                        onMessagesPointerDown={onMessagesPointerDown}
+                        onMessagesPointerUp={onMessagesPointerUp}
+                        onMessagesPointerCancel={onMessagesPointerCancel}
+                        onMessagesTouchStart={onMessagesTouchStart}
+                        onMessagesTouchMove={onMessagesTouchMove}
+                        onMessagesTouchEnd={onMessagesTouchEnd}
+                        onOpenAgentActivity={setOpenAgentActivityId}
+                        onCloseAgentActivityDetail={() => setOpenAgentActivityId(null)}
+                        scrollButtonVisible={showScrollToBottom}
+                        onScrollToBottom={onScrollToBottom}
+                        bottomContentInsetPx={
+                          composerFloatingHeight > 0 ? composerFloatingHeight + 8 : undefined
+                        }
+                      />
+                    ))
                   )}
                 </div>
 
@@ -8356,7 +8517,7 @@ export default function ChatView({
                       reserves height nor drifts away from it. Unlike the composer it
                       has no surface of its own, so scrolling content read straight
                       through the branch labels — hence the opaque row here only. */}
-                  {secondaryChromeReady ? (
+                  {secondaryChromeReady && !(isCenteredEmptyLanding && voiceSession.isActive) ? (
                     <div className={COMPOSER_COLUMN_FRAME_CLASS_NAME}>
                       {/* Narrower than the composer and centred on it, tucked up behind
                           its bottom edge (negative margin, lower z) so it reads as
@@ -8377,6 +8538,7 @@ export default function ChatView({
                             className="w-auto min-w-0 shrink justify-start px-0 py-0"
                           />
                         ) : null}
+                        <ProviderUsageRingControl provider={selectedProvider} />
                       </div>
                     </div>
                   ) : null}
@@ -8403,7 +8565,7 @@ export default function ChatView({
         {/* end chat column */}
 
         {/* Plan sidebar */}
-        {planSidebarOpen && transcriptContent === undefined ? (
+        {planSidebarOpen && transcriptContent === undefined && !voiceSession.isActive ? (
           <PlanSidebar
             activeTaskList={activeTaskList}
             activeProposedPlan={sidebarProposedPlan}

@@ -10,6 +10,15 @@ export interface SidebarSearchAction {
   description: string;
   keywords?: readonly string[];
   shortcutLabel?: string | null;
+  /**
+   * Bound handler for commands built dynamically at render time (e.g. per-model,
+   * per-provider palette commands — see SidebarSearchPaletteCommands.ts). When present,
+   * the palette calls this directly instead of resolving `id` through the static
+   * action-id switch used by the fixed navigation actions.
+   */
+  run?: () => void;
+  /** Renders the given provider's icon instead of the static per-id action icon. */
+  providerIcon?: ProviderKind;
 }
 
 export interface SidebarSearchProject {

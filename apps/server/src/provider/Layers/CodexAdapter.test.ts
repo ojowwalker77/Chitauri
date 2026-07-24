@@ -695,6 +695,41 @@ lifecycleLayer("CodexAdapterLive lifecycle", (it) => {
     }),
   );
 
+  it.effect("drops stderr duplicated by typed realtime error notifications", () =>
+    Effect.gen(function* () {
+      const adapter = yield* CodexAdapter;
+      const firstEventFiber = yield* Stream.runHead(adapter.streamEvents).pipe(Effect.forkChild);
+      const createdAt = new Date().toISOString();
+
+      lifecycleManager.emit("event", {
+        id: asEventId("evt-realtime-stderr"),
+        kind: "error",
+        provider: "codex",
+        threadId: asThreadId("thread-1"),
+        createdAt,
+        method: "process/stderr",
+        message:
+          "2026-07-24T15:40:31.951265Z ERROR codex_core::realtime_conversation: realtime stream error event received",
+      } satisfies ProviderEvent);
+      lifecycleManager.emit("event", {
+        id: asEventId("evt-after-realtime-stderr"),
+        kind: "notification",
+        provider: "codex",
+        threadId: asThreadId("thread-1"),
+        createdAt,
+        method: "thread/name/updated",
+        payload: { name: "Still connected" },
+      } satisfies ProviderEvent);
+
+      const firstEvent = yield* Fiber.join(firstEventFiber);
+      assert.equal(firstEvent._tag, "Some");
+      if (firstEvent._tag !== "Some") {
+        return;
+      }
+      assert.equal(firstEvent.value.type, "thread.metadata.updated");
+    }),
+  );
+
   it.effect("preserves request type when mapping serverRequest/resolved", () =>
     Effect.gen(function* () {
       const adapter = yield* CodexAdapter;
@@ -1163,6 +1198,86 @@ lifecycleLayer("CodexAdapterLive lifecycle", (it) => {
       assert.equal(firstEvent.value.payload.itemType, "context_compaction");
       assert.equal(firstEvent.value.payload.detail, "Compacting context");
       assert.equal(firstEvent.value.payload.status, "inProgress");
+    }),
+  );
+
+  it.effect("routes realtime transcript events through the ephemeral voice stream", () =>
+    Effect.gen(function* () {
+      const adapter = yield* CodexAdapter;
+      assert.ok(adapter.streamRealtimeEvents);
+      const firstEventFiber = yield* Stream.runHead(adapter.streamRealtimeEvents).pipe(
+        Effect.forkChild,
+      );
+
+      lifecycleManager.emit("event", {
+        id: asEventId("evt-realtime-transcript"),
+        kind: "notification",
+        provider: "codex",
+        threadId: asThreadId("thread-1"),
+        createdAt: new Date().toISOString(),
+        method: "thread/realtime/transcript/delta",
+        payload: {
+          threadId: "provider-thread-1",
+          role: "assistant",
+          delta: "Hello",
+        },
+      } satisfies ProviderEvent);
+
+      const firstEvent = yield* Fiber.join(firstEventFiber);
+      assert.equal(firstEvent._tag, "Some");
+      if (firstEvent._tag !== "Some") return;
+      assert.deepStrictEqual(firstEvent.value, {
+        type: "transcript.delta",
+        threadId: "thread-1",
+        createdAt: firstEvent.value.createdAt,
+        role: "assistant",
+        delta: "Hello",
+      });
+    }),
+  );
+
+  it.effect("routes realtime audio through the ephemeral voice stream", () =>
+    Effect.gen(function* () {
+      const adapter = yield* CodexAdapter;
+      assert.ok(adapter.streamRealtimeEvents);
+      const firstEventFiber = yield* Stream.runHead(adapter.streamRealtimeEvents).pipe(
+        Effect.forkChild,
+      );
+
+      lifecycleManager.emit("event", {
+        id: asEventId("evt-realtime-audio"),
+        kind: "notification",
+        provider: "codex",
+        threadId: asThreadId("thread-1"),
+        createdAt: new Date().toISOString(),
+        method: "thread/realtime/outputAudio/delta",
+        payload: {
+          threadId: "provider-thread-1",
+          audio: {
+            data: "AAABAP//",
+            sampleRate: 24_000,
+            numChannels: 1,
+            samplesPerChannel: 3,
+            itemId: "item-audio-1",
+          },
+        },
+      } satisfies ProviderEvent);
+
+      const firstEvent = yield* Fiber.join(firstEventFiber);
+      assert.equal(firstEvent._tag, "Some");
+      if (firstEvent._tag !== "Some") return;
+      assert.deepStrictEqual(firstEvent.value, {
+        type: "audio.delta",
+        threadId: "thread-1",
+        createdAt: firstEvent.value.createdAt,
+        audio: {
+          data: "AAABAP//",
+          sampleRate: 24_000,
+          numChannels: 1,
+          samplesPerChannel: 3,
+          itemId: "item-audio-1",
+        },
+      });
     }),
   );
 });
